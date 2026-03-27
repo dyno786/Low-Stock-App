@@ -314,9 +314,38 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);max-width:48
 </div>
 
 <script>
-// ── STORE PERSISTENCE (localStorage, no hardcoding) ──────────────────────
-function loadStores(){return JSON.parse(localStorage.getItem('ls_stores')||'[]')}
-function saveStores(s){localStorage.setItem('ls_stores',JSON.stringify(s))}
+// ── DEFAULT STORES — pre-configured, no setup needed ─────────────────────
+// Add more branches here as you get their CSV URLs
+const DEFAULT_STORES = [
+  {
+    id: 'store_roundhay',
+    name: 'Roundhay Road',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUrvjJHbN8SSivdwz78SEq8wozqOMYbR49GoA5_r2741kXxU4_0Sy-dNj5lWnlGREeaWB4O2hC2nf6/pub?gid=1758983339&single=true&output=csv'
+  },
+  {
+    id: 'store_chapeltown',
+    name: 'Chapeltown Road',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQShthKPVMTanMGmbyZIv7yOAYtQSRHMGin7zIBeSigI8aZGFuuZyVBPC9WGM3Ail0J0qQaO3wFEfan/pub?gid=1503667492&single=true&output=csv'
+  },
+  {
+    id: 'store_citycenter',
+    name: 'City Center',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRkfXBRQAGFInNCYJ-_WaqtXOBIHz9kGQ2doOa4V8MIUiHa9SFNpGjwJejSTks5G9-E5zHBgP2ewcjW/pub?gid=985285032&single=true&output=csv'
+  },
+];
+
+function loadStores(){
+  // Always start with DEFAULT_STORES as the base
+  // Any stores added via the UI are merged in on top
+  const extra = JSON.parse(localStorage.getItem('ls_stores_extra')||'[]');
+  return [...DEFAULT_STORES, ...extra];
+}
+function saveStores(s){
+  // Only save stores that aren't already in DEFAULT_STORES
+  const defaultIds = DEFAULT_STORES.map(d=>d.id);
+  const extra = s.filter(x=>!defaultIds.includes(x.id));
+  localStorage.setItem('ls_stores_extra', JSON.stringify(extra));
+}
 
 // ── STATE ────────────────────────────────────────────────────────────────
 let storeData={};
@@ -334,15 +363,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('top-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   if(waNumber) document.getElementById('wa-number').value=waNumber;
   const stores=loadStores();
+  currentStoreId=stores[0].id;
   renderStoreTabs();
-  if(!stores.length){
-    document.getElementById('main-content').innerHTML=noStoresHTML();
-    setTimeout(openAddStore,300);
-  } else {
-    currentStoreId=stores[0].id;
-    renderStoreTabs();
-    fetchStore(currentStoreId);
-  }
+  fetchStore(currentStoreId);
 });
 
 function noStoresHTML(){
