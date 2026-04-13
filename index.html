@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CC Hair & Beauty — Low Stock</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+/* ── TOKENS ────────────────────────────────────────────────── */
+:root{
+  --bg:#f2f0ec;--surface:#ffffff;--s2:#f7f6f3;--s3:#efede8;
+  --border:#e4e0d8;--border2:#d4d0c8;
+  --ink:#17150e;--ink2:#5a5649;--ink3:#9a9588;
+  --red:#c0392b;--red-bg:#fef2f2;--red-mid:#fee2e2;
+  --amber:#b45309;--amber-bg:#fffbeb;
+  --green:#15803d;--green-bg:#f0fdf4;--green-mid:#dcfce7;
+  --purple:#6d28d9;--purple-bg:#ede9fe;
+  --wa:#25d366;--wa-dark:#128c7e;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:12px;--r2:16px;--r3:20px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px;-webkit-font-smoothing:antialiased}
+
+/* ── TOPBAR ────────────────────────────────────────────────── */
+.topbar{background:var(--ink);color:#fff;padding:16px 16px 14px;position:sticky;top:0;z-index:100}
+.tb-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.tb-logo{display:flex;align-items:center;gap:8px}
+.tb-logo-mark{width:28px;height:28px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tb-logo-mark svg{width:16px;height:16px}
+.tb-title{font-size:15px;font-weight:600;letter-spacing:-.2px}
+.tb-sub{font-size:10px;color:#888;font-family:var(--mono);margin-top:1px}
+.tb-actions{display:flex;gap:6px;flex-shrink:0}
+.tb-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:4px;white-space:nowrap;transition:background .15s}
+.tb-btn:active{background:rgba(255,255,255,.2)}
+.tb-btn.spinning svg{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* pills */
+.tb-pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.1);letter-spacing:.1px}
+.pill-red{background:rgba(192,57,43,.35);color:#fca5a5}
+.pill-green{background:rgba(21,128,61,.3);color:#86efac}
+.pill-time{background:rgba(255,255,255,.07);color:#888;font-family:var(--mono)}
+
+/* ── BRANCH TABS ───────────────────────────────────────────── */
+.branch-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;position:sticky;top:82px;z-index:99}
+.branch-bar::-webkit-scrollbar{display:none}
+.branch-tab{padding:12px 18px;font-size:13px;font-weight:500;color:var(--ink3);border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.branch-tab.active{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* ── VIEW TABS ─────────────────────────────────────────────── */
+.view-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:126px;z-index:98}
+.view-tab{flex:1;padding:11px 4px;text-align:center;font-size:12px;font-weight:500;color:var(--ink3);border-bottom:2px solid transparent;cursor:pointer;transition:all .15s}
+.view-tab.active{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* ── TOOLBAR ───────────────────────────────────────────────── */
+.toolbar{padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:8px}
+.sw{flex:1;position:relative}
+.sw input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px 9px 34px;font-size:13px;font-family:var(--font);color:var(--ink);outline:none;transition:border-color .15s}
+.sw input:focus{border-color:var(--border2)}
+.sw input::placeholder{color:var(--ink3)}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none}
+.scan-btn{background:var(--ink);color:#fff;border:none;border-radius:var(--r);padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;font-family:var(--font)}
+.scan-btn:active{opacity:.85}
+
+/* ── WA NUMBER BAR ─────────────────────────────────────────── */
+.wa-setup{background:var(--s2);border-bottom:1px solid var(--border);padding:9px 12px;display:flex;align-items:center;gap:8px}
+.wa-setup-lbl{font-size:11px;color:var(--ink3);white-space:nowrap;flex-shrink:0}
+.wa-setup input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:var(--mono);color:var(--ink);outline:none}
+.wa-setup button{background:var(--ink);color:#fff;border:none;border-radius:var(--r);padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)}
+
+/* ── SECTION HEAD ──────────────────────────────────────────── */
+.sec-head{padding:12px 14px 5px;font-size:10px;font-weight:600;letter-spacing:.9px;text-transform:uppercase;color:var(--ink3);background:var(--bg);display:flex;justify-content:space-between;align-items:center}
+
+/* ── GROUP ROWS ────────────────────────────────────────────── */
+.group-row{display:flex;align-items:center;background:var(--surface);padding:13px 14px;border-bottom:1px solid var(--border);gap:11px;cursor:pointer;transition:background .1s}
+.group-row:active{background:var(--s2)}
+.g-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.g-info{flex:1;min-width:0}
+.g-name{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+.g-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.g-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.b-red{background:var(--red-bg);color:var(--red)}
+.b-amber{background:var(--amber-bg);color:var(--amber)}
+.g-arrow{color:var(--ink3);font-size:16px}
+
+/* ── PRODUCT CARDS ─────────────────────────────────────────── */
+.product-card{display:flex;background:var(--surface);border-bottom:1px solid var(--border);cursor:pointer;position:relative;min-height:84px;transition:background .1s}
+.product-card:active{background:var(--s2)}
+.p-img{width:84px;min-height:84px;flex-shrink:0;background:var(--s3);border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.p-img img{width:84px;height:84px;object-fit:cover;display:block}
+.p-body{flex:1;padding:11px 8px 11px 14px;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.p-brand{font-size:10px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:.5px}
+.p-name{font-size:13px;font-weight:500;line-height:1.35;color:var(--ink)}
+.p-variant{font-size:11px;color:var(--ink3)}
+.p-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;padding:12px 13px 12px 4px;flex-shrink:0;gap:8px}
+.p-qty{font-size:17px;font-weight:700;font-family:var(--mono);line-height:1}
+.qty-neg{color:var(--red)}
+.qty-pos{color:var(--green)}
+/* tick */
+.tick{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;background:transparent}
+.tick.done{background:var(--green);border-color:var(--green)}
+.tick svg{opacity:0;transition:opacity .15s}
+.tick.done svg{opacity:1}
+/* ticked state */
+.product-card.ticked{background:var(--s2)}
+.product-card.ticked .p-name{text-decoration:line-through;color:var(--ink3)}
+.done-bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);display:none;border-radius:0}
+.product-card.ticked .done-bar{display:block}
+
+/* ── BACK BAR ──────────────────────────────────────────────── */
+.back-bar{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--surface);border-bottom:1px solid var(--border);cursor:pointer;position:sticky;top:164px;z-index:50}
+.back-bar:active{background:var(--s2)}
+.back-bar span{font-size:13px;font-weight:500}
+
+/* ── STATES ────────────────────────────────────────────────── */
+.loading{padding:60px 20px;text-align:center;color:var(--ink3)}
+.spin-ring{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+.error-box{margin:14px 12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--red);border-radius:var(--r);padding:14px 16px}
+.error-box p{font-size:13px;color:var(--red);line-height:1.5;margin-bottom:6px}
+.error-box code{font-size:11px;color:var(--ink3);font-family:var(--mono);word-break:break-all;display:block}
+.empty{padding:60px 20px;text-align:center;color:var(--ink3);font-size:14px;line-height:1.8}
+
+/* ── DETAIL PANEL ──────────────────────────────────────────── */
+.panel-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;max-width:480px;margin:0 auto}
+.panel-ov.open{display:block}
+.panel{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:22px 22px 0 0;max-height:93vh;overflow-y:auto;padding-bottom:40px}
+.p-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
+.p-hero{width:100%;height:200px;background:var(--s3);display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--border)}
+.p-hero img{max-height:192px;max-width:100%;object-fit:contain}
+.p-hero-ph svg{color:#ccc}
+.pd{padding:16px 18px 0}
+.pd-brand{font-size:10px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.pd-title{font-size:18px;font-weight:600;line-height:1.3;margin-bottom:4px}
+.pd-variant{font-size:13px;color:var(--ink3);margin-bottom:10px}
+.pd-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+.chip-cat{background:var(--purple-bg);color:var(--purple)}
+.chip-stock{background:var(--red-bg);color:var(--red);font-family:var(--mono)}
+.chip-ok{background:var(--green-bg);color:var(--green);font-family:var(--mono)}
+.pd-sku{font-size:11px;color:var(--ink3);font-family:var(--mono);margin-bottom:14px}
+.bc-box{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center;margin-bottom:14px}
+.bc-box svg{max-width:100%;height:auto}
+.pd-div{height:1px;background:var(--border);margin:14px 0}
+.restock-title{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--ink)}
+.stepper{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.stepper-lbl{font-size:13px;color:var(--ink3);flex:1}
+.s-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--s2);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;color:var(--ink);line-height:1;transition:background .1s}
+.s-btn:active{background:var(--border)}
+.s-val{font-size:26px;font-weight:600;font-family:var(--mono);min-width:44px;text-align:center;color:var(--ink)}
+.pd-actions{display:flex;gap:8px}
+.pd-save{flex:1;background:var(--ink);color:#fff;border:none;border-radius:var(--r);padding:14px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);transition:opacity .15s}
+.pd-save:active{opacity:.85}
+.pd-done{background:var(--green-bg);color:var(--green);border:1.5px solid var(--green);border-radius:var(--r);padding:14px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:5px;white-space:nowrap;transition:all .2s}
+.pd-done.active{background:var(--green);color:#fff;border-color:var(--green)}
+.pd-saved{font-size:12px;color:var(--green);text-align:center;margin-top:10px;font-weight:500;display:none}
+
+/* ── WA FOOTER ─────────────────────────────────────────────── */
+.wa-footer{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;padding:10px 12px;background:var(--surface);border-top:1px solid var(--border);z-index:150}
+.wa-btn{width:100%;background:var(--wa);color:#fff;border:none;border-radius:var(--r);padding:14px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s}
+.wa-btn:active{opacity:.9}
+.wa-btn svg{width:20px;height:20px;flex-shrink:0}
+.wa-cnt{background:rgba(0,0,0,.2);border-radius:20px;font-size:11px;font-weight:700;padding:2px 8px}
+
+/* ── SCANNER ───────────────────────────────────────────────── */
+.scan-ov{position:fixed;inset:0;background:#000;z-index:500;display:none;flex-direction:column;max-width:480px;margin:0 auto}
+.scan-ov.open{display:flex}
+.scan-hdr{padding:16px;display:flex;align-items:center;gap:10px}
+.scan-x{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.scan-hdr-title{color:#fff;font-size:15px;font-weight:600}
+.scan-vw{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#scan-vid{width:100%;height:100%;object-fit:cover}
+.scan-frame{position:absolute;width:240px;height:110px;border:2px solid var(--wa);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.55)}
+.scan-hint{padding:14px 16px;text-align:center;color:#888;font-size:12px}
+.scan-manual{padding:0 14px 28px;display:flex;gap:8px}
+.scan-manual input{flex:1;background:#1a1a1a;border:1px solid #333;border-radius:var(--r);padding:10px 12px;font-size:14px;color:#fff;font-family:var(--font);outline:none}
+.scan-manual button{background:var(--wa);color:#fff;border:none;border-radius:var(--r);padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="tb-top">
+    <div class="tb-logo">
+      <div class="tb-logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#17150e" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </div>
+      <div>
+        <div class="tb-title">CC Hair & Beauty</div>
+        <div class="tb-sub" id="top-date"></div>
+      </div>
+    </div>
+    <div class="tb-actions">
+      <button class="tb-btn" id="refresh-btn" onclick="refreshBranch()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+  <div class="tb-pills">
+    <div class="pill pill-red" id="pill-left">—</div>
+    <div class="pill pill-green" id="pill-done">0 done ✓</div>
+    <div class="pill pill-time" id="pill-time">loading…</div>
+  </div>
+</div>
+
+<!-- BRANCH TABS -->
+<div class="branch-bar" id="branch-bar"></div>
+
+<!-- VIEW TABS -->
+<div class="view-bar">
+  <div class="view-tab active" onclick="switchView('brand')">By brand</div>
+  <div class="view-tab" onclick="switchView('category')">By category</div>
+  <div class="view-tab" onclick="switchView('all')">All items</div>
+</div>
+
+<!-- SEARCH + SCAN -->
+<div class="toolbar">
+  <div class="sw">
+    <svg class="si" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
+    <input type="search" id="search-input" placeholder="Search product, brand or SKU…" oninput="renderList()">
+  </div>
+  <button class="scan-btn" onclick="openScanner()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><line x1="22" y1="14" x2="14" y2="14"/><line x1="14" y1="14" x2="14" y2="22"/><line x1="22" y1="22" x2="18" y2="22"/><line x1="22" y1="18" x2="22" y2="22"/></svg>
+    Scan
+  </button>
+</div>
+
+<!-- WHATSAPP NUMBER -->
+<div class="wa-setup">
+  <span class="wa-setup-lbl">Manager WhatsApp:</span>
+  <input type="tel" id="wa-num" placeholder="447700900000">
+  <button onclick="saveWA()">Save</button>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="content"></div>
+
+<!-- WA FOOTER -->
+<div class="wa-footer">
+  <button class="wa-btn" onclick="sendWA()">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    Send update to manager
+    <span class="wa-cnt" id="wa-cnt">0</span>
+  </button>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="panel-ov" id="panel-ov" onclick="handlePanelBg(event)">
+  <div class="panel">
+    <div class="p-handle"></div>
+    <div class="p-hero" id="pd-hero"><div class="p-hero-ph"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div></div>
+    <div class="pd">
+      <div class="pd-brand" id="pd-brand"></div>
+      <div class="pd-title" id="pd-title"></div>
+      <div class="pd-variant" id="pd-variant"></div>
+      <div class="pd-chips">
+        <span class="chip chip-cat" id="pd-cat"></span>
+        <span class="chip chip-stock" id="pd-stock"></span>
+      </div>
+      <div class="pd-sku" id="pd-sku"></div>
+      <div id="bc-box" class="bc-box" style="display:none"><svg id="bc-svg"></svg></div>
+      <div class="pd-div"></div>
+      <div class="restock-title">How many units being put back on shelf?</div>
+      <div class="stepper">
+        <div class="stepper-lbl">Units restocked:</div>
+        <div class="s-btn" onclick="step(-1)">−</div>
+        <div class="s-val" id="s-val">0</div>
+        <div class="s-btn" onclick="step(1)">+</div>
+      </div>
+      <div class="pd-actions">
+        <button class="pd-save" onclick="saveCount()">Save &amp; mark done</button>
+        <button class="pd-done" id="pd-done-btn" onclick="toggleTick()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Done
+        </button>
+      </div>
+      <div class="pd-saved" id="pd-saved">✓ Saved — included in WhatsApp report</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCANNER -->
+<div class="scan-ov" id="scan-ov">
+  <div class="scan-hdr">
+    <button class="scan-x" onclick="closeScanner()">✕</button>
+    <div class="scan-hdr-title">Scan product barcode</div>
+  </div>
+  <div class="scan-vw">
+    <video id="scan-vid" autoplay playsinline muted></video>
+    <div class="scan-frame"></div>
+  </div>
+  <div class="scan-hint">Point camera at barcode on packaging</div>
+  <div class="scan-manual">
+    <input type="number" id="manual-bc" placeholder="Or type barcode number…">
+    <button onclick="lookupManual()">Find</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// BRANCHES — hardcoded, no setup needed
+// ═══════════════════════════════════════════════════════════
+const BRANCHES = [
+  {
+    id: 'roundhay',
+    name: 'Roundhay Road',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUrvjJHbN8SSivdwz78SEq8wozqOMYbR49GoA5_r2741kXxU4_0Sy-dNj5lWnlGREeaWB4O2hC2nf6/pub?gid=1758983339&single=true&output=csv'
+  },
+  {
+    id: 'chapeltown',
+    name: 'Chapeltown Road',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQShthKPVMTanMGmbyZIv7yOAYtQSRHMGin7zIBeSigI8aZGFuuZyVBPC9WGM3Ail0J0qQaO3wFEfan/pub?gid=1503667492&single=true&output=csv'
+  },
+  {
+    id: 'citycenter',
+    name: 'City Center',
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRkfXBRQAGFInNCYJ-_WaqtXOBIHz9kGQ2doOa4V8MIUiHa9SFNpGjwJejSTks5G9-E5zHBgP2ewcjW/pub?gid=985285032&single=true&output=csv'
+  }
+];
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let branchData   = {};          // { branchId: [products] | 'loading' | {error} }
+let currentBranch = BRANCHES[0].id;
+let currentView   = 'brand';
+let currentProduct = null;
+let waNumber = localStorage.getItem('cc_wa') || '';
+let ticks    = JSON.parse(localStorage.getItem('cc_ticks')   || '{}');
+let restocks = JSON.parse(localStorage.getItem('cc_restock') || '{}');
+let scanStream = null, scanInterval = null;
+let refreshTimer = null;
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Date
+  document.getElementById('top-date').textContent =
+    new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
+
+  // WA number
+  if (waNumber) document.getElementById('wa-num').value = waNumber;
+
+  // Build branch tabs
+  buildBranchTabs();
+
+  // Fetch all branches in parallel
+  BRANCHES.forEach(b => fetchBranch(b.id));
+
+  // Auto-refresh every 5 minutes
+  refreshTimer = setInterval(() => {
+    delete branchData[currentBranch];
+    fetchBranch(currentBranch);
+  }, 5 * 60 * 1000);
+});
+
+// ═══════════════════════════════════════════════════════════
+// BRANCH TABS
+// ═══════════════════════════════════════════════════════════
+function buildBranchTabs() {
+  document.getElementById('branch-bar').innerHTML = BRANCHES.map(b =>
+    `<div class="branch-tab ${b.id===currentBranch?'active':''}" onclick="switchBranch('${b.id}')">${b.name}</div>`
+  ).join('');
+}
+
+function switchBranch(id) {
+  currentBranch = id;
+  buildBranchTabs();
+  document.getElementById('search-input').value = '';
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════
+// FETCH
+// ═══════════════════════════════════════════════════════════
+async function fetchBranch(id) {
+  const branch = BRANCHES.find(b => b.id === id);
+  if (!branch) return;
+  branchData[id] = 'loading';
+  if (id === currentBranch) showLoading();
+  try {
+    const res = await fetch(branch.url + '&t=' + Date.now()); // cache bust
+    if (!res.ok) throw new Error(`HTTP ${res.status} — make sure the sheet is published publicly as CSV`);
+    const text = await res.text();
+    if (!text.trim()) throw new Error('Sheet returned empty data');
+    const { data } = Papa.parse(text, { header: true, skipEmptyLines: true });
+    const products = parseProducts(data, id);
+    // Restore saved state
+    products.forEach(p => {
+      p.ticked  = ticks[p.id]    || false;
+      p.restock = restocks[p.id] ?? null;
+    });
+    branchData[id] = products;
+    // Update timestamp only for current branch
+    if (id === currentBranch) {
+      document.getElementById('pill-time').textContent =
+        'Live · ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    }
+  } catch(e) {
+    branchData[id] = { error: e.message };
+  }
+  if (id === currentBranch) renderAll();
+}
+
+async function refreshBranch() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  delete branchData[currentBranch];
+  await fetchBranch(currentBranch);
+  btn.classList.remove('spinning');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PARSE PRODUCTS
+// ═══════════════════════════════════════════════════════════
+function parseProducts(rows, branchId) {
+  return rows.filter(r => {
+    const v = fv(r, ['inventory','stock','roundhay','chapeltown','city','qty']);
+    return v !== null && parseInt(v) < 0;
+  }).map((r, i) => {
+    const stock   = parseInt(fv(r, ['inventory','stock','roundhay','chapeltown','city','qty'])) || 0;
+    const sku     = clean(fv(r, ['sku','barcode','upc','ean']));
+    const vendor  = clean(fv(r, ['vendor','brand','supplier']));
+    const title   = clean(fv(r, ['product title','title','product','name']));
+    const variant = clean(fv(r, ['variant_title','variant','size','colour','color','option']));
+    const img     = clean(fv(r, ['image 1','image1','image 2','image','img','photo','picture']));
+    const id = `${branchId}|${sku||i}|${variant}`;
+    return {
+      id, vendor, title, variant, sku, stock,
+      img: img && img.startsWith('http') ? img : null,
+      category: categorise(vendor, title)
+    };
+  });
+}
+
+function clean(v) { return String(v || '').trim(); }
+
+function fv(row, keys) {
+  const rk = Object.keys(row);
+  for (const k of keys) {
+    const m = rk.find(x => x.toLowerCase().replace(/[^a-z0-9]/g,'').includes(k.replace(/[^a-z0-9]/g,'')));
+    if (m && String(row[m]).trim() !== '') return row[m];
+  }
+  return null;
+}
+
+function categorise(v, t) {
+  const s = (v + ' ' + t).toLowerCase();
+  if (/braid|crochet|twist|xpression|ultra braid|pre.?stretch|kinki|jerry curl|water bulk|beach curl|cork screw/.test(s)) return 'Braids & Crochet';
+  if (/wig|lace|weave|extension|yaki|cloud 9|galaxy|aussie|remi|premium now|premium too|angels/.test(s)) return 'Wigs & Extensions';
+  if (/colour|color|dye|tint|schwarzkopf|garnier|crazy|kiss color|adore|cover your gray|wella|tintation/.test(s)) return 'Hair Colour & Dye';
+  if (/clipper|tong|wahl|andis|babyliss|geepas|curling|straighten|dial.a.heat/.test(s)) return 'Tools & Electricals';
+  if (/comb|brush|roller|rod|magic collection|pintail|weaving thread/.test(s)) return 'Combs & Accessories';
+  if (/shampoo|conditioner|lotion|serum|silk infusion|sof n|curl activ|chi |acai|treatment|relaxer/.test(s)) return 'Hair Care';
+  if (/makeup|lip|eye|nail|mascara|foundation|eyebrow|pencil|beauty forever|nicka|absolute new york|zazie/.test(s)) return 'Beauty & Makeup';
+  if (/soap|deodor|carbolic|brut|musk|body wash/.test(s)) return 'Body & Skin';
+  return 'Accessories & Other';
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════
+function saveWA() {
+  waNumber = document.getElementById('wa-num').value.trim().replace(/\D/g,'');
+  localStorage.setItem('cc_wa', waNumber);
+  alert('✓ Number saved');
+}
+
+function showLoading() {
+  document.getElementById('content').innerHTML =
+    '<div class="loading"><div class="spin-ring"></div>Loading live stock data…</div>';
+}
+
+function renderAll() {
+  updateSummary();
+  renderList();
+}
+
+function updateSummary() {
+  const data = branchData[currentBranch];
+  const products = Array.isArray(data) ? data : [];
+  const done = products.filter(p => p.ticked).length;
+  const remaining = products.length - done;
+  document.getElementById('pill-left').textContent  = remaining + ' to check';
+  document.getElementById('pill-done').textContent  = done + ' done ✓';
+  // WA count = all ticked across all branches
+  const allDone = Object.values(branchData)
+    .flatMap(d => Array.isArray(d) ? d : [])
+    .filter(p => p.ticked).length;
+  document.getElementById('wa-cnt').textContent = allDone;
+}
+
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll('.view-tab').forEach((t, i) =>
+    t.classList.toggle('active', ['brand','category','all'][i] === v));
+  renderList();
+}
+
+function renderList() {
+  const el = document.getElementById('content');
+  const data = branchData[currentBranch];
+
+  if (!data || data === 'loading') { showLoading(); return; }
+
+  if (data.error) {
+    el.innerHTML = `
+      <div class="error-box">
+        <p>⚠️ Could not load data for this branch.</p>
+        <code>${data.error}</code>
+      </div>
+      <div style="padding:14px">
+        <p style="font-size:13px;color:var(--ink3);line-height:1.6">
+          Make sure the sheet is published:<br>
+          <strong>File → Share → Publish to web → select tab → CSV → Publish</strong>
+        </p>
+      </div>`;
+    return;
+  }
+
+  const q = document.getElementById('search-input').value.toLowerCase();
+  let products = data.filter(p =>
+    !q || p.vendor.toLowerCase().includes(q) ||
+    p.title.toLowerCase().includes(q) ||
+    p.sku.includes(q) ||
+    p.variant.toLowerCase().includes(q)
+  );
+
+  if (!products.length && !q) {
+    el.innerHTML = '<div class="empty">🎉<br><br><strong style="color:var(--ink)">All clear!</strong><br>No low stock items for this branch.</div>';
+    return;
+  }
+  if (!products.length) {
+    el.innerHTML = '<div class="empty">No products match your search.</div>';
+    return;
+  }
+
+  if (currentView === 'all') { el.innerHTML = products.map(cardHTML).join(''); return; }
+
+  const key = currentView === 'brand' ? 'vendor' : 'category';
+  const groups = {};
+  products.forEach(p => { if (!groups[p[key]]) groups[p[key]] = []; groups[p[key]].push(p); });
+  const sorted = Object.entries(groups).sort((a, b) =>
+    Math.min(...a[1].map(p => p.stock)) - Math.min(...b[1].map(p => p.stock))
+  );
+
+  let html = '';
+  if (currentView === 'brand') {
+    const byCat = {};
+    sorted.forEach(([k, ps]) => {
+      const c = ps[0].category;
+      if (!byCat[c]) byCat[c] = [];
+      byCat[c].push([k, ps]);
+    });
+    Object.entries(byCat).sort().forEach(([cat, brands]) => {
+      const total = brands.reduce((s, [, ps]) => s + ps.length, 0);
+      html += `<div class="sec-head">${cat}<span style="font-weight:400">${total} items</span></div>`;
+      brands.forEach(([brand, ps]) => html += groupHTML(brand, ps, false));
+    });
+  } else {
+    sorted.forEach(([cat, ps]) => html += groupHTML(cat, ps, true));
+  }
+  el.innerHTML = html;
+}
+
+function groupHTML(name, ps, isCat) {
+  const min   = Math.min(...ps.map(p => p.stock));
+  const total = ps.reduce((s, p) => s + p.stock, 0);
+  const done  = ps.filter(p => p.ticked).length;
+  const dot   = min <= -5 ? '#c0392b' : min <= -2 ? '#d97706' : '#9ca3af';
+  const bc    = min <= -4 ? 'b-red' : 'b-amber';
+  const sub   = done > 0
+    ? `${done}/${ps.length} <span style="color:var(--green);font-weight:600">done ✓</span>`
+    : `${ps.length} item${ps.length > 1 ? 's' : ''}`;
+  const esc = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return `<div class="group-row" onclick="showGroup('${esc}',${isCat})">
+    <div class="g-dot" style="background:${dot}"></div>
+    <div class="g-info"><div class="g-name">${name}</div><div class="g-sub">${sub}</div></div>
+    <div class="g-right"><span class="g-badge ${bc}">${total}</span><span class="g-arrow">›</span></div>
+  </div>`;
+}
+
+function showGroup(name, isCat) {
+  const key   = isCat ? 'category' : 'vendor';
+  const items = (branchData[currentBranch] || []).filter(p => p[key] === name);
+  document.getElementById('content').innerHTML =
+    `<div class="back-bar" onclick="renderList()">
+      <span style="font-size:20px;color:var(--ink3)">‹</span>
+      <span>${name}</span>
+    </div>` + items.map(cardHTML).join('');
+}
+
+function cardHTML(p) {
+  const qty = p.restock != null
+    ? `<span class="p-qty qty-pos">+${p.restock}</span>`
+    : `<span class="p-qty qty-neg">${p.stock}</span>`;
+  const img = p.img
+    ? `<img src="${p.img}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`;
+  const eid = p.id.replace(/[^a-zA-Z0-9]/g, '_');
+  return `<div class="product-card ${p.ticked?'ticked':''}" id="c_${eid}" onclick="openPanel('${p.id.replace(/'/g,"\\'")}')">
+    <div class="done-bar"></div>
+    <div class="p-img">${img}</div>
+    <div class="p-body">
+      <div class="p-brand">${p.vendor}</div>
+      <div class="p-name">${p.title}</div>
+      ${p.variant ? `<div class="p-variant">${p.variant}</div>` : ''}
+    </div>
+    <div class="p-right">
+      ${qty}
+      <div class="tick ${p.ticked?'done':''}" onclick="quickTick(event,'${p.id.replace(/'/g,"\\'")}')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// TICK
+// ═══════════════════════════════════════════════════════════
+function quickTick(e, id) {
+  e.stopPropagation();
+  const data = branchData[currentBranch];
+  if (!Array.isArray(data)) return;
+  const p = data.find(x => x.id === id);
+  if (!p) return;
+  p.ticked = !p.ticked;
+  ticks[id] = p.ticked;
+  localStorage.setItem('cc_ticks', JSON.stringify(ticks));
+  updateSummary();
+  // Update card in place
+  const eid = id.replace(/[^a-zA-Z0-9]/g, '_');
+  const card = document.getElementById('c_' + eid);
+  if (card) {
+    card.className = `product-card ${p.ticked ? 'ticked' : ''}`;
+    const tc = card.querySelector('.tick');
+    if (tc) tc.className = `tick ${p.ticked ? 'done' : ''}`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PANEL
+// ═══════════════════════════════════════════════════════════
+function openPanel(id) {
+  const data = branchData[currentBranch];
+  if (!Array.isArray(data)) return;
+  const p = data.find(x => x.id === id);
+  if (!p) return;
+  currentProduct = p;
+
+  // Fill fields
+  document.getElementById('pd-brand').textContent   = p.vendor;
+  document.getElementById('pd-title').textContent   = p.title;
+  document.getElementById('pd-variant').textContent = p.variant || '';
+  document.getElementById('pd-cat').textContent     = p.category;
+  document.getElementById('pd-stock').textContent   = 'Stock: ' + p.stock;
+  document.getElementById('pd-sku').textContent     = p.sku ? 'SKU: ' + p.sku : 'No barcode on file';
+
+  // Image
+  const hero = document.getElementById('pd-hero');
+  hero.innerHTML = p.img
+    ? `<img src="${p.img}" alt="" style="max-height:192px;max-width:100%;object-fit:contain" onerror="this.parentElement.innerHTML='<div class=p-hero-ph><svg width=48 height=48 viewBox=\\'0 0 24 24\\' fill=none stroke=\\'#ccc\\' stroke-width=1.5><rect x=3 y=3 width=18 height=18 rx=2/></svg></div>'">`
+    : `<div class="p-hero-ph"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
+
+  // Barcode
+  const bcBox = document.getElementById('bc-box');
+  const sk = p.sku.replace(/\D/g, '');
+  if (sk.length >= 8) {
+    bcBox.style.display = 'block';
+    try { JsBarcode('#bc-svg', sk, {format:'EAN13',width:2,height:56,displayValue:true,fontSize:11,margin:8,lineColor:'#17150e',background:'#ffffff'}); }
+    catch(e) { try { JsBarcode('#bc-svg', p.sku, {format:'CODE128',width:2,height:50,displayValue:true,fontSize:11,margin:6}); } catch(e2) { bcBox.style.display = 'none'; } }
+  } else { bcBox.style.display = 'none'; }
+
+  // Stepper + done state
+  document.getElementById('s-val').textContent = p.restock ?? 0;
+  const db = document.getElementById('pd-done-btn');
+  db.className = `pd-done ${p.ticked ? 'active' : ''}`;
+  db.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ${p.ticked ? 'Marked done' : 'Mark done'}`;
+  document.getElementById('pd-saved').style.display = 'none';
+  document.getElementById('panel-ov').classList.add('open');
+}
+
+function handlePanelBg(e) { if (e.target === document.getElementById('panel-ov')) closePanel(); }
+function closePanel() { document.getElementById('panel-ov').classList.remove('open'); currentProduct = null; }
+function step(d) {
+  const el = document.getElementById('s-val');
+  el.textContent = Math.max(0, (parseInt(el.textContent) || 0) + d);
+}
+function saveCount() {
+  if (!currentProduct) return;
+  const val = parseInt(document.getElementById('s-val').textContent) || 0;
+  currentProduct.restock = val;
+  currentProduct.ticked  = true;
+  ticks[currentProduct.id]    = true;
+  restocks[currentProduct.id] = val;
+  localStorage.setItem('cc_ticks',   JSON.stringify(ticks));
+  localStorage.setItem('cc_restock', JSON.stringify(restocks));
+  const db = document.getElementById('pd-done-btn');
+  db.className = 'pd-done active';
+  db.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Marked done`;
+  document.getElementById('pd-saved').style.display = 'block';
+  updateSummary();
+  setTimeout(() => { closePanel(); renderList(); }, 900);
+}
+function toggleTick() {
+  if (!currentProduct) return;
+  currentProduct.ticked = !currentProduct.ticked;
+  ticks[currentProduct.id] = currentProduct.ticked;
+  localStorage.setItem('cc_ticks', JSON.stringify(ticks));
+  const db = document.getElementById('pd-done-btn');
+  db.className = `pd-done ${currentProduct.ticked ? 'active' : ''}`;
+  db.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ${currentProduct.ticked ? 'Marked done' : 'Mark done'}`;
+  updateSummary();
+}
+
+// ═══════════════════════════════════════════════════════════
+// WHATSAPP
+// ═══════════════════════════════════════════════════════════
+function sendWA() {
+  const num = waNumber || document.getElementById('wa-num').value.trim().replace(/\D/g,'');
+  if (!num) { alert('Please save the manager WhatsApp number first'); return; }
+  const date = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'short', year:'numeric'});
+  let msg = `*CC Hair & Beauty — Low Stock Update*\n${date}\n\n`;
+  let anyDone = false;
+  BRANCHES.forEach(branch => {
+    const data = branchData[branch.id];
+    if (!Array.isArray(data)) return;
+    const done    = data.filter(p => p.ticked);
+    const pending = data.filter(p => !p.ticked);
+    if (!done.length && !pending.length) return;
+    msg += `*${branch.name}*\n`;
+    if (done.length) {
+      anyDone = true;
+      msg += `✅ ${done.length} item${done.length > 1 ? 's' : ''} checked:\n`;
+      done.forEach(p => {
+        const r = p.restock != null ? ` (+${p.restock} restocked)` : '';
+        msg += `  • ${p.vendor} — ${p.title}${p.variant ? ' (' + p.variant + ')' : ''}${r}\n`;
+      });
+    }
+    if (pending.length) msg += `⏳ ${pending.length} still to check\n`;
+    msg += '\n';
+  });
+  if (!anyDone) msg += 'No items checked yet today.\n';
+  msg += `_Sent from CC Low Stock App_`;
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCANNER
+// ═══════════════════════════════════════════════════════════
+function openScanner() {
+  document.getElementById('scan-ov').classList.add('open');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      scanStream = stream;
+      document.getElementById('scan-vid').srcObject = stream;
+      if ('BarcodeDetector' in window) {
+        const det = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','upc_a'] });
+        scanInterval = setInterval(async () => {
+          try {
+            const codes = await det.detect(document.getElementById('scan-vid'));
+            if (codes.length) { closeScanner(); lookupBarcode(codes[0].rawValue); }
+          } catch(e) {}
+        }, 400);
+      }
+    })
+    .catch(() => alert('Camera access denied. Use the manual entry below.'));
+}
+function closeScanner() {
+  document.getElementById('scan-ov').classList.remove('open');
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (scanStream)   { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+}
+function lookupManual() { lookupBarcode(document.getElementById('manual-bc').value.trim()); closeScanner(); }
+function lookupBarcode(code) {
+  const data  = branchData[currentBranch];
+  if (!Array.isArray(data)) return;
+  const clean = code.replace(/\D/g, '');
+  const p     = data.find(x => x.sku && x.sku.replace(/\D/g,'') === clean);
+  if (p) openPanel(p.id);
+  else alert('Product not found: ' + code);
+}
+</script>
+</body>
+</html>
