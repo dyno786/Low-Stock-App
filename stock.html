@@ -336,6 +336,8 @@ async function loadData(){
     if(!res.ok) throw new Error('HTTP '+res.status);
     var text=await res.text();
     allProducts=Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(function(r){
+      var ls = clean(r.LastSold);
+      var dc = clean(r.DateCreated);
       return{
         barcode:     clean(r.Barcode),
         name:        clean(r.ProductName),
@@ -343,10 +345,10 @@ async function loadData(){
         qty:         parseInt(r.StockQty)||0,
         price:       parseFloat(r.Price)||0,
         cost:        parseFloat(r.AvgCost)||0,
-        minStk:      parseInt(r.MinStock)||0,
-        maxStk:      parseInt(r.MaxStock)||0,
-        lastSold:    clean(r.LastSold)||'Never',
-        dateCreated: clean(r.DateCreated)||'Unknown',
+        minStk:      (r.MinStock&&r.MinStock!=='NULL')?parseInt(r.MinStock)||0:0,
+        maxStk:      (r.MaxStock&&r.MaxStock!=='NULL')?parseInt(r.MaxStock)||0:0,
+        lastSold:    (ls&&ls!=='NULL'&&ls!=='')?ls:'Never',
+        dateCreated: (dc&&dc!=='NULL'&&dc!=='')?dc:'Unknown',
         dept:        clean(r.Department),
         branch:      clean(r.Branch),
       };
