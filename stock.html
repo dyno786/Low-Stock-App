@@ -177,9 +177,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
         <div class="tb-sub" id="branch-label">Roundhay Road</div>
       </div>
     </div>
-    <div class="tb-sync">
-      <div class="sync-dot" id="sync-dot"></div>
-      <span id="sync-time">loading</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="tb-sync">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-time">loading</span>
+      </div>
+      <div onclick="showLog()" style="background:rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;font-size:10px;font-family:var(--mono);cursor:pointer;color:#fff">LOG</div>
     </div>
   </div>
 </div>
@@ -328,14 +331,29 @@ async function loadImages(){
   }catch(e){}
 }
 
+var debugLog=[];
+function log(msg){ debugLog.push(new Date().toLocaleTimeString('en-GB')+' '+msg); console.log(msg); }
+function showLog(){
+  document.getElementById('log-entries').textContent=debugLog.join('\n')||'No log entries yet';
+  document.getElementById('log-ov').style.display='block';
+}
+
 async function loadData(){
   try{
+    log('Fetching sheet: '+SHEET_URL.substring(0,60)+'...');
     document.getElementById('sync-dot').className='sync-dot loading';
     document.getElementById('sync-time').textContent='syncing…';
     var res=await fetch(SHEET_URL);
+    log('Response status: '+res.status+' '+res.statusText);
     if(!res.ok) throw new Error('HTTP '+res.status);
     var text=await res.text();
-    allProducts=Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(function(r){
+    log('Data received: '+text.length+' chars');
+    log('First 200 chars: '+text.substring(0,200));
+    var parsed=Papa.parse(text,{header:true,skipEmptyLines:true});
+    log('Parsed rows: '+parsed.data.length);
+    log('Headers: '+JSON.stringify(Object.keys(parsed.data[0]||{})));
+    if(parsed.errors&&parsed.errors.length) log('Parse errors: '+JSON.stringify(parsed.errors.slice(0,3)));
+    allProducts=parsed.data.map(function(r){
       var ls = clean(r.LastSold);
       var dc = clean(r.DateCreated);
       return{
@@ -353,14 +371,17 @@ async function loadData(){
         branch:      clean(r.Branch),
       };
     });
+    log('Products parsed: '+allProducts.length);
     var dmap={};
     allProducts.forEach(function(p){ dmap[p.dept]=true; });
     depts=['All'].concat(Object.keys(dmap).sort());
     updateMetrics();
     document.getElementById('sync-dot').className='sync-dot';
     document.getElementById('sync-time').textContent='live · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    log('Load complete ✓');
   }catch(e){
-    document.getElementById('content').innerHTML='<div class="empty">Could not load data.<br><small>'+e.message+'</small></div>';
+    log('ERROR: '+e.message);
+    document.getElementById('content').innerHTML='<div class="empty">Could not load data.<br><small style="font-family:monospace;font-size:11px">'+e.message+'</small><br><br><button onclick="showLog()" style="padding:8px 16px;background:#cc0000;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">View log</button></div>';
     document.getElementById('sync-dot').className='sync-dot';
     document.getElementById('sync-time').textContent='error';
   }
@@ -661,5 +682,13 @@ async function init(){
 
 init();
 </script>
+<div id="log-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;max-width:480px;margin:0 auto" onclick="if(event.target===this)this.style.display='none'">
+  <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;max-height:80vh;overflow-y:auto;padding:16px;padding-bottom:40px">
+    <div style="width:36px;height:3px;background:#e0e0e0;border-radius:2px;margin:0 auto 14px"></div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:12px">Debug Log</div>
+    <div id="log-entries" style="font-family:monospace;font-size:11px;line-height:1.8;color:#333;white-space:pre-wrap;word-break:break-all"></div>
+    <button onclick="document.getElementById('log-ov').style.display='none'" style="margin-top:16px;width:100%;padding:10px;background:#cc0000;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
+  </div>
+</div>
 </body>
 </html>
