@@ -307,9 +307,8 @@ async function fetchBranch(id) {
   branchData[id] = 'loading';
   if (id === currentBranch) showLoading();
   try {
-    // Use a CORS proxy to fetch the Google Drive file
-    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(branch.url);
-    const res = await fetch(proxyUrl);
+    // Fetch directly from Google Sheets published CSV
+    const res = await fetch(branch.url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     if (!text.trim()) throw new Error('File is empty');
