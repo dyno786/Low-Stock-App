@@ -445,7 +445,7 @@ function showGroup(name) {
 
 function cardHTML(p) {
   var qty = p.restock!=null ? '<span class="p-qty qty-pos">+'+p.restock+'</span>' : '<span class="p-qty qty-neg">'+p.stock+'</span>';
-  var img = p.img ? '<img src="' + p.img + '" alt="" loading="lazy" onerror="this.style.display='none'">' : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  var img = p.img ? '<img src="' + p.img + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
   var eid = p.id.replace(/[^a-zA-Z0-9]/g,'_');
   return '<div class="product-card '+(p.ticked?'ticked':'')+'" id="c_'+eid+'" onclick="openPanel(\''+p.id.replace(/'/g,"\\'")+'\')">'+
     '<div class="done-bar"></div>'+
@@ -494,7 +494,7 @@ function openPanel(id) {
   document.getElementById('pd-stock').textContent   = 'Stock: '+p.stock;
   document.getElementById('pd-sku').textContent     = p.sku ? 'Barcode: '+p.sku : 'No barcode';
   document.getElementById('pd-hero').innerHTML = p.img
-    ? '<img src="' + p.img + '" alt="" style="max-height:182px;max-width:100%;object-fit:contain" onerror="this.style.display='none'">'
+    ? '<img src="' + p.img + '" alt="" style="max-height:182px;max-width:100%;object-fit:contain" onerror="this.style.display=\'none\'">'
     : '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
   var bcBox = document.getElementById('bc-box');
   var sk = p.sku.replace(/\D/g,'');
