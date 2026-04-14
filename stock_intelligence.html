@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CC Stock Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --bg:#0a0000;
+  --surface:#120000;
+  --s2:#1a0000;
+  --s3:#220000;
+  --border:#3a0000;
+  --ink:#f5f0f0;
+  --ink2:#b09090;
+  --ink3:#6a4444;
+  --accent:#cc0000;
+  --accent2:#ff3333;
+  --red:#e84747;
+  --red-bg:rgba(232,71,71,.12);
+  --green:#47c97a;
+  --green-bg:rgba(71,201,122,.1);
+  --amber:#e8a847;
+  --amber-bg:rgba(232,168,71,.1);
+  --blue:#47a5e8;
+  --blue-bg:rgba(71,165,232,.1);
+  --font:'Syne',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:100px}
+
+/* TOPBAR */
+.topbar{padding:16px 16px 12px;background:var(--bg);position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border)}
+.tb-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tb-brand{display:flex;align-items:center;gap:10px}
+.tb-logo{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.tb-logo svg{width:16px;height:16px}
+.tb-title{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--ink)}
+.tb-sub{font-size:10px;color:var(--ink3);font-family:var(--mono);margin-top:1px}
+.tb-sync{font-size:10px;color:var(--ink3);font-family:var(--mono);display:flex;align-items:center;gap:5px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+.sync-dot.loading{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 16px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.metric-label{font-size:10px;color:var(--ink3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.metric-value{font-size:26px;font-weight:800;line-height:1;font-family:var(--mono)}
+.metric-sub{font-size:11px;color:var(--ink3);margin-top:4px}
+.mv-red{color:var(--red)}
+.mv-green{color:var(--green)}
+.mv-amber{color:var(--amber)}
+.mv-accent{color:var(--accent)}
+
+/* TABS */
+.tabs{display:flex;gap:6px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;color:var(--ink3);border:1px solid var(--border);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:var(--font)}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* SEARCH */
+.search-wrap{padding:0 16px 12px}
+.search{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px 10px 36px;font-size:13px;color:var(--ink);font-family:var(--font);outline:none;position:relative}
+.search-icon{position:absolute;left:28px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none}
+.search-wrap{position:relative}
+
+/* SECTION */
+.section-label{padding:0 16px 8px;font-size:10px;font-weight:600;color:var(--ink3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.8px;display:flex;justify-content:space-between;align-items:center}
+.count-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--s2);color:var(--ink2)}
+
+/* PRODUCT CARD */
+.product-card{display:flex;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;gap:12px;cursor:pointer;transition:background .1s}
+.product-card:active{background:var(--s2)}
+.p-rank{font-size:11px;color:var(--ink3);font-family:var(--mono);min-width:24px;text-align:right}
+.p-info{flex:1;min-width:0}
+.p-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-dept{font-size:11px;color:var(--ink3);margin-top:2px;font-family:var(--mono)}
+.p-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.p-qty{font-size:18px;font-weight:800;font-family:var(--mono)}
+.qty-neg{color:var(--red)}
+.qty-pos{color:var(--green)}
+.qty-zero{color:var(--ink3)}
+.p-price{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+
+/* TRANSFER CARD */
+.transfer-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin:0 16px 10px;overflow:hidden}
+.tc-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.tc-name{font-size:13px;font-weight:600;flex:1;min-width:0}
+.tc-dept{font-size:10px;color:var(--ink3);font-family:var(--mono);margin-top:2px}
+.priority{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;font-family:var(--mono);flex-shrink:0}
+.p-critical{background:var(--red-bg);color:var(--red)}
+.p-medium{background:var(--amber-bg);color:var(--amber)}
+.tc-body{padding:12px 14px;display:flex;align-items:center;gap:8px}
+.branch-col{flex:1;text-align:center}
+.bc-name{font-size:9px;color:var(--ink3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.bc-qty{font-size:22px;font-weight:800;font-family:var(--mono)}
+.arrow-col{color:var(--accent);font-size:18px;flex-shrink:0}
+.suggest-box{background:var(--blue-bg);border:1px solid var(--blue);border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0}
+.sb-qty{font-size:18px;font-weight:800;color:var(--blue);font-family:var(--mono);display:block}
+.sb-label{font-size:9px;color:var(--blue);font-family:var(--mono)}
+
+/* DEAD STOCK */
+.dead-card{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
+.dead-info{flex:1;min-width:0}
+.dead-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dead-sub{font-size:11px;color:var(--ink3);margin-top:2px;font-family:var(--mono)}
+.dead-right{text-align:right;flex-shrink:0}
+.dead-val{font-size:15px;font-weight:800;font-family:var(--mono);color:var(--amber)}
+.dead-est{font-size:10px;color:var(--ink3);font-family:var(--mono);margin-top:2px}
+
+/* LOADING */
+.loading{padding:60px 20px;text-align:center;color:var(--ink3)}
+.spin{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-text{font-size:13px;font-family:var(--mono)}
+
+/* EMPTY */
+.empty{padding:50px 20px;text-align:center;color:var(--ink3);font-size:13px}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:200;padding:8px 0 20px}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 0}
+.bn-icon{width:22px;height:22px;color:var(--ink3)}
+.bn-label{font-size:9px;font-family:var(--mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.5px}
+.bn-item.active .bn-icon{color:var(--accent)}
+.bn-item.active .bn-label{color:var(--accent)}
+
+/* PANEL */
+.panel-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:none;max-width:480px;margin:0 auto}
+.panel-ov.open{display:block}
+.panel{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;max-height:85vh;overflow-y:auto;padding-bottom:40px}
+.p-handle{width:36px;height:3px;background:var(--border);border-radius:2px;margin:12px auto 0}
+.pd{padding:16px}
+.pd-name{font-size:18px;font-weight:800;margin-bottom:4px}
+.pd-dept{font-size:12px;color:var(--ink3);font-family:var(--mono);margin-bottom:16px}
+.stat-row{display:flex;gap:8px;margin-bottom:16px}
+.stat-box{flex:1;background:var(--s2);border-radius:8px;padding:10px;text-align:center}
+.sb-val{font-size:20px;font-weight:800;font-family:var(--mono)}
+.sb-lbl{font-size:9px;color:var(--ink3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.ir-label{color:var(--ink3)}
+.ir-val{font-family:var(--mono);font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-row1">
+    <div class="tb-brand">
+      <div class="tb-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </div>
+      <div>
+        <div class="tb-title">Stock Intelligence</div>
+        <div class="tb-sub">CC Hair & Beauty</div>
+      </div>
+    </div>
+    <div class="tb-sync">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-time">loading</span>
+    </div>
+  </div>
+</div>
+
+<div class="metrics" id="metrics">
+  <div class="metric"><div class="metric-label">Total products</div><div class="metric-value mv-accent" id="m-total">—</div><div class="metric-sub">Roundhay Road</div></div>
+  <div class="metric"><div class="metric-label">Negative stock</div><div class="metric-value mv-red" id="m-neg">—</div><div class="metric-sub">need restocking</div></div>
+  <div class="metric"><div class="metric-label">Zero stock</div><div class="metric-value mv-amber" id="m-zero">—</div><div class="metric-sub">out of stock</div></div>
+  <div class="metric"><div class="metric-label">Dead stock</div><div class="metric-value mv-amber" id="m-dead">—</div><div class="metric-sub">90+ days no sale</div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('all')">All stock</div>
+  <div class="tab" onclick="switchTab('negative')">Negative</div>
+  <div class="tab" onclick="switchTab('zero')">Zero stock</div>
+  <div class="tab" onclick="switchTab('dead')">Dead stock</div>
+  <div class="tab" onclick="switchTab('transfers')">Transfers</div>
+</div>
+
+<div class="search-wrap">
+  <svg class="search-icon" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
+  <input class="search" type="search" id="search" placeholder="Search product or barcode…" oninput="renderContent()">
+</div>
+
+<div id="content"><div class="loading"><div class="spin"></div><div class="load-text">Loading stock data…</div></div></div>
+
+<nav class="bottom-nav">
+  <div class="bn-item active" onclick="switchTab('all')">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span class="bn-label">All</span>
+  </div>
+  <div class="bn-item" onclick="switchTab('negative')">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span class="bn-label">Alerts</span>
+  </div>
+  <div class="bn-item" onclick="switchTab('dead')">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span class="bn-label">Dead</span>
+  </div>
+  <div class="bn-item" onclick="switchTab('transfers')">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="1" x2="17" y2="11"/><polyline points="11 7 17 1 23 7"/><line x1="7" y1="23" x2="7" y2="13"/><polyline points="1 17 7 23 13 17"/></svg>
+    <span class="bn-label">Transfers</span>
+  </div>
+</nav>
+
+<div class="panel-ov" id="panel-ov" onclick="if(event.target===this)closePanel()">
+  <div class="panel">
+    <div class="p-handle"></div>
+    <div class="pd">
+      <div class="pd-name" id="pd-name"></div>
+      <div class="pd-dept" id="pd-dept"></div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="sb-val" id="pd-qty"></div><div class="sb-lbl">Stock</div></div>
+        <div class="stat-box"><div class="sb-val" id="pd-price"></div><div class="sb-lbl">Price</div></div>
+        <div class="stat-box"><div class="sb-val" id="pd-cost"></div><div class="sb-lbl">Cost</div></div>
+      </div>
+      <div class="info-row"><span class="ir-label">Barcode</span><span class="ir-val" id="pd-barcode"></span></div>
+      <div class="info-row"><span class="ir-label">Size</span><span class="ir-val" id="pd-size"></span></div>
+      <div class="info-row"><span class="ir-label">Last sold</span><span class="ir-val" id="pd-last"></span></div>
+      <div class="info-row"><span class="ir-label">Min stock</span><span class="ir-val" id="pd-min"></span></div>
+      <div class="info-row"><span class="ir-label">Max stock</span><span class="ir-val" id="pd-max"></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTC9vR-U0BdG0v-bZVgQL8BNwGwkn6tzb0VqlyccGlyuow74GwG5PTOPRrW8a2tbBgIwaMT6LVTRWQA/pub?gid=774857271&single=true&output=csv';
+
+let allProducts = [];
+let currentTab = 'all';
+
+async function loadData() {
+  try {
+    document.getElementById('sync-dot').className = 'sync-dot loading';
+    document.getElementById('sync-time').textContent = 'syncing…';
+    const res = await fetch(SHEET_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+    allProducts = parsed.data.map(function(r) {
+      return {
+        barcode:  clean(r.Barcode),
+        name:     clean(r.ProductName),
+        size:     clean(r.Size),
+        qty:      parseInt(r.StockQty) || 0,
+        price:    parseFloat(r.Price) || 0,
+        cost:     parseFloat(r.AvgCost) || 0,
+        minStk:   parseInt(r.MinStock) || 0,
+        maxStk:   parseInt(r.MaxStock) || 0,
+        lastSold: clean(r.LastSold),
+        dept:     clean(r.Department),
+        branch:   clean(r.Branch),
+      };
+    });
+    updateMetrics();
+    document.getElementById('sync-dot').className = 'sync-dot';
+    document.getElementById('sync-time').textContent = 'live · ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<div class="empty">Could not load data.<br><small style="font-family:var(--mono);font-size:11px;color:var(--ink3)">'+e.message+'</small></div>';
+    document.getElementById('sync-dot').className = 'sync-dot';
+    document.getElementById('sync-time').textContent = 'error';
+  }
+  renderContent();
+}
+
+function clean(v) { return String(v || '').trim(); }
+
+function updateMetrics() {
+  var neg  = allProducts.filter(function(p){return p.qty < 0;}).length;
+  var zero = allProducts.filter(function(p){return p.qty === 0;}).length;
+  var dead = allProducts.filter(function(p){return isDeadStock(p);}).length;
+  document.getElementById('m-total').textContent = allProducts.length.toLocaleString();
+  document.getElementById('m-neg').textContent   = neg;
+  document.getElementById('m-zero').textContent  = zero;
+  document.getElementById('m-dead').textContent  = dead;
+}
+
+function isDeadStock(p) {
+  if (p.qty <= 0) return false;
+  if (p.lastSold === 'Never' || !p.lastSold) return p.qty > 5;
+  var d = parseDate(p.lastSold);
+  if (!d) return false;
+  var days = (Date.now() - d.getTime()) / 86400000;
+  return days > 90 && p.qty > 5;
+}
+
+function parseDate(str) {
+  if (!str || str === 'Never') return null;
+  var parts = str.split('/');
+  if (parts.length === 3) return new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+  return new Date(str);
+}
+
+function daysSinceLastSold(p) {
+  if (!p.lastSold || p.lastSold === 'Never') return 9999;
+  var d = parseDate(p.lastSold);
+  if (!d) return 9999;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(function(t,i) {
+    t.classList.toggle('active', ['all','negative','zero','dead','transfers'][i] === tab);
+  });
+  document.querySelectorAll('.bn-item').forEach(function(t,i) {
+    t.classList.toggle('active', ['all','negative','dead','transfers'][i] === tab);
+  });
+  document.getElementById('search').value = '';
+  renderContent();
+}
+
+function renderContent() {
+  var el = document.getElementById('content');
+  if (!allProducts.length) return;
+  var q = document.getElementById('search').value.toLowerCase();
+
+  if (currentTab === 'transfers') { renderTransfers(el, q); return; }
+  if (currentTab === 'dead')      { renderDead(el, q); return; }
+
+  var products = allProducts.filter(function(p) {
+    if (currentTab === 'negative' && p.qty >= 0) return false;
+    if (currentTab === 'zero'     && p.qty !== 0) return false;
+    if (!q) return true;
+    return p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.dept.toLowerCase().includes(q);
+  });
+
+  if (currentTab === 'negative') products.sort(function(a,b){return a.qty - b.qty;});
+  if (currentTab === 'all')      products.sort(function(a,b){return a.qty - b.qty;});
+
+  if (!products.length) { el.innerHTML = '<div class="empty">No products found</div>'; return; }
+
+  var label = currentTab === 'negative' ? 'Most negative first' : currentTab === 'zero' ? 'Out of stock' : 'All products';
+  var html = '<div class="section-label"><span>'+label+'</span><span class="count-badge">'+products.length+'</span></div>';
+  products.slice(0, 200).forEach(function(p, i) {
+    var qClass = p.qty < 0 ? 'qty-neg' : p.qty === 0 ? 'qty-zero' : 'qty-pos';
+    html += '<div class="product-card" onclick="openPanel(\''+p.barcode.replace(/'/g,"\\'")+'\')">';
+    html += '<span class="p-rank">'+(i+1)+'</span>';
+    html += '<div class="p-info"><div class="p-name">'+p.name+(p.size?' <span style="color:var(--ink3);font-weight:400">'+p.size+'</span>':'')+'</div>';
+    html += '<div class="p-dept">'+p.dept+'</div></div>';
+    html += '<div class="p-right"><span class="p-qty '+qClass+'">'+p.qty+'</span>';
+    if (p.price > 0) html += '<span class="p-price">£'+p.price.toFixed(2)+'</span>';
+    html += '</div></div>';
+  });
+  if (products.length > 200) html += '<div class="empty" style="padding:20px">Showing 200 of '+products.length+' — use search to filter</div>';
+  el.innerHTML = html;
+}
+
+function renderDead(el, q) {
+  var dead = allProducts.filter(function(p) {
+    if (!isDeadStock(p)) return false;
+    if (!q) return true;
+    return p.name.toLowerCase().includes(q) || p.barcode.includes(q);
+  });
+  dead.sort(function(a,b){ return daysSinceLastSold(b) - daysSinceLastSold(a); });
+
+  if (!dead.length) { el.innerHTML = '<div class="empty">No dead stock found</div>'; return; }
+
+  var html = '<div class="section-label"><span>90+ days no sale, qty > 5</span><span class="count-badge">'+dead.length+'</span></div>';
+  dead.forEach(function(p) {
+    var days = daysSinceLastSold(p);
+    var estVal = (p.qty * p.price).toFixed(2);
+    var daysStr = days === 9999 ? 'Never sold' : days + ' days ago';
+    html += '<div class="dead-card" onclick="openPanel(\''+p.barcode.replace(/'/g,"\\'")+'\')">';
+    html += '<div class="dead-info"><div class="dead-name">'+p.name+'</div><div class="dead-sub">'+p.dept+' · Last sold: '+daysStr+'</div></div>';
+    html += '<div class="dead-right"><div class="dead-val">'+p.qty+' units</div><div class="dead-est">£'+estVal+'</div></div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderTransfers(el, q) {
+  // Find products with excess stock (> maxStk) suggesting transfer opportunities
+  var transfers = allProducts.filter(function(p) {
+    if (p.maxStk <= 0) return false;
+    if (p.qty <= p.maxStk) return false;
+    var excess = p.qty - p.maxStk;
+    return excess >= 5;
+  });
+
+  if (!transfers.length) {
+    // Show negative stock as reorder suggestions instead
+    var neg = allProducts.filter(function(p){ return p.qty < -5; });
+    if (!neg.length) { el.innerHTML = '<div class="empty">No transfer suggestions yet<br><small style="font-family:var(--mono);font-size:11px">Upload stock from all 3 branches to see cross-branch transfers</small></div>'; return; }
+    var html = '<div class="section-label"><span>Reorder needed (stock &lt; -5)</span><span class="count-badge">'+neg.length+'</span></div>';
+    neg.sort(function(a,b){return a.qty-b.qty;});
+    neg.forEach(function(p) {
+      var suggest = Math.abs(p.qty) + (p.minStk || 0);
+      html += '<div class="transfer-card">';
+      html += '<div class="tc-header"><div><div class="tc-name">'+p.name+'</div><div class="tc-dept">'+p.dept+(p.size?' · '+p.size:'')+'</div></div>';
+      html += '<span class="priority '+(p.qty < -20 ? 'p-critical':'p-medium')+'">'+(p.qty < -20 ? 'CRITICAL':'MEDIUM')+'</span></div>';
+      html += '<div class="tc-body">';
+      html += '<div class="branch-col"><div class="bc-name">Current</div><div class="bc-qty" style="color:var(--red)">'+p.qty+'</div></div>';
+      html += '<div class="arrow-col">→</div>';
+      html += '<div class="suggest-box"><span class="sb-qty">+'+suggest+'</span><span class="sb-label">order qty</span></div>';
+      html += '</div></div>';
+    });
+    el.innerHTML = html;
+    return;
+  }
+
+  var html = '<div class="section-label"><span>Over max stock — can transfer</span><span class="count-badge">'+transfers.length+'</span></div>';
+  transfers.forEach(function(p) {
+    var excess = p.qty - p.maxStk;
+    html += '<div class="transfer-card">';
+    html += '<div class="tc-header"><div><div class="tc-name">'+p.name+'</div><div class="tc-dept">'+p.dept+(p.size?' · '+p.size:'')+'</div></div>';
+    html += '<span class="priority p-medium">EXCESS</span></div>';
+    html += '<div class="tc-body">';
+    html += '<div class="branch-col"><div class="bc-name">Stock</div><div class="bc-qty" style="color:var(--green)">'+p.qty+'</div></div>';
+    html += '<div class="arrow-col">→</div>';
+    html += '<div class="suggest-box"><span class="sb-qty">'+excess+'</span><span class="sb-label">transfer</span></div>';
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function openPanel(barcode) {
+  var p = allProducts.find(function(x){ return x.barcode === barcode; });
+  if (!p) return;
+  document.getElementById('pd-name').textContent    = p.name;
+  document.getElementById('pd-dept').textContent    = p.dept + (p.size ? ' · ' + p.size : '');
+  var qEl = document.getElementById('pd-qty');
+  qEl.textContent = p.qty;
+  qEl.style.color = p.qty < 0 ? 'var(--red)' : p.qty === 0 ? 'var(--ink3)' : 'var(--green)';
+  document.getElementById('pd-price').textContent   = p.price > 0 ? '£'+p.price.toFixed(2) : '—';
+  document.getElementById('pd-cost').textContent    = p.cost > 0 ? '£'+p.cost.toFixed(2) : '—';
+  document.getElementById('pd-barcode').textContent = p.barcode || '—';
+  document.getElementById('pd-size').textContent    = p.size || '—';
+  document.getElementById('pd-last').textContent    = p.lastSold || '—';
+  document.getElementById('pd-min').textContent     = p.minStk;
+  document.getElementById('pd-max').textContent     = p.maxStk;
+  document.getElementById('panel-ov').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('panel-ov').classList.remove('open');
+}
+
+loadData();
+setInterval(function(){ loadData(); }, 10 * 60 * 1000);
+</script>
+</body>
+</html>
