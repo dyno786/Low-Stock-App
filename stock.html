@@ -408,7 +408,7 @@ function buildFilters(){
   df.style.display=deptTabs?'flex':'none';
   if(deptTabs){
     df.innerHTML=depts.map(function(d){
-      return '<div class="filter-pill'+(d===currentDept?' active':'')+'" onclick="setDept(''+d.replace(/'/g,"\'")+'')">' + d + '</div>';
+      return '<div class="filter-pill'+(d===currentDept?' active':'')+'" onclick="setDept(this.dataset.d)" data-d="'+d.replace(/"/g,'&quot;')+'">'+d+'</div>';
     }).join('');
   }
 
@@ -416,14 +416,14 @@ function buildFilters(){
   tf.style.display=timeTabs?'flex':'none';
   if(timeTabs){
     var allLabel = currentTab==='dead'?'All time':'Any time';
-    tf.innerHTML='<div class="tf'+(currentTime==='all'?' active':'')+'" onclick="setTime('all')">'+allLabel+'</div>'+
+    tf.innerHTML='<div class="tf'+(currentTime==='all'?' active':'')+'" onclick="setTime(\'all\')">'+allLabel+'</div>'+
       timeList.map(function(t){
-        return '<div class="tf'+(currentTime===String(t.val)?' active':'')+'" onclick="setTime(''+t.val+'')">'+t.label+'</div>';
+        return '<div class="tf'+(currentTime===String(t.val)?' active':'')+'" onclick="setTime('+t.val+')">'+t.label+'</div>';
       }).join('');
   }
 }
 
-function setDept(d){ currentDept=d; buildFilters(); renderContent(); }
+function setDept(d){ currentDept=d||'All'; buildFilters(); renderContent(); }
 function setTime(t){ currentTime=t; buildFilters(); renderContent(); }
 
 function switchTab(tab){
