@@ -651,7 +651,8 @@ function openPanel(barcode){
 function closePanel(){ document.getElementById('panel-ov').classList.remove('open'); }
 
 async function init(){
-  await loadImages();
+  // Load images and data in parallel — don't wait for images before showing data
+  loadImages();
   await loadData();
   setInterval(loadData, 10*60*1000);
 }
