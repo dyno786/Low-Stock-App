@@ -244,6 +244,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 
 <script>
 // ═══════════════════════════════════════════════
+// SHOPIFY IMAGE LOOKUP
+// 4 Shopify export files on Google Drive
+// App fetches these once on load and builds a
+// barcode -> image URL map used when displaying products
+// ═══════════════════════════════════════════════
+const SHOPIFY_FILES = [
+  'https://drive.google.com/uc?export=download&id=1DMyb8ALfGSLdsjIia4fMq7VBn314wZs4',
+  'https://drive.google.com/uc?export=download&id=1Dc8nSY7-S8LufpuruKMxkyjMK_6dLSTa',
+  'https://drive.google.com/uc?export=download&id=1sG7R2XNrTUpKPbqugTHZw2fcxd3_NU1A',
+  'https://drive.google.com/uc?export=download&id=15bhvB9-lFiFQ1qxhohK9jIyQXb72Nd--',
+];
+
+let imageMap = {}; // barcode -> image URL — built on load
+
+// ═══════════════════════════════════════════════
 // BRANCHES — add more branches here as you go
 // Just add the Google Drive file ID for each branch CSV
 // ═══════════════════════════════════════════════
@@ -276,13 +291,40 @@ document.addEventListener('DOMContentLoaded', function() {
     new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
   if (waNumber) document.getElementById('wa-num').value = waNumber;
   buildBranchTabs();
-  fetchBranch(currentBranch);
+  // Load Shopify images first, then fetch branch data
+  loadShopifyImages().then(function() {
+    fetchBranch(currentBranch);
+  });
   // Auto refresh every 5 minutes
   setInterval(function() {
     delete branchData[currentBranch];
     fetchBranch(currentBranch);
   }, 5 * 60 * 1000);
 });
+
+// Fetch all 4 Shopify export files and build barcode->image map
+async function loadShopifyImages() {
+  var loaded = 0;
+  for (var i = 0; i < SHOPIFY_FILES.length; i++) {
+    try {
+      var res = await fetch('https://corsproxy.io/?' + encodeURIComponent(SHOPIFY_FILES[i]));
+      if (!res.ok) continue;
+      var text = await res.text();
+      var parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      parsed.data.forEach(function(row) {
+        var barcode = String(row['Variant Barcode'] || '').trim().replace(/^'+/, '');
+        var image   = String(row['Image Src'] || '').trim();
+        if (barcode && image && image.startsWith('http')) {
+          imageMap[barcode] = image;
+          loaded++;
+        }
+      });
+    } catch(e) {
+      console.log('Shopify file ' + (i+1) + ' failed:', e.message);
+    }
+  }
+  console.log('Loaded ' + loaded + ' barcode->image mappings');
+}
 
 function buildBranchTabs() {
   document.getElementById('branch-bar').innerHTML = BRANCHES.map(function(b) {
@@ -348,9 +390,10 @@ function parseProducts(rows, branchId) {
     var name     = clean(fv(r, ['productname','product','title','name','description']));
     var size     = clean(fv(r, ['size','variant','varianttitle']));
     var dept     = clean(fv(r, ['department','category','dept']));
-    var img      = clean(fv(r, ['imageurl','image','imagesrc','img','photo']));
     var id = branchId + '|' + (barcode||i) + '|' + size;
-    return { id:id, vendor:dept, title:name, variant:size, sku:barcode, stock:stock, img:img||null, category:dept||'General' };
+    // Look up image from Shopify map by barcode
+    var img = (barcode && imageMap[barcode]) ? imageMap[barcode] : null;
+    return { id:id, vendor:dept, title:name, variant:size, sku:barcode, stock:stock, img:img, category:dept||'General' };
   });
 }
 
