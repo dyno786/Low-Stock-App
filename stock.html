@@ -263,22 +263,33 @@ function daysSince(str){
   return Math.floor((Date.now()-d.getTime())/86400000);
 }
 
+function isValidDate(str){
+  if(!str||str==='Never'||str==='Unknown') return false;
+  var d=parseDate(str);
+  if(!d||isNaN(d)) return false;
+  // Ignore dates before 2000 — bad legacy data
+  return d.getFullYear()>=2000;
+}
+
 function isDeadStock(p){
   if(p.qty<=0) return false;
   if(p.qty<=5) return false;
-  var daysSinceLastSold = daysSince(p.lastSold);
-  var daysSinceCreated  = daysSince(p.dateCreated);
-  // Never sold AND product is older than 60 days
-  if(p.lastSold==='Never'&&daysSinceCreated>60) return true;
+  var dls = daysSince(p.lastSold);
+  var dc  = isValidDate(p.dateCreated) ? daysSince(p.dateCreated) : null;
+  // Never sold AND we have a valid created date older than 90 days
+  if(p.lastSold==='Never' && dc!==null && dc>90) return true;
   // Last sold more than 90 days ago
-  if(daysSinceLastSold>90) return true;
+  if(isValidDate(p.lastSold) && dls>90) return true;
   return false;
 }
 
 function deadReason(p){
   var dls = daysSince(p.lastSold);
-  var dc  = daysSince(p.dateCreated);
-  if(p.lastSold==='Never') return 'Never sold since added '+p.dateCreated+' ('+dc+' days ago) · '+p.qty+' units in stock';
+  var dc  = isValidDate(p.dateCreated) ? daysSince(p.dateCreated) : null;
+  if(p.lastSold==='Never'){
+    if(dc) return 'Never sold · Added '+p.dateCreated+' ('+dc+' days ago) · '+p.qty+' units in stock';
+    return 'Never sold · '+p.qty+' units in stock';
+  }
   return 'Last sold '+p.lastSold+' ('+dls+' days ago) · '+p.qty+' units still in stock';
 }
 
