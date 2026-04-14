@@ -252,13 +252,16 @@ async function load(){
     depts=['All'].concat(Object.keys(dm).sort());
     metrics();
     document.getElementById('stime').textContent='live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    lg('Done ✓');
+    lg('Done ✓ - calling draw() now');
+    metrics();
+    filters();
+    draw();
+    return;
   }catch(e){
     lg('LOAD ERROR: '+e.message);
     document.getElementById('out').innerHTML='<div class="empty">Failed to load data<br><small style="font-size:11px;font-family:monospace">'+e.message+'</small><br><br><button onclick="showLog()" style="padding:8px 16px;background:#cc0000;color:#fff;border:none;border-radius:8px;cursor:pointer">View Log</button></div>';
     document.getElementById('stime').textContent='error';
   }
-  filters();draw();
 }
 
 function metrics(){
