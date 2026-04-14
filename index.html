@@ -510,7 +510,10 @@ function renderList() {
     var done  = ps.filter(function(p){return p.ticked;}).length;
     var dot   = min<=-5?'#c0392b':min<=-2?'#d97706':'#9ca3af';
     var bc    = min<=-4?'b-red':'b-amber';
-    var sub   = done>0 ? done+'/'+ps.length+' <span style="color:var(--green);font-weight:600">done ✓</span>' : ps.length+' item'+(ps.length>1?'s':'');
+    var withImg = ps.filter(function(p){return p.img;}).length;
+    var imgPct  = Math.round(withImg/ps.length*100);
+    var imgStr  = imgPct === 100 ? '' : ' · <span style="color:'+(imgPct===0?'var(--red)':'var(--amber)')+'">'+imgPct+'% online</span>';
+    var sub   = done>0 ? done+'/'+ps.length+' <span style="color:var(--green);font-weight:600">done ✓</span>'+imgStr : ps.length+' item'+(ps.length>1?'s':'')+imgStr;
     var esc   = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     html += '<div class="group-row" onclick="showGroup(\''+esc+'\')">';
     html += '<div class="g-dot" style="background:'+dot+'"></div>';
