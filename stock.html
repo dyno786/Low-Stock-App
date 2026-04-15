@@ -346,7 +346,7 @@ function drawZero(el){
     var dls=p.ls==='Never'?9999:ds(p.ls);
     var oosStr=p.ls==='Never'?'Never been sold':dls===9999?'Out of stock (unknown)':'Out of stock ~'+dls+' day'+(dls===1?'':'s');
     var lastStr=p.ls==='Never'?'Never sold':'Last sold: '+p.ls;
-    h+='<div class="card" onclick="openP(''+esc(p.bc)+'')">'+
+    h+='<div class="card" onclick="openP('\''+esc(p.bc)+'\'')">'+
       '<div class="ci">'+ihtml(p.bc)+'</div>'+
       '<div class="cn">'+
         '<div class="cn-name">'+p.nm+'</div>'+
@@ -372,8 +372,8 @@ function drawDead(el){
   });
   list=filt(list);
   list.sort(function(a,b){
-    var da=p.ls==='Never'?(vd(a.dc)?ds(a.dc):9999):ds(a.ls);
-    var db=p.ls==='Never'?(vd(b.dc)?ds(b.dc):9999):ds(b.ls);
+    var da=a.ls==='Never'?(vd(a.dc)?ds(a.dc):9999):ds(a.ls);
+    var db=b.ls==='Never'?(vd(b.dc)?ds(b.dc):9999):ds(b.ls);
     return db-da;
   });
   if(!list.length){el.innerHTML='<div class="empty">No dead stock for this filter</div>';return;}
@@ -384,7 +384,7 @@ function drawDead(el){
     var ddc=vd(p.dc)?ds(p.dc):null;
     var sinceStr=p.ls==='Never'?'Never sold'+(ddc?' · added '+ddc+'d ago':''):'Last sold '+dls+' days ago';
     var addedStr=ddc?'Added '+p.dc+' ('+ddc+'d ago)':'Added: Unknown';
-    h+='<div class="card" onclick="openP(''+esc(p.bc)+'')">'+
+    h+='<div class="card" onclick="openP('\''+esc(p.bc)+'\'')">'+
       '<div class="ci">'+ihtml(p.bc)+'</div>'+
       '<div class="cn">'+
         '<div class="cn-name">'+p.nm+'</div>'+
