@@ -13,13 +13,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .logo{width:32px;height:32px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#cc0000}
 .title{color:#fff;font-size:15px;font-weight:700;margin-left:10px}
 .sync{color:rgba(255,255,255,.8);font-size:11px;font-family:monospace}
-.log-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:10px;font-family:monospace;cursor:pointer}
+.logbtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer}
 .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
 .m{background:#fff;border-radius:10px;padding:12px;border-left:3px solid #ddd}
-.m.r{border-left-color:#cc0000} .m.a{border-left-color:#e87000} .m.b{border-left-color:#0055cc}
-.m-lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.m-val{font-size:24px;font-weight:700;font-family:monospace}
-.m-sub{font-size:11px;color:#999;margin-top:3px}
+.m.r{border-left-color:#cc0000}.m.a{border-left-color:#e87000}.m.b{border-left-color:#0055cc}
+.mlbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.mval{font-size:24px;font-weight:700;font-family:monospace}
+.msub{font-size:11px;color:#999;margin-top:3px}
 .tabs{display:flex;gap:6px;padding:0 12px 10px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;color:#555;border:1.5px solid #ddd;cursor:pointer;white-space:nowrap;background:#fff}
@@ -31,7 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .srch{padding:0 12px 10px;position:relative}
 .srch input{width:100%;background:#fff;border:1.5px solid #ddd;border-radius:10px;padding:9px 12px 9px 34px;font-size:13px;outline:none}
 .srch input:focus{border-color:#cc0000}
-.srch-ic{position:absolute;left:24px;top:50%;transform:translateY(-50%);color:#aaa;pointer-events:none}
+.sic{position:absolute;left:24px;top:50%;transform:translateY(-50%);color:#aaa;pointer-events:none}
 .sec{padding:0 12px 6px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between}
 .badge{font-size:11px;padding:1px 8px;background:#eee;border-radius:20px;color:#666}
 .card{display:flex;align-items:center;background:#fff;border-bottom:1px solid #eee;padding:11px 12px;gap:10px;cursor:pointer}
@@ -39,34 +39,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ci{width:44px;height:44px;border-radius:8px;background:#f0f0f0;border:1px solid #eee;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .ci img{width:44px;height:44px;object-fit:cover}
 .cn{flex:1;min-width:0}
-.cn-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cn-meta{font-size:11px;color:#999;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cn-meta.warn{color:#e87000}
+.cname{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmeta{font-size:11px;color:#999;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cwarn{font-size:11px;color:#e87000;margin-top:2px;font-weight:600}
 .cr{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
 .qty{font-size:18px;font-weight:700;font-family:monospace}
-.qty.neg{color:#cc0000} .qty.pos{color:#1a7f3c} .qty.zer{color:#999}
-.price{font-size:11px;color:#999;font-family:monospace}
-.dead-days{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#fff8f0;color:#e87000;margin-top:3px;display:inline-block}
-.dead-val{font-size:11px;color:#999;font-family:monospace;margin-top:2px}
+.qn{color:#cc0000}.qp{color:#1a7f3c}.qz{color:#999}
+.cprice{font-size:11px;color:#999;font-family:monospace}
+.dtag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#fff8f0;color:#e87000;margin-top:3px;display:inline-block}
+.dval{font-size:11px;color:#999;font-family:monospace;margin-top:2px}
 .oc{background:#fff;border:1px solid #ddd;border-radius:10px;margin:0 12px 10px}
-.oc-h{padding:10px 12px;border-bottom:1px solid #eee;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.oc-name{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.oc-dept{font-size:10px;color:#999;margin-top:2px}
+.och{padding:10px 12px;border-bottom:1px solid #eee;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.ocn{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ocd{font-size:10px;color:#999;margin-top:2px}
 .prio{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0}
-.prio.crit{background:#fff0f0;color:#cc0000} .prio.med{background:#fff8f0;color:#e87000}
-.oc-b{padding:10px 12px;display:flex;align-items:center;gap:8px}
-.bc{flex:1;text-align:center}
-.bc-n{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.bc-q{font-size:20px;font-weight:700;font-family:monospace}
-.arr{color:#cc0000;font-size:18px;flex-shrink:0}
+.pcrit{background:#fff0f0;color:#cc0000}.pmed{background:#fff8f0;color:#e87000}
+.ocb{padding:10px 12px;display:flex;align-items:center;gap:8px}
+.brc{flex:1;text-align:center}
+.brcn{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.brcq{font-size:20px;font-weight:700;font-family:monospace}
+.oarr{color:#cc0000;font-size:18px;flex-shrink:0}
 .sbox{background:#f0f5ff;border:1px solid #b3cff5;border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0}
-.sbox-q{font-size:18px;font-weight:700;color:#0055cc;font-family:monospace;display:block}
-.sbox-l{font-size:9px;color:#0055cc}
+.sbq{font-size:18px;font-weight:700;color:#0055cc;font-family:monospace;display:block}
+.sbl{font-size:9px;color:#0055cc}
+.sugg{background:#fff0f0;border:1px solid #ffcccc;border-radius:8px;padding:10px 12px;margin:0 12px 10px;font-size:12px;color:#880000;line-height:1.7}
 .loading{padding:60px 20px;text-align:center;color:#999}
 .spin{width:28px;height:28px;border:2px solid #eee;border-top-color:#cc0000;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty{padding:40px 20px;text-align:center;color:#999;font-size:13px;line-height:1.8}
-.sugg{background:#fff0f0;border:1px solid #ffcccc;border-radius:8px;padding:10px 12px;margin:0 12px 10px;font-size:12px;color:#880000;line-height:1.7}
 .bnav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#fff;border-top:1px solid #eee;display:flex;z-index:200;padding:6px 0 18px}
 .bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 0}
 .bni svg{width:20px;height:20px;color:#aaa}
@@ -79,82 +79,85 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .phero{width:100%;height:170px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #eee;overflow:hidden}
 .phero img{max-height:166px;max-width:100%;object-fit:contain}
 .pd{padding:14px 16px}
-.pd-name{font-size:17px;font-weight:700;margin-bottom:3px}
-.pd-dept{font-size:11px;color:#999;margin-bottom:14px}
-.stats{display:flex;gap:8px;margin-bottom:14px}
-.stat{flex:1;background:#f4f4f4;border-radius:8px;padding:10px;text-align:center}
-.stat-v{font-size:20px;font-weight:700;font-family:monospace}
-.stat-l{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.pdname{font-size:17px;font-weight:700;margin-bottom:3px}
+.pddept{font-size:11px;color:#999;margin-bottom:14px}
+.pstats{display:flex;gap:8px;margin-bottom:14px}
+.pstat{flex:1;background:#f4f4f4;border-radius:8px;padding:10px;text-align:center}
+.pstatv{font-size:20px;font-weight:700;font-family:monospace}
+.pstatl{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 .irow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee;font-size:13px}
-.il{color:#999;font-size:12px} .iv{font-family:monospace;font-weight:600;font-size:12px}
-.dead-note{background:#fff8f0;border:1px solid #f5d080;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#e87000;line-height:1.6}
+.il{color:#999;font-size:12px}.iv{font-family:monospace;font-weight:600;font-size:12px}
+.dnote{background:#fff8f0;border:1px solid #f5d080;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#e87000;line-height:1.6}
 .logov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;max-width:480px;margin:0 auto}
 .logpan{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;max-height:80vh;overflow-y:auto;padding:16px;padding-bottom:40px}
 </style>
 </head>
 <body>
+
 <div class="top">
   <div class="top-row">
     <div style="display:flex;align-items:center">
       <div class="logo">CC</div>
-      <div class="title" style="margin-left:10px">Stock Intelligence</div>
+      <span class="title">Stock Intelligence</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <span class="sync" id="stime">loading</span>
-      <button class="log-btn" onclick="showLog()">LOG</button>
+      <button class="logbtn" id="logbtn">LOG</button>
     </div>
   </div>
 </div>
 
 <div class="metrics">
-  <div class="m b"><div class="m-lbl">Total</div><div class="m-val" id="mt">—</div><div class="m-sub">products</div></div>
-  <div class="m r"><div class="m-lbl">Negative</div><div class="m-val" id="mn" style="color:#cc0000">—</div><div class="m-sub">need stock</div></div>
-  <div class="m a"><div class="m-lbl">Zero stock</div><div class="m-val" id="mz" style="color:#e87000">—</div><div class="m-sub">out of stock</div></div>
-  <div class="m a"><div class="m-lbl">Dead stock</div><div class="m-val" id="md" style="color:#e87000">—</div><div class="m-sub">90+ days</div></div>
+  <div class="m b"><div class="mlbl">Total</div><div class="mval" id="mt">—</div><div class="msub">products</div></div>
+  <div class="m r"><div class="mlbl">Negative</div><div class="mval" id="mn" style="color:#cc0000">—</div><div class="msub">need stock</div></div>
+  <div class="m a"><div class="mlbl">Zero stock</div><div class="mval" id="mz" style="color:#e87000">—</div><div class="msub">out of stock</div></div>
+  <div class="m a"><div class="mlbl">Dead stock</div><div class="mval" id="md" style="color:#e87000">—</div><div class="msub">90+ days</div></div>
 </div>
 
 <div class="tabs" id="tabs">
-  <div class="tab on" onclick="go('all')">All</div>
-  <div class="tab" onclick="go('neg')">Negative</div>
-  <div class="tab" onclick="go('zero')">Zero stock</div>
-  <div class="tab" onclick="go('dead')">Dead stock</div>
-  <div class="tab" onclick="go('reorder')">Reorder</div>
-  <div class="tab" onclick="go('trend')">Trending</div>
+  <div class="tab on" data-tab="all">All</div>
+  <div class="tab" data-tab="neg">Negative</div>
+  <div class="tab" data-tab="zero">Zero stock</div>
+  <div class="tab" data-tab="dead">Dead stock</div>
+  <div class="tab" data-tab="reorder">Reorder</div>
+  <div class="tab" data-tab="trend">Trending</div>
 </div>
 
 <div class="pills" id="dpills" style="display:none"></div>
 <div class="pills" id="tpills" style="display:none"></div>
 
 <div class="srch">
-  <svg class="srch-ic" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
-  <input type="search" id="sq" placeholder="Search product, barcode…" oninput="draw()">
+  <svg class="sic" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
+  <input type="search" id="sq" placeholder="Search product, barcode…">
 </div>
 
 <div id="out"><div class="loading"><div class="spin"></div>Loading…</div></div>
 
-<nav class="bnav">
-  <div class="bni on" onclick="go('all')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>All</span></div>
-  <div class="bni" onclick="go('zero')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Zero</span></div>
-  <div class="bni" onclick="go('dead')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Dead</span></div>
-  <div class="bni" onclick="go('reorder')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg><span>Reorder</span></div>
-  <div class="bni" onclick="go('trend')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><span>Trend</span></div>
+<nav class="bnav" id="bnav">
+  <div class="bni on" data-tab="all"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>All</span></div>
+  <div class="bni" data-tab="zero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Zero</span></div>
+  <div class="bni" data-tab="dead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Dead</span></div>
+  <div class="bni" data-tab="reorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg><span>Reorder</span></div>
+  <div class="bni" data-tab="trend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><span>Trend</span></div>
 </nav>
 
-<div class="pov" id="pov" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="pov" id="pov">
   <div class="pan">
     <div class="ph"></div>
-    <div class="phero" id="phero"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+    <div class="phero" id="phero">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    </div>
     <div class="pd">
-      <div class="pd-name" id="pn"></div>
-      <div class="pd-dept" id="pp"></div>
-      <div class="stats">
-        <div class="stat"><div class="stat-v" id="pq"></div><div class="stat-l">Stock</div></div>
-        <div class="stat"><div class="stat-v" id="ppr"></div><div class="stat-l">Price</div></div>
-        <div class="stat"><div class="stat-v" id="pc"></div><div class="stat-l">Cost</div></div>
+      <div class="pdname" id="pn"></div>
+      <div class="pddept" id="pp"></div>
+      <div class="pstats">
+        <div class="pstat"><div class="pstatv" id="pq"></div><div class="pstatl">Stock</div></div>
+        <div class="pstat"><div class="pstatv" id="ppr"></div><div class="pstatl">Price</div></div>
+        <div class="pstat"><div class="pstatv" id="pc"></div><div class="pstatl">Cost</div></div>
       </div>
-      <div class="dead-note" id="pdn" style="display:none"></div>
+      <div class="dnote" id="pdn" style="display:none"></div>
       <div class="irow"><span class="il">Barcode</span><span class="iv" id="pb"></span></div>
-      <div class="irow"><span class="il">Size</span><span class="iv" id="ps"></span></div>
+      <div class="irow"><span class="il">Size</span><span class="iv" id="psz"></span></div>
       <div class="irow"><span class="il">Date added</span><span class="iv" id="pdc"></span></div>
       <div class="irow"><span class="il">Last sold</span><span class="iv" id="pls"></span></div>
       <div class="irow"><span class="il">Min stock</span><span class="iv" id="pmn"></span></div>
@@ -163,326 +166,427 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
-<div class="logov" id="logov" onclick="if(event.target===this)this.style.display='none'">
+<div class="logov" id="logov">
   <div class="logpan">
     <div class="ph"></div>
     <div style="font-size:14px;font-weight:700;margin:12px 0 10px">Debug Log</div>
     <pre id="logtext" style="font-size:11px;line-height:1.8;color:#333;white-space:pre-wrap;word-break:break-all"></pre>
-    <button onclick="document.getElementById('logov').style.display='none'" style="margin-top:14px;width:100%;padding:10px;background:#cc0000;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
+    <button id="logclose" style="margin-top:14px;width:100%;padding:10px;background:#cc0000;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
   </div>
 </div>
 
 <script>
-var SURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTC9vR-U0BdG0v-bZVgQL8BNwGwkn6tzb0VqlyccGlyuow74GwG5PTOPRrW8a2tbBgIwaMT6LVTRWQA/pub?gid=774857271&single=true&output=csv';
-var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
+var SURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTC9vR-U0BdG0v-bZVgQL8BNwGwkn6tzb0VqlyccGlyuow74GwG5PTOPRrW8a2tbBgIwaMT6LVTRWQA/pub?gid=774857271&single=true&output=csv';
+var IURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
+var DTIMES = [{l:'7 days',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'3 months',v:90},{l:'6 months',v:180},{l:'1 year',v:365},{l:'1 year+',v:730}];
+var ZTIMES = [{l:'1 day',v:1},{l:'3 days',v:3},{l:'1 week',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'2 months',v:60},{l:'3 months',v:90}];
 
-var prods=[],imgs={},tab='all',dept='All',tval='all',depts=[];
-var logs=[];
-var DTIMES=[{l:'7 days',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'3 months',v:90},{l:'6 months',v:180},{l:'1 year',v:365},{l:'1 year+',v:730}];
-var ZTIMES=[{l:'1 day',v:1},{l:'3 days',v:3},{l:'1 week',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'2 months',v:60},{l:'3 months',v:90}];
+var prods = [], imgs = {}, depts = [];
+var tab = 'all', dept = 'All', tval = 'all';
+var logs = [];
 
-function lg(m){logs.push(new Date().toLocaleTimeString()+' '+m);console.log(m);}
-function showLog(){document.getElementById('logtext').textContent=logs.join('\n')||'empty';document.getElementById('logov').style.display='block';}
+function lg(m) { logs.push(new Date().toLocaleTimeString() + ' ' + m); console.log(m); }
+function cl(v) { return String(v == null ? '' : v).trim(); }
 
-function cl(v){return String(v==null?'':v).trim();}
-function pd(s){
-  if(!s||s==='Never'||s==='Unknown'||s==='NULL') return null;
-  var p=s.split('/');
-  if(p.length===3){var d=new Date(+p[2],+p[1]-1,+p[0]);return isNaN(d)?null:d;}
-  var d=new Date(s);return isNaN(d)?null:d;
+function pDate(s) {
+  if (!s || s === 'Never' || s === 'Unknown' || s === 'NULL' || s === '') return null;
+  var p = s.split('/');
+  if (p.length === 3) {
+    var d = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  var d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
 }
-function ds(s){var d=pd(s);if(!d)return 9999;return Math.floor((Date.now()-d)/86400000);}
-function vd(s){var d=pd(s);return d&&d.getFullYear()>=2000;}
 
-function isDead(p,days){
-  days=days||90;
-  if(p.qty<=5||p.qty<=0)return false;
-  if(p.ls==='Never'&&vd(p.dc)&&ds(p.dc)>days)return true;
-  if(vd(p.ls)&&ds(p.ls)>=days)return true;
+function dSince(s) {
+  var d = pDate(s);
+  if (!d) return 9999;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function isVD(s) {
+  var d = pDate(s);
+  return d !== null && d.getFullYear() >= 2000;
+}
+
+function isDead(p, days) {
+  days = days || 90;
+  if (p.qty <= 0 || p.qty <= 5) return false;
+  if (p.ls === 'Never' && isVD(p.dc) && dSince(p.dc) >= days) return true;
+  if (isVD(p.ls) && dSince(p.ls) >= days) return true;
   return false;
 }
 
-async function loadImgs(){
-  try{
-    lg('Loading images from: '+IURL.substring(0,50)+'...');
-    var r=await fetch(IURL);
-    lg('Image fetch status: '+r.status);
-    var t=await r.text();
-    lg('Image data: '+t.length+' chars');
-    Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
-      var bc=cl(row['Barcode']),img=cl(row['ImageURL']);
-      if(bc&&img&&img.startsWith('http'))imgs[bc]=img;
+async function loadImgs() {
+  try {
+    lg('Loading images...');
+    var r = await fetch(IURL);
+    lg('Img status: ' + r.status);
+    var t = await r.text();
+    Papa.parse(t, {header:true, skipEmptyLines:true}).data.forEach(function(row) {
+      var bc = cl(row['Barcode']), src = cl(row['ImageURL']);
+      if (bc && src && src.startsWith('http')) imgs[bc] = src;
     });
-    lg('Images loaded: '+Object.keys(imgs).length);
-  }catch(e){lg('Image error: '+e.message);}
+    lg('Images: ' + Object.keys(imgs).length);
+  } catch(e) { lg('Img err: ' + e.message); }
 }
 
-async function load(){
-  try{
-    lg('Fetching stock from: '+SURL.substring(0,50)+'...');
-    document.getElementById('stime').textContent='syncing…';
-    var r=await fetch(SURL);
-    lg('Stock fetch status: '+r.status+' '+r.statusText);
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    var t=await r.text();
-    lg('Stock data: '+t.length+' chars');
-    lg('First 150: '+t.substring(0,150));
-    var parsed=Papa.parse(t,{header:true,skipEmptyLines:true});
-    lg('Rows: '+parsed.data.length+', Errors: '+parsed.errors.length);
-    if(parsed.data.length>0)lg('Headers: '+JSON.stringify(Object.keys(parsed.data[0])));
-    prods=parsed.data.map(function(r){
-      var ls=cl(r['LastSold']),dc=cl(r['DateCreated']);
-      return{
-        bc:  cl(r['Barcode']),
-        nm:  cl(r['ProductName']),
-        sz:  cl(r['Size']),
-        qty: parseInt(r['StockQty'])||0,
-        prc: parseFloat(r['Price'])||0,
-        cst: parseFloat(r['AvgCost'])||0,
-        mn:  (r['MinStock']&&r['MinStock']!=='NULL')?parseInt(r['MinStock'])||0:0,
-        mx:  (r['MaxStock']&&r['MaxStock']!=='NULL')?parseInt(r['MaxStock'])||0:0,
-        ls:  (ls&&ls!=='NULL'&&ls!=='')?ls:'Never',
-        dc:  (dc&&dc!=='NULL'&&dc!=='')?dc:'Unknown',
-        dp:  cl(r['Department']),
-        br:  cl(r['Branch'])
+async function loadData() {
+  try {
+    lg('Fetching stock...');
+    document.getElementById('stime').textContent = 'syncing…';
+    var r = await fetch(SURL);
+    lg('Stock status: ' + r.status);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var t = await r.text();
+    lg('Chars: ' + t.length);
+    lg('First 100: ' + t.substring(0, 100));
+    var parsed = Papa.parse(t, {header:true, skipEmptyLines:true});
+    lg('Rows: ' + parsed.data.length + ' Errs: ' + parsed.errors.length);
+    if (parsed.data.length > 0) lg('Cols: ' + Object.keys(parsed.data[0]).join(','));
+    prods = parsed.data.map(function(row) {
+      var ls = cl(row['LastSold']), dc = cl(row['DateCreated']);
+      return {
+        bc:  cl(row['Barcode']),
+        nm:  cl(row['ProductName']),
+        sz:  cl(row['Size']),
+        qty: parseInt(row['StockQty']) || 0,
+        prc: parseFloat(row['Price']) || 0,
+        cst: parseFloat(row['AvgCost']) || 0,
+        mn:  (row['MinStock'] && row['MinStock'] !== 'NULL') ? (parseInt(row['MinStock']) || 0) : 0,
+        mx:  (row['MaxStock'] && row['MaxStock'] !== 'NULL') ? (parseInt(row['MaxStock']) || 0) : 0,
+        ls:  (ls && ls !== 'NULL') ? ls : 'Never',
+        dc:  (dc && dc !== 'NULL') ? dc : 'Unknown',
+        dp:  cl(row['Department']),
+        br:  cl(row['Branch'])
       };
     });
-    lg('Products: '+prods.length);
-    var dm={};prods.forEach(function(p){dm[p.dp]=1;});
-    depts=['All'].concat(Object.keys(dm).sort());
-    metrics();
-    document.getElementById('stime').textContent='live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    lg('Done ✓ - calling draw() now');
-    metrics();
-    filters();
-    draw();
-    return;
-  }catch(e){
-    lg('LOAD ERROR: '+e.message);
-    document.getElementById('out').innerHTML='<div class="empty">Failed to load data<br><small style="font-size:11px;font-family:monospace">'+e.message+'</small><br><br><button onclick="showLog()" style="padding:8px 16px;background:#cc0000;color:#fff;border:none;border-radius:8px;cursor:pointer">View Log</button></div>';
-    document.getElementById('stime').textContent='error';
+    lg('Mapped: ' + prods.length);
+    var dm = {};
+    prods.forEach(function(p) { dm[p.dp] = 1; });
+    depts = ['All'].concat(Object.keys(dm).sort());
+    updateMetrics();
+    document.getElementById('stime').textContent = 'live ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    lg('Done ✓');
+    renderFilters();
+    renderContent();
+  } catch(e) {
+    lg('ERR: ' + e.message);
+    document.getElementById('out').innerHTML = '<div class="empty">Failed to load<br><small>' + e.message + '</small></div>';
+    document.getElementById('stime').textContent = 'error';
   }
 }
 
-function metrics(){
-  document.getElementById('mt').textContent=prods.length.toLocaleString();
-  document.getElementById('mn').textContent=prods.filter(function(p){return p.qty<0;}).length;
-  document.getElementById('mz').textContent=prods.filter(function(p){return p.qty===0;}).length;
-  document.getElementById('md').textContent=prods.filter(function(p){return isDead(p,90);}).length;
+function updateMetrics() {
+  document.getElementById('mt').textContent = prods.length.toLocaleString();
+  document.getElementById('mn').textContent = prods.filter(function(p){return p.qty<0;}).length;
+  document.getElementById('mz').textContent = prods.filter(function(p){return p.qty===0;}).length;
+  document.getElementById('md').textContent = prods.filter(function(p){return isDead(p,90);}).length;
 }
 
-function filters(){
-  var showD=['zero','dead','reorder','trend'].indexOf(tab)>=0;
-  var showT=['zero','dead'].indexOf(tab)>=0;
-  var tlist=tab==='dead'?DTIMES:ZTIMES;
-  var dp=document.getElementById('dpills');
-  dp.style.display=showD?'flex':'none';
-  if(showD)dp.innerHTML=depts.map(function(d){return '<div class="pill'+(d===dept?' on':'')+'" onclick="setD(\''+d.replace(/'/g,"\\'")+'\')">'+(d==='All'?'All depts':d)+'</div>';}).join('');
-  var tp=document.getElementById('tpills');
-  tp.style.display=showT?'flex':'none';
-  if(showT)tp.innerHTML='<div class="pill'+(tval==='all'?' on':'')+'" onclick="setT(\'all\')">'+(tab==='dead'?'All time':'Any time')+'</div>'+tlist.map(function(t){return '<div class="pill'+(tval==t.v?' on':'')+'" onclick="setT('+t.v+')">'+t.l+'</div>';}).join('');
+function renderFilters() {
+  var showDept = ['zero','dead','reorder','trend'].indexOf(tab) >= 0;
+  var showTime = ['zero','dead'].indexOf(tab) >= 0;
+  var tlist = tab === 'dead' ? DTIMES : ZTIMES;
+
+  var dp = document.getElementById('dpills');
+  dp.style.display = showDept ? 'flex' : 'none';
+  if (showDept) {
+    dp.innerHTML = '';
+    depts.forEach(function(d) {
+      var el = document.createElement('div');
+      el.className = 'pill' + (d === dept ? ' on' : '');
+      el.textContent = d === 'All' ? 'All depts' : d;
+      el.addEventListener('click', function() { dept = d; renderFilters(); renderContent(); });
+      dp.appendChild(el);
+    });
+  }
+
+  var tp = document.getElementById('tpills');
+  tp.style.display = showTime ? 'flex' : 'none';
+  if (showTime) {
+    tp.innerHTML = '';
+    var allEl = document.createElement('div');
+    allEl.className = 'pill' + (tval === 'all' ? ' on' : '');
+    allEl.textContent = tab === 'dead' ? 'All time' : 'Any time';
+    allEl.addEventListener('click', function() { tval = 'all'; renderFilters(); renderContent(); });
+    tp.appendChild(allEl);
+    tlist.forEach(function(t) {
+      var el = document.createElement('div');
+      el.className = 'pill' + (String(tval) === String(t.v) ? ' on' : '');
+      el.textContent = t.l;
+      el.addEventListener('click', (function(tv) {
+        return function() { tval = tv; renderFilters(); renderContent(); };
+      })(t.v));
+      tp.appendChild(el);
+    });
+  }
 }
 
-function setD(d){dept=d;filters();draw();}
-function setT(v){tval=v;filters();draw();}
-
-function go(t){
-  tab=t;dept='All';tval='all';
-  document.getElementById('sq').value='';
-  document.querySelectorAll('.tab').forEach(function(el,i){el.classList.toggle('on',['all','neg','zero','dead','reorder','trend'][i]===t);});
-  document.querySelectorAll('.bni').forEach(function(el,i){el.classList.toggle('on',['all','zero','dead','reorder','trend'][i]===t);});
-  filters();draw();
-}
-
-function img(bc){return imgs[bc]||null;}
-function ihtml(bc){
-  var i=img(bc);
-  if(i)return '<img src="'+i+'" alt="" loading="lazy" style="width:44px;height:44px;object-fit:cover" onerror="this.style.display=\'none\'">';
-  return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
-}
-
-function filt(list){
-  var q=document.getElementById('sq').value.toLowerCase();
-  return list.filter(function(p){
-    if(dept!=='All'&&p.dp!==dept)return false;
-    if(!q)return true;
-    return p.nm.toLowerCase().indexOf(q)>=0||p.bc.indexOf(q)>=0||p.dp.toLowerCase().indexOf(q)>=0;
+function applySearch(list) {
+  var q = document.getElementById('sq').value.toLowerCase();
+  return list.filter(function(p) {
+    if (dept !== 'All' && p.dp !== dept) return false;
+    if (!q) return true;
+    return p.nm.toLowerCase().indexOf(q) >= 0 || p.bc.indexOf(q) >= 0 || p.dp.toLowerCase().indexOf(q) >= 0;
   });
 }
 
-function draw(){
-  var el=document.getElementById('out');
-  if(!prods.length)return;
-  if(tab==='dead'){drawDead(el);return;}
-  if(tab==='reorder'){drawReorder(el);return;}
-  if(tab==='trend'){drawTrend(el);return;}
-  if(tab==='zero'){drawZero(el);return;}
-
-  var list=prods.filter(function(p){return tab==='neg'?p.qty<0:true;});
-  list=filt(list);
-  if(tab==='neg'||tab==='all')list.sort(function(a,b){return a.qty-b.qty;});
-  if(!list.length){el.innerHTML='<div class="empty">No products found</div>';return;}
-
-  var h='<div class="sec"><span>'+(tab==='neg'?'Most negative first':'All products')+'</span><span class="badge">'+list.length+'</span></div>';
-  list.slice(0,300).forEach(function(p){
-    var qc=p.qty<0?'neg':p.qty===0?'zer':'pos';
-    h+='<div class="card" onclick="openP(\''+esc(p.bc)+'\')"><div class="ci">'+ihtml(p.bc)+'</div><div class="cn"><div class="cn-name">'+p.nm+'</div><div class="cn-meta">'+p.bc+(p.sz?' · '+p.sz:'')+(p.dp?' · '+p.dp:'')+'</div></div><div class="cr"><span class="qty '+qc+'">'+p.qty+'</span>'+(p.prc>0?'<span class="price">£'+p.prc.toFixed(2)+'</span>':'')+'</div></div>';
-  });
-  el.innerHTML=h;
+function mkSec(label, count) {
+  var div = document.createElement('div');
+  div.className = 'sec';
+  var sp1 = document.createElement('span'); sp1.textContent = label;
+  var sp2 = document.createElement('span'); sp2.className = 'badge'; sp2.textContent = count;
+  div.appendChild(sp1); div.appendChild(sp2);
+  return div;
 }
 
-function drawZero(el){
-  var td=tval==='all'?null:parseInt(tval);
-  var list=prods.filter(function(p){
-    if(p.qty!==0)return false;
-    if(td!==null){var dls=p.ls==='Never'?9999:ds(p.ls);if(dls<td)return false;}
+function mkCard(p) {
+  var card = document.createElement('div');
+  card.className = 'card';
+  var src = imgs[p.bc];
+  var ci = document.createElement('div'); ci.className = 'ci';
+  if (src) {
+    var img = document.createElement('img');
+    img.src = src; img.style.cssText = 'width:44px;height:44px;object-fit:cover';
+    img.loading = 'lazy';
+    img.onerror = function() { this.style.display='none'; };
+    ci.appendChild(img);
+  } else {
+    ci.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  }
+  var cn = document.createElement('div'); cn.className = 'cn';
+  var cname = document.createElement('div'); cname.className = 'cname'; cname.textContent = p.nm;
+  var cmeta = document.createElement('div'); cmeta.className = 'cmeta'; cmeta.textContent = p.bc + (p.sz ? ' · ' + p.sz : '');
+  cn.appendChild(cname); cn.appendChild(cmeta);
+  var cr = document.createElement('div'); cr.className = 'cr';
+  var qty = document.createElement('span'); qty.className = 'qty ' + (p.qty<0?'qn':p.qty===0?'qz':'qp'); qty.textContent = p.qty;
+  cr.appendChild(qty);
+  if (p.prc > 0) { var pr = document.createElement('span'); pr.className = 'cprice'; pr.textContent = '£' + p.prc.toFixed(2); cr.appendChild(pr); }
+  card.appendChild(ci); card.appendChild(cn); card.appendChild(cr);
+  card.addEventListener('click', function() { openPanel(p.bc); });
+  return card;
+}
+
+function renderContent() {
+  if (!prods.length) { lg('renderContent: no prods yet'); return; }
+  lg('renderContent tab=' + tab);
+  var el = document.getElementById('out');
+  if (tab === 'zero')    { renderZero(el);    return; }
+  if (tab === 'dead')    { renderDead(el);    return; }
+  if (tab === 'reorder') { renderReorder(el); return; }
+  if (tab === 'trend')   { renderTrend(el);   return; }
+
+  var list = prods.filter(function(p) { return tab === 'neg' ? p.qty < 0 : true; });
+  list = applySearch(list);
+  list.sort(function(a, b) { return a.qty - b.qty; });
+  if (!list.length) { el.innerHTML = '<div class="empty">No products found</div>'; return; }
+  lg('Rendering ' + list.length + ' products');
+  var frag = document.createDocumentFragment();
+  frag.appendChild(mkSec(tab === 'neg' ? 'Most negative first' : 'All products', list.length));
+  list.slice(0, 300).forEach(function(p) { frag.appendChild(mkCard(p)); });
+  el.innerHTML = '';
+  el.appendChild(frag);
+  lg('Render done');
+}
+
+function renderZero(el) {
+  var td = tval === 'all' ? null : parseInt(tval);
+  var list = prods.filter(function(p) {
+    if (p.qty !== 0) return false;
+    if (td !== null && dSince(p.ls) < td) return false;
     return true;
   });
-  list=filt(list);
-  list.sort(function(a,b){return ds(a.ls)-ds(b.ls);});
-  if(!list.length){el.innerHTML='<div class="empty">No zero stock items for this filter</div>';return;}
-  var h='<div class="sec"><span>Out of stock</span><span class="badge">'+list.length+'</span></div>';
-  list.slice(0,300).forEach(function(p){
-    var dls=p.ls==='Never'?9999:ds(p.ls);
-    var oosStr=p.ls==='Never'?'Never been sold':dls===9999?'Out of stock (unknown)':'Out of stock ~'+dls+' day'+(dls===1?'':'s');
-    var lastStr=p.ls==='Never'?'Never sold':'Last sold: '+p.ls;
-    h+='<div class="card" onclick="openP('\''+esc(p.bc)+'\'')">'+
-      '<div class="ci">'+ihtml(p.bc)+'</div>'+
-      '<div class="cn">'+
-        '<div class="cn-name">'+p.nm+'</div>'+
-        '<div class="cn-meta">'+p.bc+(p.sz?' · '+p.sz:'')+'</div>'+
-        '<div class="cn-meta warn" style="font-weight:600">'+oosStr+'</div>'+
-        '<div class="cn-meta" style="color:#aaa;font-size:10px">'+lastStr+'</div>'+
-      '</div>'+
-      '<div class="cr"><span class="qty zer">0</span>'+(p.prc>0?'<span class="price">£'+p.prc.toFixed(2)+'</span>':'')+'</div>'+
-    '</div>';
+  list = applySearch(list);
+  list.sort(function(a, b) { return dSince(a.ls) - dSince(b.ls); });
+  if (!list.length) { el.innerHTML = '<div class="empty">No zero stock items</div>'; return; }
+  var frag = document.createDocumentFragment();
+  frag.appendChild(mkSec('Out of stock', list.length));
+  list.slice(0, 300).forEach(function(p) {
+    var dls = dSince(p.ls);
+    var card = mkCard(p);
+    var cn = card.querySelector('.cn');
+    var w = document.createElement('div'); w.className = 'cwarn';
+    w.textContent = p.ls === 'Never' ? 'Never been sold' : 'Out of stock ~' + dls + ' day' + (dls===1?'':'s');
+    var s = document.createElement('div'); s.className = 'cmeta'; s.style.fontSize = '10px'; s.style.color = '#aaa';
+    s.textContent = p.ls === 'Never' ? 'Never sold' : 'Last sold: ' + p.ls;
+    cn.appendChild(w); cn.appendChild(s);
+    frag.appendChild(card);
   });
-  el.innerHTML=h;
+  el.innerHTML = ''; el.appendChild(frag);
 }
 
-function drawDead(el){
-  var days=tval==='all'?90:parseInt(tval);
-  var list=prods.filter(function(p){
-    if(p.qty<=5||p.qty<=0)return false;
-    var dls=p.ls==='Never'?9999:ds(p.ls);
-    var ddc=vd(p.dc)?ds(p.dc):null;
-    if(p.ls==='Never'&&ddc!==null&&ddc>=days)return true;
-    if(vd(p.ls)&&dls>=days)return true;
+function renderDead(el) {
+  var days = tval === 'all' ? 90 : parseInt(tval);
+  var list = prods.filter(function(p) {
+    if (p.qty <= 0 || p.qty <= 5) return false;
+    var dls = dSince(p.ls);
+    var ddc = isVD(p.dc) ? dSince(p.dc) : null;
+    if (p.ls === 'Never' && ddc !== null && ddc >= days) return true;
+    if (isVD(p.ls) && dls >= days) return true;
     return false;
   });
-  list=filt(list);
-  list.sort(function(a,b){
-    var da=a.ls==='Never'?(vd(a.dc)?ds(a.dc):9999):ds(a.ls);
-    var db=b.ls==='Never'?(vd(b.dc)?ds(b.dc):9999):ds(b.ls);
-    return db-da;
+  list = applySearch(list);
+  list.sort(function(a, b) {
+    var da = a.ls === 'Never' ? (isVD(a.dc) ? dSince(a.dc) : 9999) : dSince(a.ls);
+    var db = b.ls === 'Never' ? (isVD(b.dc) ? dSince(b.dc) : 9999) : dSince(b.ls);
+    return db - da;
   });
-  if(!list.length){el.innerHTML='<div class="empty">No dead stock for this filter</div>';return;}
-  var tv=list.reduce(function(s,p){return s+p.qty*p.prc;},0);
-  var h='<div class="sec"><span>Dead stock · £'+tv.toFixed(0)+' tied up</span><span class="badge">'+list.length+'</span></div>';
-  list.forEach(function(p){
-    var dls=p.ls==='Never'?9999:ds(p.ls);
-    var ddc=vd(p.dc)?ds(p.dc):null;
-    var sinceStr=p.ls==='Never'?'Never sold'+(ddc?' · added '+ddc+'d ago':''):'Last sold '+dls+' days ago';
-    var addedStr=ddc?'Added '+p.dc+' ('+ddc+'d ago)':'Added: Unknown';
-    h+='<div class="card" onclick="openP('\''+esc(p.bc)+'\'')">'+
-      '<div class="ci">'+ihtml(p.bc)+'</div>'+
-      '<div class="cn">'+
-        '<div class="cn-name">'+p.nm+'</div>'+
-        '<div class="cn-meta">'+p.dp+(p.sz?' · '+p.sz:'')+'</div>'+
-        '<div class="dead-days">'+sinceStr+'</div>'+
-        '<div class="cn-meta" style="color:#aaa;font-size:10px">'+addedStr+'</div>'+
-      '</div>'+
-      '<div class="cr">'+
-        '<div class="qty pos" style="font-size:15px">'+p.qty+'</div>'+
-        '<div class="dead-val">£'+(p.qty*p.prc).toFixed(2)+'</div>'+
-      '</div>'+
-    '</div>';
+  if (!list.length) { el.innerHTML = '<div class="empty">No dead stock for this filter</div>'; return; }
+  var tv = list.reduce(function(s,p){return s+p.qty*p.prc;},0);
+  var frag = document.createDocumentFragment();
+  frag.appendChild(mkSec('Dead stock · £' + tv.toFixed(0) + ' tied up', list.length));
+  list.forEach(function(p) {
+    var dls = dSince(p.ls);
+    var ddc = isVD(p.dc) ? dSince(p.dc) : null;
+    var card = mkCard(p);
+    var cn = card.querySelector('.cn');
+    cn.querySelector('.cmeta').textContent = p.dp + (p.sz ? ' · ' + p.sz : '');
+    var tag = document.createElement('div'); tag.className = 'dtag';
+    tag.textContent = p.ls === 'Never' ? ('Never sold' + (ddc ? ' · added ' + ddc + 'd ago' : '')) : ('Last sold ' + dls + ' days ago');
+    var added = document.createElement('div'); added.className = 'cmeta'; added.style.fontSize = '10px'; added.style.color = '#aaa';
+    added.textContent = ddc ? 'Added: ' + p.dc + ' (' + ddc + ' days ago)' : 'Date added: Unknown';
+    cn.appendChild(tag); cn.appendChild(added);
+    var cr = card.querySelector('.cr'); cr.innerHTML = '';
+    var q = document.createElement('div'); q.className = 'qty qp'; q.style.fontSize = '15px'; q.textContent = p.qty;
+    var v = document.createElement('div'); v.className = 'dval'; v.textContent = '£' + (p.qty*p.prc).toFixed(2);
+    cr.appendChild(q); cr.appendChild(v);
+    frag.appendChild(card);
   });
-  el.innerHTML=h;
+  el.innerHTML = ''; el.appendChild(frag);
 }
 
-function drawReorder(el){
-  var list=prods.filter(function(p){
-    if(p.qty!==0)return false;
-    var d=ds(p.ls);
-    return d<=90&&p.ls!=='Never';
+function renderReorder(el) {
+  var list = prods.filter(function(p) {
+    return p.qty === 0 && p.ls !== 'Never' && dSince(p.ls) <= 90;
   });
-  list=filt(list);
-  list.sort(function(a,b){return ds(a.ls)-ds(b.ls);});
-  if(!list.length){el.innerHTML='<div class="empty">No reorder suggestions<br><small style="font-size:11px">Shows zero stock items sold within last 90 days</small></div>';return;}
-  var h='<div class="sec"><span>Recently sold, now zero</span><span class="badge">'+list.length+'</span></div>';
-  list.forEach(function(p){
-    var d=ds(p.ls);var urg=d<=7;
-    var sug=Math.max(p.mn||0,p.mx>0?Math.ceil(p.mx/2):5);
-    h+='<div class="oc"><div class="oc-h"><div><div class="oc-name">'+p.nm+'</div><div class="oc-dept">'+p.dp+(p.sz?' · '+p.sz:'')+'</div></div><span class="prio '+(urg?'crit':'med')+'">'+(urg?'URGENT':'ORDER')+'</span></div><div class="oc-b"><div class="bc"><div class="bc-n">Last sold</div><div class="bc-q" style="font-size:14px;color:#e87000">'+d+'d ago</div></div><div class="arr">→</div><div class="sbox"><span class="sbox-q">+'+sug+'</span><span class="sbox-l">suggested</span></div><div class="bc"><div class="bc-n">Price</div><div class="bc-q" style="font-size:14px;color:#666">'+(p.prc>0?'£'+p.prc.toFixed(2):'—')+'</div></div></div></div>';
+  list = applySearch(list);
+  list.sort(function(a,b){return dSince(a.ls)-dSince(b.ls);});
+  if (!list.length) { el.innerHTML = '<div class="empty">No reorder suggestions<br><small style="font-size:11px">Zero stock items sold within last 90 days</small></div>'; return; }
+  var frag = document.createDocumentFragment();
+  frag.appendChild(mkSec('Recently sold, now zero', list.length));
+  list.forEach(function(p) {
+    var d = dSince(p.ls);
+    var urg = d <= 7;
+    var sug = Math.max(p.mn || 0, p.mx > 0 ? Math.ceil(p.mx / 2) : 5);
+    var oc = document.createElement('div'); oc.className = 'oc';
+    var och = document.createElement('div'); och.className = 'och';
+    var left = document.createElement('div');
+    var ocn = document.createElement('div'); ocn.className = 'ocn'; ocn.textContent = p.nm;
+    var ocd = document.createElement('div'); ocd.className = 'ocd'; ocd.textContent = p.dp + (p.sz ? ' · ' + p.sz : '');
+    left.appendChild(ocn); left.appendChild(ocd);
+    var prio = document.createElement('span'); prio.className = 'prio ' + (urg ? 'pcrit' : 'pmed'); prio.textContent = urg ? 'URGENT' : 'ORDER';
+    och.appendChild(left); och.appendChild(prio);
+    var ocb = document.createElement('div'); ocb.className = 'ocb';
+    ocb.innerHTML = '<div class="brc"><div class="brcn">Last sold</div><div class="brcq" style="font-size:14px;color:#e87000">' + d + 'd ago</div></div>' +
+      '<div class="oarr">→</div>' +
+      '<div class="sbox"><span class="sbq">+' + sug + '</span><span class="sbl">suggested</span></div>' +
+      '<div class="brc"><div class="brcn">Price</div><div class="brcq" style="font-size:14px;color:#666">' + (p.prc>0?'£'+p.prc.toFixed(2):'—') + '</div></div>';
+    oc.appendChild(och); oc.appendChild(ocb);
+    frag.appendChild(oc);
   });
-  el.innerHTML=h;
+  el.innerHTML = ''; el.appendChild(frag);
 }
 
-function drawTrend(el){
-  // Only show products sold recently with qty suggesting active selling
-  // Products with lastSold within 30 days AND still have stock (meaning they keep selling)
-  // OR products with lastSold very recent (within 7 days) regardless
-  var list=prods.filter(function(p){
-    if(p.ls==='Never')return false;
-    var dls=ds(p.ls);
-    if(dls>30)return false;
-    // Exclude products with qty=0 already shown in reorder
-    // Include if: sold within 7 days, OR sold within 30 days with reasonable stock
-    return dls<=7||(dls<=30&&p.qty>=2);
+function renderTrend(el) {
+  var list = prods.filter(function(p) {
+    if (p.ls === 'Never') return false;
+    var dls = dSince(p.ls);
+    return dls <= 7 || (dls <= 30 && p.qty >= 2);
   });
-  list=filt(list);
-  list.sort(function(a,b){return ds(a.ls)-ds(b.ls);});
-  var low=list.filter(function(p){return p.qty<=3||(p.mn>0&&p.qty<=p.mn);});
-  var ok=list.filter(function(p){return p.qty>3&&(p.mn===0||p.qty>p.mn);});
-  var h='';
-  if(low.length){
-    h+='<div class="sugg"><strong>'+low.length+' trending product'+(low.length>1?'s':'')+' running low</strong><br>Sold within 30 days but critically low stock. Consider reordering or transferring from other branches.</div>';
-    h+='<div class="sec"><span>Trending — low stock</span><span class="badge">'+low.length+'</span></div>';
-    low.forEach(function(p,i){
-      var d=ds(p.ls);var qc=p.qty<=0?'neg':'neg';
-      h+='<div class="card" onclick="openP(\''+esc(p.bc)+'\')"><div class="cn-meta" style="min-width:24px;text-align:center;color:'+(i<3?'#cc0000':'#aaa')+';font-weight:700;font-family:monospace">'+(i+1)+'</div><div class="ci">'+ihtml(p.bc)+'</div><div class="cn"><div class="cn-name">'+p.nm+'</div><div class="cn-meta">'+p.dp+'</div><div class="dead-days" style="background:#fff0f0;color:#cc0000">sold '+d+'d ago · '+p.qty+' left</div></div><div class="cr"><span class="qty '+qc+'">'+p.qty+'</span>'+(p.prc>0?'<span class="price">£'+p.prc.toFixed(2)+'</span>':'')+'</div></div>';
+  list = applySearch(list);
+  list.sort(function(a,b){return dSince(a.ls)-dSince(b.ls);});
+  var low = list.filter(function(p){return p.qty<=3||(p.mn>0&&p.qty<=p.mn);});
+  var ok  = list.filter(function(p){return p.qty>3&&(p.mn===0||p.qty>p.mn);});
+  if (!low.length && !ok.length) { el.innerHTML = '<div class="empty">No trending products<br><small style="font-size:11px">Products sold in last 30 days appear here</small></div>'; return; }
+  var frag = document.createDocumentFragment();
+  if (low.length) {
+    var sugg = document.createElement('div'); sugg.className = 'sugg';
+    sugg.innerHTML = '<strong>' + low.length + ' trending product' + (low.length>1?'s':'') + ' running low</strong><br>Sold within 30 days but stock critically low. Consider reordering or transferring.';
+    frag.appendChild(sugg);
+    frag.appendChild(mkSec('Trending — low stock', low.length));
+    low.forEach(function(p) {
+      var d = dSince(p.ls);
+      var card = mkCard(p);
+      var cn = card.querySelector('.cn');
+      var tag = document.createElement('div'); tag.className = 'dtag'; tag.style.cssText = 'background:#fff0f0;color:#cc0000';
+      tag.textContent = 'sold ' + d + 'd ago · ' + p.qty + ' left';
+      cn.appendChild(tag); frag.appendChild(card);
     });
   }
-  if(ok.length){
-    h+='<div class="sec" style="margin-top:8px"><span>Trending — good stock</span><span class="badge">'+ok.length+'</span></div>';
-    ok.forEach(function(p,i){
-      var d=ds(p.ls);
-      h+='<div class="card" onclick="openP(\''+esc(p.bc)+'\')"><div class="cn-meta" style="min-width:24px;text-align:center;color:'+(i<3?'#cc0000':'#aaa')+';font-weight:700;font-family:monospace">'+(i+1)+'</div><div class="ci">'+ihtml(p.bc)+'</div><div class="cn"><div class="cn-name">'+p.nm+'</div><div class="cn-meta">'+p.dp+'</div><div class="dead-days" style="background:#f0fff5;color:#1a7f3c">sold '+d+'d ago</div></div><div class="cr"><span class="qty pos">'+p.qty+'</span>'+(p.prc>0?'<span class="price">£'+p.prc.toFixed(2)+'</span>':'')+'</div></div>';
+  if (ok.length) {
+    frag.appendChild(mkSec('Trending — good stock', ok.length));
+    ok.forEach(function(p) {
+      var d = dSince(p.ls);
+      var card = mkCard(p);
+      var cn = card.querySelector('.cn');
+      var tag = document.createElement('div'); tag.className = 'dtag'; tag.style.cssText = 'background:#f0fff5;color:#1a7f3c';
+      tag.textContent = 'sold ' + d + 'd ago';
+      cn.appendChild(tag); frag.appendChild(card);
     });
   }
-  if(!h)h='<div class="empty">No trending products found<br><small style="font-size:11px">Products sold in last 30 days appear here</small></div>';
-  el.innerHTML=h;
+  el.innerHTML = ''; el.appendChild(frag);
 }
 
-function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
-
-function openP(bc){
-  var p=prods.find(function(x){return x.bc===bc;});
-  if(!p)return;
-  var i=img(bc);
-  document.getElementById('phero').innerHTML=i?'<img src="'+i+'" style="max-height:166px;max-width:100%;object-fit:contain" alt="">':'<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
-  document.getElementById('pn').textContent=p.nm;
-  document.getElementById('pp').textContent=p.dp+(p.sz?' · '+p.sz:'');
-  var qe=document.getElementById('pq');qe.textContent=p.qty;qe.style.color=p.qty<0?'#cc0000':p.qty===0?'#999':'#1a7f3c';
-  document.getElementById('ppr').textContent=p.prc>0?'£'+p.prc.toFixed(2):'—';
-  document.getElementById('pc').textContent=p.cst>0?'£'+p.cst.toFixed(2):'—';
-  document.getElementById('pb').textContent=p.bc||'—';
-  document.getElementById('ps').textContent=p.sz||'—';
-  document.getElementById('pdc').textContent=p.dc||'—';
-  document.getElementById('pls').textContent=p.ls||'—';
-  document.getElementById('pmn').textContent=p.mn;
-  document.getElementById('pmx').textContent=p.mx;
-  var dn=document.getElementById('pdn');
-  if(isDead(p,90)){dn.style.display='block';dn.textContent='Dead stock: '+(p.ls==='Never'?'Never sold · '+p.qty+' units in stock':'Last sold '+p.ls+' ('+ds(p.ls)+' days ago) · '+p.qty+' units');}
-  else dn.style.display='none';
+function openPanel(bc) {
+  var p = prods.find(function(x){return x.bc===bc;});
+  if (!p) return;
+  var src = imgs[bc];
+  var hero = document.getElementById('phero');
+  if (src) { hero.innerHTML = ''; var img=document.createElement('img'); img.src=src; img.style.cssText='max-height:166px;max-width:100%;object-fit:contain'; hero.appendChild(img); }
+  else { hero.innerHTML = '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'; }
+  document.getElementById('pn').textContent  = p.nm;
+  document.getElementById('pp').textContent  = p.dp + (p.sz?' · '+p.sz:'');
+  var qe = document.getElementById('pq'); qe.textContent = p.qty;
+  qe.style.color = p.qty<0?'#cc0000':p.qty===0?'#999':'#1a7f3c';
+  document.getElementById('ppr').textContent = p.prc>0?'£'+p.prc.toFixed(2):'—';
+  document.getElementById('pc').textContent  = p.cst>0?'£'+p.cst.toFixed(2):'—';
+  document.getElementById('pb').textContent  = p.bc||'—';
+  document.getElementById('psz').textContent = p.sz||'—';
+  document.getElementById('pdc').textContent = p.dc||'—';
+  document.getElementById('pls').textContent = p.ls||'—';
+  document.getElementById('pmn').textContent = p.mn;
+  document.getElementById('pmx').textContent = p.mx;
+  var dn = document.getElementById('pdn');
+  if (isDead(p,90)) {
+    dn.style.display='block';
+    dn.textContent = p.ls==='Never' ? 'Dead stock: Never sold · '+p.qty+' units in stock' : 'Dead stock: Last sold '+p.ls+' ('+dSince(p.ls)+' days ago) · '+p.qty+' units';
+  } else { dn.style.display='none'; }
   document.getElementById('pov').classList.add('open');
 }
 
-async function init(){
+// Event listeners — all DOM based, no inline handlers
+document.getElementById('tabs').addEventListener('click', function(e) {
+  var t = e.target.closest('.tab'); if (!t) return;
+  var v = t.dataset.tab; if (!v) return;
+  switchTab(v);
+});
+document.getElementById('bnav').addEventListener('click', function(e) {
+  var t = e.target.closest('.bni'); if (!t) return;
+  var v = t.dataset.tab; if (!v) return;
+  switchTab(v);
+});
+function switchTab(v) {
+  tab=v; dept='All'; tval='all';
+  document.querySelectorAll('.tab').forEach(function(el){el.classList.toggle('on',el.dataset.tab===v);});
+  document.querySelectorAll('.bni').forEach(function(el){el.classList.toggle('on',el.dataset.tab===v);});
+  document.getElementById('sq').value='';
+  renderFilters(); renderContent();
+}
+document.getElementById('sq').addEventListener('input', renderContent);
+document.getElementById('pov').addEventListener('click', function(e){if(e.target===this)this.classList.remove('open');});
+document.getElementById('logbtn').addEventListener('click', function(){
+  document.getElementById('logtext').textContent=logs.join('\n')||'No entries yet';
+  document.getElementById('logov').style.display='block';
+});
+document.getElementById('logclose').addEventListener('click', function(){document.getElementById('logov').style.display='none';});
+document.getElementById('logov').addEventListener('click', function(e){if(e.target===this)this.style.display='none';});
+
+async function init() {
   loadImgs();
-  await load();
-  setInterval(load,10*60*1000);
+  await loadData();
+  setInterval(loadData, 10*60*1000);
 }
 init();
 </script>
