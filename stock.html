@@ -178,7 +178,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script>
 var SURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTC9vR-U0BdG0v-bZVgQL8BNwGwkn6tzb0VqlyccGlyuow74GwG5PTOPRrW8a2tbBgIwaMT6LVTRWQA/pub?gid=774857271&single=true&output=csv';
 var IURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
-var DTIMES = [{l:'7 days',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'3 months',v:90},{l:'6 months',v:180},{l:'1 year',v:365},{l:'1 year+',v:730}];
+var DTIMES = [{l:'0-7 days',v:'0-7'},{l:'7-14 days',v:'7-14'},{l:'14-30 days',v:'14-30'},{l:'30-60 days',v:'30-60'},{l:'60-90 days',v:'60-90'},{l:'90-180 days',v:'90-180'},{l:'180-365 days',v:'180-365'},{l:'1 year+',v:'365-99999'}];
 var ZTIMES = [{l:'1 day',v:1},{l:'3 days',v:3},{l:'1 week',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'2 months',v:60},{l:'3 months',v:90}];
 
 var prods = [], imgs = {}, depts = [];
@@ -419,15 +419,12 @@ function renderZero(el) {
 }
 
 function renderDead(el) {
-  // minDays = lower bound, maxDays = upper bound (null = no upper limit)
   var minDays, maxDays;
-  if (tval === 'all') { minDays = 90; maxDays = null; }
+  if (tval === 'all') { minDays = 0; maxDays = 99999; }
   else {
-    var v = parseInt(tval);
-    // Map each button to a range
-    var ranges = {7:[7,13], 14:[14,29], 30:[30,89], 90:[90,179], 180:[180,364], 365:[365,729], 730:[730,null]};
-    var r = ranges[v] || [v, null];
-    minDays = r[0]; maxDays = r[1];
+    var parts = String(tval).split('-');
+    minDays = parseInt(parts[0]);
+    maxDays = parseInt(parts[1]);
   }
   lg('renderDead: tval=' + tval + ' min=' + minDays + ' max=' + maxDays);
 
@@ -435,11 +432,8 @@ function renderDead(el) {
     if (p.qty <= 0 || p.qty <= 5) return false;
     var dls = p.ls === 'Never' ? 9999 : dSince(p.ls);
     var ddc = isVD(p.dc) ? dSince(p.dc) : null;
-    // Use the most relevant age: last sold, or date created if never sold
-    var age = p.ls === 'Never' ? (ddc || 9999) : dls;
-    if (age < minDays) return false;
-    if (maxDays !== null && age > maxDays) return false;
-    return true;
+    var age = p.ls === 'Never' ? (ddc !== null ? ddc : 9999) : dls;
+    return age >= minDays && age <= maxDays;
   });
   list = applySearch(list);
   list.sort(function(a, b) {
@@ -450,9 +444,8 @@ function renderDead(el) {
   if (!list.length) { el.innerHTML = '<div class="empty">No dead stock for this filter</div>'; return; }
   var tv = list.reduce(function(s,p){return s+p.qty*p.prc;},0);
   var frag = document.createDocumentFragment();
-  var rangeLabels = {'all':'90+ days','7':'7-13 days','14':'14-29 days','30':'30-89 days','90':'90-179 days','180':'180-364 days','365':'1-2 years','730':'2+ years'};
-  var filterLabel = rangeLabels[String(tval)] || (tval + '+ days');
-  frag.appendChild(mkSec('Dead · £' + tv.toFixed(0) + ' · not sold ' + filterLabel, list.length));
+  var filterLabel = tval === 'all' ? 'all' : 'not sold ' + String(tval).replace('-99999','+ days').replace('-',' to ') + ' days';
+  frag.appendChild(mkSec('Dead stock · £' + tv.toFixed(0) + ' tied up', list.length));
   list.forEach(function(p) {
     var dls = dSince(p.ls);
     var ddc = isVD(p.dc) ? dSince(p.dc) : null;
