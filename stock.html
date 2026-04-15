@@ -419,16 +419,27 @@ function renderZero(el) {
 }
 
 function renderDead(el) {
-  var days = tval === 'all' ? 90 : parseInt(tval);
-  lg('renderDead: tval=' + tval + ' days=' + days);
+  // minDays = lower bound, maxDays = upper bound (null = no upper limit)
+  var minDays, maxDays;
+  if (tval === 'all') { minDays = 90; maxDays = null; }
+  else {
+    var v = parseInt(tval);
+    // Map each button to a range
+    var ranges = {7:[7,13], 14:[14,29], 30:[30,89], 90:[90,179], 180:[180,364], 365:[365,729], 730:[730,null]};
+    var r = ranges[v] || [v, null];
+    minDays = r[0]; maxDays = r[1];
+  }
+  lg('renderDead: tval=' + tval + ' min=' + minDays + ' max=' + maxDays);
+
   var list = prods.filter(function(p) {
     if (p.qty <= 0 || p.qty <= 5) return false;
-    var dls = dSince(p.ls);
+    var dls = p.ls === 'Never' ? 9999 : dSince(p.ls);
     var ddc = isVD(p.dc) ? dSince(p.dc) : null;
-    // Show products not sold for AT LEAST 'days' days
-    if (p.ls === 'Never' && ddc !== null && ddc >= days) return true;
-    if (isVD(p.ls) && dls >= days) return true;
-    return false;
+    // Use the most relevant age: last sold, or date created if never sold
+    var age = p.ls === 'Never' ? (ddc || 9999) : dls;
+    if (age < minDays) return false;
+    if (maxDays !== null && age > maxDays) return false;
+    return true;
   });
   list = applySearch(list);
   list.sort(function(a, b) {
@@ -439,8 +450,9 @@ function renderDead(el) {
   if (!list.length) { el.innerHTML = '<div class="empty">No dead stock for this filter</div>'; return; }
   var tv = list.reduce(function(s,p){return s+p.qty*p.prc;},0);
   var frag = document.createDocumentFragment();
-  var filterLabel = tval === 'all' ? 'not sold 90+ days' : 'not sold ' + days + '+ days';
-  frag.appendChild(mkSec('Dead stock · £' + tv.toFixed(0) + ' · ' + filterLabel, list.length));
+  var rangeLabels = {'all':'90+ days','7':'7-13 days','14':'14-29 days','30':'30-89 days','90':'90-179 days','180':'180-364 days','365':'1-2 years','730':'2+ years'};
+  var filterLabel = rangeLabels[String(tval)] || (tval + '+ days');
+  frag.appendChild(mkSec('Dead · £' + tv.toFixed(0) + ' · not sold ' + filterLabel, list.length));
   list.forEach(function(p) {
     var dls = dSince(p.ls);
     var ddc = isVD(p.dc) ? dSince(p.dc) : null;
