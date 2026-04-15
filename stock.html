@@ -335,31 +335,68 @@ function drawZero(el){
   var td=tval==='all'?null:parseInt(tval);
   var list=prods.filter(function(p){
     if(p.qty!==0)return false;
-    if(td!==null&&ds(p.ls)<td)return false;
+    if(td!==null){var dls=p.ls==='Never'?9999:ds(p.ls);if(dls<td)return false;}
     return true;
   });
   list=filt(list);
-  list.sort(function(a,b){return ds(b.ls)-ds(a.ls);});
-  if(!list.length){el.innerHTML='<div class="empty">No zero stock items</div>';return;}
+  list.sort(function(a,b){return ds(a.ls)-ds(b.ls);});
+  if(!list.length){el.innerHTML='<div class="empty">No zero stock items for this filter</div>';return;}
   var h='<div class="sec"><span>Out of stock</span><span class="badge">'+list.length+'</span></div>';
   list.slice(0,300).forEach(function(p){
-    var dlss=p.ls==='Never'?'Never sold':ds(p.ls)===9999?'Unknown':ds(p.ls)+' days ago';
-    h+='<div class="card" onclick="openP(\''+esc(p.bc)+'\')"><div class="ci">'+ihtml(p.bc)+'</div><div class="cn"><div class="cn-name">'+p.nm+'</div><div class="cn-meta">'+p.bc+(p.sz?' · '+p.sz:'')+'</div><div class="cn-meta warn">Last: '+dlss+'</div></div><div class="cr"><span class="qty zer">0</span>'+(p.prc>0?'<span class="price">£'+p.prc.toFixed(2)+'</span>':'')+'</div></div>';
+    var dls=p.ls==='Never'?9999:ds(p.ls);
+    var oosStr=p.ls==='Never'?'Never been sold':dls===9999?'Out of stock (unknown)':'Out of stock ~'+dls+' day'+(dls===1?'':'s');
+    var lastStr=p.ls==='Never'?'Never sold':'Last sold: '+p.ls;
+    h+='<div class="card" onclick="openP(''+esc(p.bc)+'')">'+
+      '<div class="ci">'+ihtml(p.bc)+'</div>'+
+      '<div class="cn">'+
+        '<div class="cn-name">'+p.nm+'</div>'+
+        '<div class="cn-meta">'+p.bc+(p.sz?' · '+p.sz:'')+'</div>'+
+        '<div class="cn-meta warn" style="font-weight:600">'+oosStr+'</div>'+
+        '<div class="cn-meta" style="color:#aaa;font-size:10px">'+lastStr+'</div>'+
+      '</div>'+
+      '<div class="cr"><span class="qty zer">0</span>'+(p.prc>0?'<span class="price">£'+p.prc.toFixed(2)+'</span>':'')+'</div>'+
+    '</div>';
   });
   el.innerHTML=h;
 }
 
 function drawDead(el){
   var days=tval==='all'?90:parseInt(tval);
-  var list=prods.filter(function(p){return isDead(p,days);});
+  var list=prods.filter(function(p){
+    if(p.qty<=5||p.qty<=0)return false;
+    var dls=p.ls==='Never'?9999:ds(p.ls);
+    var ddc=vd(p.dc)?ds(p.dc):null;
+    if(p.ls==='Never'&&ddc!==null&&ddc>=days)return true;
+    if(vd(p.ls)&&dls>=days)return true;
+    return false;
+  });
   list=filt(list);
-  list.sort(function(a,b){return ds(b.ls)-ds(a.ls);});
+  list.sort(function(a,b){
+    var da=p.ls==='Never'?(vd(a.dc)?ds(a.dc):9999):ds(a.ls);
+    var db=p.ls==='Never'?(vd(b.dc)?ds(b.dc):9999):ds(b.ls);
+    return db-da;
+  });
   if(!list.length){el.innerHTML='<div class="empty">No dead stock for this filter</div>';return;}
   var tv=list.reduce(function(s,p){return s+p.qty*p.prc;},0);
   var h='<div class="sec"><span>Dead stock · £'+tv.toFixed(0)+' tied up</span><span class="badge">'+list.length+'</span></div>';
   list.forEach(function(p){
-    var dlss=p.ls==='Never'?'Never sold':ds(p.ls)+' days ago';
-    h+='<div class="card" onclick="openP(\''+esc(p.bc)+'\')"><div class="ci">'+ihtml(p.bc)+'</div><div class="cn"><div class="cn-name">'+p.nm+'</div><div class="cn-meta">'+p.dp+(p.sz?' · '+p.sz:'')+'</div><div class="dead-days">'+dlss+'</div></div><div class="cr"><div class="qty pos" style="font-size:15px">'+p.qty+'</div><div class="dead-val">£'+(p.qty*p.prc).toFixed(2)+'</div></div></div>';
+    var dls=p.ls==='Never'?9999:ds(p.ls);
+    var ddc=vd(p.dc)?ds(p.dc):null;
+    var sinceStr=p.ls==='Never'?'Never sold'+(ddc?' · added '+ddc+'d ago':''):'Last sold '+dls+' days ago';
+    var addedStr=ddc?'Added '+p.dc+' ('+ddc+'d ago)':'Added: Unknown';
+    h+='<div class="card" onclick="openP(''+esc(p.bc)+'')">'+
+      '<div class="ci">'+ihtml(p.bc)+'</div>'+
+      '<div class="cn">'+
+        '<div class="cn-name">'+p.nm+'</div>'+
+        '<div class="cn-meta">'+p.dp+(p.sz?' · '+p.sz:'')+'</div>'+
+        '<div class="dead-days">'+sinceStr+'</div>'+
+        '<div class="cn-meta" style="color:#aaa;font-size:10px">'+addedStr+'</div>'+
+      '</div>'+
+      '<div class="cr">'+
+        '<div class="qty pos" style="font-size:15px">'+p.qty+'</div>'+
+        '<div class="dead-val">£'+(p.qty*p.prc).toFixed(2)+'</div>'+
+      '</div>'+
+    '</div>';
   });
   el.innerHTML=h;
 }
@@ -383,7 +420,17 @@ function drawReorder(el){
 }
 
 function drawTrend(el){
-  var list=prods.filter(function(p){return p.ls!=='Never'&&ds(p.ls)<=30;});
+  // Only show products sold recently with qty suggesting active selling
+  // Products with lastSold within 30 days AND still have stock (meaning they keep selling)
+  // OR products with lastSold very recent (within 7 days) regardless
+  var list=prods.filter(function(p){
+    if(p.ls==='Never')return false;
+    var dls=ds(p.ls);
+    if(dls>30)return false;
+    // Exclude products with qty=0 already shown in reorder
+    // Include if: sold within 7 days, OR sold within 30 days with reasonable stock
+    return dls<=7||(dls<=30&&p.qty>=2);
+  });
   list=filt(list);
   list.sort(function(a,b){return ds(a.ls)-ds(b.ls);});
   var low=list.filter(function(p){return p.qty<=3||(p.mn>0&&p.qty<=p.mn);});
