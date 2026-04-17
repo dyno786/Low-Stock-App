@@ -212,6 +212,11 @@ function pinCheck() {
   </div>
 </div>
 
+<div style="display:flex;background:#fff;border-bottom:1px solid #eee">
+  <div id="brn0" onclick="switchBranch(0)" style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:#cc0000;border-bottom:2px solid #cc0000;cursor:pointer">Roundhay</div>
+  <div id="brn1" onclick="switchBranch(1)" style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:#999;border-bottom:2px solid transparent;cursor:pointer">Chapeltown</div>
+</div>
+
 <div class="metrics">
   <div class="m b"><div class="mlbl">Total</div><div class="mval" id="mt">—</div><div class="msub">products</div></div>
   <div class="m r"><div class="mlbl">Negative</div><div class="mval" id="mn" style="color:#cc0000">—</div><div class="msub">need stock</div></div>
@@ -299,8 +304,22 @@ function pinCheck() {
 </div>
 
 <script>
-var SURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv';
-var LURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=407478843&single=true&output=csv';
+// ── BRANCHES ─────────────────────────────────────────────────────────────────
+var BRANCHES = [
+  {
+    name: 'Roundhay Road',
+    surl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv',
+    lurl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=407478843&single=true&output=csv'
+  },
+  {
+    name: 'Chapeltown Road',
+    surl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv',
+    lurl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=324459618&single=true&output=csv'
+  }
+];
+var currentBranchIdx = 0;
+function SURL() { return BRANCHES[currentBranchIdx].surl; }
+function LURL() { return BRANCHES[currentBranchIdx].lurl; }
 var IURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
 var DTIMES=[{l:'0-7 days',v:'0-7'},{l:'7-14 days',v:'7-14'},{l:'14-30 days',v:'14-30'},{l:'30-60 days',v:'30-60'},{l:'60-90 days',v:'60-90'},{l:'90-180 days',v:'90-180'},{l:'180-365 days',v:'180-365'},{l:'1 year+',v:'365-99999'}];
 var ZTIMES=[{l:'1 day',v:1},{l:'3 days',v:3},{l:'1 week',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'2 months',v:60},{l:'3 months',v:90}];
@@ -313,6 +332,20 @@ function dSince(s){var d=pDate(s);return d?Math.floor((Date.now()-d.getTime())/8
 function isVD(s){var d=pDate(s);return d!==null&&d.getFullYear()>=2000;}
 function isDead(p,days){days=days||90;if(p.qty<=5)return false;if(p.ls==='Never'&&isVD(p.dc)&&dSince(p.dc)>=days)return true;if(isVD(p.ls)&&dSince(p.ls)>=days)return true;return false;}
 
+function switchBranch(idx) {
+  currentBranchIdx = idx;
+  [0,1].forEach(function(i) {
+    var el = document.getElementById('brn'+i);
+    if (!el) return;
+    el.style.color = i === idx ? '#cc0000' : '#999';
+    el.style.borderBottom = i === idx ? '2px solid #cc0000' : '2px solid transparent';
+  });
+  prods=[]; imgs={};
+  document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  document.getElementById('stime').textContent='loading';
+  loadImgs().then(function(){ loadData(); });
+}
+
 async function loadImgs(){
   try{var r=await fetch(IURL);var t=await r.text();Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){var bc=cl(row['Barcode']),src=cl(row['ImageURL']);if(bc&&src&&src.startsWith('http'))imgs[bc]=src;});lg('Images: '+Object.keys(imgs).length);}catch(e){lg('Img err: '+e.message);}
 }
@@ -320,7 +353,7 @@ async function loadImgs(){
 async function loadData(){
   try{
     lg('Fetching...');document.getElementById('stime').textContent='syncing…';
-    var r=await fetch(SURL);if(!r.ok)throw new Error('HTTP '+r.status);
+    var r=await fetch(SURL());if(!r.ok)throw new Error('HTTP '+r.status);
     var t=await r.text();lg('Chars: '+t.length);
     var parsed=Papa.parse(t,{header:true,skipEmptyLines:true});lg('Rows: '+parsed.data.length);
     prods=parsed.data.map(function(row){var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,cst:parseFloat(row['AvgCost'])||0,mn:(row['MinStock']&&row['MinStock']!=='NULL')?(parseInt(row['MinStock'])||0):0,mx:(row['MaxStock']&&row['MaxStock']!=='NULL')?(parseInt(row['MaxStock'])||0):0,ls:(ls&&ls!=='NULL')?ls:'Never',dc:(dc&&dc!=='NULL')?dc:'Unknown',dp:cl(row['Department']),br:cl(row['Branch'])};});
@@ -370,7 +403,7 @@ async function checkChain(){
   if(lastFetchTime){var m4=Math.floor((Date.now()-lastFetchTime.getTime())/60000);var c4=sCls(m4);setStep(4,sIcon(c4),c4,'Fetched '+timeAgo(lastFetchTime)+' · '+lastFetchRows.toLocaleString()+' products',m4<35?'Data is fresh ✓':'May be stale — reload',m4+'m ago');}else{setStep(4,'⏳','load','Not yet fetched','','—');}
   try{
     setStep(1,'⏳','load','Checking…','','…');setStep(2,'⏳','load','Checking…','','…');setStep(3,'⏳','load','Checking…','','…');
-    var r=await fetch(LURL+'&t='+Date.now());if(!r.ok)throw new Error('HTTP '+r.status);
+    var r=await fetch(LURL()+'&t='+Date.now());if(!r.ok)throw new Error('HTTP '+r.status);
     var txt=await r.text();var rows=txt.trim().split('\n');
     if(rows.length<2){setStep(3,'⚠️','warn','No import log yet','Run importRoundhay() in Apps Script','No log');setStep(2,'⚠️','warn','Cannot confirm sync','Set up Apps Script trigger','?');setStep(1,'⚠️','warn','Cannot confirm export','Check PC Task Scheduler','?');return;}
     var row=rows[1].split(',');var runTime=(row[0]||'').replace(/"/g,'');var csvMod=(row[1]||'').replace(/"/g,'');var rowCount=(row[2]||'0').replace(/"/g,'');var status=(row[3]||'').replace(/"/g,'');var duration=(row[4]||'').replace(/"/g,'');
