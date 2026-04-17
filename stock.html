@@ -421,18 +421,33 @@ function pinCheck() {
   }
 }
 
-document.getElementById('pinpad').addEventListener('click', function(e) {
-  var btn = e.target.closest('[data-n]');
-  if (!btn || btn.disabled) return;
-  var n = btn.getAttribute('data-n');
-  if (n === 'del') {
-    if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0, -1); pinDots(); }
-  } else if (pinEntry.length < 4) {
-    pinEntry += n;
-    pinDots();
-    if (pinEntry.length === 4) setTimeout(pinCheck, 150);
+// Wire up each PIN button individually — most reliable on iOS Safari
+(function() {
+  var keys = document.querySelectorAll('#pinpad .pinkey');
+  for (var i = 0; i < keys.length; i++) {
+    (function(btn) {
+      var n = btn.getAttribute('data-n');
+      if (!n) return; // disabled spacer button
+      // Use touchend for instant response on iOS, click as fallback
+      function handlePress(e) {
+        e.preventDefault();
+        if (n === 'del') {
+          if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0, -1); pinDots(); }
+        } else if (pinEntry.length < 4) {
+          pinEntry += n;
+          pinDots();
+          if (pinEntry.length === 4) setTimeout(pinCheck, 150);
+        }
+      }
+      btn.addEventListener('touchend', handlePress, {passive: false});
+      btn.addEventListener('click', function(e) {
+        // Only fire click if not already handled by touchend
+        if (!e.isTrusted) return;
+        handlePress(e);
+      });
+    })(keys[i]);
   }
-});
+})();
 
 // ── DATA LOADING ──────────────────────────────────────────────────────────────
 async function loadImgs() {
