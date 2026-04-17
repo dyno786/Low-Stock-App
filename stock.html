@@ -165,18 +165,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="pindot" id="pd2"></div>
     <div class="pindot" id="pd3"></div>
   </div>
-  <div class="pinpad" id="pinpad">
-    <button class="pinkey" data-n="1">1</button>
-    <button class="pinkey" data-n="2">2</button>
-    <button class="pinkey" data-n="3">3</button>
-    <button class="pinkey" data-n="4">4</button>
-    <button class="pinkey" data-n="5">5</button>
-    <button class="pinkey" data-n="6">6</button>
-    <button class="pinkey" data-n="7">7</button>
-    <button class="pinkey" data-n="8">8</button>
-    <button class="pinkey" data-n="9">9</button>
-    <button class="pinkey" data-n="del" style="font-size:16px">⌫</button>
-    <button class="pinkey" data-n="0">0</button>
+  <div class="pinpad">
+    <button class="pinkey" onclick="pp('1')">1</button>
+    <button class="pinkey" onclick="pp('2')">2</button>
+    <button class="pinkey" onclick="pp('3')">3</button>
+    <button class="pinkey" onclick="pp('4')">4</button>
+    <button class="pinkey" onclick="pp('5')">5</button>
+    <button class="pinkey" onclick="pp('6')">6</button>
+    <button class="pinkey" onclick="pp('7')">7</button>
+    <button class="pinkey" onclick="pp('8')">8</button>
+    <button class="pinkey" onclick="pp('9')">9</button>
+    <button class="pinkey" onclick="pd()" style="font-size:16px">⌫</button>
+    <button class="pinkey" onclick="pp('0')">0</button>
     <button class="pinkey" style="opacity:0;pointer-events:none" disabled></button>
   </div>
   <div class="pinerr" id="pinerr"></div>
@@ -402,14 +402,20 @@ function isDead(p, days) {
 
 // ── PIN ───────────────────────────────────────────────────────────────────────
 function pinDots() {
-  for (var i = 0; i < 4; i++) {
-    document.getElementById('pd' + i).className = 'pindot' + (i < pinEntry.length ? ' filled' : '');
-  }
+  for (var i = 0; i < 4; i++)
+    document.getElementById('pd'+i).className = 'pindot'+(i < pinEntry.length ? ' filled' : '');
 }
-
+function pp(n) { // pin press
+  if (pinEntry.length >= 4) return;
+  pinEntry += n;
+  pinDots();
+  if (pinEntry.length === 4) setTimeout(pinCheck, 150);
+}
+function pd() { // pin delete
+  if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0,-1); pinDots(); }
+}
 function pinCheck() {
   if (pinEntry === PIN) {
-    // Store unlock time - valid for 8 hours
     localStorage.setItem('cc_unlocked', Date.now().toString());
     document.getElementById('pinov').style.display = 'none';
     startApp();
@@ -417,37 +423,9 @@ function pinCheck() {
     document.getElementById('pinerr').textContent = 'Incorrect PIN, try again';
     pinEntry = '';
     pinDots();
-    setTimeout(function() { document.getElementById('pinerr').textContent = ''; }, 2000);
+    setTimeout(function(){ document.getElementById('pinerr').textContent=''; }, 2000);
   }
 }
-
-// Wire up each PIN button individually — most reliable on iOS Safari
-(function() {
-  var keys = document.querySelectorAll('#pinpad .pinkey');
-  for (var i = 0; i < keys.length; i++) {
-    (function(btn) {
-      var n = btn.getAttribute('data-n');
-      if (!n) return; // disabled spacer button
-      // Use touchend for instant response on iOS, click as fallback
-      function handlePress(e) {
-        e.preventDefault();
-        if (n === 'del') {
-          if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0, -1); pinDots(); }
-        } else if (pinEntry.length < 4) {
-          pinEntry += n;
-          pinDots();
-          if (pinEntry.length === 4) setTimeout(pinCheck, 150);
-        }
-      }
-      btn.addEventListener('touchend', handlePress, {passive: false});
-      btn.addEventListener('click', function(e) {
-        // Only fire click if not already handled by touchend
-        if (!e.isTrusted) return;
-        handlePress(e);
-      });
-    })(keys[i]);
-  }
-})();
 
 // ── DATA LOADING ──────────────────────────────────────────────────────────────
 async function loadImgs() {
