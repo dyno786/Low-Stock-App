@@ -14,6 +14,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .title{color:#fff;font-size:15px;font-weight:700;margin-left:10px}
 .sync{color:rgba(255,255,255,.8);font-size:11px;font-family:monospace}
 .topbtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;line-height:1}
+.branchbar{display:flex;background:#fff;border-bottom:1px solid #eee}
+.branchbtn{flex:1;padding:11px 4px;text-align:center;font-size:12px;font-weight:600;color:#999;border-bottom:2.5px solid transparent;cursor:pointer;user-select:none}
+.branchbtn.on{color:#cc0000;border-bottom-color:#cc0000}
 .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
 .m{background:#fff;border-radius:10px;padding:12px;border-left:3px solid #ddd}
 .m.r{border-left-color:#cc0000}.m.a{border-left-color:#e87000}.m.b{border-left-color:#0055cc}
@@ -111,7 +114,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .logov.open{display:block}
 .logpan{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;max-height:80vh;overflow-y:auto;padding:16px;padding-bottom:40px}
 .bottombtn{margin-top:14px;width:100%;padding:11px;background:#cc0000;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-/* PIN */
 .pinov{position:fixed;inset:0;background:#cc0000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:480px;margin:0 auto}
 .pinlogo{width:60px;height:60px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#cc0000;margin-bottom:16px}
 .pintitle{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
@@ -127,7 +129,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </head>
 <body>
 
-<!-- PIN — rendered first, z-index 9999, covers everything -->
+<!-- PIN -->
 <div class="pinov" id="pinov">
   <div class="pinlogo">CC</div>
   <div class="pintitle">CC Hair &amp; Beauty</div>
@@ -154,50 +156,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
   <div class="pinerr" id="pinerr"></div>
 </div>
-
-<!-- PIN SCRIPT — inline here so functions exist before any button is tapped -->
 <script>
-var PIN = '1979';
-var pinEntry = '';
-
-function pinDots() {
-  for (var i = 0; i < 4; i++)
-    document.getElementById('pd'+i).className = 'pindot' + (i < pinEntry.length ? ' filled' : '');
-}
-
-function pinPress(n) {
-  if (pinEntry.length >= 4) return;
-  pinEntry += n;
-  pinDots();
-  if (pinEntry.length === 4) setTimeout(pinCheck, 150);
-}
-
-function pinDel() {
-  if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0,-1); pinDots(); }
-}
-
-function pinCheck() {
-  if (pinEntry === PIN) {
-    localStorage.setItem('cc_pin_ts', Date.now().toString());
-    document.getElementById('pinov').style.display = 'none';
-  } else {
-    document.getElementById('pinerr').textContent = 'Incorrect PIN';
-    pinEntry = '';
-    pinDots();
-    setTimeout(function(){ document.getElementById('pinerr').textContent = ''; }, 2000);
-  }
-}
-
-// Check if already unlocked within 8 hours
-(function() {
-  var ts = localStorage.getItem('cc_pin_ts');
-  if (ts && (Date.now() - parseInt(ts)) < 8 * 60 * 60 * 1000) {
-    document.getElementById('pinov').style.display = 'none';
-  }
-})();
+var pinEntry='';
+function pinDots(){for(var i=0;i<4;i++)document.getElementById('pd'+i).className='pindot'+(i<pinEntry.length?' filled':'');}
+function pinPress(n){if(pinEntry.length>=4)return;pinEntry+=n;pinDots();if(pinEntry.length===4)setTimeout(pinCheck,150);}
+function pinDel(){if(pinEntry.length>0){pinEntry=pinEntry.slice(0,-1);pinDots();}}
+function pinCheck(){if(pinEntry==='1979'){localStorage.setItem('cc_pin_ts',Date.now().toString());document.getElementById('pinov').style.display='none';}else{document.getElementById('pinerr').textContent='Incorrect PIN';pinEntry='';pinDots();setTimeout(function(){document.getElementById('pinerr').textContent='';},2000);}}
+(function(){var ts=localStorage.getItem('cc_pin_ts');if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)document.getElementById('pinov').style.display='none';})();
 </script>
 
-<!-- APP HTML -->
+<!-- APP -->
 <div class="top">
   <div class="top-row">
     <div style="display:flex;align-items:center">
@@ -212,9 +180,10 @@ function pinCheck() {
   </div>
 </div>
 
-<div style="display:flex;background:#fff;border-bottom:1px solid #eee">
-  <div id="brn0" onclick="switchBranch(0)" style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:#cc0000;border-bottom:2px solid #cc0000;cursor:pointer">Roundhay</div>
-  <div id="brn1" onclick="switchBranch(1)" style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:#999;border-bottom:2px solid transparent;cursor:pointer">Chapeltown</div>
+<!-- BRANCH SWITCHER -->
+<div class="branchbar">
+  <div class="branchbtn on" id="brn0" onclick="switchBranch(0)">Roundhay Road</div>
+  <div class="branchbtn" id="brn1" onclick="switchBranch(1)">Chapeltown Road</div>
 </div>
 
 <div class="metrics">
@@ -277,7 +246,7 @@ function pinCheck() {
 <div class="statov" id="statov">
   <div class="statpan">
     <div class="ph"></div>
-    <div class="stat-h2">Data Chain Monitor</div>
+    <div class="stat-h2" id="chain-title">Data Chain Monitor</div>
     <div class="stat-sub">Live status of your stock data pipeline</div>
     <div class="cstep"><div class="cicon load" id="s1icon">⏳</div><div class="cinfo"><div class="clabel">1. SQL Export (PC Batch File)</div><div class="ctime" id="s1time">Checking…</div><div class="cstat" id="s1stat"></div></div><span class="cbadge load" id="s1badge">—</span></div>
     <div class="cline"></div>
@@ -304,7 +273,7 @@ function pinCheck() {
 </div>
 
 <script>
-// ── BRANCHES ─────────────────────────────────────────────────────────────────
+// ── BRANCH CONFIG ─────────────────────────────────────────────────────────────
 var BRANCHES = [
   {
     name: 'Roundhay Road',
@@ -317,13 +286,13 @@ var BRANCHES = [
     lurl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=324459618&single=true&output=csv'
   }
 ];
-var currentBranchIdx = 0;
-function SURL() { return BRANCHES[currentBranchIdx].surl; }
-function LURL() { return BRANCHES[currentBranchIdx].lurl; }
+
 var IURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
 var DTIMES=[{l:'0-7 days',v:'0-7'},{l:'7-14 days',v:'7-14'},{l:'14-30 days',v:'14-30'},{l:'30-60 days',v:'30-60'},{l:'60-90 days',v:'60-90'},{l:'90-180 days',v:'90-180'},{l:'180-365 days',v:'180-365'},{l:'1 year+',v:'365-99999'}];
 var ZTIMES=[{l:'1 day',v:1},{l:'3 days',v:3},{l:'1 week',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'2 months',v:60},{l:'3 months',v:90}];
-var prods=[],imgs={},depts=[],tab='all',dept='All',tval='all',logs=[],lastFetchTime=null,lastFetchRows=0;
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+var currentBranch=0,prods=[],imgs={},depts=[],tab='all',dept='All',tval='all',logs=[],lastFetchTime=null,lastFetchRows=0;
 
 function lg(m){logs.push(new Date().toLocaleTimeString()+' '+m);console.log(m);}
 function cl(v){return String(v==null?'':v).trim();}
@@ -332,28 +301,33 @@ function dSince(s){var d=pDate(s);return d?Math.floor((Date.now()-d.getTime())/8
 function isVD(s){var d=pDate(s);return d!==null&&d.getFullYear()>=2000;}
 function isDead(p,days){days=days||90;if(p.qty<=5)return false;if(p.ls==='Never'&&isVD(p.dc)&&dSince(p.dc)>=days)return true;if(isVD(p.ls)&&dSince(p.ls)>=days)return true;return false;}
 
+// ── BRANCH SWITCH ─────────────────────────────────────────────────────────────
 function switchBranch(idx) {
-  currentBranchIdx = idx;
-  [0,1].forEach(function(i) {
-    var el = document.getElementById('brn'+i);
-    if (!el) return;
-    el.style.color = i === idx ? '#cc0000' : '#999';
-    el.style.borderBottom = i === idx ? '2px solid #cc0000' : '2px solid transparent';
+  currentBranch = idx;
+  document.querySelectorAll('.branchbtn').forEach(function(el,i){
+    el.classList.toggle('on', i===idx);
   });
   prods=[]; imgs={};
+  tab='all'; dept='All'; tval='all';
+  document.getElementById('sq').value='';
+  document.querySelectorAll('.tab').forEach(function(el){el.classList.toggle('on',el.dataset.tab==='all');});
+  document.querySelectorAll('.bni').forEach(function(el){el.classList.toggle('on',el.dataset.tab==='all');});
   document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
   document.getElementById('stime').textContent='loading';
+  lastFetchTime=null; lastFetchRows=0;
   loadImgs().then(function(){ loadData(); });
 }
 
+// ── DATA ──────────────────────────────────────────────────────────────────────
 async function loadImgs(){
   try{var r=await fetch(IURL);var t=await r.text();Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){var bc=cl(row['Barcode']),src=cl(row['ImageURL']);if(bc&&src&&src.startsWith('http'))imgs[bc]=src;});lg('Images: '+Object.keys(imgs).length);}catch(e){lg('Img err: '+e.message);}
 }
 
 async function loadData(){
+  var branch=BRANCHES[currentBranch];
   try{
-    lg('Fetching...');document.getElementById('stime').textContent='syncing…';
-    var r=await fetch(SURL());if(!r.ok)throw new Error('HTTP '+r.status);
+    lg('Fetching '+branch.name+'...');document.getElementById('stime').textContent='syncing…';
+    var r=await fetch(branch.surl);if(!r.ok)throw new Error('HTTP '+r.status);
     var t=await r.text();lg('Chars: '+t.length);
     var parsed=Papa.parse(t,{header:true,skipEmptyLines:true});lg('Rows: '+parsed.data.length);
     prods=parsed.data.map(function(row){var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,cst:parseFloat(row['AvgCost'])||0,mn:(row['MinStock']&&row['MinStock']!=='NULL')?(parseInt(row['MinStock'])||0):0,mx:(row['MaxStock']&&row['MaxStock']!=='NULL')?(parseInt(row['MaxStock'])||0):0,ls:(ls&&ls!=='NULL')?ls:'Never',dc:(dc&&dc!=='NULL')?dc:'Unknown',dp:cl(row['Department']),br:cl(row['Branch'])};});
@@ -382,13 +356,9 @@ function mkImg(bc){var src=imgs[bc];if(src){var img=document.createElement('img'
 function mkCard(p){var card=document.createElement('div');card.className='card';var ci=document.createElement('div');ci.className='ci';ci.appendChild(mkImg(p.bc));var cn=document.createElement('div');cn.className='cn';var cname=document.createElement('div');cname.className='cname';cname.textContent=p.nm;var cmeta=document.createElement('div');cmeta.className='cmeta';cmeta.textContent=p.bc+(p.sz?' · '+p.sz:'');cn.appendChild(cname);cn.appendChild(cmeta);var cr=document.createElement('div');cr.className='cr';var qty=document.createElement('span');qty.className='qty '+(p.qty<0?'qn':p.qty===0?'qz':'qp');qty.textContent=p.qty;cr.appendChild(qty);if(p.prc>0){var pr=document.createElement('span');pr.className='cprice';pr.textContent='£'+p.prc.toFixed(2);cr.appendChild(pr);}card.appendChild(ci);card.appendChild(cn);card.appendChild(cr);card.addEventListener('click',function(){openPanel(p.bc);});return card;}
 
 function renderContent(){if(!prods.length)return;var el=document.getElementById('out');if(tab==='zero'){renderZero(el);return;}if(tab==='dead'){renderDead(el);return;}if(tab==='reorder'){renderReorder(el);return;}if(tab==='trend'){renderTrend(el);return;}var list=prods.filter(function(p){return tab==='neg'?p.qty<0:true;});list=applySearch(list);list.sort(function(a,b){return a.qty-b.qty;});if(!list.length){el.innerHTML='<div class="empty">No products found</div>';return;}var frag=document.createDocumentFragment();frag.appendChild(mkSec(tab==='neg'?'Most negative first':'All products',list.length));list.slice(0,300).forEach(function(p){frag.appendChild(mkCard(p));});el.innerHTML='';el.appendChild(frag);}
-
 function renderZero(el){var td=tval==='all'?null:parseInt(tval);var list=prods.filter(function(p){if(p.qty!==0)return false;if(td!==null&&dSince(p.ls)<td)return false;return true;});list=applySearch(list);list.sort(function(a,b){return dSince(a.ls)-dSince(b.ls);});if(!list.length){el.innerHTML='<div class="empty">No zero stock items</div>';return;}var frag=document.createDocumentFragment();frag.appendChild(mkSec(tval==='all'?'Out of stock':'Out of stock '+tval+'+ days',list.length));list.slice(0,300).forEach(function(p){var dls=dSince(p.ls);var card=mkCard(p);var cn=card.querySelector('.cn');var w=document.createElement('div');w.className='cwarn';w.textContent=p.ls==='Never'?'Never been sold':'Out of stock ~'+dls+' day'+(dls===1?'':'s');var s=document.createElement('div');s.className='cmeta';s.style.fontSize='10px';s.style.color='#aaa';s.textContent=p.ls==='Never'?'Never sold':'Last sold: '+p.ls;cn.appendChild(w);cn.appendChild(s);frag.appendChild(card);});el.innerHTML='';el.appendChild(frag);}
-
 function renderDead(el){var minDays,maxDays;if(tval==='all'){minDays=0;maxDays=99999;}else{var pts=String(tval).split('-');minDays=parseInt(pts[0]);maxDays=parseInt(pts[1]);}var list=prods.filter(function(p){if(p.qty<=5)return false;var age=p.ls==='Never'?(isVD(p.dc)?dSince(p.dc):9999):dSince(p.ls);return age>=minDays&&age<=maxDays;});list=applySearch(list);list.sort(function(a,b){var da=a.ls==='Never'?(isVD(a.dc)?dSince(a.dc):9999):dSince(a.ls);var db=b.ls==='Never'?(isVD(b.dc)?dSince(b.dc):9999):dSince(b.ls);return db-da;});if(!list.length){el.innerHTML='<div class="empty">No dead stock for this filter</div>';return;}var tv=list.reduce(function(s,p){return s+p.qty*p.prc;},0);var frag=document.createDocumentFragment();frag.appendChild(mkSec('Dead stock · £'+tv.toFixed(0)+' tied up',list.length));list.forEach(function(p){var dls=dSince(p.ls);var ddc=isVD(p.dc)?dSince(p.dc):null;var card=mkCard(p);var cn=card.querySelector('.cn');cn.querySelector('.cmeta').textContent=p.dp+(p.sz?' · '+p.sz:'');var tag=document.createElement('div');tag.className='dtag';tag.textContent=p.ls==='Never'?('Never sold'+(ddc?' · added '+ddc+'d ago':'')):('Last sold '+dls+' days ago');var added=document.createElement('div');added.className='cmeta';added.style.fontSize='10px';added.style.color='#aaa';added.textContent=ddc?'Added: '+p.dc+' ('+ddc+'d ago)':'Date added: Unknown';cn.appendChild(tag);cn.appendChild(added);var cr=card.querySelector('.cr');cr.innerHTML='';var q=document.createElement('div');q.className='qty qp';q.style.fontSize='15px';q.textContent=p.qty;var v=document.createElement('div');v.className='dval';v.textContent='£'+(p.qty*p.prc).toFixed(2);cr.appendChild(q);cr.appendChild(v);frag.appendChild(card);});el.innerHTML='';el.appendChild(frag);}
-
 function renderReorder(el){var list=prods.filter(function(p){return p.qty===0&&p.ls!=='Never'&&dSince(p.ls)<=90;});list=applySearch(list);list.sort(function(a,b){return dSince(a.ls)-dSince(b.ls);});if(!list.length){el.innerHTML='<div class="empty">No reorder suggestions<br><small style="font-size:11px">Zero stock items sold within last 90 days</small></div>';return;}var frag=document.createDocumentFragment();frag.appendChild(mkSec('Recently sold, now zero',list.length));list.forEach(function(p){var d=dSince(p.ls);var urg=d<=7;var sug=Math.max(p.mn||0,p.mx>0?Math.ceil(p.mx/2):5);var oc=document.createElement('div');oc.className='oc';var och=document.createElement('div');och.className='och';var ci=document.createElement('div');ci.style.cssText='width:40px;height:40px;flex-shrink:0;border-radius:6px;overflow:hidden;background:#f0f0f0;border:1px solid #eee;display:flex;align-items:center;justify-content:center;margin-right:2px';var imgEl=mkImg(p.bc);if(imgEl.tagName==='IMG')imgEl.style.cssText='width:40px;height:40px;object-fit:cover';ci.appendChild(imgEl);var left=document.createElement('div');left.style.cssText='flex:1;min-width:0';var ocn=document.createElement('div');ocn.className='ocn';ocn.textContent=p.nm;var ocd=document.createElement('div');ocd.className='ocd';ocd.textContent=p.dp+(p.sz?' · '+p.sz:'');left.appendChild(ocn);left.appendChild(ocd);var prio=document.createElement('span');prio.className='prio '+(urg?'pcrit':'pmed');prio.textContent=urg?'URGENT':'ORDER';och.appendChild(ci);och.appendChild(left);och.appendChild(prio);var ocb=document.createElement('div');ocb.className='ocb';ocb.innerHTML='<div class="brc"><div class="brcn">Last sold</div><div class="brcq" style="font-size:14px;color:#e87000">'+d+'d ago</div></div><div class="oarr">→</div><div class="sbox"><span class="sbq">+'+sug+'</span><span class="sbl">suggested</span></div><div class="brc"><div class="brcn">Price</div><div class="brcq" style="font-size:14px;color:#666">'+(p.prc>0?'£'+p.prc.toFixed(2):'—')+'</div></div>';oc.appendChild(och);oc.appendChild(ocb);oc.addEventListener('click',function(){openPanel(p.bc);});frag.appendChild(oc);});el.innerHTML='';el.appendChild(frag);}
-
 function renderTrend(el){var list=prods.filter(function(p){if(p.ls==='Never')return false;var dls=dSince(p.ls);return dls<=7||(dls<=30&&p.qty>=2);});list=applySearch(list);list.sort(function(a,b){return dSince(a.ls)-dSince(b.ls);});var low=list.filter(function(p){return p.qty<=3||(p.mn>0&&p.qty<=p.mn);});var ok=list.filter(function(p){return p.qty>3&&(p.mn===0||p.qty>p.mn);});if(!low.length&&!ok.length){el.innerHTML='<div class="empty">No trending products<br><small style="font-size:11px">Products sold in last 30 days appear here</small></div>';return;}var frag=document.createDocumentFragment();if(low.length){var sugg=document.createElement('div');sugg.className='sugg';sugg.innerHTML='<strong>'+low.length+' trending product'+(low.length>1?'s':'')+' running low</strong><br>Sold within 30 days but stock critically low.';frag.appendChild(sugg);frag.appendChild(mkSec('Trending — low stock',low.length));low.forEach(function(p){var d=dSince(p.ls);var card=mkCard(p);var tag=document.createElement('div');tag.className='dtag';tag.style.cssText='background:#fff0f0;color:#cc0000';tag.textContent='sold '+d+'d ago · '+p.qty+' left';card.querySelector('.cn').appendChild(tag);frag.appendChild(card);});}if(ok.length){frag.appendChild(mkSec('Trending — good stock',ok.length));ok.forEach(function(p){var d=dSince(p.ls);var card=mkCard(p);var tag=document.createElement('div');tag.className='dtag';tag.style.cssText='background:#f0fff5;color:#1a7f3c';tag.textContent='sold '+d+'d ago';card.querySelector('.cn').appendChild(tag);frag.appendChild(card);});}el.innerHTML='';el.appendChild(frag);}
 
 function openPanel(bc){var p=prods.find(function(x){return x.bc===bc;});if(!p)return;var hero=document.getElementById('phero');hero.innerHTML='';var src=imgs[bc];if(src){var img=document.createElement('img');img.src=src;img.style.cssText='max-height:166px;max-width:100%;object-fit:contain';hero.appendChild(img);}else{hero.innerHTML='<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';}document.getElementById('pn').textContent=p.nm;document.getElementById('pp').textContent=p.dp+(p.sz?' · '+p.sz:'');var qe=document.getElementById('pq');qe.textContent=p.qty;qe.style.color=p.qty<0?'#cc0000':p.qty===0?'#999':'#1a7f3c';document.getElementById('ppr').textContent=p.prc>0?'£'+p.prc.toFixed(2):'—';document.getElementById('pc').textContent=p.cst>0?'£'+p.cst.toFixed(2):'—';document.getElementById('pb').textContent=p.bc||'—';document.getElementById('psz').textContent=p.sz||'—';document.getElementById('pdc').textContent=p.dc||'—';document.getElementById('pls').textContent=p.ls||'—';document.getElementById('pmn').textContent=p.mn;document.getElementById('pmx').textContent=p.mx;var dn=document.getElementById('pdn');if(isDead(p,90)){dn.style.display='block';dn.textContent=p.ls==='Never'?'Dead stock: Never sold · '+p.qty+' units':'Dead stock: Last sold '+p.ls+' ('+dSince(p.ls)+'d ago) · '+p.qty+' units';}else{dn.style.display='none';}document.getElementById('pov').classList.add('open');}
@@ -400,12 +370,15 @@ function sIcon(cls){return cls==='ok'?'✅':cls==='warn'?'⚠️':'❌';}
 function parseDT(s){if(!s)return null;var p=s.trim().split(' ');if(p.length<2)return null;var d=p[0].split('/'),t=p[1].split(':');if(d.length<3||t.length<2)return null;return new Date(parseInt(d[2]),parseInt(d[1])-1,parseInt(d[0]),parseInt(t[0]),parseInt(t[1]),parseInt(t[2]||0));}
 
 async function checkChain(){
+  var branch=BRANCHES[currentBranch];
+  document.getElementById('chain-title').textContent='Data Chain — '+branch.name;
   if(lastFetchTime){var m4=Math.floor((Date.now()-lastFetchTime.getTime())/60000);var c4=sCls(m4);setStep(4,sIcon(c4),c4,'Fetched '+timeAgo(lastFetchTime)+' · '+lastFetchRows.toLocaleString()+' products',m4<35?'Data is fresh ✓':'May be stale — reload',m4+'m ago');}else{setStep(4,'⏳','load','Not yet fetched','','—');}
   try{
     setStep(1,'⏳','load','Checking…','','…');setStep(2,'⏳','load','Checking…','','…');setStep(3,'⏳','load','Checking…','','…');
-    var r=await fetch(LURL()+'&t='+Date.now());if(!r.ok)throw new Error('HTTP '+r.status);
+    var r=await fetch(branch.lurl+'&t='+Date.now());if(!r.ok)throw new Error('HTTP '+r.status);
     var txt=await r.text();var rows=txt.trim().split('\n');
-    if(rows.length<2){setStep(3,'⚠️','warn','No import log yet','Run importRoundhay() in Apps Script','No log');setStep(2,'⚠️','warn','Cannot confirm sync','Set up Apps Script trigger','?');setStep(1,'⚠️','warn','Cannot confirm export','Check PC Task Scheduler','?');return;}
+    if(rows.length<2){setStep(3,'⚠️','warn','No import log yet','Run Apps Script import function','No log');setStep(2,'⚠️','warn','Cannot confirm','Check Apps Script','?');setStep(1,'⚠️','warn','Cannot confirm','Check PC Task Scheduler','?');
+    var logEl=document.getElementById('exportlog');if(logEl)logEl.textContent='No history yet';return;}
     var row=rows[1].split(',');var runTime=(row[0]||'').replace(/"/g,'');var csvMod=(row[1]||'').replace(/"/g,'');var rowCount=(row[2]||'0').replace(/"/g,'');var status=(row[3]||'').replace(/"/g,'');var duration=(row[4]||'').replace(/"/g,'');
     var runDate=parseDT(runTime);var csvDate=parseDT(csvMod);var isOK=status==='OK';
     var m3=runDate?Math.floor((Date.now()-runDate.getTime())/60000):9999;var c3=!isOK?'err':sCls(m3);
@@ -413,9 +386,9 @@ async function checkChain(){
     var m2=csvDate?Math.floor((Date.now()-csvDate.getTime())/60000):9999;var c2=sCls(m2);
     setStep(2,sIcon(c2),c2,'CSV last modified: '+(csvMod||'?'),m2<35?'Synced on schedule ✓':'Sync may be delayed',timeAgo(csvDate));
     var c1=sCls(m2);var next=30-(m2%30);
-    setStep(1,sIcon(c1),c1,'Last export: '+(csvMod||'?'),c1==='ok'?'Running ✓ · Next ~'+next+' mins':'Check Task Scheduler on Roundhay PC',timeAgo(csvDate));
+    setStep(1,sIcon(c1),c1,'Last export: '+(csvMod||'?'),c1==='ok'?'Running ✓ · Next ~'+next+' mins':'Check Task Scheduler on '+branch.name+' PC',timeAgo(csvDate));
     var logEl=document.getElementById('exportlog');
-    if(logEl){var lrows=rows.slice(1).slice(0,10);if(!lrows.length){logEl.textContent='No history yet';}else{logEl.innerHTML=lrows.map(function(r2){var c=r2.split(',');var rt=(c[0]||'').replace(/"/g,'');var rc=(c[2]||'').replace(/"/g,'');var st=(c[3]||'').replace(/"/g,'');var du=(c[4]||'').replace(/"/g,'');var ok2=st==='OK';return'<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #eee"><span>'+(ok2?'✅':'❌')+' <span style="color:'+(ok2?'#1a7f3c':'#cc0000')+'">'+rt+'</span></span><span style="color:#999">'+(ok2?parseInt(rc).toLocaleString()+' rows · '+du:st)+'</span></div>';}).join('');}}
+    if(logEl){var lrows=rows.slice(1,11);if(!lrows.length){logEl.textContent='No history yet';}else{logEl.innerHTML=lrows.map(function(r2){var c=r2.split(',');var rt=(c[0]||'').replace(/"/g,'');var rc=(c[2]||'').replace(/"/g,'');var st=(c[3]||'').replace(/"/g,'');var du=(c[4]||'').replace(/"/g,'');var ok2=st==='OK';return'<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #eee"><span>'+(ok2?'✅':'❌')+' <span style="color:'+(ok2?'#1a7f3c':'#cc0000')+'">'+rt+'</span></span><span style="color:#999">'+(ok2?parseInt(rc).toLocaleString()+' rows · '+du:st)+'</span></div>';}).join('');}}
   }catch(e){setStep(3,'❌','err','Cannot read import log','Publish ImportLog tab as CSV','Error');setStep(2,'⚠️','warn','Cannot confirm','Check Apps Script','?');setStep(1,'⚠️','warn','Cannot confirm','Check PC Scheduler','?');var logEl=document.getElementById('exportlog');if(logEl)logEl.textContent='Log unavailable';}
 }
 
@@ -432,10 +405,9 @@ document.getElementById('logbtn').addEventListener('click',function(){document.g
 document.getElementById('logclose').addEventListener('click',function(){document.getElementById('logov').classList.remove('open');});
 document.getElementById('logov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
-// Start loading data immediately — PIN is already handled above
 loadImgs();
 loadData();
-setInterval(loadData, 30 * 60 * 1000);
+setInterval(loadData, 30*60*1000);
 </script>
 </body>
 </html>
