@@ -274,18 +274,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="pindot" id="pd2"></div>
     <div class="pindot" id="pd3"></div>
   </div>
-  <div class="pinpad">
-    <button class="pinkey" onclick="pinPress(1)">1</button>
-    <button class="pinkey" onclick="pinPress(2)">2</button>
-    <button class="pinkey" onclick="pinPress(3)">3</button>
-    <button class="pinkey" onclick="pinPress(4)">4</button>
-    <button class="pinkey" onclick="pinPress(5)">5</button>
-    <button class="pinkey" onclick="pinPress(6)">6</button>
-    <button class="pinkey" onclick="pinPress(7)">7</button>
-    <button class="pinkey" onclick="pinPress(8)">8</button>
-    <button class="pinkey" onclick="pinPress(9)">9</button>
-    <button class="pinkey del" onclick="pinDel()">⌫</button>
-    <button class="pinkey" onclick="pinPress(0)">0</button>
+  <div class="pinpad" id="pinpad">
+    <button class="pinkey" data-n="1">1</button>
+    <button class="pinkey" data-n="2">2</button>
+    <button class="pinkey" data-n="3">3</button>
+    <button class="pinkey" data-n="4">4</button>
+    <button class="pinkey" data-n="5">5</button>
+    <button class="pinkey" data-n="6">6</button>
+    <button class="pinkey" data-n="7">7</button>
+    <button class="pinkey" data-n="8">8</button>
+    <button class="pinkey" data-n="9">9</button>
+    <button class="pinkey del" data-n="del">⌫</button>
+    <button class="pinkey" data-n="0">0</button>
     <button class="pinkey" style="opacity:0" disabled></button>
   </div>
   <div class="pinerr" id="pinerr"></div>
@@ -859,48 +859,45 @@ document.getElementById('logclose').addEventListener('click', function(){documen
 document.getElementById('logov').addEventListener('click', function(e){if(e.target===this)this.style.display='none';});
 
 // ─── PIN Lock ─────────────────────────────────────────────────────────────────
-var PIN = '1979'; // Change this to your PIN
+var PIN = '1979';
 var pinEntry = '';
-var pinLocked = true;
 
-function pinPress(n) {
-  if (pinEntry.length >= 4) return;
-  pinEntry += String(n);
-  updatePinDots();
-  if (pinEntry.length === 4) {
-    setTimeout(checkPin, 150);
-  }
-}
-
-function pinDel() {
-  if (pinEntry.length > 0) {
-    pinEntry = pinEntry.slice(0, -1);
-    updatePinDots();
-  }
-}
-
-function updatePinDots() {
+function pinUpdateDots() {
   for (var i = 0; i < 4; i++) {
-    document.getElementById('pd' + i).className = 'pindot' + (i < pinEntry.length ? ' filled' : '');
+    document.getElementById('pd'+i).className = 'pindot' + (i < pinEntry.length ? ' filled' : '');
   }
 }
 
-function checkPin() {
+function pinCheck() {
   if (pinEntry === PIN) {
-    pinLocked = false;
-    sessionStorage.setItem('cc_unlocked', '1');
+    sessionStorage.setItem('cc_unlocked','1');
     document.getElementById('pinov').style.display = 'none';
-    // Start loading data now
     loadImgs();
     loadData();
     setInterval(loadData, 10*60*1000);
   } else {
     document.getElementById('pinerr').textContent = 'Incorrect PIN, try again';
     pinEntry = '';
-    updatePinDots();
-    setTimeout(function() { document.getElementById('pinerr').textContent = ''; }, 2000);
+    pinUpdateDots();
+    setTimeout(function(){ document.getElementById('pinerr').textContent=''; }, 2000);
   }
 }
+
+// Wire up PIN pad via event delegation — works on mobile touch
+document.getElementById('pinpad').addEventListener('click', function(e) {
+  var btn = e.target.closest('.pinkey');
+  if (!btn || btn.disabled) return;
+  var n = btn.dataset.n;
+  if (n === 'del') {
+    if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0,-1); pinUpdateDots(); }
+  } else {
+    if (pinEntry.length < 4) {
+      pinEntry += n;
+      pinUpdateDots();
+      if (pinEntry.length === 4) setTimeout(pinCheck, 150);
+    }
+  }
+});
 
 async function init() {
   // Check if already unlocked in this session
