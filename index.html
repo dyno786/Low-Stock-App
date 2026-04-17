@@ -139,7 +139,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#17150e" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </div>
       <div>
-        <div class="tb-title">CC Hair & Beauty</div>
+        <div class="tb-title">CC Hair &amp; Beauty</div>
         <div class="tb-sub" id="top-date"></div>
       </div>
     </div>
@@ -197,6 +197,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </button>
 </div>
 
+<!-- Product detail panel -->
 <div class="panel-ov" id="panel-ov" onclick="handlePanelBg(event)">
   <div class="panel">
     <div class="p-handle"></div>
@@ -231,6 +232,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </div>
 </div>
 
+<!-- Sync log panel -->
 <div class="panel-ov" id="log-ov" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="panel" style="padding-bottom:20px">
     <div class="p-handle"></div>
@@ -241,6 +243,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </div>
 </div>
 
+<!-- Barcode scanner -->
 <div class="scan-ov" id="scan-ov">
   <div class="scan-hdr">
     <button class="scan-x" onclick="closeScanner()">✕</button>
@@ -258,88 +261,79 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 </div>
 
 <script>
-// ═══════════════════════════════════════════════
-// SHOPIFY IMAGE LOOKUP
-// Single published Google Sheet — 2 columns: Barcode, ImageURL
-// Built from all 4 Shopify export files
-// ═══════════════════════════════════════════════
-const IMAGE_LOOKUP_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
+// ── CONFIG ─────────────────────────────────────────────────────────────────────
+// Image lookup sheet — all Shopify product images by barcode
+const IMAGE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
 
-let imageMap = {}; // barcode -> image URL — built on load
-
-// ═══════════════════════════════════════════════
-// BRANCHES — add more branches here as you go
-// Just add the Google Drive file ID for each branch CSV
-// ═══════════════════════════════════════════════
+// ── BRANCHES ───────────────────────────────────────────────────────────────────
+// To add a new branch:
+// 1. Run the stock_export bat file on that branch PC
+// 2. Set up the Google Sheet + Apps Script import for that branch
+// 3. Publish the Sheet as CSV
+// 4. Add the branch here with the published CSV URL
 const BRANCHES = [
   {
     id:   'roundhay',
     name: 'Roundhay Road',
-    url:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRLnwd1s-p2s72xRhJyD_POJZJDuHKlXvyTnC3dZ-iDqVH_jtiqIcob_8zEqfJslebVnEjfH4zqaJ7r/pub?gid=197766818&single=true&output=csv'
+    // ✅ LIVE — updated every 30 mins via Apps Script from SQL export
+    url:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'
   },
   {
     id:   'chapeltown',
     name: 'Chapeltown Road',
+    // ⏳ PENDING — replace URL once Apps Script set up for this branch
     url:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vThAzuFKIKsBuDOoeATRQeMz3-cRDfEmLgOGVXhS1AD7mo7TsjuPw9v9prtncfkKD8xOq5pHSwiay6N/pub?gid=570210411&single=true&output=csv'
   },
   {
     id:   'citycenter',
     name: 'City Center',
+    // ⏳ PENDING — replace URL once Apps Script set up for this branch
     url:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcR7_ZTab8wjdsHhWIKZHMHeiJplL-GbNGcscoQPZN80-a7qVbtngFRJoU0ewzPXaNFgS_FYaGii4i/pub?gid=775572675&single=true&output=csv'
   },
 ];
 
-// ═══════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════
+// ── STATE ──────────────────────────────────────────────────────────────────────
+let imageMap      = {};
 let branchData    = {};
 let currentBranch = BRANCHES[0].id;
 let currentView   = 'brand';
 let currentProduct = null;
-let waNumber = localStorage.getItem('cc_wa') || '';
-let ticks    = JSON.parse(localStorage.getItem('cc_ticks')   || '{}');
-let restocks = JSON.parse(localStorage.getItem('cc_restock') || '{}');
+let waNumber  = localStorage.getItem('cc_wa') || '';
+let ticks     = JSON.parse(localStorage.getItem('cc_ticks')   || '{}');
+let restocks  = JSON.parse(localStorage.getItem('cc_restock') || '{}');
 let scanStream = null, scanInterval = null;
 
+// ── INIT ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('top-date').textContent =
     new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
   if (waNumber) document.getElementById('wa-num').value = waNumber;
   buildBranchTabs();
-  // Load Shopify images first, then fetch branch data
-  loadShopifyImages().then(function() {
-    fetchBranch(currentBranch);
-  });
-  // Auto refresh every 5 minutes
-  setInterval(function() {
-    delete branchData[currentBranch];
-    fetchBranch(currentBranch);
-  }, 5 * 60 * 1000);
+  loadImages().then(function() { fetchBranch(currentBranch); });
+  // Auto refresh every 30 mins (matches scheduler)
+  setInterval(function() { delete branchData[currentBranch]; fetchBranch(currentBranch); }, 30 * 60 * 1000);
 });
 
-// Fetch the image lookup sheet and build barcode->image map
-async function loadShopifyImages() {
+// ── IMAGES ─────────────────────────────────────────────────────────────────────
+async function loadImages() {
   try {
-    var res = await fetch(IMAGE_LOOKUP_URL);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var text = await res.text();
-    var parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-    parsed.data.forEach(function(row) {
-      var barcode = String(row['Barcode'] || '').trim();
-      var image   = String(row['ImageURL'] || '').trim();
-      if (barcode && image && image.startsWith('http')) {
-        imageMap[barcode] = image;
-      }
+    var r = await fetch(IMAGE_URL);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var t = await r.text();
+    Papa.parse(t, {header:true, skipEmptyLines:true}).data.forEach(function(row) {
+      var bc  = String(row['Barcode']  || '').trim();
+      var img = String(row['ImageURL'] || '').trim();
+      if (bc && img && img.startsWith('http')) imageMap[bc] = img;
     });
-    console.log('Loaded ' + Object.keys(imageMap).length + ' barcode->image mappings');
-  } catch(e) {
-    console.log('Image lookup failed:', e.message);
-  }
+    console.log('Images loaded: ' + Object.keys(imageMap).length);
+  } catch(e) { console.log('Image load failed:', e.message); }
 }
 
+// ── BRANCH TABS ────────────────────────────────────────────────────────────────
 function buildBranchTabs() {
   document.getElementById('branch-bar').innerHTML = BRANCHES.map(function(b) {
-    return '<div class="branch-tab ' + (b.id===currentBranch?'active':'') + '" onclick="switchBranch(\'' + b.id + '\')">' + b.name + '</div>';
+    return '<div class="branch-tab' + (b.id === currentBranch ? ' active' : '') +
+      '" onclick="switchBranch(\'' + b.id + '\')">' + b.name + '</div>';
   }).join('');
 }
 
@@ -351,22 +345,19 @@ function switchBranch(id) {
   else renderAll();
 }
 
-// ═══════════════════════════════════════════════
-// FETCH CSV DIRECTLY FROM GOOGLE DRIVE
-// ═══════════════════════════════════════════════
+// ── DATA FETCH ─────────────────────────────────────────────────────────────────
 async function fetchBranch(id) {
-  const branch = BRANCHES.find(function(b) { return b.id === id; });
+  var branch = BRANCHES.find(function(b) { return b.id === id; });
   if (!branch) return;
   branchData[id] = 'loading';
   if (id === currentBranch) showLoading();
   try {
-    // Fetch directly from Google Sheets published CSV
-    const res = await fetch(branch.url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    if (!text.trim()) throw new Error('File is empty');
-    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-    const products = parseProducts(parsed.data, id);
+    var r = await fetch(branch.url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var t = await r.text();
+    if (!t.trim()) throw new Error('File is empty');
+    var parsed = Papa.parse(t, {header:true, skipEmptyLines:true});
+    var products = parseProducts(parsed.data, id);
     products.forEach(function(p) {
       p.ticked  = ticks[p.id]    || false;
       p.restock = restocks[p.id] != null ? restocks[p.id] : null;
@@ -374,16 +365,10 @@ async function fetchBranch(id) {
     branchData[id] = products;
     var now = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
     document.getElementById('pill-time').textContent = 'Live · ' + now;
-    // Log successful sync
-    var log = JSON.parse(localStorage.getItem('cc_synclog') || '{}');
-    log[id] = { time: new Date().toISOString(), count: products.length, status: 'ok' };
-    localStorage.setItem('cc_synclog', JSON.stringify(log));
+    saveLog(id, {count: products.length, status: 'ok'});
   } catch(e) {
-    branchData[id] = { error: e.message };
-    // Log failed sync
-    var log = JSON.parse(localStorage.getItem('cc_synclog') || '{}');
-    log[id] = { time: new Date().toISOString(), count: 0, status: 'error', msg: e.message };
-    localStorage.setItem('cc_synclog', JSON.stringify(log));
+    branchData[id] = {error: e.message};
+    saveLog(id, {count: 0, status: 'error', msg: e.message});
   }
   if (id === currentBranch) renderAll();
 }
@@ -396,25 +381,29 @@ async function refreshBranch() {
   btn.classList.remove('spinning');
 }
 
-// ═══════════════════════════════════════════════
-// PARSE
-// ═══════════════════════════════════════════════
+function saveLog(id, data) {
+  var log = JSON.parse(localStorage.getItem('cc_synclog') || '{}');
+  log[id] = Object.assign({time: new Date().toISOString()}, data);
+  localStorage.setItem('cc_synclog', JSON.stringify(log));
+}
+
+// ── PARSE ──────────────────────────────────────────────────────────────────────
 function parseProducts(rows, branchId) {
   var products = rows.filter(function(r) {
     var v = fv(r, ['stockqty','stock','qty','inventory']);
     return v !== null && parseInt(v) < 0;
   }).map(function(r, i) {
-    var stock    = parseInt(fv(r, ['stockqty','stock','qty','inventory'])) || 0;
-    var barcode  = clean(fv(r, ['barcode','sku','upc','ean']));
-    var name     = clean(fv(r, ['productname','product','title','name','description']));
-    var size     = clean(fv(r, ['size','variant','varianttitle']));
-    var dept     = clean(fv(r, ['department','category','dept']));
-    var id = branchId + '|' + (barcode||i) + '|' + size;
+    var stock   = parseInt(fv(r, ['stockqty','stock','qty','inventory'])) || 0;
+    var barcode = cl(fv(r, ['barcode','sku','upc','ean']));
+    var name    = cl(fv(r, ['productname','product','title','name','description']));
+    var size    = cl(fv(r, ['size','variant','varianttitle']));
+    var dept    = cl(fv(r, ['department','category','dept']));
+    var id  = branchId + '|' + (barcode || i) + '|' + size;
     var img = (barcode && imageMap[barcode]) ? imageMap[barcode] : null;
-    return { id:id, vendor:dept, title:name, variant:size, sku:barcode, stock:stock, img:img, category:dept||'General' };
+    return {id:id, vendor:dept, title:name, variant:size, sku:barcode, stock:stock, img:img, category:dept||'General'};
   });
   // Sort: images first, then alphabetical
-  products.sort(function(a,b) {
+  products.sort(function(a, b) {
     if (a.img && !b.img) return -1;
     if (!a.img && b.img) return 1;
     return a.title.localeCompare(b.title);
@@ -422,21 +411,19 @@ function parseProducts(rows, branchId) {
   return products;
 }
 
-function clean(v) { return String(v || '').trim(); }
+function cl(v) { return String(v || '').trim(); }
 
 function fv(row, keys) {
   var rk = Object.keys(row);
   for (var i = 0; i < keys.length; i++) {
     var k = keys[i];
-    var m = rk.find(function(x) { return x.toLowerCase().replace(/[^a-z0-9]/g,'') === k.replace(/[^a-z0-9]/g,''); });
+    var m = rk.find(function(x) { return x.toLowerCase().replace(/[^a-z0-9]/g,'') === k; });
     if (m && String(row[m]).trim() !== '') return row[m];
   }
   return null;
 }
 
-// ═══════════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════════
+// ── RENDER ─────────────────────────────────────────────────────────────────────
 function saveWA() {
   waNumber = document.getElementById('wa-num').value.trim().replace(/\D/g,'');
   localStorage.setItem('cc_wa', waNumber);
@@ -444,25 +431,29 @@ function saveWA() {
 }
 
 function showLoading() {
-  document.getElementById('content').innerHTML = '<div class="loading"><div class="spin-ring"></div>Loading live stock data…</div>';
+  document.getElementById('content').innerHTML =
+    '<div class="loading"><div class="spin-ring"></div>Loading live stock data…</div>';
 }
 
 function renderAll() { updateSummary(); renderList(); }
 
 function updateSummary() {
-  var data = branchData[currentBranch];
+  var data     = branchData[currentBranch];
   var products = Array.isArray(data) ? data : [];
   var done     = products.filter(function(p) { return p.ticked; }).length;
   var withImg  = products.filter(function(p) { return p.img; }).length;
   document.getElementById('pill-left').textContent = (products.length - done) + ' to check';
   document.getElementById('pill-done').textContent = done + ' done ✓';
-  var allDone = Object.values(branchData).flatMap(function(d) { return Array.isArray(d) ? d : []; }).filter(function(p) { return p.ticked; }).length;
+  var allDone = Object.values(branchData)
+    .flatMap(function(d) { return Array.isArray(d) ? d : []; })
+    .filter(function(p) { return p.ticked; }).length;
   document.getElementById('wa-cnt').textContent = allDone;
   var imgPill = document.getElementById('pill-imgs');
   if (products.length > 0) {
     imgPill.style.display = '';
-    var pct = Math.round(withImg / products.length * 100);
-    imgPill.textContent = withImg + '/' + products.length + ' images (' + pct + '%)';
+    imgPill.textContent = withImg + '/' + products.length + ' images (' + Math.round(withImg/products.length*100) + '%)';
+  } else {
+    imgPill.style.display = 'none';
   }
 }
 
@@ -475,112 +466,126 @@ function switchView(v) {
 }
 
 function renderList() {
-  var el = document.getElementById('content');
+  var el   = document.getElementById('content');
   var data = branchData[currentBranch];
+
   if (!data || data === 'loading') { showLoading(); return; }
+
   if (data.error) {
-    var log = JSON.parse(localStorage.getItem('cc_synclog') || '{}');
-    var hist = '';
-    BRANCHES.forEach(function(b) {
-      var entry = log[b.id];
-      if (!entry) return;
-      var t = new Date(entry.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-      var d = new Date(entry.time).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
-      var status = entry.status === 'ok' ? '✓ ' + entry.count + ' items' : '✗ ' + entry.msg;
-      hist += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="font-weight:500">' + b.name + '</span><span style="color:var(--ink3)">' + d + ' ' + t + ' — ' + status + '</span></div>';
-    });
-    el.innerHTML = '<div class="error-box"><p>⚠️ Could not load data.</p><code>' + data.error + '</code>' + (hist ? '<div style="margin-top:10px"><div style="font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">Sync History</div>' + hist + '</div>' : '') + '</div>';
+    el.innerHTML = '<div class="error-box"><p>⚠️ Could not load data.</p><code>' + data.error + '</code></div>';
     return;
   }
+
   var q = document.getElementById('search-input').value.toLowerCase();
   var products = data.filter(function(p) {
-    return !q || p.title.toLowerCase().includes(q) || p.sku.includes(q) || p.variant.toLowerCase().includes(q) || p.vendor.toLowerCase().includes(q);
+    return !q || p.title.toLowerCase().includes(q) || p.sku.includes(q) ||
+           p.variant.toLowerCase().includes(q) || p.vendor.toLowerCase().includes(q);
   });
+
   if (!products.length) { el.innerHTML = '<div class="empty">No products found.</div>'; return; }
+
   if (currentView === 'all') { el.innerHTML = products.map(cardHTML).join(''); return; }
+
   var key = currentView === 'brand' ? 'vendor' : 'category';
   var groups = {};
-  products.forEach(function(p) { if (!groups[p[key]]) groups[p[key]]=[]; groups[p[key]].push(p); });
-  var sorted = Object.entries(groups).sort(function(a,b) { return Math.min.apply(null,a[1].map(function(p){return p.stock;})) - Math.min.apply(null,b[1].map(function(p){return p.stock;})); });
+  products.forEach(function(p) { if (!groups[p[key]]) groups[p[key]] = []; groups[p[key]].push(p); });
+
+  var sorted = Object.entries(groups).sort(function(a, b) {
+    return Math.min.apply(null, a[1].map(function(p){return p.stock;})) -
+           Math.min.apply(null, b[1].map(function(p){return p.stock;}));
+  });
+
   var html = '';
   sorted.forEach(function(entry) {
     var name = entry[0], ps = entry[1];
-    var min   = Math.min.apply(null, ps.map(function(p){return p.stock;}));
-    var total = ps.reduce(function(s,p){return s+p.stock;}, 0);
-    var done  = ps.filter(function(p){return p.ticked;}).length;
-    var dot   = min<=-5?'#c0392b':min<=-2?'#d97706':'#9ca3af';
-    var bc    = min<=-4?'b-red':'b-amber';
+    var min     = Math.min.apply(null, ps.map(function(p){return p.stock;}));
+    var total   = ps.reduce(function(s,p){return s+p.stock;},0);
+    var done    = ps.filter(function(p){return p.ticked;}).length;
     var withImg = ps.filter(function(p){return p.img;}).length;
     var imgPct  = Math.round(withImg/ps.length*100);
-    var imgStr  = imgPct === 100 ? '' : ' · <span style="color:'+(imgPct===0?'var(--red)':'var(--amber)')+'">'+imgPct+'% online</span>';
-    var sub   = done>0 ? done+'/'+ps.length+' <span style="color:var(--green);font-weight:600">done ✓</span>'+imgStr : ps.length+' item'+(ps.length>1?'s':'')+imgStr;
-    var esc   = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    html += '<div class="group-row" onclick="showGroup(\''+esc+'\')">';
-    html += '<div class="g-dot" style="background:'+dot+'"></div>';
-    html += '<div class="g-info"><div class="g-name">'+name+'</div><div class="g-sub">'+sub+'</div></div>';
-    html += '<div class="g-right"><span class="g-badge '+bc+'">'+total+'</span><span class="g-arrow">›</span></div>';
-    html += '</div>';
+    var dot  = min <= -5 ? '#c0392b' : min <= -2 ? '#d97706' : '#9ca3af';
+    var bc   = min <= -4 ? 'b-red' : 'b-amber';
+    var imgStr = imgPct === 100 ? '' :
+      ' · <span style="color:' + (imgPct === 0 ? 'var(--red)' : 'var(--amber)') + '">' + imgPct + '% online</span>';
+    var sub = done > 0
+      ? done + '/' + ps.length + ' <span style="color:var(--green);font-weight:600">done ✓</span>' + imgStr
+      : ps.length + ' item' + (ps.length > 1 ? 's' : '') + imgStr;
+    var esc = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html += '<div class="group-row" onclick="showGroup(\'' + esc + '\')">' +
+      '<div class="g-dot" style="background:' + dot + '"></div>' +
+      '<div class="g-info"><div class="g-name">' + name + '</div><div class="g-sub">' + sub + '</div></div>' +
+      '<div class="g-right"><span class="g-badge ' + bc + '">' + total + '</span><span class="g-arrow">›</span></div>' +
+      '</div>';
   });
   el.innerHTML = html;
 }
 
 function showGroup(name) {
-  var items = (branchData[currentBranch]||[]).filter(function(p) { return (currentView==='brand'?p.vendor:p.category) === name; });
+  var key   = currentView === 'brand' ? 'vendor' : 'category';
+  var items = (branchData[currentBranch] || []).filter(function(p) { return p[key] === name; });
   document.getElementById('content').innerHTML =
-    '<div class="back-bar" onclick="renderList()"><span style="font-size:20px;color:var(--ink3)">‹</span><span style="font-size:13px;font-weight:500;margin-left:4px">'+name+'</span></div>' +
+    '<div class="back-bar" onclick="renderList()">' +
+      '<span style="font-size:20px;color:var(--ink3)">‹</span>' +
+      '<span style="font-size:13px;font-weight:500;margin-left:4px">' + name + '</span>' +
+    '</div>' +
     items.map(cardHTML).join('');
 }
 
 function cardHTML(p) {
-  var qty = p.restock!=null ? '<span class="p-qty qty-pos">+'+p.restock+'</span>' : '<span class="p-qty qty-neg">'+p.stock+'</span>';
-  var img = p.img ? '<img src="' + p.img + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  var qty = p.restock != null
+    ? '<span class="p-qty qty-pos">+' + p.restock + '</span>'
+    : '<span class="p-qty qty-neg">' + p.stock + '</span>';
+  var img = p.img
+    ? '<img src="' + p.img + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+    : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
   var eid = p.id.replace(/[^a-zA-Z0-9]/g,'_');
-  return '<div class="product-card '+(p.ticked?'ticked':'')+'" id="c_'+eid+'" onclick="openPanel(\''+p.id.replace(/'/g,"\\'")+'\')">'+
-    '<div class="done-bar"></div>'+
-    '<div class="p-img">'+img+'</div>'+
-    '<div class="p-body">'+
-      '<div class="p-brand">'+p.vendor+'</div>'+
-      '<div class="p-name">'+p.title+'</div>'+
-      (p.variant?'<div class="p-variant">'+p.variant+'</div>':'')+
-    '</div>'+
-    '<div class="p-right">'+qty+
-      '<div class="tick '+(p.ticked?'done':'')+'" onclick="quickTick(event,\''+p.id.replace(/'/g,"\\'")+'\')">'+
-        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
-      '</div>'+
+  var sid = p.id.replace(/'/g,"\\'");
+  return '<div class="product-card ' + (p.ticked ? 'ticked' : '') + '" id="c_' + eid + '" onclick="openPanel(\'' + sid + '\')">' +
+    '<div class="done-bar"></div>' +
+    '<div class="p-img">' + img + '</div>' +
+    '<div class="p-body">' +
+      '<div class="p-brand">' + p.vendor + '</div>' +
+      '<div class="p-name">' + p.title + '</div>' +
+      (p.variant ? '<div class="p-variant">' + p.variant + '</div>' : '') +
+    '</div>' +
+    '<div class="p-right">' + qty +
+      '<div class="tick ' + (p.ticked ? 'done' : '') + '" onclick="quickTick(event,\'' + sid + '\')">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' +
+      '</div>' +
     '</div></div>';
 }
 
+// ── INTERACTIONS ───────────────────────────────────────────────────────────────
 function quickTick(e, id) {
   e.stopPropagation();
   var data = branchData[currentBranch];
   if (!Array.isArray(data)) return;
-  var p = data.find(function(x){return x.id===id;});
+  var p = data.find(function(x) { return x.id === id; });
   if (!p) return;
   p.ticked = !p.ticked;
   ticks[id] = p.ticked;
   localStorage.setItem('cc_ticks', JSON.stringify(ticks));
   updateSummary();
-  var eid = id.replace(/[^a-zA-Z0-9]/g,'_');
-  var card = document.getElementById('c_'+eid);
+  var card = document.getElementById('c_' + id.replace(/[^a-zA-Z0-9]/g,'_'));
   if (card) {
-    card.className = 'product-card '+(p.ticked?'ticked':'');
+    card.className = 'product-card ' + (p.ticked ? 'ticked' : '');
     var tc = card.querySelector('.tick');
-    if (tc) tc.className = 'tick '+(p.ticked?'done':'');
+    if (tc) tc.className = 'tick ' + (p.ticked ? 'done' : '');
   }
 }
 
 function openPanel(id) {
   var data = branchData[currentBranch];
   if (!Array.isArray(data)) return;
-  var p = data.find(function(x){return x.id===id;});
+  var p = data.find(function(x) { return x.id === id; });
   if (!p) return;
   currentProduct = p;
   document.getElementById('pd-brand').textContent   = p.vendor;
   document.getElementById('pd-title').textContent   = p.title;
-  document.getElementById('pd-variant').textContent = p.variant||'';
+  document.getElementById('pd-variant').textContent = p.variant || '';
   document.getElementById('pd-cat').textContent     = p.category;
-  document.getElementById('pd-stock').textContent   = 'Stock: '+p.stock;
-  document.getElementById('pd-sku').textContent     = p.sku ? 'Barcode: '+p.sku : 'No barcode';
+  document.getElementById('pd-stock').textContent   = 'Stock: ' + p.stock;
+  document.getElementById('pd-sku').textContent     = p.sku ? 'Barcode: ' + p.sku : 'No barcode';
   document.getElementById('pd-hero').innerHTML = p.img
     ? '<img src="' + p.img + '" alt="" style="max-height:182px;max-width:100%;object-fit:contain" onerror="this.style.display=\'none\'">'
     : '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
@@ -588,130 +593,141 @@ function openPanel(id) {
   var sk = p.sku.replace(/\D/g,'');
   if (sk.length >= 8) {
     bcBox.style.display = 'block';
-    try { JsBarcode('#bc-svg', sk, {format:'EAN13',width:2,height:56,displayValue:true,fontSize:11,margin:8,lineColor:'#17150e',background:'#ffffff'}); }
-    catch(e) { try { JsBarcode('#bc-svg', p.sku, {format:'CODE128',width:2,height:50,displayValue:true,fontSize:11,margin:6}); } catch(e2) { bcBox.style.display='none'; } }
+    try {
+      JsBarcode('#bc-svg', sk, {format:'EAN13',width:2,height:56,displayValue:true,fontSize:11,margin:8,lineColor:'#17150e',background:'#ffffff'});
+    } catch(e) {
+      try { JsBarcode('#bc-svg', p.sku, {format:'CODE128',width:2,height:50,displayValue:true,fontSize:11,margin:6}); }
+      catch(e2) { bcBox.style.display='none'; }
+    }
   } else { bcBox.style.display='none'; }
   document.getElementById('s-val').textContent = p.restock != null ? p.restock : 0;
   var db = document.getElementById('pd-done-btn');
-  db.className = 'pd-done '+(p.ticked?'active':'');
-  db.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> '+(p.ticked?'Marked done':'Mark done');
+  db.className = 'pd-done ' + (p.ticked ? 'active' : '');
+  db.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ' + (p.ticked ? 'Marked done' : 'Mark done');
   document.getElementById('pd-saved').style.display = 'none';
   document.getElementById('panel-ov').classList.add('open');
 }
 
-function handlePanelBg(e) { if (e.target===document.getElementById('panel-ov')) closePanel(); }
-function closePanel() { document.getElementById('panel-ov').classList.remove('open'); currentProduct=null; }
-function step(d) { var el=document.getElementById('s-val'); el.textContent=Math.max(0,(parseInt(el.textContent)||0)+d); }
+function handlePanelBg(e) { if (e.target === document.getElementById('panel-ov')) closePanel(); }
+function closePanel() { document.getElementById('panel-ov').classList.remove('open'); currentProduct = null; }
+function step(d) { var el = document.getElementById('s-val'); el.textContent = Math.max(0, (parseInt(el.textContent)||0) + d); }
 
 function saveCount() {
   if (!currentProduct) return;
-  var val = parseInt(document.getElementById('s-val').textContent)||0;
-  currentProduct.restock=val; currentProduct.ticked=true;
-  ticks[currentProduct.id]=true; restocks[currentProduct.id]=val;
-  localStorage.setItem('cc_ticks',JSON.stringify(ticks));
-  localStorage.setItem('cc_restock',JSON.stringify(restocks));
-  var db=document.getElementById('pd-done-btn');
-  db.className='pd-done active';
-  db.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Marked done';
-  document.getElementById('pd-saved').style.display='block';
+  var val = parseInt(document.getElementById('s-val').textContent) || 0;
+  currentProduct.restock = val;
+  currentProduct.ticked  = true;
+  ticks[currentProduct.id]    = true;
+  restocks[currentProduct.id] = val;
+  localStorage.setItem('cc_ticks',   JSON.stringify(ticks));
+  localStorage.setItem('cc_restock', JSON.stringify(restocks));
+  var db = document.getElementById('pd-done-btn');
+  db.className = 'pd-done active';
+  db.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Marked done';
+  document.getElementById('pd-saved').style.display = 'block';
   updateSummary();
-  setTimeout(function(){closePanel();renderList();},900);
+  setTimeout(function() { closePanel(); renderList(); }, 900);
 }
 
 function toggleTick() {
   if (!currentProduct) return;
-  currentProduct.ticked=!currentProduct.ticked;
-  ticks[currentProduct.id]=currentProduct.ticked;
-  localStorage.setItem('cc_ticks',JSON.stringify(ticks));
-  var db=document.getElementById('pd-done-btn');
-  db.className='pd-done '+(currentProduct.ticked?'active':'');
-  db.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> '+(currentProduct.ticked?'Marked done':'Mark done');
+  currentProduct.ticked = !currentProduct.ticked;
+  ticks[currentProduct.id] = currentProduct.ticked;
+  localStorage.setItem('cc_ticks', JSON.stringify(ticks));
+  var db = document.getElementById('pd-done-btn');
+  db.className = 'pd-done ' + (currentProduct.ticked ? 'active' : '');
+  db.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ' + (currentProduct.ticked ? 'Marked done' : 'Mark done');
   updateSummary();
 }
 
+// ── WHATSAPP ───────────────────────────────────────────────────────────────────
 function sendWA() {
   var num = waNumber || document.getElementById('wa-num').value.trim().replace(/\D/g,'');
   if (!num) { alert('Please save manager WhatsApp number first'); return; }
   var date = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
-  var msg = '*CC Hair & Beauty — Low Stock Update*\n'+date+'\n\n';
+  var msg  = '*CC Hair & Beauty — Low Stock Update*\n' + date + '\n\n';
   BRANCHES.forEach(function(branch) {
-    var data = branchData[branch.id];
-    if (!Array.isArray(data)) return;
-    var done = data.filter(function(p){return p.ticked;});
-    var pending = data.filter(function(p){return !p.ticked;});
+    var data    = branchData[branch.id];
+    var done    = Array.isArray(data) ? data.filter(function(p){return p.ticked;})    : [];
+    var pending = Array.isArray(data) ? data.filter(function(p){return !p.ticked;}) : [];
     if (!done.length && !pending.length) return;
-    msg += '*'+branch.name+'*\n';
+    msg += '*' + branch.name + '*\n';
     if (done.length) {
-      msg += '✅ '+done.length+' item'+(done.length>1?'s':'')+' checked:\n';
+      msg += '✅ ' + done.length + ' item' + (done.length > 1 ? 's' : '') + ' checked:\n';
       done.forEach(function(p) {
-        var r = p.restock!=null?' (+'+p.restock+' restocked)':'';
-        msg += '  • '+p.title+(p.variant?' ('+p.variant+')':'')+r+'\n';
+        msg += '  • ' + p.title + (p.variant ? ' (' + p.variant + ')' : '') + (p.restock != null ? ' (+' + p.restock + ' restocked)' : '') + '\n';
       });
     }
-    if (pending.length) msg += '⏳ '+pending.length+' still to check\n';
+    if (pending.length) msg += '⏳ ' + pending.length + ' still to check\n';
     msg += '\n';
   });
   msg += '_Sent from CC Low Stock App_';
-  window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
+// ── SYNC LOG ───────────────────────────────────────────────────────────────────
 function showSyncLog() {
   var log  = JSON.parse(localStorage.getItem('cc_synclog') || '{}');
   var html = '';
   BRANCHES.forEach(function(b) {
-    var data  = branchData[b.id];
-    var prods = Array.isArray(data) ? data : [];
-    var imgs  = prods.filter(function(p) { return p.img; }).length;
-    var entry = log[b.id];
-    var timeStr = entry ? new Date(entry.time).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Never synced';
+    var data    = branchData[b.id];
+    var prods   = Array.isArray(data) ? data : [];
+    var imgs    = prods.filter(function(p) { return p.img; }).length;
+    var entry   = log[b.id];
+    var timeStr = entry ? new Date(entry.time).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Never synced';
     var status  = entry ? (entry.status === 'ok' ? '✓ OK' : '✗ Error') : '—';
-    var statusColor = entry && entry.status === 'ok' ? 'var(--green)' : 'var(--red)';
+    var sColor  = entry && entry.status === 'ok' ? 'var(--green)' : 'var(--red)';
     var imgPct  = prods.length > 0 ? Math.round(imgs/prods.length*100) : 0;
-    var imgColor = imgPct >= 50 ? 'var(--green)' : imgPct > 0 ? 'var(--amber)' : 'var(--red)';
-    html += '<div style="background:var(--s2);border-radius:var(--r);padding:14px;margin-bottom:10px">';
-    html += '<div style="font-size:13px;font-weight:600;margin-bottom:8px">' + b.name + '</div>';
-    html += '<div style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink3)">';
-    html += '<div style="display:flex;justify-content:space-between"><span>Last sync</span><span style="color:var(--ink)">' + timeStr + '</span></div>';
-    html += '<div style="display:flex;justify-content:space-between"><span>Status</span><span style="color:' + statusColor + ';font-weight:600">' + status + '</span></div>';
-    html += '<div style="display:flex;justify-content:space-between"><span>Products</span><span style="color:var(--ink)">' + (entry ? entry.count : '—') + '</span></div>';
-    html += '<div style="display:flex;justify-content:space-between"><span>Images matched</span><span style="color:' + imgColor + ';font-weight:600">' + imgs + '/' + prods.length + ' (' + imgPct + '%)</span></div>';
-    if (entry && entry.status === 'error') {
-      html += '<div style="margin-top:4px;padding:6px 8px;background:var(--red-bg);border-radius:6px;color:var(--red);font-size:11px;word-break:break-all">' + entry.msg + '</div>';
-    }
-    html += '</div></div>';
+    var iColor  = imgPct >= 50 ? 'var(--green)' : imgPct > 0 ? 'var(--amber)' : 'var(--red)';
+    html += '<div style="background:var(--s2);border-radius:var(--r);padding:14px;margin-bottom:10px">' +
+      '<div style="font-size:13px;font-weight:600;margin-bottom:8px">' + b.name + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink3)">' +
+      '<div style="display:flex;justify-content:space-between"><span>Last sync</span><span style="color:var(--ink)">' + timeStr + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between"><span>Status</span><span style="color:' + sColor + ';font-weight:600">' + status + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between"><span>Products</span><span style="color:var(--ink)">' + (entry ? entry.count : '—') + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between"><span>Images matched</span><span style="color:' + iColor + ';font-weight:600">' + imgs + '/' + prods.length + ' (' + imgPct + '%)</span></div>' +
+      (entry && entry.status === 'error' ? '<div style="margin-top:4px;padding:6px 8px;background:var(--red-bg);border-radius:6px;color:var(--red);font-size:11px">' + entry.msg + '</div>' : '') +
+      '</div></div>';
   });
-  if (!html) html = '<div style="text-align:center;color:var(--ink3);padding:20px;font-size:13px">No sync history yet — refresh the app to start logging.</div>';
+  if (!html) html = '<div style="text-align:center;color:var(--ink3);padding:20px;font-size:13px">No sync history yet.</div>';
   document.getElementById('log-content').innerHTML = html;
   document.getElementById('log-ov').classList.add('open');
 }
 
+// ── SCANNER ────────────────────────────────────────────────────────────────────
 function openScanner() {
   document.getElementById('scan-ov').classList.add('open');
   navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
     .then(function(stream) {
-      scanStream=stream;
-      document.getElementById('scan-vid').srcObject=stream;
+      scanStream = stream;
+      document.getElementById('scan-vid').srcObject = stream;
       if ('BarcodeDetector' in window) {
-        var det=new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a']});
-        scanInterval=setInterval(async function(){
-          try { var c=await det.detect(document.getElementById('scan-vid')); if(c.length){closeScanner();lookupBarcode(c[0].rawValue);} } catch(e){}
-        },400);
+        var det = new BarcodeDetector({formats:['ean_13','ean_8','code_128','upc_a']});
+        scanInterval = setInterval(async function() {
+          try {
+            var c = await det.detect(document.getElementById('scan-vid'));
+            if (c.length) { closeScanner(); lookupBarcode(c[0].rawValue); }
+          } catch(e) {}
+        }, 400);
       }
-    }).catch(function(){alert('Camera access denied. Use manual entry below.');});
+    }).catch(function() { alert('Camera access denied. Use manual entry below.'); });
 }
+
 function closeScanner() {
   document.getElementById('scan-ov').classList.remove('open');
-  if(scanInterval){clearInterval(scanInterval);scanInterval=null;}
-  if(scanStream){scanStream.getTracks().forEach(function(t){t.stop();});scanStream=null;}
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (scanStream)   { scanStream.getTracks().forEach(function(t){t.stop();}); scanStream = null; }
 }
+
 function lookupManual() { lookupBarcode(document.getElementById('manual-bc').value.trim()); closeScanner(); }
+
 function lookupBarcode(code) {
-  var data=branchData[currentBranch];
-  if(!Array.isArray(data)) return;
-  var clean=code.replace(/\D/g,'');
-  var p=data.find(function(x){return x.sku&&x.sku.replace(/\D/g,'')===clean;});
-  if(p) openPanel(p.id);
-  else alert('Product not found: '+code);
+  var data  = branchData[currentBranch];
+  if (!Array.isArray(data)) return;
+  var clean = code.replace(/\D/g,'');
+  var p     = data.find(function(x) { return x.sku && x.sku.replace(/\D/g,'') === clean; });
+  if (p) openPanel(p.id);
+  else alert('Product not found: ' + code);
 }
 </script>
 </body>
