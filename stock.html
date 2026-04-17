@@ -837,7 +837,7 @@ function timeAgo(date) {
   return Math.floor(hrs / 24) + 'd ago';
 }
 
-function sCls(mins) { return mins < 35 ? 'ok' : mins < 90 ? 'warn' : 'err'; }
+function sCls(mins) { return mins < 65 ? 'ok' : mins < 120 ? 'warn' : 'err'; }
 function sIcon(cls) { return cls === 'ok' ? '✅' : cls === 'warn' ? '⚠️' : '❌'; }
 
 function parseDDMMYYYY(s) {
