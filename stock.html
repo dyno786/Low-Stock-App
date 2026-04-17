@@ -409,7 +409,8 @@ function pinDots() {
 
 function pinCheck() {
   if (pinEntry === PIN) {
-    sessionStorage.setItem('cc_unlocked', '1');
+    // Store unlock time - valid for 8 hours
+    localStorage.setItem('cc_unlocked', Date.now().toString());
     document.getElementById('pinov').style.display = 'none';
     startApp();
   } else {
@@ -1002,11 +1003,14 @@ function startApp() {
 }
 
 function init() {
-  if (sessionStorage.getItem('cc_unlocked') === '1') {
+  var unlocked = localStorage.getItem('cc_unlocked');
+  var EIGHT_HOURS = 8 * 60 * 60 * 1000;
+  if (unlocked && (Date.now() - parseInt(unlocked)) < EIGHT_HOURS) {
+    // Still within 8 hours of last unlock
     document.getElementById('pinov').style.display = 'none';
     startApp();
   }
-  // else: wait for PIN — pinpad listener handles it
+  // else: show PIN — pinpad listener handles entry
 }
 
 init();
