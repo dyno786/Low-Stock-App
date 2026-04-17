@@ -8,48 +8,65 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f4;color:#111;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:90px}
+
+/* ── TOP BAR ── */
 .top{background:#cc0000;padding:14px 16px 10px;position:sticky;top:0;z-index:100}
 .top-row{display:flex;align-items:center;justify-content:space-between}
 .logo{width:32px;height:32px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#cc0000}
 .title{color:#fff;font-size:15px;font-weight:700;margin-left:10px}
 .sync{color:rgba(255,255,255,.8);font-size:11px;font-family:monospace}
-.logbtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer}
+.topbtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;line-height:1}
+
+/* ── METRICS ── */
 .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
 .m{background:#fff;border-radius:10px;padding:12px;border-left:3px solid #ddd}
 .m.r{border-left-color:#cc0000}.m.a{border-left-color:#e87000}.m.b{border-left-color:#0055cc}
 .mlbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .mval{font-size:24px;font-weight:700;font-family:monospace}
 .msub{font-size:11px;color:#999;margin-top:3px}
+
+/* ── TABS ── */
 .tabs{display:flex;gap:6px;padding:0 12px 10px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;color:#555;border:1.5px solid #ddd;cursor:pointer;white-space:nowrap;background:#fff}
+.tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;color:#555;border:1.5px solid #ddd;cursor:pointer;white-space:nowrap;background:#fff;user-select:none}
 .tab.on{background:#cc0000;color:#fff;border-color:#cc0000}
+
+/* ── PILLS ── */
 .pills{display:flex;gap:6px;padding:0 12px 8px;overflow-x:auto;scrollbar-width:none}
 .pills::-webkit-scrollbar{display:none}
-.pill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;color:#555;border:1px solid #ddd;cursor:pointer;white-space:nowrap;background:#fff}
+.pill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;color:#555;border:1px solid #ddd;cursor:pointer;white-space:nowrap;background:#fff;user-select:none}
 .pill.on{background:#111;color:#fff;border-color:#111}
+
+/* ── SEARCH ── */
 .srch{padding:0 12px 10px;position:relative}
-.srch input{width:100%;background:#fff;border:1.5px solid #ddd;border-radius:10px;padding:9px 12px 9px 34px;font-size:13px;outline:none}
+.srch input{width:100%;background:#fff;border:1.5px solid #ddd;border-radius:10px;padding:9px 12px 9px 34px;font-size:13px;outline:none;-webkit-appearance:none}
 .srch input:focus{border-color:#cc0000}
 .sic{position:absolute;left:24px;top:50%;transform:translateY(-50%);color:#aaa;pointer-events:none}
-.sec{padding:0 12px 6px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between}
+
+/* ── SECTION HEADER ── */
+.sec{padding:0 12px 6px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between;align-items:center}
 .badge{font-size:11px;padding:1px 8px;background:#eee;border-radius:20px;color:#666}
-.card{display:flex;align-items:center;background:#fff;border-bottom:1px solid #eee;padding:11px 12px;gap:10px;cursor:pointer}
+
+/* ── PRODUCT CARD ── */
+.card{display:flex;align-items:center;background:#fff;border-bottom:1px solid #eee;padding:11px 12px;gap:10px;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.05)}
 .card:active{background:#f8f8f8}
 .ci{width:44px;height:44px;border-radius:8px;background:#f0f0f0;border:1px solid #eee;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .ci img{width:44px;height:44px;object-fit:cover}
 .cn{flex:1;min-width:0}
 .cname{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmeta{font-size:11px;color:#999;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cwarn{font-size:11px;color:#e87000;margin-top:2px;font-weight:600}
+.cwarn{font-size:11px;color:#e87000;margin-top:2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cr{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
 .qty{font-size:18px;font-weight:700;font-family:monospace}
 .qn{color:#cc0000}.qp{color:#1a7f3c}.qz{color:#999}
 .cprice{font-size:11px;color:#999;font-family:monospace}
 .dtag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#fff8f0;color:#e87000;margin-top:3px;display:inline-block}
 .dval{font-size:11px;color:#999;font-family:monospace;margin-top:2px}
-.oc{background:#fff;border:1px solid #ddd;border-radius:10px;margin:0 12px 10px}
-.och{padding:10px 12px;border-bottom:1px solid #eee;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+
+/* ── REORDER CARD ── */
+.oc{background:#fff;border:1px solid #ddd;border-radius:10px;margin:0 12px 10px;cursor:pointer}
+.oc:active{background:#f8f8f8}
+.och{padding:10px 12px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px}
 .ocn{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ocd{font-size:10px;color:#999;margin-top:2px}
 .prio{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0}
@@ -62,16 +79,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sbox{background:#f0f5ff;border:1px solid #b3cff5;border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0}
 .sbq{font-size:18px;font-weight:700;color:#0055cc;font-family:monospace;display:block}
 .sbl{font-size:9px;color:#0055cc}
+
+/* ── STATES ── */
 .sugg{background:#fff0f0;border:1px solid #ffcccc;border-radius:8px;padding:10px 12px;margin:0 12px 10px;font-size:12px;color:#880000;line-height:1.7}
 .loading{padding:60px 20px;text-align:center;color:#999}
 .spin{width:28px;height:28px;border:2px solid #eee;border-top-color:#cc0000;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty{padding:40px 20px;text-align:center;color:#999;font-size:13px;line-height:1.8}
+
+/* ── BOTTOM NAV ── */
 .bnav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#fff;border-top:1px solid #eee;display:flex;z-index:200;padding:6px 0 18px}
-.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 0}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 0;user-select:none}
 .bni svg{width:20px;height:20px;color:#aaa}
 .bni span{font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .bni.on svg,.bni.on span{color:#cc0000}
+
+/* ── PRODUCT PANEL ── */
 .pov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;max-width:480px;margin:0 auto}
 .pov.open{display:block}
 .pan{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
@@ -85,35 +108,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pstat{flex:1;background:#f4f4f4;border-radius:8px;padding:10px;text-align:center}
 .pstatv{font-size:20px;font-weight:700;font-family:monospace}
 .pstatl{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
-.irow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee;font-size:13px}
-.il{color:#999;font-size:12px}.iv{font-family:monospace;font-weight:600;font-size:12px}
+.irow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #eee}
+.il{color:#999;font-size:12px}.iv{font-family:monospace;font-weight:600;font-size:12px;text-align:right;max-width:60%}
 .dnote{background:#fff8f0;border:1px solid #f5d080;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#e87000;line-height:1.6}
-.logov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;max-width:480px;margin:0 auto}
-.logpan{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;max-height:80vh;overflow-y:auto;padding:16px;padding-bottom:40px}
+
+/* ── DATA CHAIN PANEL ── */
 .statov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;max-width:480px;margin:0 auto}
 .statov.open{display:block}
-.statpan{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;padding:20px 16px 40px}
-.statpan h2{font-size:15px;font-weight:700;margin-bottom:4px}
-.statpan .sub{font-size:12px;color:#999;margin-bottom:20px}
-.chain{display:flex;flex-direction:column;gap:0}
+.statpan{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;padding:0 16px 40px;max-height:85vh;overflow-y:auto}
+.stat-h2{font-size:15px;font-weight:700;margin:16px 0 2px}
+.stat-sub{font-size:12px;color:#999;margin-bottom:20px}
 .cstep{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid #f0f0f0}
 .cstep:last-child{border-bottom:none}
 .cicon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
-.cicon.ok{background:#f0fff5}
-.cicon.warn{background:#fff8f0}
-.cicon.err{background:#fff0f0}
-.cicon.load{background:#f0f0f0}
+.cicon.ok{background:#f0fff5}.cicon.warn{background:#fff8f0}.cicon.err{background:#fff0f0}.cicon.load{background:#f0f0f0}
 .cinfo{flex:1;min-width:0}
-.cinfo .clabel{font-size:13px;font-weight:600;margin-bottom:2px}
-.cinfo .ctime{font-size:12px;color:#999;font-family:monospace}
-.cinfo .cstatus{font-size:11px;font-weight:600;margin-top:3px}
-.cstatus.ok{color:#1a7f3c}.cstatus.warn{color:#e87000}.cstatus.err{color:#cc0000}
-.cline{width:2px;height:16px;background:#eee;margin:0 17px}
-.cbadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
-.cbadge.ok{background:#f0fff5;color:#1a7f3c}
-.cbadge.warn{background:#fff8f0;color:#e87000}
-.cbadge.err{background:#fff0f0;color:#cc0000}
-.cbadge.load{background:#f0f0f0;color:#999}
+.clabel{font-size:13px;font-weight:600;margin-bottom:2px}
+.ctime{font-size:11px;color:#999;font-family:monospace;margin-top:2px}
+.cstat{font-size:11px;font-weight:600;margin-top:3px}
+.cstat.ok{color:#1a7f3c}.cstat.warn{color:#e87000}.cstat.err{color:#cc0000}
+.cline{width:2px;height:14px;background:#eee;margin:0 17px}
+.cbadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;flex-shrink:0}
+.cbadge.ok{background:#f0fff5;color:#1a7f3c}.cbadge.warn{background:#fff8f0;color:#e87000}
+.cbadge.err{background:#fff0f0;color:#cc0000}.cbadge.load{background:#f0f0f0;color:#999}
+
+/* ── LOG PANEL ── */
+.logov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;max-width:480px;margin:0 auto}
+.logov.open{display:block}
+.logpan{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;max-height:80vh;overflow-y:auto;padding:16px;padding-bottom:40px}
+.bottombtn{margin-top:14px;width:100%;padding:11px;background:#cc0000;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+
+/* ── PIN LOCK ── */
 .pinov{position:fixed;inset:0;background:#cc0000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:480px;margin:0 auto}
 .pinlogo{width:60px;height:60px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#cc0000;margin-bottom:16px}
 .pintitle{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
@@ -122,14 +147,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pindot{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .15s}
 .pindot.filled{background:#fff}
 .pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:240px}
-.pinkey{background:rgba(255,255,255,.15);border:none;border-radius:12px;height:64px;font-size:22px;font-weight:600;color:#fff;cursor:pointer;transition:background .1s}
-.pinkey:active{background:rgba(255,255,255,.3)}
-.pinkey.del{font-size:16px}
+.pinkey{background:rgba(255,255,255,.15);border:none;border-radius:12px;height:64px;font-size:22px;font-weight:600;color:#fff;cursor:pointer;transition:background .1s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.pinkey:active{background:rgba(255,255,255,.35)}
 .pinerr{color:#ffcccc;font-size:13px;margin-top:16px;height:20px;text-align:center}
 </style>
 </head>
 <body>
 
+<!-- PIN LOCK — must be first so it covers everything -->
+<div class="pinov" id="pinov">
+  <div class="pinlogo">CC</div>
+  <div class="pintitle">CC Hair &amp; Beauty</div>
+  <div class="pinsub">Stock Intelligence</div>
+  <div class="pindots">
+    <div class="pindot" id="pd0"></div>
+    <div class="pindot" id="pd1"></div>
+    <div class="pindot" id="pd2"></div>
+    <div class="pindot" id="pd3"></div>
+  </div>
+  <div class="pinpad" id="pinpad">
+    <button class="pinkey" data-n="1">1</button>
+    <button class="pinkey" data-n="2">2</button>
+    <button class="pinkey" data-n="3">3</button>
+    <button class="pinkey" data-n="4">4</button>
+    <button class="pinkey" data-n="5">5</button>
+    <button class="pinkey" data-n="6">6</button>
+    <button class="pinkey" data-n="7">7</button>
+    <button class="pinkey" data-n="8">8</button>
+    <button class="pinkey" data-n="9">9</button>
+    <button class="pinkey" data-n="del" style="font-size:16px">⌫</button>
+    <button class="pinkey" data-n="0">0</button>
+    <button class="pinkey" style="opacity:0;pointer-events:none" disabled></button>
+  </div>
+  <div class="pinerr" id="pinerr"></div>
+</div>
+
+<!-- TOP BAR -->
 <div class="top">
   <div class="top-row">
     <div style="display:flex;align-items:center">
@@ -138,12 +191,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div style="display:flex;align-items:center;gap:6px">
       <span class="sync" id="stime">loading</span>
-      <button class="logbtn" id="statbtn" style="background:rgba(255,255,255,.25)">⛓</button>
-      <button class="logbtn" id="logbtn">LOG</button>
+      <button class="topbtn" id="statbtn">⛓</button>
+      <button class="topbtn" id="logbtn">LOG</button>
     </div>
   </div>
 </div>
 
+<!-- METRICS -->
 <div class="metrics">
   <div class="m b"><div class="mlbl">Total</div><div class="mval" id="mt">—</div><div class="msub">products</div></div>
   <div class="m r"><div class="mlbl">Negative</div><div class="mval" id="mn" style="color:#cc0000">—</div><div class="msub">need stock</div></div>
@@ -151,6 +205,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="m a"><div class="mlbl">Dead stock</div><div class="mval" id="md" style="color:#e87000">—</div><div class="msub">90+ days</div></div>
 </div>
 
+<!-- TABS -->
 <div class="tabs" id="tabs">
   <div class="tab on" data-tab="all">All</div>
   <div class="tab" data-tab="neg">Negative</div>
@@ -160,24 +215,44 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="tab" data-tab="trend">Trending</div>
 </div>
 
+<!-- FILTER PILLS -->
 <div class="pills" id="dpills" style="display:none"></div>
 <div class="pills" id="tpills" style="display:none"></div>
 
+<!-- SEARCH -->
 <div class="srch">
   <svg class="sic" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
-  <input type="search" id="sq" placeholder="Search product, barcode…">
+  <input type="search" id="sq" placeholder="Search product, barcode…" autocomplete="off">
 </div>
 
+<!-- MAIN CONTENT -->
 <div id="out"><div class="loading"><div class="spin"></div>Loading…</div></div>
 
+<!-- BOTTOM NAV -->
 <nav class="bnav" id="bnav">
-  <div class="bni on" data-tab="all"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>All</span></div>
-  <div class="bni" data-tab="zero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Zero</span></div>
-  <div class="bni" data-tab="dead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Dead</span></div>
-  <div class="bni" data-tab="reorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg><span>Reorder</span></div>
-  <div class="bni" data-tab="trend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><span>Trend</span></div>
+  <div class="bni on" data-tab="all">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>All</span>
+  </div>
+  <div class="bni" data-tab="zero">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    <span>Zero</span>
+  </div>
+  <div class="bni" data-tab="dead">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>Dead</span>
+  </div>
+  <div class="bni" data-tab="reorder">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+    <span>Reorder</span>
+  </div>
+  <div class="bni" data-tab="trend">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    <span>Trend</span>
+  </div>
 </nav>
 
+<!-- PRODUCT DETAIL PANEL -->
 <div class="pov" id="pov">
   <div class="pan">
     <div class="ph"></div>
@@ -203,111 +278,97 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
-<!-- Data Chain Status Panel -->
+<!-- DATA CHAIN PANEL -->
 <div class="statov" id="statov">
   <div class="statpan">
     <div class="ph"></div>
-    <h2 style="margin-top:12px">Data Chain Monitor</h2>
-    <div class="sub">Live status of your stock data pipeline</div>
-    <div class="chain" id="chain">
-      <div class="cstep">
-        <div class="cicon load" id="s1icon">⏳</div>
-        <div class="cinfo">
-          <div class="clabel">1. SQL Export (PC Batch File)</div>
-          <div class="ctime" id="s1time">Checking…</div>
-          <div class="cstatus" id="s1status"></div>
-        </div>
-        <span class="cbadge load" id="s1badge">—</span>
+    <div class="stat-h2">Data Chain Monitor</div>
+    <div class="stat-sub">Live status of your stock data pipeline</div>
+
+    <div class="cstep">
+      <div class="cicon load" id="s1icon">⏳</div>
+      <div class="cinfo">
+        <div class="clabel">1. SQL Export (PC Batch File)</div>
+        <div class="ctime" id="s1time">Checking…</div>
+        <div class="cstat" id="s1stat"></div>
       </div>
-      <div class="cline"></div>
-      <div class="cstep">
-        <div class="cicon load" id="s2icon">⏳</div>
-        <div class="cinfo">
-          <div class="clabel">2. Google Drive Sync</div>
-          <div class="ctime" id="s2time">Checking…</div>
-          <div class="cstatus" id="s2status"></div>
-        </div>
-        <span class="cbadge load" id="s2badge">—</span>
-      </div>
-      <div class="cline"></div>
-      <div class="cstep">
-        <div class="cicon load" id="s3icon">⏳</div>
-        <div class="cinfo">
-          <div class="clabel">3. Google Sheet (Apps Script)</div>
-          <div class="ctime" id="s3time">Checking…</div>
-          <div class="cstatus" id="s3status"></div>
-        </div>
-        <span class="cbadge load" id="s3badge">—</span>
-      </div>
-      <div class="cline"></div>
-      <div class="cstep">
-        <div class="cicon load" id="s4icon">⏳</div>
-        <div class="cinfo">
-          <div class="clabel">4. App Last Fetched</div>
-          <div class="ctime" id="s4time">Checking…</div>
-          <div class="cstatus" id="s4status"></div>
-        </div>
-        <span class="cbadge load" id="s4badge">—</span>
-      </div>
+      <span class="cbadge load" id="s1badge">—</span>
     </div>
-    <button id="statclose" style="margin-top:20px;width:100%;padding:10px;background:#cc0000;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
+    <div class="cline"></div>
+    <div class="cstep">
+      <div class="cicon load" id="s2icon">⏳</div>
+      <div class="cinfo">
+        <div class="clabel">2. Google Drive Sync</div>
+        <div class="ctime" id="s2time">Checking…</div>
+        <div class="cstat" id="s2stat"></div>
+      </div>
+      <span class="cbadge load" id="s2badge">—</span>
+    </div>
+    <div class="cline"></div>
+    <div class="cstep">
+      <div class="cicon load" id="s3icon">⏳</div>
+      <div class="cinfo">
+        <div class="clabel">3. Google Sheet (Apps Script)</div>
+        <div class="ctime" id="s3time">Checking…</div>
+        <div class="cstat" id="s3stat"></div>
+      </div>
+      <span class="cbadge load" id="s3badge">—</span>
+    </div>
+    <div class="cline"></div>
+    <div class="cstep">
+      <div class="cicon load" id="s4icon">⏳</div>
+      <div class="cinfo">
+        <div class="clabel">4. App Last Fetched</div>
+        <div class="ctime" id="s4time">Checking…</div>
+        <div class="cstat" id="s4stat"></div>
+      </div>
+      <span class="cbadge load" id="s4badge">—</span>
+    </div>
+
+    <button class="bottombtn" id="statclose">Close</button>
   </div>
 </div>
 
+<!-- LOG PANEL -->
 <div class="logov" id="logov">
   <div class="logpan">
     <div class="ph"></div>
-    <div style="font-size:14px;font-weight:700;margin:12px 0 10px">Debug Log</div>
+    <div style="font-size:14px;font-weight:700;margin:14px 0 10px">Debug Log</div>
     <pre id="logtext" style="font-size:11px;line-height:1.8;color:#333;white-space:pre-wrap;word-break:break-all"></pre>
-    <button id="logclose" style="margin-top:14px;width:100%;padding:10px;background:#cc0000;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
+    <button class="bottombtn" id="logclose">Close</button>
   </div>
-</div>
-
-<!-- PIN Lock -->
-<div class="pinov" id="pinov">
-  <div class="pinlogo">CC</div>
-  <div class="pintitle">CC Hair &amp; Beauty</div>
-  <div class="pinsub">Stock Intelligence</div>
-  <div class="pindots" id="pindots">
-    <div class="pindot" id="pd0"></div>
-    <div class="pindot" id="pd1"></div>
-    <div class="pindot" id="pd2"></div>
-    <div class="pindot" id="pd3"></div>
-  </div>
-  <div class="pinpad" id="pinpad">
-    <button class="pinkey" data-n="1">1</button>
-    <button class="pinkey" data-n="2">2</button>
-    <button class="pinkey" data-n="3">3</button>
-    <button class="pinkey" data-n="4">4</button>
-    <button class="pinkey" data-n="5">5</button>
-    <button class="pinkey" data-n="6">6</button>
-    <button class="pinkey" data-n="7">7</button>
-    <button class="pinkey" data-n="8">8</button>
-    <button class="pinkey" data-n="9">9</button>
-    <button class="pinkey del" data-n="del">⌫</button>
-    <button class="pinkey" data-n="0">0</button>
-    <button class="pinkey" style="opacity:0" disabled></button>
-  </div>
-  <div class="pinerr" id="pinerr"></div>
 </div>
 
 <script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+var PIN  = '1979';
 var SURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv';
-// Log sheet (Sheet 2 — ImportLog) — publish this tab too after setup
 var LURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=407478843&single=true&output=csv';
 var IURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
-var DTIMES = [{l:'0-7 days',v:'0-7'},{l:'7-14 days',v:'7-14'},{l:'14-30 days',v:'14-30'},{l:'30-60 days',v:'30-60'},{l:'60-90 days',v:'60-90'},{l:'90-180 days',v:'90-180'},{l:'180-365 days',v:'180-365'},{l:'1 year+',v:'365-99999'}];
-var ZTIMES = [{l:'1 day',v:1},{l:'3 days',v:3},{l:'1 week',v:7},{l:'14 days',v:14},{l:'1 month',v:30},{l:'2 months',v:60},{l:'3 months',v:90}];
 
+var DTIMES = [
+  {l:'0-7 days',v:'0-7'},{l:'7-14 days',v:'7-14'},{l:'14-30 days',v:'14-30'},
+  {l:'30-60 days',v:'30-60'},{l:'60-90 days',v:'60-90'},{l:'90-180 days',v:'90-180'},
+  {l:'180-365 days',v:'180-365'},{l:'1 year+',v:'365-99999'}
+];
+var ZTIMES = [
+  {l:'1 day',v:1},{l:'3 days',v:3},{l:'1 week',v:7},
+  {l:'14 days',v:14},{l:'1 month',v:30},{l:'2 months',v:60},{l:'3 months',v:90}
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
 var prods = [], imgs = {}, depts = [];
 var tab = 'all', dept = 'All', tval = 'all';
 var logs = [];
+var lastFetchTime = null, lastFetchRows = 0;
+var pinEntry = '';
 
+// ── UTILS ─────────────────────────────────────────────────────────────────────
 function lg(m) { logs.push(new Date().toLocaleTimeString() + ' ' + m); console.log(m); }
 function cl(v) { return String(v == null ? '' : v).trim(); }
 
 function pDate(s) {
-  if (!s || s === 'Never' || s === 'Unknown' || s === 'NULL' || s === '') return null;
+  if (!s || s === 'Never' || s === 'Unknown' || s === 'NULL') return null;
   var p = s.split('/');
   if (p.length === 3) {
     var d = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
@@ -319,8 +380,7 @@ function pDate(s) {
 
 function dSince(s) {
   var d = pDate(s);
-  if (!d) return 9999;
-  return Math.floor((Date.now() - d.getTime()) / 86400000);
+  return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : 9999;
 }
 
 function isVD(s) {
@@ -330,17 +390,49 @@ function isVD(s) {
 
 function isDead(p, days) {
   days = days || 90;
-  if (p.qty <= 0 || p.qty <= 5) return false;
+  if (p.qty <= 5) return false;
   if (p.ls === 'Never' && isVD(p.dc) && dSince(p.dc) >= days) return true;
   if (isVD(p.ls) && dSince(p.ls) >= days) return true;
   return false;
 }
 
+// ── PIN ───────────────────────────────────────────────────────────────────────
+function pinDots() {
+  for (var i = 0; i < 4; i++) {
+    document.getElementById('pd' + i).className = 'pindot' + (i < pinEntry.length ? ' filled' : '');
+  }
+}
+
+function pinCheck() {
+  if (pinEntry === PIN) {
+    sessionStorage.setItem('cc_unlocked', '1');
+    document.getElementById('pinov').style.display = 'none';
+    startApp();
+  } else {
+    document.getElementById('pinerr').textContent = 'Incorrect PIN, try again';
+    pinEntry = '';
+    pinDots();
+    setTimeout(function() { document.getElementById('pinerr').textContent = ''; }, 2000);
+  }
+}
+
+document.getElementById('pinpad').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-n]');
+  if (!btn || btn.disabled) return;
+  var n = btn.getAttribute('data-n');
+  if (n === 'del') {
+    if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0, -1); pinDots(); }
+  } else if (pinEntry.length < 4) {
+    pinEntry += n;
+    pinDots();
+    if (pinEntry.length === 4) setTimeout(pinCheck, 150);
+  }
+});
+
+// ── DATA LOADING ──────────────────────────────────────────────────────────────
 async function loadImgs() {
   try {
-    lg('Loading images...');
     var r = await fetch(IURL);
-    lg('Img status: ' + r.status);
     var t = await r.text();
     Papa.parse(t, {header:true, skipEmptyLines:true}).data.forEach(function(row) {
       var bc = cl(row['Barcode']), src = cl(row['ImageURL']);
@@ -355,14 +447,13 @@ async function loadData() {
     lg('Fetching stock...');
     document.getElementById('stime').textContent = 'syncing…';
     var r = await fetch(SURL);
-    lg('Stock status: ' + r.status);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var t = await r.text();
     lg('Chars: ' + t.length);
-    lg('First 100: ' + t.substring(0, 100));
     var parsed = Papa.parse(t, {header:true, skipEmptyLines:true});
-    lg('Rows: ' + parsed.data.length + ' Errs: ' + parsed.errors.length);
+    lg('Rows: ' + parsed.data.length);
     if (parsed.data.length > 0) lg('Cols: ' + Object.keys(parsed.data[0]).join(','));
+
     prods = parsed.data.map(function(row) {
       var ls = cl(row['LastSold']), dc = cl(row['DateCreated']);
       return {
@@ -380,24 +471,25 @@ async function loadData() {
         br:  cl(row['Branch'])
       };
     });
-    lg('Mapped: ' + prods.length);
+
     lastFetchTime = new Date();
     lastFetchRows = prods.length;
     var dm = {};
     prods.forEach(function(p) { dm[p.dp] = 1; });
     depts = ['All'].concat(Object.keys(dm).sort());
     updateMetrics();
-    document.getElementById('stime').textContent = 'live ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('stime').textContent = 'live ' + lastFetchTime.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     lg('Done ✓');
     renderFilters();
     renderContent();
   } catch(e) {
     lg('ERR: ' + e.message);
-    document.getElementById('out').innerHTML = '<div class="empty">Failed to load<br><small>' + e.message + '</small></div>';
+    document.getElementById('out').innerHTML = '<div class="empty">Failed to load data<br><small style="font-size:11px">' + e.message + '</small></div>';
     document.getElementById('stime').textContent = 'error';
   }
 }
 
+// ── METRICS ───────────────────────────────────────────────────────────────────
 function updateMetrics() {
   document.getElementById('mt').textContent = prods.length.toLocaleString();
   document.getElementById('mn').textContent = prods.filter(function(p){return p.qty<0;}).length;
@@ -405,6 +497,7 @@ function updateMetrics() {
   document.getElementById('md').textContent = prods.filter(function(p){return isDead(p,90);}).length;
 }
 
+// ── FILTERS ───────────────────────────────────────────────────────────────────
 function renderFilters() {
   var showDept = ['zero','dead','reorder','trend'].indexOf(tab) >= 0;
   var showTime = ['zero','dead'].indexOf(tab) >= 0;
@@ -444,8 +537,9 @@ function renderFilters() {
   }
 }
 
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 function applySearch(list) {
-  var q = document.getElementById('sq').value.toLowerCase();
+  var q = document.getElementById('sq').value.toLowerCase().trim();
   return list.filter(function(p) {
     if (dept !== 'All' && p.dp !== dept) return false;
     if (!q) return true;
@@ -456,42 +550,54 @@ function applySearch(list) {
 function mkSec(label, count) {
   var div = document.createElement('div');
   div.className = 'sec';
-  var sp1 = document.createElement('span'); sp1.textContent = label;
-  var sp2 = document.createElement('span'); sp2.className = 'badge'; sp2.textContent = count;
-  div.appendChild(sp1); div.appendChild(sp2);
+  var s1 = document.createElement('span'); s1.textContent = label;
+  var s2 = document.createElement('span'); s2.className = 'badge'; s2.textContent = count;
+  div.appendChild(s1); div.appendChild(s2);
   return div;
+}
+
+function mkImg(bc) {
+  var src = imgs[bc];
+  if (src) {
+    var img = document.createElement('img');
+    img.src = src;
+    img.style.cssText = 'width:44px;height:44px;object-fit:cover';
+    img.loading = 'lazy';
+    img.onerror = function() { this.style.display = 'none'; };
+    return img;
+  }
+  var svg = document.createElement('div');
+  svg.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  return svg.firstChild;
 }
 
 function mkCard(p) {
   var card = document.createElement('div');
   card.className = 'card';
-  var src = imgs[p.bc];
   var ci = document.createElement('div'); ci.className = 'ci';
-  if (src) {
-    var img = document.createElement('img');
-    img.src = src; img.style.cssText = 'width:44px;height:44px;object-fit:cover';
-    img.loading = 'lazy';
-    img.onerror = function() { this.style.display='none'; };
-    ci.appendChild(img);
-  } else {
-    ci.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
-  }
+  ci.appendChild(mkImg(p.bc));
   var cn = document.createElement('div'); cn.className = 'cn';
   var cname = document.createElement('div'); cname.className = 'cname'; cname.textContent = p.nm;
-  var cmeta = document.createElement('div'); cmeta.className = 'cmeta'; cmeta.textContent = p.bc + (p.sz ? ' · ' + p.sz : '');
+  var cmeta = document.createElement('div'); cmeta.className = 'cmeta';
+  cmeta.textContent = p.bc + (p.sz ? ' · ' + p.sz : '');
   cn.appendChild(cname); cn.appendChild(cmeta);
   var cr = document.createElement('div'); cr.className = 'cr';
-  var qty = document.createElement('span'); qty.className = 'qty ' + (p.qty<0?'qn':p.qty===0?'qz':'qp'); qty.textContent = p.qty;
+  var qty = document.createElement('span');
+  qty.className = 'qty ' + (p.qty < 0 ? 'qn' : p.qty === 0 ? 'qz' : 'qp');
+  qty.textContent = p.qty;
   cr.appendChild(qty);
-  if (p.prc > 0) { var pr = document.createElement('span'); pr.className = 'cprice'; pr.textContent = '£' + p.prc.toFixed(2); cr.appendChild(pr); }
+  if (p.prc > 0) {
+    var pr = document.createElement('span'); pr.className = 'cprice';
+    pr.textContent = '£' + p.prc.toFixed(2); cr.appendChild(pr);
+  }
   card.appendChild(ci); card.appendChild(cn); card.appendChild(cr);
   card.addEventListener('click', function() { openPanel(p.bc); });
   return card;
 }
 
+// ── RENDER ────────────────────────────────────────────────────────────────────
 function renderContent() {
-  if (!prods.length) { lg('renderContent: no prods yet'); return; }
-  lg('renderContent tab=' + tab);
+  if (!prods.length) return;
   var el = document.getElementById('out');
   if (tab === 'zero')    { renderZero(el);    return; }
   if (tab === 'dead')    { renderDead(el);    return; }
@@ -502,13 +608,10 @@ function renderContent() {
   list = applySearch(list);
   list.sort(function(a, b) { return a.qty - b.qty; });
   if (!list.length) { el.innerHTML = '<div class="empty">No products found</div>'; return; }
-  lg('Rendering ' + list.length + ' products');
   var frag = document.createDocumentFragment();
   frag.appendChild(mkSec(tab === 'neg' ? 'Most negative first' : 'All products', list.length));
   list.slice(0, 300).forEach(function(p) { frag.appendChild(mkCard(p)); });
-  el.innerHTML = '';
-  el.appendChild(frag);
-  lg('Render done');
+  el.innerHTML = ''; el.appendChild(frag);
 }
 
 function renderZero(el) {
@@ -520,17 +623,17 @@ function renderZero(el) {
   });
   list = applySearch(list);
   list.sort(function(a, b) { return dSince(a.ls) - dSince(b.ls); });
-  if (!list.length) { el.innerHTML = '<div class="empty">No zero stock items</div>'; return; }
+  if (!list.length) { el.innerHTML = '<div class="empty">No zero stock items for this filter</div>'; return; }
   var frag = document.createDocumentFragment();
-  var zLabel = tval === 'all' ? 'Out of stock' : 'Out of stock ' + tval + '+ days';
-  frag.appendChild(mkSec(zLabel, list.length));
+  frag.appendChild(mkSec(tval === 'all' ? 'Out of stock' : 'Out of stock ' + tval + '+ days', list.length));
   list.slice(0, 300).forEach(function(p) {
     var dls = dSince(p.ls);
     var card = mkCard(p);
     var cn = card.querySelector('.cn');
     var w = document.createElement('div'); w.className = 'cwarn';
-    w.textContent = p.ls === 'Never' ? 'Never been sold' : 'Out of stock ~' + dls + ' day' + (dls===1?'':'s');
-    var s = document.createElement('div'); s.className = 'cmeta'; s.style.fontSize = '10px'; s.style.color = '#aaa';
+    w.textContent = p.ls === 'Never' ? 'Never been sold' : 'Out of stock ~' + dls + ' day' + (dls === 1 ? '' : 's');
+    var s = document.createElement('div'); s.className = 'cmeta';
+    s.style.fontSize = '10px'; s.style.color = '#aaa';
     s.textContent = p.ls === 'Never' ? 'Never sold' : 'Last sold: ' + p.ls;
     cn.appendChild(w); cn.appendChild(s);
     frag.appendChild(card);
@@ -542,17 +645,14 @@ function renderDead(el) {
   var minDays, maxDays;
   if (tval === 'all') { minDays = 0; maxDays = 99999; }
   else {
-    var parts = String(tval).split('-');
-    minDays = parseInt(parts[0]);
-    maxDays = parseInt(parts[1]);
+    var pts = String(tval).split('-');
+    minDays = parseInt(pts[0]);
+    maxDays = parseInt(pts[1]);
   }
-  lg('renderDead: tval=' + tval + ' min=' + minDays + ' max=' + maxDays);
 
   var list = prods.filter(function(p) {
-    if (p.qty <= 0 || p.qty <= 5) return false;
-    var dls = p.ls === 'Never' ? 9999 : dSince(p.ls);
-    var ddc = isVD(p.dc) ? dSince(p.dc) : null;
-    var age = p.ls === 'Never' ? (ddc !== null ? ddc : 9999) : dls;
+    if (p.qty <= 5) return false;
+    var age = p.ls === 'Never' ? (isVD(p.dc) ? dSince(p.dc) : 9999) : dSince(p.ls);
     return age >= minDays && age <= maxDays;
   });
   list = applySearch(list);
@@ -562,10 +662,11 @@ function renderDead(el) {
     return db - da;
   });
   if (!list.length) { el.innerHTML = '<div class="empty">No dead stock for this filter</div>'; return; }
-  var tv = list.reduce(function(s,p){return s+p.qty*p.prc;},0);
+
+  var tv = list.reduce(function(s, p) { return s + p.qty * p.prc; }, 0);
   var frag = document.createDocumentFragment();
-  var filterLabel = tval === 'all' ? 'all' : 'not sold ' + String(tval).replace('-99999','+ days').replace('-',' to ') + ' days';
   frag.appendChild(mkSec('Dead stock · £' + tv.toFixed(0) + ' tied up', list.length));
+
   list.forEach(function(p) {
     var dls = dSince(p.ls);
     var ddc = isVD(p.dc) ? dSince(p.dc) : null;
@@ -573,13 +674,16 @@ function renderDead(el) {
     var cn = card.querySelector('.cn');
     cn.querySelector('.cmeta').textContent = p.dp + (p.sz ? ' · ' + p.sz : '');
     var tag = document.createElement('div'); tag.className = 'dtag';
-    tag.textContent = p.ls === 'Never' ? ('Never sold' + (ddc ? ' · added ' + ddc + 'd ago' : '')) : ('Last sold ' + dls + ' days ago');
-    var added = document.createElement('div'); added.className = 'cmeta'; added.style.fontSize = '10px'; added.style.color = '#aaa';
-    added.textContent = ddc ? 'Added: ' + p.dc + ' (' + ddc + ' days ago)' : 'Date added: Unknown';
+    tag.textContent = p.ls === 'Never'
+      ? ('Never sold' + (ddc ? ' · added ' + ddc + 'd ago' : ''))
+      : ('Last sold ' + dls + ' days ago');
+    var added = document.createElement('div'); added.className = 'cmeta';
+    added.style.fontSize = '10px'; added.style.color = '#aaa';
+    added.textContent = ddc ? 'Added: ' + p.dc + ' (' + ddc + 'd ago)' : 'Date added: Unknown';
     cn.appendChild(tag); cn.appendChild(added);
     var cr = card.querySelector('.cr'); cr.innerHTML = '';
     var q = document.createElement('div'); q.className = 'qty qp'; q.style.fontSize = '15px'; q.textContent = p.qty;
-    var v = document.createElement('div'); v.className = 'dval'; v.textContent = '£' + (p.qty*p.prc).toFixed(2);
+    var v = document.createElement('div'); v.className = 'dval'; v.textContent = '£' + (p.qty * p.prc).toFixed(2);
     cr.appendChild(q); cr.appendChild(v);
     frag.appendChild(card);
   });
@@ -591,35 +695,39 @@ function renderReorder(el) {
     return p.qty === 0 && p.ls !== 'Never' && dSince(p.ls) <= 90;
   });
   list = applySearch(list);
-  list.sort(function(a,b){return dSince(a.ls)-dSince(b.ls);});
-  if (!list.length) { el.innerHTML = '<div class="empty">No reorder suggestions<br><small style="font-size:11px">Zero stock items sold within last 90 days</small></div>'; return; }
+  list.sort(function(a, b) { return dSince(a.ls) - dSince(b.ls); });
+  if (!list.length) {
+    el.innerHTML = '<div class="empty">No reorder suggestions<br><small style="font-size:11px">Zero stock items sold within last 90 days</small></div>';
+    return;
+  }
   var frag = document.createDocumentFragment();
   frag.appendChild(mkSec('Recently sold, now zero', list.length));
   list.forEach(function(p) {
     var d = dSince(p.ls);
     var urg = d <= 7;
     var sug = Math.max(p.mn || 0, p.mx > 0 ? Math.ceil(p.mx / 2) : 5);
-    var src = imgs[p.bc];
     var oc = document.createElement('div'); oc.className = 'oc';
-    // Header row with image + name + priority
     var och = document.createElement('div'); och.className = 'och';
-    // Image
-    var ci = document.createElement('div'); ci.className = 'ci'; ci.style.cssText = 'width:40px;height:40px;flex-shrink:0;margin-right:2px';
-    if (src) { var img = document.createElement('img'); img.src=src; img.loading='lazy'; img.style.cssText='width:40px;height:40px;object-fit:cover;border-radius:6px'; img.onerror=function(){this.style.display='none';}; ci.appendChild(img); }
-    else { ci.style.cssText += ';background:#f0f0f0;border-radius:6px;border:1px solid #eee;display:flex;align-items:center;justify-content:center'; ci.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'; }
-    var left = document.createElement('div'); left.style.flex='1'; left.style.minWidth='0';
+    var ci = document.createElement('div');
+    ci.style.cssText = 'width:40px;height:40px;flex-shrink:0;border-radius:6px;overflow:hidden;background:#f0f0f0;border:1px solid #eee;display:flex;align-items:center;justify-content:center;margin-right:2px';
+    var imgEl = mkImg(p.bc);
+    if (imgEl.tagName === 'IMG') imgEl.style.cssText = 'width:40px;height:40px;object-fit:cover';
+    ci.appendChild(imgEl);
+    var left = document.createElement('div'); left.style.cssText = 'flex:1;min-width:0';
     var ocn = document.createElement('div'); ocn.className = 'ocn'; ocn.textContent = p.nm;
     var ocd = document.createElement('div'); ocd.className = 'ocd'; ocd.textContent = p.dp + (p.sz ? ' · ' + p.sz : '');
     left.appendChild(ocn); left.appendChild(ocd);
-    var prio = document.createElement('span'); prio.className = 'prio ' + (urg ? 'pcrit' : 'pmed'); prio.textContent = urg ? 'URGENT' : 'ORDER';
+    var prio = document.createElement('span');
+    prio.className = 'prio ' + (urg ? 'pcrit' : 'pmed');
+    prio.textContent = urg ? 'URGENT' : 'ORDER';
     och.appendChild(ci); och.appendChild(left); och.appendChild(prio);
     var ocb = document.createElement('div'); ocb.className = 'ocb';
-    ocb.innerHTML = '<div class="brc"><div class="brcn">Last sold</div><div class="brcq" style="font-size:14px;color:#e87000">' + d + 'd ago</div></div>' +
+    ocb.innerHTML =
+      '<div class="brc"><div class="brcn">Last sold</div><div class="brcq" style="font-size:14px;color:#e87000">' + d + 'd ago</div></div>' +
       '<div class="oarr">→</div>' +
       '<div class="sbox"><span class="sbq">+' + sug + '</span><span class="sbl">suggested</span></div>' +
-      '<div class="brc"><div class="brcn">Price</div><div class="brcq" style="font-size:14px;color:#666">' + (p.prc>0?'£'+p.prc.toFixed(2):'—') + '</div></div>';
+      '<div class="brc"><div class="brcn">Price</div><div class="brcq" style="font-size:14px;color:#666">' + (p.prc > 0 ? '£' + p.prc.toFixed(2) : '—') + '</div></div>';
     oc.appendChild(och); oc.appendChild(ocb);
-    oc.style.cursor = 'pointer';
     oc.addEventListener('click', function() { openPanel(p.bc); });
     frag.appendChild(oc);
   });
@@ -633,23 +741,27 @@ function renderTrend(el) {
     return dls <= 7 || (dls <= 30 && p.qty >= 2);
   });
   list = applySearch(list);
-  list.sort(function(a,b){return dSince(a.ls)-dSince(b.ls);});
-  var low = list.filter(function(p){return p.qty<=3||(p.mn>0&&p.qty<=p.mn);});
-  var ok  = list.filter(function(p){return p.qty>3&&(p.mn===0||p.qty>p.mn);});
-  if (!low.length && !ok.length) { el.innerHTML = '<div class="empty">No trending products<br><small style="font-size:11px">Products sold in last 30 days appear here</small></div>'; return; }
+  list.sort(function(a, b) { return dSince(a.ls) - dSince(b.ls); });
+  var low = list.filter(function(p) { return p.qty <= 3 || (p.mn > 0 && p.qty <= p.mn); });
+  var ok  = list.filter(function(p) { return p.qty > 3 && (p.mn === 0 || p.qty > p.mn); });
+  if (!low.length && !ok.length) {
+    el.innerHTML = '<div class="empty">No trending products<br><small style="font-size:11px">Products sold in last 30 days appear here</small></div>';
+    return;
+  }
   var frag = document.createDocumentFragment();
   if (low.length) {
     var sugg = document.createElement('div'); sugg.className = 'sugg';
-    sugg.innerHTML = '<strong>' + low.length + ' trending product' + (low.length>1?'s':'') + ' running low</strong><br>Sold within 30 days but stock critically low. Consider reordering or transferring.';
+    sugg.innerHTML = '<strong>' + low.length + ' trending product' + (low.length > 1 ? 's' : '') + ' running low</strong><br>Sold within 30 days but stock critically low. Consider reordering or transferring.';
     frag.appendChild(sugg);
     frag.appendChild(mkSec('Trending — low stock', low.length));
     low.forEach(function(p) {
       var d = dSince(p.ls);
       var card = mkCard(p);
-      var cn = card.querySelector('.cn');
-      var tag = document.createElement('div'); tag.className = 'dtag'; tag.style.cssText = 'background:#fff0f0;color:#cc0000';
+      var tag = document.createElement('div'); tag.className = 'dtag';
+      tag.style.cssText = 'background:#fff0f0;color:#cc0000';
       tag.textContent = 'sold ' + d + 'd ago · ' + p.qty + ' left';
-      cn.appendChild(tag); frag.appendChild(card);
+      card.querySelector('.cn').appendChild(tag);
+      frag.appendChild(card);
     });
   }
   if (ok.length) {
@@ -657,258 +769,203 @@ function renderTrend(el) {
     ok.forEach(function(p) {
       var d = dSince(p.ls);
       var card = mkCard(p);
-      var cn = card.querySelector('.cn');
-      var tag = document.createElement('div'); tag.className = 'dtag'; tag.style.cssText = 'background:#f0fff5;color:#1a7f3c';
+      var tag = document.createElement('div'); tag.className = 'dtag';
+      tag.style.cssText = 'background:#f0fff5;color:#1a7f3c';
       tag.textContent = 'sold ' + d + 'd ago';
-      cn.appendChild(tag); frag.appendChild(card);
+      card.querySelector('.cn').appendChild(tag);
+      frag.appendChild(card);
     });
   }
   el.innerHTML = ''; el.appendChild(frag);
 }
 
+// ── PRODUCT PANEL ─────────────────────────────────────────────────────────────
 function openPanel(bc) {
-  var p = prods.find(function(x){return x.bc===bc;});
+  var p = prods.find(function(x) { return x.bc === bc; });
   if (!p) return;
-  var src = imgs[bc];
   var hero = document.getElementById('phero');
-  if (src) { hero.innerHTML = ''; var img=document.createElement('img'); img.src=src; img.style.cssText='max-height:166px;max-width:100%;object-fit:contain'; hero.appendChild(img); }
-  else { hero.innerHTML = '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'; }
-  document.getElementById('pn').textContent  = p.nm;
-  document.getElementById('pp').textContent  = p.dp + (p.sz?' · '+p.sz:'');
-  var qe = document.getElementById('pq'); qe.textContent = p.qty;
-  qe.style.color = p.qty<0?'#cc0000':p.qty===0?'#999':'#1a7f3c';
-  document.getElementById('ppr').textContent = p.prc>0?'£'+p.prc.toFixed(2):'—';
-  document.getElementById('pc').textContent  = p.cst>0?'£'+p.cst.toFixed(2):'—';
-  document.getElementById('pb').textContent  = p.bc||'—';
-  document.getElementById('psz').textContent = p.sz||'—';
-  document.getElementById('pdc').textContent = p.dc||'—';
-  document.getElementById('pls').textContent = p.ls||'—';
-  document.getElementById('pmn').textContent = p.mn;
-  document.getElementById('pmx').textContent = p.mx;
+  hero.innerHTML = '';
+  var src = imgs[bc];
+  if (src) {
+    var img = document.createElement('img');
+    img.src = src; img.style.cssText = 'max-height:166px;max-width:100%;object-fit:contain';
+    hero.appendChild(img);
+  } else {
+    hero.innerHTML = '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  }
+  document.getElementById('pn').textContent   = p.nm;
+  document.getElementById('pp').textContent   = p.dp + (p.sz ? ' · ' + p.sz : '');
+  var qe = document.getElementById('pq');
+  qe.textContent = p.qty;
+  qe.style.color = p.qty < 0 ? '#cc0000' : p.qty === 0 ? '#999' : '#1a7f3c';
+  document.getElementById('ppr').textContent  = p.prc > 0 ? '£' + p.prc.toFixed(2) : '—';
+  document.getElementById('pc').textContent   = p.cst > 0 ? '£' + p.cst.toFixed(2) : '—';
+  document.getElementById('pb').textContent   = p.bc || '—';
+  document.getElementById('psz').textContent  = p.sz || '—';
+  document.getElementById('pdc').textContent  = p.dc || '—';
+  document.getElementById('pls').textContent  = p.ls || '—';
+  document.getElementById('pmn').textContent  = p.mn;
+  document.getElementById('pmx').textContent  = p.mx;
   var dn = document.getElementById('pdn');
-  if (isDead(p,90)) {
-    dn.style.display='block';
-    dn.textContent = p.ls==='Never' ? 'Dead stock: Never sold · '+p.qty+' units in stock' : 'Dead stock: Last sold '+p.ls+' ('+dSince(p.ls)+' days ago) · '+p.qty+' units';
-  } else { dn.style.display='none'; }
+  if (isDead(p, 90)) {
+    dn.style.display = 'block';
+    dn.textContent = p.ls === 'Never'
+      ? 'Dead stock: Never sold · ' + p.qty + ' units in stock'
+      : 'Dead stock: Last sold ' + p.ls + ' (' + dSince(p.ls) + ' days ago) · ' + p.qty + ' units';
+  } else { dn.style.display = 'none'; }
   document.getElementById('pov').classList.add('open');
 }
 
-// Event listeners — all DOM based, no inline handlers
-document.getElementById('tabs').addEventListener('click', function(e) {
-  var t = e.target.closest('.tab'); if (!t) return;
-  var v = t.dataset.tab; if (!v) return;
-  switchTab(v);
-});
-document.getElementById('bnav').addEventListener('click', function(e) {
-  var t = e.target.closest('.bni'); if (!t) return;
-  var v = t.dataset.tab; if (!v) return;
-  switchTab(v);
-});
-function switchTab(v) {
-  tab=v; dept='All'; tval='all';
-  document.querySelectorAll('.tab').forEach(function(el){el.classList.toggle('on',el.dataset.tab===v);});
-  document.querySelectorAll('.bni').forEach(function(el){el.classList.toggle('on',el.dataset.tab===v);});
-  document.getElementById('sq').value='';
-  renderFilters(); renderContent();
-}
-document.getElementById('sq').addEventListener('input', renderContent);
-document.getElementById('pov').addEventListener('click', function(e){if(e.target===this)this.classList.remove('open');});
-// ─── Data Chain Monitor ───────────────────────────────────────────────────────
-var lastFetchTime = null;
-var lastFetchRows = 0;
-
-// We store the sheet's first-row timestamp to detect updates
-// Apps Script writes a timestamp into cell A1 of sheet 2 on every import
-// For now we use the data row count + fetch time as proxy
-function setStep(n, icon, iconClass, time, status, statusClass, badge, badgeClass) {
+// ── DATA CHAIN ────────────────────────────────────────────────────────────────
+function setStep(n, icon, cls, time, stat, badge) {
   document.getElementById('s'+n+'icon').textContent = icon;
-  document.getElementById('s'+n+'icon').className = 'cicon ' + iconClass;
+  document.getElementById('s'+n+'icon').className = 'cicon ' + cls;
   document.getElementById('s'+n+'time').textContent = time;
-  document.getElementById('s'+n+'status').textContent = status;
-  document.getElementById('s'+n+'status').className = 'cstatus ' + statusClass;
+  document.getElementById('s'+n+'stat').textContent = stat;
+  document.getElementById('s'+n+'stat').className = 'cstat ' + cls;
   document.getElementById('s'+n+'badge').textContent = badge;
-  document.getElementById('s'+n+'badge').className = 'cbadge ' + badgeClass;
+  document.getElementById('s'+n+'badge').className = 'cbadge ' + cls;
 }
 
 function timeAgo(date) {
   if (!date) return 'Unknown';
   var mins = Math.floor((Date.now() - date.getTime()) / 60000);
   if (mins < 1) return 'Just now';
-  if (mins < 60) return mins + ' min' + (mins===1?'':'s') + ' ago';
-  var hrs = Math.floor(mins/60);
-  if (hrs < 24) return hrs + ' hr' + (hrs===1?'':'s') + ' ago';
-  return Math.floor(hrs/24) + ' day(s) ago';
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
 }
 
-function statusColor(mins) {
-  if (mins < 35) return 'ok';
-  if (mins < 90) return 'warn';
-  return 'err';
-}
+function sCls(mins) { return mins < 35 ? 'ok' : mins < 90 ? 'warn' : 'err'; }
+function sIcon(cls) { return cls === 'ok' ? '✅' : cls === 'warn' ? '⚠️' : '❌'; }
 
-function statusIcon(cls) {
-  if (cls==='ok') return '✅';
-  if (cls==='warn') return '⚠️';
-  return '❌';
+function parseDDMMYYYY(s) {
+  if (!s) return null;
+  var p = s.trim().split(' ');
+  if (p.length < 2) return null;
+  var d = p[0].split('/'), t = p[1].split(':');
+  if (d.length < 3 || t.length < 2) return null;
+  return new Date(parseInt(d[2]), parseInt(d[1])-1, parseInt(d[0]), parseInt(t[0]), parseInt(t[1]), parseInt(t[2]||0));
 }
 
 async function checkChain() {
-  // Step 4 — App last fetch
+  // Step 4 — app fetch time
   if (lastFetchTime) {
-    var mins4 = Math.floor((Date.now() - lastFetchTime.getTime()) / 60000);
-    var cls4 = statusColor(mins4);
-    setStep(4, statusIcon(cls4), cls4,
+    var m4 = Math.floor((Date.now() - lastFetchTime.getTime()) / 60000);
+    var c4 = sCls(m4);
+    setStep(4, sIcon(c4), c4,
       'Fetched ' + timeAgo(lastFetchTime) + ' · ' + lastFetchRows.toLocaleString() + ' products',
-      mins4 < 35 ? 'Data is fresh ✓' : 'Data may be stale — pull to refresh',
-      cls4, mins4 + 'm ago', cls4);
+      m4 < 35 ? 'Data is fresh ✓' : 'May be stale — reload page',
+      m4 + 'm ago');
   } else {
-    setStep(4, '⏳', 'load', 'Not yet fetched this session', '', 'load', '—', 'load');
+    setStep(4, '⏳', 'load', 'Not yet fetched', '', '—');
   }
 
-  // Steps 1-3: read from ImportLog sheet (Sheet 2)
+  // Steps 1-3 from ImportLog
   try {
-    setStep(1,'⏳','load','Checking…','','load','…','load');
-    setStep(2,'⏳','load','Checking…','','load','…','load');
-    setStep(3,'⏳','load','Checking…','','load','…','load');
-
+    setStep(1,'⏳','load','Checking…','','…');
+    setStep(2,'⏳','load','Checking…','','…');
+    setStep(3,'⏳','load','Checking…','','…');
     var r = await fetch(LURL + '&t=' + Date.now());
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var txt = await r.text();
-    var rows = txt.trim().split('
-');
-
+    var rows = txt.trim().split('\n');
     if (rows.length < 2) {
-      // No log yet — ImportLog sheet not populated
-      setStep(3,'⚠️','warn','No import log found','Run importRoundhay() in Apps Script first','warn','No log','warn');
-      setStep(2,'⚠️','warn','Cannot confirm Drive sync','Check Apps Script is set up','warn','Unknown','warn');
-      setStep(1,'⚠️','warn','Cannot confirm PC export','Check scheduler is running','warn','Unknown','warn');
+      setStep(3,'⚠️','warn','No import log yet','Run importRoundhay() in Apps Script','No log');
+      setStep(2,'⚠️','warn','Cannot confirm sync','Set up Apps Script trigger','?');
+      setStep(1,'⚠️','warn','Cannot confirm export','Check PC Task Scheduler','?');
       return;
     }
-
-    // Latest log row (row index 1 = first data row after header)
-    var latest = rows[1].split(',');
-    // Cols: RunTime, CSVModified, RowsWritten, Status, Duration
-    var runTime    = latest[0] ? latest[0].replace(/"/g,'') : '';
-    var csvMod     = latest[1] ? latest[1].replace(/"/g,'') : '';
-    var rowCount   = latest[2] ? latest[2].replace(/"/g,'') : '0';
-    var status     = latest[3] ? latest[3].replace(/"/g,'') : '';
-    var duration   = latest[4] ? latest[4].replace(/"/g,'') : '';
-
-    // Parse the run time (format: dd/MM/yyyy HH:mm:ss)
-    function parseDDMMYYYY(s) {
-      if (!s) return null;
-      var p = s.trim().split(' ');
-      if (p.length < 2) return null;
-      var d = p[0].split('/');
-      var t = p[1].split(':');
-      if (d.length < 3 || t.length < 2) return null;
-      return new Date(parseInt(d[2]), parseInt(d[1])-1, parseInt(d[0]), parseInt(t[0]), parseInt(t[1]), parseInt(t[2]||0));
-    }
-
-    var runDate = parseDDMMYYYY(runTime);
-    var csvDate = parseDDMMYYYY(csvMod);
-    var isOK    = status === 'OK';
-
-    // Step 3 — Apps Script / Sheet update
-    var mins3 = runDate ? Math.floor((Date.now()-runDate.getTime())/60000) : 9999;
-    var cls3  = !isOK ? 'err' : statusColor(mins3);
-    setStep(3, statusIcon(cls3), cls3,
-      'Last import: ' + (runTime||'Unknown') + ' (' + duration + ')',
-      isOK ? parseInt(rowCount).toLocaleString() + ' rows written successfully' : 'ERROR: ' + status,
-      cls3, timeAgo(runDate), cls3);
-
-    // Step 2 — Drive sync (CSV modified time)
-    var mins2 = csvDate ? Math.floor((Date.now()-csvDate.getTime())/60000) : 9999;
-    var cls2  = statusColor(mins2);
-    setStep(2, statusIcon(cls2), cls2,
-      'CSV last modified: ' + (csvMod||'Unknown'),
-      mins2 < 35 ? 'Google Drive synced on schedule ✓' : 'Drive sync may be delayed',
-      cls2, timeAgo(csvDate), cls2);
-
-    // Step 1 — PC batch file (CSV modified = bat file ran)
-    var cls1 = statusColor(mins2);
-    var next = 30 - (mins2 % 30);
-    setStep(1, statusIcon(cls1), cls1,
-      'Last export: ' + (csvMod||'Unknown'),
-      cls1==='ok' ? 'Scheduler running ✓ · Next run ~' + next + ' mins' : 'Check Task Scheduler on Roundhay PC',
-      cls1, timeAgo(csvDate), cls1);
-
+    var row = rows[1].split(',');
+    var runTime  = (row[0]||'').replace(/"/g,'');
+    var csvMod   = (row[1]||'').replace(/"/g,'');
+    var rowCount = (row[2]||'0').replace(/"/g,'');
+    var status   = (row[3]||'').replace(/"/g,'');
+    var duration = (row[4]||'').replace(/"/g,'');
+    var runDate  = parseDDMMYYYY(runTime);
+    var csvDate  = parseDDMMYYYY(csvMod);
+    var isOK     = status === 'OK';
+    var m3 = runDate ? Math.floor((Date.now()-runDate.getTime())/60000) : 9999;
+    var c3 = !isOK ? 'err' : sCls(m3);
+    setStep(3, sIcon(c3), c3,
+      'Last import: ' + (runTime||'?') + ' (' + duration + ')',
+      isOK ? parseInt(rowCount).toLocaleString() + ' rows written ✓' : 'ERROR: ' + status,
+      timeAgo(runDate));
+    var m2 = csvDate ? Math.floor((Date.now()-csvDate.getTime())/60000) : 9999;
+    var c2 = sCls(m2);
+    setStep(2, sIcon(c2), c2,
+      'CSV last modified: ' + (csvMod||'?'),
+      m2 < 35 ? 'Synced on schedule ✓' : 'Sync may be delayed',
+      timeAgo(csvDate));
+    var c1 = sCls(m2);
+    var next = 30 - (m2 % 30);
+    setStep(1, sIcon(c1), c1,
+      'Last export: ' + (csvMod||'?'),
+      c1==='ok' ? 'Running ✓ · Next ~' + next + ' mins' : 'Check Task Scheduler on Roundhay PC',
+      timeAgo(csvDate));
   } catch(e) {
-    setStep(3,'❌','err','Cannot read import log','Publish Sheet 2 (ImportLog) as CSV','err','Error','err');
-    setStep(2,'⚠️','warn','Cannot confirm','Check Apps Script logs','warn','Unknown','warn');
-    setStep(1,'⚠️','warn','Cannot confirm','Check PC Task Scheduler','warn','Unknown','warn');
+    setStep(3,'❌','err','Cannot read import log','Publish ImportLog tab as CSV','Error');
+    setStep(2,'⚠️','warn','Cannot confirm','Check Apps Script','?');
+    setStep(1,'⚠️','warn','Cannot confirm','Check PC Scheduler','?');
   }
 }
 
-document.getElementById('statbtn').addEventListener('click', function(){
-  document.getElementById('statov').classList.add('open');
-  checkChain();
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+function switchTab(v) {
+  tab = v; dept = 'All'; tval = 'all';
+  document.querySelectorAll('.tab').forEach(function(el) { el.classList.toggle('on', el.dataset.tab === v); });
+  document.querySelectorAll('.bni').forEach(function(el) { el.classList.toggle('on', el.dataset.tab === v); });
+  document.getElementById('sq').value = '';
+  renderFilters(); renderContent();
+}
+
+// ── EVENT LISTENERS ───────────────────────────────────────────────────────────
+document.getElementById('tabs').addEventListener('click', function(e) {
+  var t = e.target.closest('.tab'); if (t && t.dataset.tab) switchTab(t.dataset.tab);
 });
-document.getElementById('statclose').addEventListener('click', function(){
+document.getElementById('bnav').addEventListener('click', function(e) {
+  var t = e.target.closest('.bni'); if (t && t.dataset.tab) switchTab(t.dataset.tab);
+});
+document.getElementById('sq').addEventListener('input', renderContent);
+document.getElementById('pov').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+document.getElementById('statbtn').addEventListener('click', function() {
+  document.getElementById('statov').classList.add('open'); checkChain();
+});
+document.getElementById('statclose').addEventListener('click', function() {
   document.getElementById('statov').classList.remove('open');
 });
-document.getElementById('statov').addEventListener('click', function(e){
-  if(e.target===this) this.classList.remove('open');
+document.getElementById('statov').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+document.getElementById('logbtn').addEventListener('click', function() {
+  document.getElementById('logtext').textContent = logs.join('\n') || 'No log entries yet';
+  document.getElementById('logov').classList.add('open');
+});
+document.getElementById('logclose').addEventListener('click', function() {
+  document.getElementById('logov').classList.remove('open');
+});
+document.getElementById('logov').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
 });
 
-document.getElementById('logbtn').addEventListener('click', function(){
-  document.getElementById('logtext').textContent=logs.join('\n')||'No entries yet';
-  document.getElementById('logov').style.display='block';
-});
-document.getElementById('logclose').addEventListener('click', function(){document.getElementById('logov').style.display='none';});
-document.getElementById('logov').addEventListener('click', function(e){if(e.target===this)this.style.display='none';});
-
-// ─── PIN Lock ─────────────────────────────────────────────────────────────────
-var PIN = '1979';
-var pinEntry = '';
-
-function pinUpdateDots() {
-  for (var i = 0; i < 4; i++) {
-    document.getElementById('pd'+i).className = 'pindot' + (i < pinEntry.length ? ' filled' : '');
-  }
+// ── APP START ─────────────────────────────────────────────────────────────────
+function startApp() {
+  loadImgs();
+  loadData();
+  setInterval(loadData, 30 * 60 * 1000);
 }
 
-function pinCheck() {
-  if (pinEntry === PIN) {
-    sessionStorage.setItem('cc_unlocked','1');
-    document.getElementById('pinov').style.display = 'none';
-    loadImgs();
-    loadData();
-    setInterval(loadData, 10*60*1000);
-  } else {
-    document.getElementById('pinerr').textContent = 'Incorrect PIN, try again';
-    pinEntry = '';
-    pinUpdateDots();
-    setTimeout(function(){ document.getElementById('pinerr').textContent=''; }, 2000);
-  }
-}
-
-// Wire up PIN pad via event delegation — works on mobile touch
-document.getElementById('pinpad').addEventListener('click', function(e) {
-  var btn = e.target.closest('.pinkey');
-  if (!btn || btn.disabled) return;
-  var n = btn.dataset.n;
-  if (n === 'del') {
-    if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0,-1); pinUpdateDots(); }
-  } else {
-    if (pinEntry.length < 4) {
-      pinEntry += n;
-      pinUpdateDots();
-      if (pinEntry.length === 4) setTimeout(pinCheck, 150);
-    }
-  }
-});
-
-async function init() {
-  // Check if already unlocked in this session
+function init() {
   if (sessionStorage.getItem('cc_unlocked') === '1') {
     document.getElementById('pinov').style.display = 'none';
-    loadImgs();
-    await loadData();
-    setInterval(loadData, 10*60*1000);
+    startApp();
   }
-  // Otherwise wait for PIN entry
+  // else: wait for PIN — pinpad listener handles it
 }
+
 init();
 </script>
 </body>
