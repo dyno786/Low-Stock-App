@@ -275,9 +275,14 @@ async function loadBranch(bidx){
     branchData[bidx]=[];
   }
   loaded++;
-  var loadedNames=BRANCHES.filter(function(_,i){return branchData[i]&&branchData[i].length>0;}).map(function(b){return b.name;});
   document.getElementById('stime').textContent=loaded<3?('loaded '+loaded+'/3…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
-  if(loaded===3) render();
+  // Render as soon as first branch loads so user sees something immediately
+  if(loaded===1) render();
+  // Re-render when all done
+  if(loaded===3){
+    document.getElementById('stime').textContent='live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    render();
+  }
 }
 
 // ── BUILD CROSS-BRANCH MAP ────────────────────────────────────────────────────
@@ -721,10 +726,10 @@ document.getElementById('pov').addEventListener('click',function(e){if(e.target=
 function init(){
   loaded=0;
   document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div>Loading all 3 branches…</div>';
-  // Load images first, then all branches in parallel
-  loadImgs().then(function(){
-    BRANCHES.forEach(function(_,i){ loadBranch(i); });
-  });
+  // Load all 3 branches in parallel immediately — don't wait for images
+  BRANCHES.forEach(function(_,i){ loadBranch(i); });
+  // Load images quietly in background — they'll appear when ready
+  loadImgs();
 }
 
 (function(){
