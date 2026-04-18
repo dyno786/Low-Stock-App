@@ -388,7 +388,30 @@ function toggleSec(id){var el=document.getElementById(id);if(!el)return;var h=el
 
 // ── DATA LOADING ──────────────────────────────────────────────────────────────
 async function loadImgs(){
-  try{var r=await fetch(IURL);var t=await r.text();Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){var bc=cl(row['Barcode']),src=cl(row['ImageURL']);if(bc&&src&&src.startsWith('http'))imgs[bc]=src;});lg('Images: '+Object.keys(imgs).length);}catch(e){lg('Img err: '+e.message);}
+  // Try cache first — images rarely change
+  try{
+    var cached=localStorage.getItem('cc_imgs');
+    if(cached){
+      var obj=JSON.parse(cached);
+      // Use cache if less than 24 hours old
+      if(Date.now()-obj.ts < 24*60*60*1000){
+        imgs=obj.d;
+        lg('Images from cache: '+Object.keys(imgs).length);
+        return;
+      }
+    }
+  }catch(e){}
+  // Fetch fresh
+  try{
+    var r=await fetch(IURL);var t=await r.text();
+    Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
+      var bc=cl(row['Barcode']),src=cl(row['ImageURL']);
+      if(bc&&src&&src.startsWith('http'))imgs[bc]=src;
+    });
+    lg('Images fetched: '+Object.keys(imgs).length);
+    // Save to cache
+    try{localStorage.setItem('cc_imgs',JSON.stringify({ts:Date.now(),d:imgs}));}catch(e){lg('Img cache err: '+e.message);}
+  }catch(e){lg('Img err: '+e.message);}
 }
 
 async function loadData(){
@@ -705,9 +728,13 @@ document.getElementById('logov').addEventListener('click',function(e){if(e.targe
 
 // ── START ─────────────────────────────────────────────────────────────────────
 function startApp(){
-  loadImgs();
-  loadData();
-  setInterval(loadData,30*60*1000);
+  // 1. Load branch data immediately — app is usable right away
+  loadData().then(function(){
+    // 2. After data shows, load images quietly in background
+    // Re-render when done so images fill in
+    loadImgs().then(function(){ renderSection(); });
+  });
+  setInterval(loadData, 30*60*1000);
 }
 (function(){var ts=localStorage.getItem('cc_pin_ts');if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)startApp();})();
 </script>
