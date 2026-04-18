@@ -182,8 +182,9 @@ function pinCheck(){if(pinEntry==='1979'){localStorage.setItem('cc_pin_ts',Date.
 
 <!-- BRANCH SWITCHER -->
 <div class="branchbar">
-  <div class="branchbtn on" id="brn0" onclick="switchBranch(0)">Roundhay Road</div>
-  <div class="branchbtn" id="brn1" onclick="switchBranch(1)">Chapeltown Road</div>
+  <div class="branchbtn on" id="brn0" onclick="switchBranch(0)">Roundhay</div>
+  <div class="branchbtn" id="brn1" onclick="switchBranch(1)">Chapeltown</div>
+  <div class="branchbtn" id="brn2" onclick="switchBranch(2)">City Center</div>
 </div>
 
 <div class="metrics">
@@ -284,6 +285,11 @@ var BRANCHES = [
     name: 'Chapeltown Road',
     surl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv',
     lurl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=324459618&single=true&output=csv'
+  },
+  {
+    name: 'City Center',
+    surl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv',
+    lurl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=229494628&single=true&output=csv'
   }
 ];
 
