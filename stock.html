@@ -303,11 +303,12 @@ function isDead(p,days){days=days||90;if(p.qty<=5)return false;if(p.ls==='Never'
 
 // ── BRANCH SWITCH ─────────────────────────────────────────────────────────────
 function switchBranch(idx) {
+  if(idx===currentBranch) return;
   currentBranch = idx;
   document.querySelectorAll('.branchbtn').forEach(function(el,i){
     el.classList.toggle('on', i===idx);
   });
-  prods=[]; imgs={};
+  prods=[];
   tab='all'; dept='All'; tval='all';
   document.getElementById('sq').value='';
   document.querySelectorAll('.tab').forEach(function(el){el.classList.toggle('on',el.dataset.tab==='all');});
@@ -315,7 +316,7 @@ function switchBranch(idx) {
   document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
   document.getElementById('stime').textContent='loading';
   lastFetchTime=null; lastFetchRows=0;
-  loadImgs().then(function(){ loadData(); });
+  loadData(); // images already loaded, just load new branch data
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
@@ -405,9 +406,11 @@ document.getElementById('logbtn').addEventListener('click',function(){document.g
 document.getElementById('logclose').addEventListener('click',function(){document.getElementById('logov').classList.remove('open');});
 document.getElementById('logov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
-loadImgs();
-loadData();
-setInterval(loadData, 30*60*1000);
+// Load images once, then load branch data
+loadImgs().then(function() {
+  loadData();
+  setInterval(loadData, 30*60*1000);
+});
 </script>
 </body>
 </html>
