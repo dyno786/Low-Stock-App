@@ -249,34 +249,29 @@ function allDepts(){
   return ['All'].concat(Object.keys(dm).sort());
 }
 
-// ── DATA LOAD ─────────────────────────────────────────────────────────────────
+// ── DATA LOAD — reads from localStorage cache written by stock.html ──────────
+// stock.html saves each branch after loading. analysis.html reads it instantly.
+// No network fetches needed — loads in under 1 second.
+function loadFromCache(){
+  var CACHE_MAX_AGE = 2 * 60 * 60 * 1000; // 2 hours
+  var allOk = true;
+  for(var i=0;i<3;i++){
+    try{
+      var raw = localStorage.getItem('cc_cache_'+i);
+      if(!raw){ allOk=false; branchData[i]=[]; continue; }
+      var obj = JSON.parse(raw);
+      if(Date.now() - obj.ts > CACHE_MAX_AGE){ allOk=false; }
+      // Unpack slim format: [bc,nm,sz,qty,prc,cst,ls,dc,dp]
+      branchData[i] = obj.d.map(function(r){
+        return{bc:r[0],nm:r[1],sz:r[2],qty:r[3],prc:r[4],cst:r[5],ls:r[6],dc:r[7],dp:r[8]};
+      });
+    }catch(e){ branchData[i]=[]; allOk=false; }
+  }
+  return allOk;
+}
+
 async function loadImgs(){
   try{var r=await fetch(IURL);var t=await r.text();Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){var bc=cl(row['Barcode']),src=cl(row['ImageURL']);if(bc&&src&&src.startsWith('http'))imgs[bc]=src;});}catch(e){}
-}
-async function loadBranch(bidx){
-  try{
-    // 25 second timeout per branch
-    var controller=new AbortController();
-    var timer=setTimeout(function(){controller.abort();},25000);
-    var r=await fetch(BRANCHES[bidx].url,{signal:controller.signal});
-    clearTimeout(timer);
-    var t=await r.text();
-    var parsed=Papa.parse(t,{header:true,skipEmptyLines:true});
-    branchData[bidx]=parsed.data.map(function(row){
-      var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
-      return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
-             qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
-             cst:parseFloat(row['AvgCost'])||0,
-             ls:(ls&&ls!=='NULL')?ls:'Never',dc:(dc&&dc!=='NULL')?dc:'Unknown',
-             dp:cl(row['Department']),br:cl(row['Branch']),bidx:bidx};
-    });
-  }catch(e){
-    console.log('Branch '+bidx+' failed: '+e.message);
-    branchData[bidx]=[];
-  }
-  loaded++;
-  document.getElementById('stime').textContent=loaded<3?('loaded '+loaded+'/3…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
-  render();
 }
 
 // ── BUILD CROSS-BRANCH MAP ────────────────────────────────────────────────────
@@ -719,12 +714,30 @@ document.getElementById('pov').addEventListener('click',function(e){if(e.target=
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function init(){
-  loaded=0;
-  document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div>Loading all 3 branches…</div>';
-  // Load all 3 branches in parallel immediately — don't wait for images
-  BRANCHES.forEach(function(_,i){ loadBranch(i); });
-  // Load images quietly in background — they'll appear when ready
-  loadImgs();
+  loaded=3; // mark as loaded since we read from cache
+  var ok = loadFromCache();
+  var totalRows = branchData.reduce(function(s,d){return s+d.length;},0);
+
+  if(totalRows === 0){
+    // No cache at all — tell user to open stock.html first
+    document.getElementById('content').innerHTML =
+      '<div style="padding:40px 20px;text-align:center;color:#999;font-size:13px;line-height:2">' +
+      '<div style="font-size:32px;margin-bottom:12px">⚠️</div>' +
+      '<strong style="color:#333;font-size:15px">No data loaded yet</strong><br>' +
+      'Open <a href="/stock.html" style="color:#cc0000">Stock Intelligence</a> first<br>' +
+      'and browse each branch — then come back here.<br><br>' +
+      '<a href="/stock.html" style="background:#cc0000;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px">Open Stock Intelligence →</a>' +
+      '</div>';
+    document.getElementById('stime').textContent = 'no cache';
+    return;
+  }
+
+  var ts = localStorage.getItem('cc_cache_0');
+  var age = ts ? Math.round((Date.now() - JSON.parse(ts).ts) / 60000) : 0;
+  document.getElementById('stime').textContent = totalRows.toLocaleString() + ' rows · ' + age + 'm ago';
+  // Load images in background
+  loadImgs().then(function(){ render(); });
+  render();
 }
 
 (function(){
