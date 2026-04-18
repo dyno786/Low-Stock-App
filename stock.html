@@ -443,10 +443,27 @@ function switchSection(s,el){
 
 function renderSection(){
   if(section==='stock'){renderFilters();renderContent();}
-  else if(section==='transfer')renderTransfer();
-  else if(section==='fast')renderFast();
-  else if(section==='dead')renderDeadAnalysis();
-  else renderCompare();
+  else{
+    // Check how many branches are loaded
+    var loadedCount=allBranchData.filter(function(d){return d&&d.length>0;}).length;
+    if(loadedCount<2){
+      document.getElementById('out').innerHTML=
+        '<div class="empty" style="padding:30px 16px">'+
+        '<div style="font-size:28px;margin-bottom:10px">📊</div>'+
+        '<strong style="font-size:14px;color:#333">Load branches first</strong><br><br>'+
+        'Switch to <strong>Stock</strong> tab and browse<br>each branch to load its data.<br><br>'+
+        '<div style="font-size:12px;color:#999">Loaded: '+
+        allBranchData.map(function(d,i){return '<span style="color:'+(d&&d.length>0?'#1a7f3c':'#cc0000')+'">'+BRANCHES[i].name+(d&&d.length>0?' ✓':' ✗')+'</span>';}).join(' · ')+
+        '</div><br>'+
+        '<div onclick="switchSection('stock',document.querySelector('.mainnavbtn'))" style="display:inline-block;background:#cc0000;color:#fff;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Go to Stock →</div>'+
+        '</div>';
+      return;
+    }
+    if(section==='transfer')renderTransfer();
+    else if(section==='fast')renderFast();
+    else if(section==='dead')renderDeadAnalysis();
+    else renderCompare();
+  }
 }
 
 // ── STOCK SECTION ─────────────────────────────────────────────────────────────
