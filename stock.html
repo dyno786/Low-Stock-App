@@ -341,7 +341,9 @@ async function loadData(){
     lastFetchTime=new Date();lastFetchRows=prods.length;
     var dm={};prods.forEach(function(p){dm[p.dp]=1;});depts=['All'].concat(Object.keys(dm).sort());
     updateMetrics();document.getElementById('stime').textContent='live '+lastFetchTime.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    lg('Done ✓');renderFilters();renderContent();
+    lg('Done ✓');
+    try{var slim=prods.map(function(p){return[p.bc,p.nm,p.sz,p.qty,p.prc,p.cst,p.ls,p.dc,p.dp];});localStorage.setItem('cc_cache_'+currentBranch,JSON.stringify({ts:Date.now(),d:slim}));lg('Cached '+slim.length+' rows for branch '+currentBranch);}catch(e){lg('Cache err: '+e.message);}
+    renderFilters();renderContent();
   }catch(e){lg('ERR: '+e.message);document.getElementById('out').innerHTML='<div class="empty">Failed to load<br><small>'+e.message+'</small></div>';document.getElementById('stime').textContent='error';}
 }
 
