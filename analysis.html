@@ -255,7 +255,12 @@ async function loadImgs(){
 }
 async function loadBranch(bidx){
   try{
-    var r=await fetch(BRANCHES[bidx].url);var t=await r.text();
+    // 25 second timeout per branch
+    var controller=new AbortController();
+    var timer=setTimeout(function(){controller.abort();},25000);
+    var r=await fetch(BRANCHES[bidx].url,{signal:controller.signal});
+    clearTimeout(timer);
+    var t=await r.text();
     var parsed=Papa.parse(t,{header:true,skipEmptyLines:true});
     branchData[bidx]=parsed.data.map(function(row){
       var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
@@ -265,12 +270,14 @@ async function loadBranch(bidx){
              ls:(ls&&ls!=='NULL')?ls:'Never',dc:(dc&&dc!=='NULL')?dc:'Unknown',
              dp:cl(row['Department']),br:cl(row['Branch']),bidx:bidx};
     });
-  }catch(e){branchData[bidx]=[];}
-  loaded++;
-  if(loaded===3){
-    document.getElementById('stime').textContent='live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    render();
+  }catch(e){
+    console.log('Branch '+bidx+' failed: '+e.message);
+    branchData[bidx]=[];
   }
+  loaded++;
+  var loadedNames=BRANCHES.filter(function(_,i){return branchData[i]&&branchData[i].length>0;}).map(function(b){return b.name;});
+  document.getElementById('stime').textContent=loaded<3?('loaded '+loaded+'/3…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+  if(loaded===3) render();
 }
 
 // ── BUILD CROSS-BRANCH MAP ────────────────────────────────────────────────────
@@ -714,8 +721,10 @@ document.getElementById('pov').addEventListener('click',function(e){if(e.target=
 function init(){
   loaded=0;
   document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div>Loading all 3 branches…</div>';
-  loadImgs();
-  BRANCHES.forEach(function(_,i){loadBranch(i);});
+  // Load images first, then all branches in parallel
+  loadImgs().then(function(){
+    BRANCHES.forEach(function(_,i){ loadBranch(i); });
+  });
 }
 
 (function(){
