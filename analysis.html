@@ -209,7 +209,7 @@ var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0d
 var DEAD_DAYS=90;
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-var branchData=[null,null,null],imgs={},loaded=0,mainTab='transfer';
+var branchData=[[],[],[]],imgs={},loaded=0,mainTab='transfer';
 var tfrom=0,tto=1,deadDept='All',transDept='All',fastDept='All';
 var fastMinSold=3,fastDays=30;
 var currentPanel=null;
@@ -276,13 +276,7 @@ async function loadBranch(bidx){
   }
   loaded++;
   document.getElementById('stime').textContent=loaded<3?('loaded '+loaded+'/3…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
-  // Render as soon as first branch loads so user sees something immediately
-  if(loaded===1) render();
-  // Re-render when all done
-  if(loaded===3){
-    document.getElementById('stime').textContent='live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    render();
-  }
+  render();
 }
 
 // ── BUILD CROSS-BRANCH MAP ────────────────────────────────────────────────────
@@ -307,7 +301,8 @@ function switchMain(tab,el){
 }
 
 function render(){
-  if(loaded<3){document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div>Loading all branches…</div>';return;}
+  // Show partial data as soon as any branch loads
+  if(loaded===0){document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div>Loading branches…</div>';return;}
   if(mainTab==='transfer')renderTransfer();
   else if(mainTab==='fast')renderFast();
   else if(mainTab==='dead')renderDead();
