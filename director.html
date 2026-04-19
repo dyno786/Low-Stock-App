@@ -51,7 +51,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pbr.zero{background:#fef2f2;color:#991b1b}
 .pbr.na{background:#f4f4f4;color:#ccc}
 .pr{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
-.tcard{background:#fff;border-bottom:1px solid #eee;padding:9px 10px}
+.tcard{background:#fff;border-bottom:1px solid #eee;padding:9px 10px;cursor:pointer}
+.tcard:active{background:#f8f8f8}
 .tcard-top{display:flex;align-items:center;gap:5px;margin-bottom:6px}
 .tfrom{font-size:10px;background:#fef2f2;color:#991b1b;padding:2px 7px;border-radius:4px;font-weight:700}
 .tto{font-size:10px;background:#f0fdf4;color:#166534;padding:2px 7px;border-radius:4px;font-weight:700}
@@ -97,7 +98,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .bqty{font-size:14px;font-weight:700;font-family:monospace;flex-shrink:0}
 .irow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #eee;font-size:11px}
 .il{color:#999}.iv{font-family:monospace;font-weight:600;font-size:10px;text-align:right}
-.loading{padding:50px 20px;text-align:center;color:#999;font-size:12px}
+.loading{padding:30px 16px;text-align:center;color:#999;font-size:12px}
 .spin{width:26px;height:26px;border:2px solid #eee;border-top-color:#cc0000;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty{padding:36px 16px;text-align:center;color:#999;font-size:12px;line-height:1.8}
@@ -106,6 +107,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .bni svg{width:18px;height:18px;color:#555}
 .bni span{font-size:8px;color:#555;text-transform:uppercase;letter-spacing:.4px;font-weight:600}
 .bni.on svg,.bni.on span{color:#cc0000}
+/* LOG PANEL */
+.logov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:none;max-width:480px;margin:0 auto}
+.logov.open{display:block}
+.logpan{position:absolute;bottom:0;left:0;right:0;background:#111;border-radius:18px 18px 0 0;max-height:85vh;overflow-y:auto;padding-bottom:30px}
+.logph{width:36px;height:3px;background:#333;border-radius:2px;margin:12px auto 0}
+.logtitle{color:#fff;font-size:13px;font-weight:700;padding:12px 14px 8px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center}
+.logentry{padding:6px 14px;border-bottom:1px solid #1a1a1a;font-family:monospace;font-size:10px;line-height:1.5;display:flex;gap:8px}
+.logentry.ok{color:#4ade80}
+.logentry.err{color:#f87171}
+.logentry.warn{color:#fbbf24}
+.logentry.info{color:#94a3b8}
+.logentry.step{color:#60a5fa}
+.logt{color:#555;flex-shrink:0;font-size:9px;margin-top:1px}
+.logmsg{flex:1;word-break:break-all}
+.logclose{background:#cc0000;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer}
+/* Loading status bars */
+.load-status{background:#fff;padding:10px 14px;border-bottom:1px solid #eee}
+.load-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px}
+.load-row:last-child{margin-bottom:0}
+.load-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.load-dot.waiting{background:#ddd}
+.load-dot.loading{background:#e87000;animation:pulse 1s infinite}
+.load-dot.done{background:#1a7f3c}
+.load-dot.error{background:#cc0000}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.load-name{font-weight:600;width:70px;flex-shrink:0}
+.load-info{color:#999;flex:1;font-size:10px;font-family:monospace}
 </style>
 </head>
 <body>
@@ -136,7 +164,7 @@ function pinCheck(){
     document.getElementById('pinov').style.display='none';
     startApp();
   }else{
-    document.getElementById('pinerr').textContent='Incorrect PIN';
+    document.getElementById('pinerr').textContent='Incorrect PIN — try 2025';
     pinEntry='';pinDots();
     setTimeout(function(){document.getElementById('pinerr').textContent='';},2000);
   }
@@ -147,7 +175,12 @@ document.getElementById('pinpad').addEventListener('click',function(e){
   if(n==='del'){if(pinEntry.length>0){pinEntry=pinEntry.slice(0,-1);pinDots();}}
   else{if(pinEntry.length<4){pinEntry+=n;pinDots();if(pinEntry.length===4)setTimeout(pinCheck,150);}}
 });
-(function(){var ts=localStorage.getItem('cc_dir_ts');if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)document.getElementById('pinov').style.display='none';})();
+(function(){
+  var ts=localStorage.getItem('cc_dir_ts');
+  if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000){
+    document.getElementById('pinov').style.display='none';
+  }
+})();
 </script>
 
 <div class="top">
@@ -157,24 +190,23 @@ document.getElementById('pinpad').addEventListener('click',function(e){
       <span class="title">Director View</span>
     </div>
     <div style="display:flex;align-items:center;gap:5px">
-      <span class="sync" id="stime">loading…</span>
-      <button class="topbtn" id="logbtn">LOG</button>
+      <span class="sync" id="stime">waiting…</span>
+      <button class="topbtn" id="logbtn">📋 LOG</button>
     </div>
   </div>
 </div>
 
 <div class="mainnav">
-  <div class="mnbtn on" onclick="switchMain('overview',this)">Overview</div>
-  <div class="mnbtn" onclick="switchMain('dead',this)">Dead stock</div>
-  <div class="mnbtn" onclick="switchMain('transfer',this)">Transfers</div>
-  <div class="mnbtn" onclick="switchMain('fast',this)">Fast sellers</div>
-  <div class="mnbtn" onclick="switchMain('compare',this)">Compare</div>
+  <div class="mnbtn on" data-sec="overview">Overview</div>
+  <div class="mnbtn" data-sec="dead">Dead stock</div>
+  <div class="mnbtn" data-sec="transfer">Transfers</div>
+  <div class="mnbtn" data-sec="fast">Fast sellers</div>
+  <div class="mnbtn" data-sec="compare">Compare</div>
 </div>
 
-<div id="out"><div class="loading"><div class="spin"></div>Loading all 3 branches…</div></div>
+<div id="out"><div class="loading"><div class="spin"></div>Waiting to start…</div></div>
 
-<!-- BOTTOM NAV -->
-<nav class="bnav">
+<nav class="bnav" id="bnav">
   <div class="bni on" data-sec="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></div>
   <div class="bni" data-sec="dead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Dead</span></div>
   <div class="bni" data-sec="transfer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span>Transfer</span></div>
@@ -191,108 +223,226 @@ document.getElementById('pinpad').addEventListener('click',function(e){
       <div class="pdname" id="pn"></div>
       <div class="pdept" id="pdpt"></div>
       <div class="irow"><span class="il">Barcode</span><span class="iv" id="pbc2"></span></div>
-      <div class="irow"><span class="il">Size</span><span class="iv" id="psz"></span></div>
       <div class="irow"><span class="il">Price</span><span class="iv" id="pprc"></span></div>
-      <div class="irow"><span class="il">Avg cost</span><span class="iv" id="pcst"></span></div>
+      <div class="irow"><span class="il">Cost</span><span class="iv" id="pcst"></span></div>
       <div class="branch-rows" id="branch-rows"></div>
     </div>
   </div>
 </div>
 
-<!-- LOG -->
-<div class="pov" id="logov">
-  <div class="pan">
-    <div class="ph"></div>
-    <div style="padding:14px;font-size:13px;font-weight:700">Debug log</div>
-    <pre id="logtext" style="font-size:10px;line-height:1.7;color:#333;white-space:pre-wrap;word-break:break-all;padding:0 14px 14px"></pre>
+<!-- LOG PANEL -->
+<div class="logov" id="logov">
+  <div class="logpan">
+    <div class="logph"></div>
+    <div class="logtitle">
+      <span>Diagnostic Log</span>
+      <button class="logclose" id="logclose">Close</button>
+    </div>
+    <div id="logentries"></div>
   </div>
 </div>
 
 <script>
 var BRANCHES=[
-  {name:'Roundhay', short:'Roundhay', chip:'bc-r',
+  {name:'Roundhay', short:'R', chip:'bc-r',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
-  {name:'Chapy', short:'Chapy', chip:'bc-c',
+  {name:'Chapy',    short:'C', chip:'bc-c',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
-  {name:'City', short:'City', chip:'bc-x',
+  {name:'City',     short:'X', chip:'bc-x',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'}
 ];
 var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
 
-var bd=[[],[],[]],imgs={},logs=[],loaded=0;
-var section='overview',tfrom=0,tto=1,deadDept='All',transDept='All',fastDept='All',fastDays=30,imgsLoaded=false;
+var bd=[[],[],[]],imgs={},loaded=0,imgsLoaded=false;
+var section='overview',tfrom=0,tto=1,deadDept='All',transDept='All',fastDept='All',fastDays=30;
+var branchStatus=[
+  {state:'waiting',rows:0,ms:0,err:''},
+  {state:'waiting',rows:0,ms:0,err:''},
+  {state:'waiting',rows:0,ms:0,err:''}
+];
 
-function lg(m){logs.push(new Date().toLocaleTimeString()+' '+m);}
+// ── LOG SYSTEM ──────────────────────────────────────────────
+var logEntries=[];
+function lg(msg,type){
+  type=type||'info';
+  var t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  logEntries.push({t:t,msg:msg,type:type});
+  console.log('['+type.toUpperCase()+'] '+msg);
+  // Live update if log is open
+  var el=document.getElementById('logentries');
+  if(el&&document.getElementById('logov').classList.contains('open')){
+    renderLog();
+  }
+}
+function renderLog(){
+  var el=document.getElementById('logentries');
+  if(!el)return;
+  el.innerHTML=logEntries.slice().reverse().map(function(e){
+    return '<div class="logentry '+e.type+'"><span class="logt">'+e.t+'</span><span class="logmsg">'+e.msg+'</span></div>';
+  }).join('');
+}
+
+// ── HELPERS ─────────────────────────────────────────────────
 function cl(v){return String(v==null?'':v).trim();}
-function pDate(s){if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;var p=s.split('/');if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d.getTime())?null:d;}var d=new Date(s);return isNaN(d.getTime())?null:d;}
+function pDate(s){
+  if(!s||s==='Never'||s==='Unknown'||s==='NULL'||s==='')return null;
+  var p=s.split('/');
+  if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d.getTime())?null:d;}
+  var d=new Date(s);return isNaN(d.getTime())?null:d;
+}
 function dSince(s){var d=pDate(s);return d?Math.floor((Date.now()-d.getTime())/86400000):9999;}
 function isVD(s){var d=pDate(s);return d!==null&&d.getFullYear()>=2000;}
-function isDead(p){if(!p||p.qty<=5)return false;if(p.ls==='Never'&&isVD(p.dc)&&dSince(p.dc)>=90)return true;if(isVD(p.ls)&&dSince(p.ls)>=90)return true;return false;}
-function deadAge(p){if(!p)return 9999;if(p.ls==='Never')return isVD(p.dc)?dSince(p.dc):9999;return dSince(p.ls);}
+function isDead(p){
+  if(!p||p.qty<=5)return false;
+  if(p.ls==='Never'&&isVD(p.dc)&&dSince(p.dc)>=90)return true;
+  if(isVD(p.ls)&&dSince(p.ls)>=90)return true;
+  return false;
+}
+function deadAge(p){
+  if(!p)return 9999;
+  if(p.ls==='Never')return isVD(p.dc)?dSince(p.dc):9999;
+  return dSince(p.ls);
+}
 function brCls(p){if(!p)return 'na';if(p.qty<=0)return 'zero';if(isDead(p))return 'dead';return 'ok';}
 function brLabel(p,b){
-  if(!p)return '<span class="pbr na">'+BRANCHES[b].short+':—</span>';
+  if(!p)return '<span class="pbr na">'+BRANCHES[b].name+':—</span>';
   var cls=brCls(p);
-  var ageStr=isDead(p)?' ('+deadAge(p)+'d)':'';
-  return '<span class="pbr '+cls+'">'+BRANCHES[b].short+':'+p.qty+ageStr+'</span>';
+  var age=isDead(p)?' ('+deadAge(p)+'d)':'';
+  return '<span class="pbr '+cls+'">'+BRANCHES[b].name+':'+p.qty+age+'</span>';
 }
 function imgEl(bc,sz){
   var src=imgs[bc];
   if(src)return '<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';
   return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
 }
-function allDepts(){var dm={};bd.forEach(function(b){b.forEach(function(p){dm[p.dp]=1;});});return['All'].concat(Object.keys(dm).sort());}
 function buildMap(){
   var m={};
-  for(var b=0;b<3;b++){bd[b].forEach(function(p){if(!p.bc)return;if(!m[p.bc])m[p.bc]={nm:p.nm,sz:p.sz,bc:p.bc,dp:p.dp,prc:p.prc,cst:p.cst,branches:[null,null,null]};m[p.bc].branches[b]=p;});}
+  for(var b=0;b<3;b++){
+    bd[b].forEach(function(p){
+      if(!p.bc)return;
+      if(!m[p.bc])m[p.bc]={nm:p.nm,sz:p.sz,bc:p.bc,dp:p.dp,prc:p.prc,cst:p.cst,branches:[null,null,null]};
+      m[p.bc].branches[b]=p;
+    });
+  }
   return m;
+}
+function allDepts(){
+  var dm={};
+  bd.forEach(function(b){b.forEach(function(p){if(p.dp)dm[p.dp]=1;});});
+  return['All'].concat(Object.keys(dm).sort());
 }
 function pillRow(opts,cur,fn){
   var h='<div class="pill-row">';
-  opts.forEach(function(o){h+='<div class="apill'+(o===cur?' on':'')+'" onclick="'+fn+'(\''+o.replace(/'/g,"\\'")+'\')">'+( o==='All'?'All depts':o)+'</div>';});
+  opts.forEach(function(o){
+    var label=o==='All'?'All depts':o;
+    h+='<div class="apill'+(o===cur?' on':'')+'" data-val="'+o+'" data-fn="'+fn+'">'+label+'</div>';
+  });
   return h+'</div>';
 }
-function toggleDept(id){var el=document.getElementById(id);if(!el)return;var h=el.style.display==='none';el.style.display=h?'':'none';var a=document.getElementById('arr_'+id);if(a)a.textContent=h?'▾':'▸';}
-
-async function loadImgs(){
-  if(imgsLoaded)return;imgsLoaded=true;
-  try{
-    var cached=localStorage.getItem('cc_imgs');
-    if(cached){var obj=JSON.parse(cached);if(Date.now()-obj.ts<24*60*60*1000){imgs=obj.d;lg('Images from cache: '+Object.keys(imgs).length);return;}}
-  }catch(e){}
-  try{
-    var r=await fetch(IURL);var t=await r.text();
-    Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){var bc=cl(row['Barcode']),src=cl(row['ImageURL']);if(bc&&src&&src.startsWith('http'))imgs[bc]=src;});
-    lg('Images: '+Object.keys(imgs).length);
-    try{localStorage.setItem('cc_imgs',JSON.stringify({ts:Date.now(),d:imgs}));}catch(e){}
-  }catch(e){lg('Img err: '+e.message);}
+function toggleDept(id){
+  var el=document.getElementById(id);if(!el)return;
+  var hidden=el.style.display==='none';
+  el.style.display=hidden?'':'none';
+  var arr=document.getElementById('arr_'+id);if(arr)arr.textContent=hidden?'▾':'▸';
 }
 
+// ── LOADING STATUS BAR ───────────────────────────────────────
+function renderLoadStatus(){
+  var html='<div class="load-status">';
+  branchStatus.forEach(function(s,i){
+    var dotCls=s.state==='done'?'done':s.state==='loading'?'loading':s.state==='error'?'error':'waiting';
+    var info='';
+    if(s.state==='waiting')info='waiting…';
+    else if(s.state==='loading')info='fetching…';
+    else if(s.state==='done')info=s.rows.toLocaleString()+' rows · '+s.ms+'ms';
+    else if(s.state==='error')info='ERROR: '+s.err;
+    html+='<div class="load-row"><div class="load-dot '+dotCls+'"></div><span class="load-name">'+BRANCHES[i].name+'</span><span class="load-info">'+info+'</span></div>';
+  });
+  html+='</div>';
+  return html;
+}
+
+// ── DATA LOADING ─────────────────────────────────────────────
 async function loadBranch(bidx){
+  branchStatus[bidx].state='loading';
+  lg('Fetching '+BRANCHES[bidx].name+'…','step');
+  updateStime();
+  var t0=Date.now();
   try{
-    var r=await fetch(BRANCHES[bidx].url);var t=await r.text();
-    bd[bidx]=Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){
+    var r=await fetch(BRANCHES[bidx].url+'&t='+Date.now());
+    lg(BRANCHES[bidx].name+' HTTP '+r.status+' in '+(Date.now()-t0)+'ms',r.ok?'ok':'err');
+    if(!r.ok)throw new Error('HTTP '+r.status+' '+r.statusText);
+    var txt=await r.text();
+    lg(BRANCHES[bidx].name+' got '+txt.length+' chars','ok');
+    var parsed=Papa.parse(txt,{header:true,skipEmptyLines:true});
+    if(parsed.errors.length>0)lg(BRANCHES[bidx].name+' parse warnings: '+parsed.errors.length,'warn');
+    bd[bidx]=parsed.data.map(function(row){
       var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
-      return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
-             qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,cst:parseFloat(row['AvgCost'])||0,
-             ls:(ls&&ls!=='NULL')?ls:'Never',dc:(dc&&dc!=='NULL')?dc:'Unknown',dp:cl(row['Department'])};
+      return{
+        bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
+        qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
+        cst:parseFloat(row['AvgCost'])||0,
+        ls:(ls&&ls!=='NULL')?ls:'Never',
+        dc:(dc&&dc!=='NULL')?dc:'Unknown',
+        dp:cl(row['Department'])
+      };
     });
-    lg(BRANCHES[bidx].name+': '+bd[bidx].length+' rows');
-  }catch(e){lg(BRANCHES[bidx].name+' ERR: '+e.message);bd[bidx]=[];}
+    branchStatus[bidx].state='done';
+    branchStatus[bidx].rows=bd[bidx].length;
+    branchStatus[bidx].ms=Date.now()-t0;
+    lg(BRANCHES[bidx].name+' mapped '+bd[bidx].length+' products','ok');
+  }catch(e){
+    branchStatus[bidx].state='error';
+    branchStatus[bidx].err=e.message;
+    lg(BRANCHES[bidx].name+' FAILED: '+e.message,'err');
+    bd[bidx]=[];
+  }
   loaded++;
-  document.getElementById('stime').textContent=loaded<3?('loaded '+loaded+'/3…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
-  if(loaded>=1)render();
-  if(loaded===3){loadImgs().then(function(){render();});}
-}
-
-function switchMain(s,el){
-  section=s;
-  document.querySelectorAll('.mnbtn').forEach(function(t){t.classList.remove('on');});
-  el.classList.add('on');
-  document.querySelectorAll('.bni').forEach(function(t){t.classList.toggle('on',t.dataset.sec===s);});
+  updateStime();
   render();
 }
 
+async function loadImgs(){
+  if(imgsLoaded)return;imgsLoaded=true;
+  lg('Loading images…','step');
+  try{
+    var cached=localStorage.getItem('cc_imgs');
+    if(cached){
+      var obj=JSON.parse(cached);
+      if(Date.now()-obj.ts<24*60*60*1000){
+        imgs=obj.d;
+        lg('Images from cache: '+Object.keys(imgs).length,'ok');
+        return;
+      }else{lg('Image cache expired — refetching','warn');}
+    }
+  }catch(e){lg('Cache read error: '+e.message,'warn');}
+  try{
+    var r=await fetch(IURL+'&t='+Date.now());
+    lg('Images HTTP '+r.status,r.ok?'ok':'err');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var t=await r.text();
+    Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
+      var bc=cl(row['Barcode']),src=cl(row['ImageURL']);
+      if(bc&&src&&src.startsWith('http'))imgs[bc]=src;
+    });
+    lg('Images loaded: '+Object.keys(imgs).length,'ok');
+    try{localStorage.setItem('cc_imgs',JSON.stringify({ts:Date.now(),d:imgs}));}catch(e){lg('Image cache save failed: '+e.message,'warn');}
+  }catch(e){lg('Images FAILED: '+e.message,'err');}
+}
+
+function updateStime(){
+  var done=branchStatus.filter(function(s){return s.state==='done';}).length;
+  var errs=branchStatus.filter(function(s){return s.state==='error';}).length;
+  var el=document.getElementById('stime');
+  if(!el)return;
+  if(loaded>=3){
+    el.textContent=errs?'⚠ '+errs+' error(s)':(done+'/3 loaded');
+  }else{
+    el.textContent='loading '+loaded+'/3…';
+  }
+}
+
+// ── RENDER ───────────────────────────────────────────────────
 function render(){
   if(section==='overview')renderOverview();
   else if(section==='dead')renderDead();
@@ -301,8 +451,7 @@ function render(){
   else renderCompare();
 }
 
-
-// ── OVERVIEW ──────────────────────────────────────────────
+// ── OVERVIEW ─────────────────────────────────────────────────
 function renderOverview(){
   var el=document.getElementById('out');
   var totalProds=bd.reduce(function(s,b){return s+b.length;},0);
@@ -312,125 +461,136 @@ function renderOverview(){
   var totalDeadVal=bd.reduce(function(s,b){return s+b.filter(isDead).reduce(function(s2,p){return s2+p.qty*p.prc;},0);},0);
   var totalInStock=bd.reduce(function(s,b){return s+b.filter(function(p){return p.qty>0;}).length;},0);
 
-  var html='<div class="metrics">';
-  html+='<div class="m b"><div class="mlbl">Total products</div><div class="mval">'+totalProds.toLocaleString()+'</div><div class="msub">across all 3 branches</div></div>';
+  var html=renderLoadStatus();
+
+  if(totalProds===0&&loaded<3){
+    html+='<div class="loading"><div class="spin"></div>Loading branches…<br><span style="font-size:10px;color:#aaa;margin-top:6px;display:block">Tap 📋 LOG to see progress</span></div>';
+    el.innerHTML=html;return;
+  }
+
+  html+='<div class="metrics">';
+  html+='<div class="m b"><div class="mlbl">Total products</div><div class="mval">'+totalProds.toLocaleString()+'</div><div class="msub">across '+loaded+' branch(es)</div></div>';
   html+='<div class="m r"><div class="mlbl">Negative stock</div><div class="mval" style="color:#cc0000">'+totalNeg+'</div><div class="msub">need urgent fix</div></div>';
   html+='<div class="m a"><div class="mlbl">Zero stock</div><div class="mval" style="color:#e87000">'+totalZero.toLocaleString()+'</div><div class="msub">out of stock</div></div>';
-  html+='<div class="m a"><div class="mlbl">Dead stock</div><div class="mval" style="color:#b45309">'+totalDead.toLocaleString()+'</div><div class="msub">90+ days unsold</div></div>';
-  html+='<div class="m r"><div class="mlbl">Dead value</div><div class="mval" style="color:#cc0000">£'+Math.round(totalDeadVal/1000)+'k</div><div class="msub">tied up in dead stock</div></div>';
-  html+='<div class="m g"><div class="mlbl">In stock</div><div class="mval" style="color:#1a7f3c">'+totalInStock.toLocaleString()+'</div><div class="msub">active products</div></div>';
+  html+='<div class="m a"><div class="mlbl">Dead stock</div><div class="mval" style="color:#b45309">'+totalDead.toLocaleString()+'</div><div class="msub">90+ days</div></div>';
+  html+='<div class="m r"><div class="mlbl">Dead value</div><div class="mval" style="color:#cc0000">£'+Math.round(totalDeadVal/1000)+'k</div><div class="msub">tied up</div></div>';
+  html+='<div class="m g"><div class="mlbl">In stock</div><div class="mval" style="color:#1a7f3c">'+totalInStock.toLocaleString()+'</div><div class="msub">active</div></div>';
   html+='</div>';
 
-  // Per-branch summary
   html+='<div class="sec"><span>Branch breakdown</span></div>';
   bd.forEach(function(b,i){
+    var s=branchStatus[i];
+    if(s.state==='waiting'||s.state==='loading'){
+      html+='<div style="background:#fff;border-bottom:1px solid #eee;padding:10px 12px;color:#999;font-size:11px">'+BRANCHES[i].name+': '+s.state+'…</div>';
+      return;
+    }
+    if(s.state==='error'){
+      html+='<div style="background:#fef2f2;border-bottom:1px solid #eee;padding:10px 12px;font-size:11px;color:#cc0000">'+BRANCHES[i].name+': ERROR — '+s.err+'</div>';
+      return;
+    }
     var neg=b.filter(function(p){return p.qty<0;}).length;
     var dead=b.filter(isDead).length;
-    var dval=b.filter(isDead).reduce(function(s,p){return s+p.qty*p.prc;},0);
+    var dval=b.filter(isDead).reduce(function(sum,p){return sum+p.qty*p.prc;},0);
     html+='<div style="background:#fff;border-bottom:1px solid #eee;padding:10px 12px">';
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
     html+='<span class="bchip '+BRANCHES[i].chip+'">'+BRANCHES[i].name+'</span>';
-    html+='<span style="font-size:12px;color:#999">'+b.length.toLocaleString()+' products</span>';
+    html+='<span style="font-size:11px;color:#999">'+b.length.toLocaleString()+' products</span>';
     html+='</div>';
     html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">';
-    html+='<div style="background:#fef2f2;border-radius:6px;padding:7px;text-align:center"><div style="font-size:16px;font-weight:700;color:#cc0000">'+neg+'</div><div style="font-size:9px;color:#991b1b;text-transform:uppercase;letter-spacing:.4px">Negative</div></div>';
-    html+='<div style="background:#fff8f0;border-radius:6px;padding:7px;text-align:center"><div style="font-size:16px;font-weight:700;color:#b45309">'+dead.toLocaleString()+'</div><div style="font-size:9px;color:#b45309;text-transform:uppercase;letter-spacing:.4px">Dead items</div></div>';
-    html+='<div style="background:#fff8f0;border-radius:6px;padding:7px;text-align:center"><div style="font-size:16px;font-weight:700;color:#b45309">£'+Math.round(dval/1000)+'k</div><div style="font-size:9px;color:#b45309;text-transform:uppercase;letter-spacing:.4px">Dead value</div></div>';
+    html+='<div style="background:#fef2f2;border-radius:6px;padding:7px;text-align:center"><div style="font-size:16px;font-weight:700;color:#cc0000">'+neg+'</div><div style="font-size:9px;color:#991b1b;text-transform:uppercase">Negative</div></div>';
+    html+='<div style="background:#fff8f0;border-radius:6px;padding:7px;text-align:center"><div style="font-size:16px;font-weight:700;color:#b45309">'+dead.toLocaleString()+'</div><div style="font-size:9px;color:#b45309;text-transform:uppercase">Dead</div></div>';
+    html+='<div style="background:#fff8f0;border-radius:6px;padding:7px;text-align:center"><div style="font-size:16px;font-weight:700;color:#b45309">£'+Math.round(dval/1000)+'k</div><div style="font-size:9px;color:#b45309;text-transform:uppercase">Dead val</div></div>';
     html+='</div></div>';
   });
-
   el.innerHTML=html;
 }
 
-// ── DEAD STOCK ────────────────────────────────────────────
-function setDeadDept(d){deadDept=d;renderDead();}
+// ── DEAD STOCK ────────────────────────────────────────────────
 function renderDead(){
   var el=document.getElementById('out');
   var map=buildMap();
-  var html=pillRow(allDepts(),deadDept,'setDeadDept');
-
+  var html=renderLoadStatus()+pillRow(allDepts(),deadDept,'setDeadDept');
   var deadAll=[],deadSome=[];
   Object.values(map).forEach(function(item){
     if(deadDept!=='All'&&item.dp!==deadDept)return;
     var dc=item.branches.filter(isDead).length;
     if(!item.branches.some(function(p){return p!==null;}))return;
-    if(dc===3){deadAll.push({item:item});}
+    if(dc===3)deadAll.push({item:item});
     else if(dc>=1){
       var live=item.branches.map(function(p,i){return{p:p,i:i};}).filter(function(x){return x.p&&!isDead(x.p)&&x.p.qty>0;});
       deadSome.push({item:item,live:live});
     }
   });
-
-  deadAll.sort(function(a,b){var va=a.item.branches.reduce(function(s,p){return s+(p?p.qty*p.prc:0);},0);var vb=b.item.branches.reduce(function(s,p){return s+(p?p.qty*p.prc:0);},0);return vb-va;});
-  deadSome.sort(function(a,b){var va=a.item.branches.reduce(function(s,p){return s+(p&&isDead(p)?p.qty*p.prc:0);},0);var vb=b.item.branches.reduce(function(s,p){return s+(p&&isDead(p)?p.qty*p.prc:0);},0);return vb-va;});
-
+  deadAll.sort(function(a,b){
+    var va=a.item.branches.reduce(function(s,p){return s+(p?p.qty*p.prc:0);},0);
+    var vb=b.item.branches.reduce(function(s,p){return s+(p?p.qty*p.prc:0);},0);
+    return vb-va;
+  });
+  deadSome.sort(function(a,b){
+    var va=a.item.branches.reduce(function(s,p){return s+(p&&isDead(p)?p.qty*p.prc:0);},0);
+    var vb=b.item.branches.reduce(function(s,p){return s+(p&&isDead(p)?p.qty*p.prc:0);},0);
+    return vb-va;
+  });
   var allVal=deadAll.reduce(function(s,x){return s+x.item.branches.reduce(function(s2,p){return s2+(p?p.qty*p.prc:0);},0);},0);
   var someVal=deadSome.reduce(function(s,x){return s+x.item.branches.reduce(function(s2,p){return s2+(p&&isDead(p)?p.qty*p.prc:0);},0);},0);
-
   html+='<div class="metrics">';
-  html+='<div class="m r"><div class="mlbl">Dead all 3</div><div class="mval">'+deadAll.length+'</div><div class="msub">need clearance</div></div>';
+  html+='<div class="m r"><div class="mlbl">Dead all 3</div><div class="mval">'+deadAll.length+'</div><div class="msub">clearance needed</div></div>';
   html+='<div class="m a"><div class="mlbl">Dead 1-2</div><div class="mval">'+deadSome.length+'</div><div class="msub">transfer opportunity</div></div>';
-  html+='<div class="m r"><div class="mlbl">All value</div><div class="mval">£'+Math.round(allVal/1000)+'k</div><div class="msub">dead all branches</div></div>';
-  html+='<div class="m a"><div class="mlbl">Some value</div><div class="mval">£'+Math.round(someVal/1000)+'k</div><div class="msub">transferable</div></div>';
+  html+='<div class="m r"><div class="mlbl">All 3 value</div><div class="mval">£'+Math.round(allVal/1000)+'k</div></div>';
+  html+='<div class="m a"><div class="mlbl">Some value</div><div class="mval">£'+Math.round(someVal/1000)+'k</div></div>';
   html+='</div>';
 
   function mkDeadRow(x,allDead){
     var tq=x.item.branches.reduce(function(s,p){return s+(p&&p.qty>0?p.qty:0);},0);
     var tv=x.item.branches.reduce(function(s,p){return s+(p&&p.qty>0?p.qty*p.prc:0);},0);
-    var mv=(!allDead&&x.live&&x.live.length)?'<div style="font-size:9px;color:#0369a1;background:#e0f2fe;padding:2px 5px;border-radius:3px;display:inline-block;margin-top:3px">→ move to: '+x.live.map(function(lb){return BRANCHES[lb.i].name;}).join(' or ')+'</div>':'';
-    // Last sold — find oldest across branches with stock
-    var lastSolds=x.item.branches.filter(function(p){return p&&p.ls!=='Never';}).map(function(p){return p.ls;});
-    var lastSoldStr=lastSolds.length?lastSolds[0]:'Never sold';
-    return '<div class="prow" onclick=\'openPanel("'+x.item.bc+'")\'>'+
+    var ls=x.item.branches.filter(function(p){return p&&p.ls!=='Never';}).map(function(p){return p.ls;});
+    var mv=(!allDead&&x.live&&x.live.length)?'<div style="font-size:9px;color:#0369a1;background:#e0f2fe;padding:2px 5px;border-radius:3px;margin-top:3px;display:inline-block">→ move to: '+x.live.map(function(lb){return BRANCHES[lb.i].name;}).join(' / ')+'</div>':'';
+    return '<div class="prow" data-bc="'+x.item.bc+'">'+
       '<div class="pi">'+imgEl(x.item.bc,46)+'</div>'+
       '<div class="pm">'+
         '<div class="pname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>'+
         '<div class="pbc">'+x.item.bc+'</div>'+
         '<div class="pbranches">'+x.item.branches.map(function(p,i){return brLabel(p,i);}).join('')+'</div>'+
-        '<div style="font-size:9px;color:#999;margin-top:2px">Last sold: '+lastSoldStr+'</div>'+
+        '<div style="font-size:9px;color:#999;margin-top:2px">Last sold: '+(ls.length?ls[0]:'Never')+'</div>'+
         mv+
       '</div>'+
       '<div class="pr">'+
-        '<div style="font-size:14px;font-weight:700;font-family:monospace;color:'+(allDead?'#991b1b':'#b45309')+'">'+tq+'</div>'+
+        '<div style="font-size:14px;font-weight:700;color:'+(allDead?'#991b1b':'#b45309')+'">'+tq+'</div>'+
         '<div style="font-size:9px;color:#999">units</div>'+
         (tv>0?'<div style="font-size:9px;color:#b45309;font-weight:600">£'+Math.round(tv)+'</div>':'')+
-        (allDead?'<div style="font-size:8px;background:#fef2f2;color:#991b1b;padding:1px 4px;border-radius:3px;font-weight:600">clearance</div>':'')+
+        (allDead?'<div style="font-size:8px;background:#fef2f2;color:#991b1b;padding:1px 4px;border-radius:3px;font-weight:600;margin-top:2px">clearance</div>':'')+
       '</div>'+
     '</div>';
   }
-
   if(deadAll.length){
-    var byDeptAll={};deadAll.forEach(function(x){var d=x.item.dp||'General';if(!byDeptAll[d])byDeptAll[d]=[];byDeptAll[d].push(x);});
+    var byDA={};deadAll.forEach(function(x){var d=x.item.dp||'Other';if(!byDA[d])byDA[d]=[];byDA[d].push(x);});
     html+='<div class="sec" style="background:#fef2f2"><span style="color:#991b1b">Dead ALL 3 — clearance needed</span><span class="badge" style="background:#fecaca;color:#991b1b">'+deadAll.length+'</span></div>';
-    Object.keys(byDeptAll).sort(function(a,b){return byDeptAll[b].length-byDeptAll[a].length;}).forEach(function(dept){
-      var items=byDeptAll[dept];
-      var dVal=items.reduce(function(s,x){return s+x.item.branches.reduce(function(s2,p){return s2+(p?p.qty*p.prc:0);},0);},0);
-      var did='da_'+dept.replace(/[^a-z0-9]/gi,'_');
-      html+='<div class="dept-hdr" onclick="toggleDept(\''+did+'\')"><div><div class="dept-name">'+dept+'</div><div class="dept-meta" style="color:#991b1b">£'+Math.round(dVal).toLocaleString()+' tied up · '+items.length+' products</div></div><span id="arr_'+did+'" style="color:#999">▾</span></div>';
+    Object.keys(byDA).sort(function(a,b){return byDA[b].length-byDA[a].length;}).forEach(function(dept){
+      var items=byDA[dept];
+      var dv=items.reduce(function(s,x){return s+x.item.branches.reduce(function(s2,p){return s2+(p?p.qty*p.prc:0);},0);},0);
+      var did='da_'+dept.replace(/\W/g,'_');
+      html+='<div class="dept-hdr" data-toggle="'+did+'"><div><div class="dept-name">'+dept+'</div><div class="dept-meta" style="color:#991b1b">£'+Math.round(dv).toLocaleString()+' · '+items.length+' products</div></div><span id="arr_'+did+'" style="color:#999">▾</span></div>';
       html+='<div id="'+did+'">'+items.map(function(x){return mkDeadRow(x,true);}).join('')+'</div>';
     });
   }
-
   if(deadSome.length){
-    var byDeptSome={};deadSome.forEach(function(x){var d=x.item.dp||'General';if(!byDeptSome[d])byDeptSome[d]=[];byDeptSome[d].push(x);});
+    var byDS={};deadSome.forEach(function(x){var d=x.item.dp||'Other';if(!byDS[d])byDS[d]=[];byDS[d].push(x);});
     html+='<div class="sec"><span>Dead 1-2 branches — transfer opportunity</span><span class="badge">'+deadSome.length+'</span></div>';
-    Object.keys(byDeptSome).sort(function(a,b){return byDeptSome[b].length-byDeptSome[a].length;}).forEach(function(dept){
-      var items=byDeptSome[dept];
-      var dVal=items.reduce(function(s,x){return s+x.item.branches.reduce(function(s2,p){return s2+(p&&isDead(p)?p.qty*p.prc:0);},0);},0);
-      var did='ds_'+dept.replace(/[^a-z0-9]/gi,'_');
-      html+='<div class="dept-hdr" onclick="toggleDept(\''+did+'\')"><div><div class="dept-name">'+dept+'</div><div class="dept-meta">£'+Math.round(dVal).toLocaleString()+' dead · '+items.length+' products</div></div><span id="arr_'+did+'" style="color:#999">▾</span></div>';
+    Object.keys(byDS).sort(function(a,b){return byDS[b].length-byDS[a].length;}).forEach(function(dept){
+      var items=byDS[dept];
+      var dv=items.reduce(function(s,x){return s+x.item.branches.reduce(function(s2,p){return s2+(p&&isDead(p)?p.qty*p.prc:0);},0);},0);
+      var did='ds_'+dept.replace(/\W/g,'_');
+      html+='<div class="dept-hdr" data-toggle="'+did+'"><div><div class="dept-name">'+dept+'</div><div class="dept-meta">£'+Math.round(dv).toLocaleString()+' dead · '+items.length+'</div></div><span id="arr_'+did+'" style="color:#999">▾</span></div>';
       html+='<div id="'+did+'">'+items.map(function(x){return mkDeadRow(x,false);}).join('')+'</div>';
     });
   }
-
   el.innerHTML=html;
 }
 
-// ── TRANSFERS ─────────────────────────────────────────────
-function setTransDept(d){transDept=d;renderTransfer();}
+// ── TRANSFERS ─────────────────────────────────────────────────
 function renderTransfer(){
   var el=document.getElementById('out');
-  var map=buildMap();var suggestions=[];
+  var map=buildMap();var sug=[];
   Object.values(map).forEach(function(item){
     var src=item.branches[tfrom];var dst=item.branches[tto];
     if(!src||!dst)return;
@@ -438,35 +598,31 @@ function renderTransfer(){
     if(!isDead(src))return;
     if(dst.qty>3)return;
     if(transDept!=='All'&&item.dp!==transDept)return;
-    var suggest=Math.min(Math.floor(src.qty/2),Math.max(5,src.qty-5));
-    suggestions.push({item:item,src:src,dst:dst,suggest:suggest,age:deadAge(src)});
+    sug.push({item:item,src:src,dst:dst,suggest:Math.min(Math.floor(src.qty/2),Math.max(5,src.qty-5)),age:deadAge(src)});
   });
-  suggestions.sort(function(a,b){return b.age-a.age;});
-
-  var html='<div class="sel-row"><span>From</span><select onchange="tfrom=parseInt(this.value);if(tfrom===tto)tto=(tfrom+1)%3;renderTransfer()">';
+  sug.sort(function(a,b){return b.age-a.age;});
+  var html=renderLoadStatus();
+  html+='<div class="sel-row"><span>From</span>';
+  html+='<select id="sel_from">';
   BRANCHES.forEach(function(b,i){html+='<option value="'+i+'"'+(i===tfrom?' selected':'')+'>'+b.name+'</option>';});
-  html+='</select><span style="color:#cc0000;font-weight:700">→</span><select onchange="tto=parseInt(this.value);if(tfrom===tto)tfrom=(tto+1)%3;renderTransfer()">';
+  html+='</select><span style="color:#cc0000;font-weight:700">→</span>';
+  html+='<select id="sel_to">';
   BRANCHES.forEach(function(b,i){html+='<option value="'+i+'"'+(i===tto?' selected':'')+'>'+b.name+'</option>';});
   html+='</select></div>';
-  html+='<div style="padding:7px 10px;background:#fff;border-bottom:1px solid #eee;display:flex;align-items:center;gap:7px"><span style="font-size:11px;font-weight:700;background:#fef2f2;color:#991b1b;padding:3px 8px;border-radius:5px">'+BRANCHES[tfrom].name+'</span><span style="color:#cc0000;font-size:14px;font-weight:700">→</span><span style="font-size:11px;font-weight:700;background:#f0fdf4;color:#166534;padding:3px 8px;border-radius:5px">'+BRANCHES[tto].name+'</span><span style="font-size:10px;color:#999;margin-left:auto">'+suggestions.length+' items</span></div>';
   html+=pillRow(allDepts(),transDept,'setTransDept');
-
-  var totalVal=suggestions.reduce(function(s,x){return s+x.src.qty*x.src.prc;},0);
-  var urgent=suggestions.filter(function(x){return x.dst.qty<=0;}).length;
-  html+='<div class="metrics"><div class="m r"><div class="mlbl">To transfer</div><div class="mval">'+suggestions.length+'</div></div><div class="m a"><div class="mlbl">Value</div><div class="mval">£'+Math.round(totalVal).toLocaleString()+'</div></div><div class="m g"><div class="mlbl">Urgent</div><div class="mval">'+urgent+'</div></div></div>';
-
-  if(!suggestions.length){html+='<div class="empty">No transfer opportunities<br>for this selection</div>';el.innerHTML=html;return;}
-
-  var byDept={};suggestions.forEach(function(x){var d=x.item.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(x);});
-  Object.keys(byDept).sort(function(a,b){return byDept[b].length-byDept[a].length;}).forEach(function(dept){
-    var items=byDept[dept];var dVal=items.reduce(function(s,x){return s+x.src.qty*x.src.prc;},0);
-    var did='td_'+dept.replace(/[^a-z0-9]/gi,'_');
-    html+='<div class="dept-hdr" onclick="toggleDept(\''+did+'\')"><div><div class="dept-name">'+dept+'</div><div class="dept-meta">£'+Math.round(dVal).toLocaleString()+' transferable · '+items.length+' items</div></div><span id="arr_'+did+'" style="color:#999">▾</span></div>';
+  var tv=sug.reduce(function(s,x){return s+x.src.qty*x.src.prc;},0);
+  var urg=sug.filter(function(x){return x.dst.qty<=0;}).length;
+  html+='<div class="metrics"><div class="m r"><div class="mlbl">To transfer</div><div class="mval">'+sug.length+'</div></div><div class="m a"><div class="mlbl">Value</div><div class="mval">£'+Math.round(tv).toLocaleString()+'</div></div><div class="m g"><div class="mlbl">Urgent</div><div class="mval">'+urg+'</div></div></div>';
+  if(!sug.length){html+='<div class="empty">No transfer opportunities</div>';el.innerHTML=html;return;}
+  var byD={};sug.forEach(function(x){var d=x.item.dp||'Other';if(!byD[d])byD[d]=[];byD[d].push(x);});
+  Object.keys(byD).sort(function(a,b){return byD[b].length-byD[a].length;}).forEach(function(dept){
+    var items=byD[dept];var dv=items.reduce(function(s,x){return s+x.src.qty*x.src.prc;},0);
+    var did='td_'+dept.replace(/\W/g,'_');
+    html+='<div class="dept-hdr" data-toggle="'+did+'"><div><div class="dept-name">'+dept+'</div><div class="dept-meta">£'+Math.round(dv).toLocaleString()+' · '+items.length+' items</div></div><span id="arr_'+did+'" style="color:#999">▾</span></div>';
     html+='<div id="'+did+'">';
     items.forEach(function(x){
       var age=deadAge(x.src);var ageStr=age>=9999?'Never sold':age+'d no sale';
-      var dstStr=x.dst.qty<=0?'Out of stock':'Low: '+x.dst.qty;
-      html+='<div class="tcard" onclick=\'openPanel("'+x.item.bc+'")\'>'+
+      html+='<div class="tcard" data-bc="'+x.item.bc+'">'+
         '<div class="tcard-top"><span class="tfrom">'+BRANCHES[tfrom].name+'</span><span class="tarr">→</span><span class="tto">'+BRANCHES[tto].name+'</span><span style="font-size:9px;color:#b45309;margin-left:auto">'+ageStr+'</span></div>'+
         '<div class="tcard-body">'+
           '<div class="tpi">'+imgEl(x.item.bc,44)+'</div>'+
@@ -475,14 +631,13 @@ function renderTransfer(){
             '<div class="tbc">'+x.item.bc+'</div>'+
             '<div class="tstats">'+
               '<span class="tstat dead">Src: '+x.src.qty+'</span>'+
-              '<span class="tstat '+(x.dst.qty<=0?'zero':'ok')+'">'+dstStr+'</span>'+
-              '<span class="tstat" style="background:#f4f4f4;color:#555">Last sold: '+x.src.ls+'</span>'+
+              '<span class="tstat '+(x.dst.qty<=0?'zero':'ok')+'">'+(x.dst.qty<=0?'Out':'Low: '+x.dst.qty)+'</span>'+
+              '<span class="tstat" style="background:#f4f4f4;color:#555">Last: '+x.src.ls+'</span>'+
               (x.item.prc>0?'<span class="tstat" style="background:#f4f4f4;color:#555">£'+x.item.prc.toFixed(2)+'</span>':'')+
             '</div>'+
           '</div>'+
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">'+
-            '<div class="tmove">'+x.suggest+'</div>'+
-            '<div class="tmove-lbl">move</div>'+
+            '<div class="tmove">'+x.suggest+'</div><div class="tmove-lbl">move</div>'+
           '</div>'+
         '</div>'+
       '</div>';
@@ -490,51 +645,51 @@ function renderTransfer(){
     html+='</div>';
   });
   el.innerHTML=html;
+  var sf=document.getElementById('sel_from');
+  var st=document.getElementById('sel_to');
+  if(sf)sf.addEventListener('change',function(){tfrom=parseInt(this.value);if(tfrom===tto)tto=(tfrom+1)%3;renderTransfer();});
+  if(st)st.addEventListener('change',function(){tto=parseInt(this.value);if(tto===tfrom)tfrom=(tto+1)%3;renderTransfer();});
 }
 
-// ── FAST SELLERS ──────────────────────────────────────────
-function setFastDept(d){fastDept=d;renderFast();}
+// ── FAST SELLERS ──────────────────────────────────────────────
 function renderFast(){
   var el=document.getElementById('out');var map=buildMap();
-  var html='<div class="sel-row"><span>Sold within</span><select onchange="fastDays=parseInt(this.value);renderFast()">';
+  var html=renderLoadStatus();
+  html+='<div class="sel-row"><span>Sold within</span><select id="sel_days">';
   [7,14,30,60,90].forEach(function(d){html+='<option value="'+d+'"'+(d===fastDays?' selected':'')+'>'+d+' days</option>';});
-  html+='</select><span>Source</span><select onchange="tfrom=parseInt(this.value);renderFast()">';
+  html+='</select><span>From</span><select id="sel_fsrc">';
   BRANCHES.forEach(function(b,i){html+='<option value="'+i+'"'+(i===tfrom?' selected':'')+'>'+b.name+'</option>';});
   html+='</select></div>';
   html+=pillRow(allDepts(),fastDept,'setFastDept');
-
   var results=[];
   Object.values(map).forEach(function(item){
     if(fastDept!=='All'&&item.dp!==fastDept)return;
     var src=item.branches[tfrom];if(!src||src.qty<=0)return;
     if(src.ls==='Never'||dSince(src.ls)>fastDays)return;
-    var needs=[];for(var b=0;b<3;b++){if(b===tfrom)continue;var dst=item.branches[b];if(dst&&dst.qty<=3)needs.push({bidx:b,qty:dst.qty});}
+    var needs=[];
+    for(var b=0;b<3;b++){if(b===tfrom)continue;var dst=item.branches[b];if(dst&&dst.qty<=3)needs.push({bidx:b,qty:dst.qty});}
     if(!needs.length)return;
     results.push({item:item,src:src,needs:needs,lastSold:dSince(src.ls)});
   });
   results.sort(function(a,b){return a.lastSold-b.lastSold;});
-
-  html+='<div class="metrics"><div class="m g"><div class="mlbl">Fast sellers</div><div class="mval">'+results.length+'</div></div><div class="m a"><div class="mlbl">Need stock</div><div class="mval">'+results.reduce(function(s,x){return s+x.needs.length;},0)+'</div></div><div class="m r"><div class="mlbl">Days window</div><div class="mval">'+fastDays+'</div></div></div>';
-
+  html+='<div class="metrics"><div class="m g"><div class="mlbl">Fast sellers</div><div class="mval">'+results.length+'</div></div><div class="m a"><div class="mlbl">Need stock</div><div class="mval">'+results.reduce(function(s,x){return s+x.needs.length;},0)+'</div></div></div>';
   if(!results.length){html+='<div class="empty">No fast sellers found</div>';el.innerHTML=html;return;}
-
-  var byDept={};results.forEach(function(x){var d=x.item.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(x);});
+  var byD={};results.forEach(function(x){var d=x.item.dp||'Other';if(!byD[d])byD[d]=[];byD[d].push(x);});
   html+='<div class="sec"><span>Fast in '+BRANCHES[tfrom].name+' — low elsewhere</span><span class="badge">'+results.length+'</span></div>';
-  Object.keys(byDept).sort().forEach(function(dept){
-    var items=byDept[dept];var did='fd_'+dept.replace(/[^a-z0-9]/gi,'_');
-    html+='<div class="dept-hdr" onclick="toggleDept(\''+did+'\')"><div><div class="dept-name">'+dept+'</div><div class="dept-meta">'+items.length+' fast sellers</div></div><span id="arr_'+did+'" style="color:#999">▾</span></div>';
+  Object.keys(byD).sort().forEach(function(dept){
+    var items=byD[dept];var did='fd_'+dept.replace(/\W/g,'_');
+    html+='<div class="dept-hdr" data-toggle="'+did+'"><div><div class="dept-name">'+dept+'</div><div class="dept-meta">'+items.length+' fast sellers</div></div><span id="arr_'+did+'" style="color:#999">▾</span></div>';
     html+='<div id="'+did+'">';
     items.forEach(function(x){
-      html+='<div class="prow" onclick=\'openPanel("'+x.item.bc+'")\'>'+
+      html+='<div class="prow" data-bc="'+x.item.bc+'">'+
         '<div class="pi">'+imgEl(x.item.bc,46)+'</div>'+
         '<div class="pm">'+
           '<div class="pname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>'+
           '<div class="pbc">'+x.item.bc+'</div>'+
           '<div class="pbranches">'+
-            '<span class="pbr ok">'+BRANCHES[tfrom].short+':'+x.src.qty+'</span>';
-      x.needs.forEach(function(n){html+='<span class="pbr '+(n.qty<=0?'zero':'dead')+'">'+BRANCHES[n.bidx].short+':'+(n.qty<=0?'OUT':n.qty)+'</span>';});
-      html+='<span class="pbr" style="background:#e0f2fe;color:#0369a1">last sold: '+x.src.ls+'</span>'+
-          '</div>'+
+            '<span class="pbr ok">'+BRANCHES[tfrom].name+':'+x.src.qty+'</span>';
+      x.needs.forEach(function(n){html+='<span class="pbr '+(n.qty<=0?'zero':'dead')+'">'+BRANCHES[n.bidx].name+':'+(n.qty<=0?'OUT':n.qty)+'</span>';});
+      html+='<span class="pbr" style="background:#e0f2fe;color:#0369a1">sold:'+x.src.ls+'</span></div>'+
         '</div>'+
         '<div class="pr"><div style="font-size:14px;font-weight:700;color:#1a7f3c">'+x.src.qty+'</div><div style="font-size:8px;color:#999">avail</div></div>'+
       '</div>';
@@ -542,25 +697,25 @@ function renderFast(){
     html+='</div>';
   });
   el.innerHTML=html;
+  var sd=document.getElementById('sel_days');var sf2=document.getElementById('sel_fsrc');
+  if(sd)sd.addEventListener('change',function(){fastDays=parseInt(this.value);renderFast();});
+  if(sf2)sf2.addEventListener('change',function(){tfrom=parseInt(this.value);renderFast();});
 }
 
-// ── COMPARE ───────────────────────────────────────────────
+// ── COMPARE ──────────────────────────────────────────────────
 function renderCompare(){
   var el=document.getElementById('out');
   var rows=[
-    ['Total products',function(b){return b.length.toLocaleString();}],
-    ['Negative stock',function(b){var n=b.filter(function(p){return p.qty<0;}).length;return'<span style="color:#cc0000">'+n+'</span>';}],
-    ['Zero stock',function(b){var n=b.filter(function(p){return p.qty===0;}).length;return'<span style="color:#e87000">'+n.toLocaleString()+'</span>';}],
+    ['Total',function(b){return b.length.toLocaleString();}],
+    ['Negative',function(b){var n=b.filter(function(p){return p.qty<0;}).length;return'<span style="color:#cc0000">'+n+'</span>';}],
+    ['Zero',function(b){var n=b.filter(function(p){return p.qty===0;}).length;return'<span style="color:#e87000">'+n.toLocaleString()+'</span>';}],
     ['In stock',function(b){var n=b.filter(function(p){return p.qty>0;}).length;return'<span style="color:#1a7f3c">'+n.toLocaleString()+'</span>';}],
     ['Dead items',function(b){var n=b.filter(isDead).length;return'<span style="color:#b45309">'+n.toLocaleString()+'</span>';}],
     ['Dead value',function(b){var v=b.filter(isDead).reduce(function(s,p){return s+p.qty*p.prc;},0);return'<span style="color:#b45309">£'+Math.round(v).toLocaleString()+'</span>';}],
     ['Never sold',function(b){var n=b.filter(function(p){return p.qty>0&&p.ls==='Never';}).length;return'<span style="color:#666">'+n.toLocaleString()+'</span>';}],
   ];
-  var html='<div style="padding:10px">';
-  html+='<div style="background:#fff;border-radius:8px;border:1px solid #eee;overflow:hidden">';
-  html+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
-  html+='<thead><tr style="background:#f8f8f8"><th style="padding:8px 10px;text-align:left;font-weight:600;color:#999;font-size:9px;text-transform:uppercase">Metric</th>';
-  BRANCHES.forEach(function(b){html+='<th style="padding:8px 7px;text-align:center;font-weight:700;color:#333;font-size:10px">'+b.name+'</th>';});
+  var html=renderLoadStatus()+'<div style="padding:10px"><div style="background:#fff;border-radius:8px;border:1px solid #eee;overflow:hidden"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:#f8f8f8"><th style="padding:8px 10px;text-align:left;font-size:9px;color:#999;text-transform:uppercase">Metric</th>';
+  BRANCHES.forEach(function(b){html+='<th style="padding:8px 7px;text-align:center;font-weight:700;font-size:10px">'+b.name+'</th>';});
   html+='</tr></thead><tbody>';
   rows.forEach(function(row,ri){
     html+='<tr style="border-top:1px solid #f0f0f0'+(ri%2===0?';background:#fafafa':'')+'"><td style="padding:8px 10px;color:#666;font-size:10px">'+row[0]+'</td>';
@@ -571,11 +726,11 @@ function renderCompare(){
   el.innerHTML=html;
 }
 
-// ── PRODUCT PANEL ─────────────────────────────────────────
+// ── PRODUCT PANEL ─────────────────────────────────────────────
 function openPanel(bc){
   var found=[null,null,null];var info=null;
   for(var b=0;b<3;b++){var p=bd[b].find(function(x){return x.bc===bc;});if(p){found[b]=p;if(!info)info=p;}}
-  if(!info)return;
+  if(!info){lg('openPanel: barcode not found: '+bc,'warn');return;}
   var hero=document.getElementById('phero');hero.innerHTML='';
   var src=imgs[bc];
   if(src){var img=document.createElement('img');img.src=src;img.style.cssText='max-height:146px;max-width:100%;object-fit:contain';hero.appendChild(img);}
@@ -583,7 +738,6 @@ function openPanel(bc){
   document.getElementById('pn').textContent=info.nm+(info.sz?' · '+info.sz:'');
   document.getElementById('pdpt').textContent=info.dp;
   document.getElementById('pbc2').textContent=bc||'—';
-  document.getElementById('psz').textContent=info.sz||'—';
   document.getElementById('pprc').textContent=info.prc>0?'£'+info.prc.toFixed(2):'—';
   document.getElementById('pcst').textContent=info.cst>0?'£'+info.cst.toFixed(2):'—';
   var brows='<div style="margin-top:10px;font-size:9px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Stock by branch</div>';
@@ -593,24 +747,80 @@ function openPanel(bc){
     if(!p){brows+='<span style="color:#999;font-size:11px">Not stocked</span></div>';continue;}
     var status=isDead(p)?'Dead '+deadAge(p)+'d':p.qty<=0?'Out of stock':p.qty+' in stock';
     var sc=isDead(p)?'#b45309':p.qty<=0?'#cc0000':'#1a7f3c';
-    brows+='<div class="binfo"><div class="bstatus" style="color:'+sc+'">'+status+'</div>'+
-      '<div class="blast">Last sold: '+p.ls+(p.dc&&p.dc!=='Unknown'?' · Added: '+p.dc:'')+'</div></div>'+
-      '<span class="bqty" style="color:'+sc+'">'+p.qty+'</span></div>';
+    brows+='<div class="binfo"><div class="bstatus" style="color:'+sc+'">'+status+'</div><div class="blast">Last sold: '+p.ls+(p.dc&&p.dc!=='Unknown'?' · Added: '+p.dc:'')+'</div></div><span class="bqty" style="color:'+sc+'">'+p.qty+'</span></div>';
   }
   document.getElementById('branch-rows').innerHTML=brows;
   document.getElementById('pov').classList.add('open');
 }
 
-document.getElementById('pov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
-document.getElementById('logov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
-document.getElementById('logbtn').addEventListener('click',function(){document.getElementById('logtext').textContent=logs.join('\n')||'No entries';document.getElementById('logov').classList.add('open');});
-document.getElementById('bnav').addEventListener('click',function(e){var t=e.target.closest('.bni');if(t&&t.dataset.sec){section=t.dataset.sec;document.querySelectorAll('.bni').forEach(function(b){b.classList.toggle('on',b.dataset.sec===section);});document.querySelectorAll('.mnbtn').forEach(function(b){b.classList.toggle('on',b.textContent.toLowerCase().trim()===section||b.getAttribute('onclick').includes(section));});render();}});
+// ── PILL/DEPT SETTERS ─────────────────────────────────────────
+function setDeadDept(d){deadDept=d;renderDead();}
+function setTransDept(d){transDept=d;renderTransfer();}
+function setFastDept(d){fastDept=d;renderFast();}
 
-function startApp(){
-  // Sequential — one at a time, show data as each loads
-  loadBranch(0).then(function(){return loadBranch(1);}).then(function(){return loadBranch(2);});
+// ── NAVIGATION ────────────────────────────────────────────────
+function switchSection(s){
+  section=s;
+  document.querySelectorAll('.mnbtn').forEach(function(b){b.classList.toggle('on',b.dataset.sec===s);});
+  document.querySelectorAll('.bni').forEach(function(b){b.classList.toggle('on',b.dataset.sec===s);});
+  render();
 }
-(function(){var ts=localStorage.getItem('cc_dir_ts');if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)startApp();})();
+
+// ── EVENT DELEGATION ──────────────────────────────────────────
+document.getElementById('out').addEventListener('click',function(e){
+  // Product card tap
+  var card=e.target.closest('[data-bc]');
+  if(card){openPanel(card.dataset.bc);return;}
+  // Dept header toggle
+  var dh=e.target.closest('[data-toggle]');
+  if(dh){toggleDept(dh.dataset.toggle);return;}
+  // Pill click
+  var pill=e.target.closest('.apill');
+  if(pill){
+    var fn=pill.dataset.fn;var val=pill.dataset.val;
+    if(fn==='setDeadDept')setDeadDept(val);
+    else if(fn==='setTransDept')setTransDept(val);
+    else if(fn==='setFastDept')setFastDept(val);
+  }
+});
+document.getElementById('pov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+document.getElementById('logbtn').addEventListener('click',function(){renderLog();document.getElementById('logov').classList.add('open');});
+document.getElementById('logclose').addEventListener('click',function(){document.getElementById('logov').classList.remove('open');});
+document.getElementById('logov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+document.getElementById('mainnav').addEventListener('click',function(e){
+  var btn=e.target.closest('.mnbtn');if(btn&&btn.dataset.sec)switchSection(btn.dataset.sec);
+});
+document.getElementById('bnav').addEventListener('click',function(e){
+  var btn=e.target.closest('.bni');if(btn&&btn.dataset.sec)switchSection(btn.dataset.sec);
+});
+
+// ── START ─────────────────────────────────────────────────────
+function startApp(){
+  lg('App started','step');
+  lg('PapaParse available: '+(typeof Papa!=='undefined'),'info');
+  lg('Starting sequential branch load','step');
+  // Sequential: Roundhay → Chapy → City
+  loadBranch(0)
+    .then(function(){return loadBranch(1);})
+    .then(function(){
+      return loadBranch(2);
+    })
+    .then(function(){
+      lg('All 3 branches loaded — fetching images in background','step');
+      loadImgs().then(function(){render();});
+    });
+}
+
+// Auto-start if PIN session still valid
+(function(){
+  var ts=localStorage.getItem('cc_dir_ts');
+  if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000){
+    lg('PIN session valid — auto-starting','ok');
+    startApp();
+  }else{
+    lg('PIN required','info');
+  }
+})();
 </script>
 </body>
 </html>
