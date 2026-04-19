@@ -742,7 +742,8 @@ document.getElementById('logbtn').addEventListener('click',function(){document.g
 document.getElementById('bnav').addEventListener('click',function(e){var t=e.target.closest('.bni');if(t&&t.dataset.sec){section=t.dataset.sec;document.querySelectorAll('.bni').forEach(function(b){b.classList.toggle('on',b.dataset.sec===section);});document.querySelectorAll('.mnbtn').forEach(function(b){b.classList.toggle('on',b.textContent.toLowerCase().trim()===section||b.getAttribute('onclick').includes(section));});render();}});
 
 function startApp(){
-  BRANCHES.forEach(function(_,i){loadBranch(i);});
+  // Sequential — one at a time, show data as each loads
+  loadBranch(0).then(function(){return loadBranch(1);}).then(function(){return loadBranch(2);});
 }
 (function(){var ts=localStorage.getItem('cc_dir_ts');if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)startApp();})();
 </script>
