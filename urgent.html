@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CC Urgent Transfers</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f4;color:#111;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:20px}
+.pinov{position:fixed;inset:0;background:#111;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:480px;margin:0 auto}
+.pinlogo{width:60px;height:60px;background:#cc0000;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#fff;margin-bottom:16px}
+.pintitle{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
+.pinsub{color:rgba(255,255,255,.5);font-size:13px;margin-bottom:36px}
+.pindots{display:flex;gap:14px;margin-bottom:32px}
+.pindot{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .15s}
+.pindot.filled{background:#cc0000}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:240px}
+.pinkey{background:rgba(255,255,255,.1);border:none;border-radius:12px;height:64px;font-size:22px;font-weight:600;color:#fff;cursor:pointer;touch-action:manipulation}
+.pinkey:active{background:rgba(255,255,255,.25)}
+.pinerr{color:#ff6b6b;font-size:13px;margin-top:16px;height:20px;text-align:center}
+.top{background:#cc0000;padding:12px 16px 8px;position:sticky;top:0;z-index:100}
+.top-row{display:flex;align-items:center;justify-content:space-between}
+.logo{width:30px;height:30px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#cc0000}
+.title{color:#fff;font-size:14px;font-weight:700;margin-left:8px}
+.sync{color:rgba(255,255,255,.7);font-size:10px;font-family:monospace}
+/* Branch pair tabs */
+.pairtabs{display:flex;background:#fff;border-bottom:1px solid #eee;overflow-x:auto;scrollbar-width:none}
+.pairtabs::-webkit-scrollbar{display:none}
+.pairtab{flex-shrink:0;padding:10px 13px;font-size:11px;font-weight:600;color:#999;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;user-select:none}
+.pairtab.on{color:#cc0000;border-bottom-color:#cc0000}
+/* Time pills */
+.timepills{display:flex;gap:5px;padding:8px 10px;background:#fff;border-bottom:1px solid #eee;overflow-x:auto;scrollbar-width:none}
+.timepills::-webkit-scrollbar{display:none}
+.tpill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;border:1.5px solid #ddd;background:#fff;color:#555;user-select:none}
+.tpill.on{background:#cc0000;color:#fff;border-color:#cc0000}
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px}
+.m{background:#fff;border-radius:8px;padding:9px 8px;text-align:center;border-top:2px solid #ddd}
+.m.r{border-top-color:#cc0000}.m.g{border-top-color:#1a7f3c}.m.a{border-top-color:#e87000}
+.mlbl{font-size:8px;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.mval{font-size:18px;font-weight:700;font-family:monospace}
+/* Section header */
+.sec{padding:6px 10px;font-size:9px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee}
+.sec.green{background:#f0fdf4}.sec.amber{background:#fff8f0}.sec.red{background:#fef2f2}
+.badge{font-size:10px;padding:1px 7px;background:#eee;border-radius:20px;color:#666}
+/* Cards */
+.card{background:#fff;border-bottom:1px solid #eee;padding:10px 12px;cursor:pointer}
+.card:active{background:#f8f8f8}
+.card-top{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.urgbadge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px}
+.card-body{display:flex;gap:8px;align-items:flex-start}
+.ci{width:46px;height:46px;border-radius:7px;background:#f0f0f0;border:1px solid #eee;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.ci img{width:46px;height:46px;object-fit:cover}
+.cm{flex:1;min-width:0}
+.cname{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.cbc{font-size:9px;color:#aaa;font-family:monospace;margin-bottom:4px}
+.ctags{display:flex;gap:3px;flex-wrap:wrap}
+.ctag{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:500}
+.ctag.out{background:#fef2f2;color:#991b1b}
+.ctag.ok{background:#f0fdf4;color:#166534}
+.ctag.na{background:#f4f4f4;color:#999}
+.ctag.info{background:#f4f4f4;color:#555}
+.csend{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.sendbox{font-size:14px;font-weight:700;background:#f0fdf4;color:#166534;padding:5px 8px;border-radius:6px;text-align:center;min-width:36px}
+.sendlbl{font-size:8px;color:#166534;text-align:center}
+/* Empty / loading */
+.loading{padding:50px 16px;text-align:center;color:#999;font-size:12px}
+.spin{width:26px;height:26px;border:2px solid #eee;border-top-color:#cc0000;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:40px 16px;text-align:center;color:#999;font-size:13px;line-height:2}
+/* Product panel */
+.pov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;max-width:480px;margin:0 auto}
+.pov.open{display:block}
+.pan{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
+.ph{width:36px;height:3px;background:#eee;border-radius:2px;margin:12px auto 0}
+.phero{width:100%;height:150px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #eee;overflow:hidden}
+.phero img{max-height:146px;max-width:100%;object-fit:contain}
+.pd{padding:12px 14px}
+.pdname{font-size:15px;font-weight:700;margin-bottom:2px}
+.pdept{font-size:10px;color:#999;margin-bottom:10px}
+.irow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #eee;font-size:11px}
+.il{color:#999}.iv{font-family:monospace;font-weight:600;font-size:11px}
+.brow{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid #eee;gap:8px;font-size:11px}
+.bchip{font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;min-width:60px;text-align:center;flex-shrink:0}
+.bc-r{background:#fef2f2;color:#991b1b}
+.bc-c{background:#fff3e0;color:#b45309}
+.bc-x{background:#e8f5e9;color:#2e7d32}
+</style>
+</head>
+<body>
+
+<div class="pinov" id="pinov">
+  <div class="pinlogo">CC</div>
+  <div class="pintitle">Urgent Transfers</div>
+  <div class="pinsub">CC Hair &amp; Beauty</div>
+  <div class="pindots">
+    <div class="pindot" id="pd0"></div><div class="pindot" id="pd1"></div>
+    <div class="pindot" id="pd2"></div><div class="pindot" id="pd3"></div>
+  </div>
+  <div class="pinpad" id="pinpad">
+    <button class="pinkey" data-n="1">1</button><button class="pinkey" data-n="2">2</button><button class="pinkey" data-n="3">3</button>
+    <button class="pinkey" data-n="4">4</button><button class="pinkey" data-n="5">5</button><button class="pinkey" data-n="6">6</button>
+    <button class="pinkey" data-n="7">7</button><button class="pinkey" data-n="8">8</button><button class="pinkey" data-n="9">9</button>
+    <button class="pinkey" data-n="del" style="font-size:16px">⌫</button><button class="pinkey" data-n="0">0</button>
+    <button class="pinkey" style="opacity:0;pointer-events:none" disabled></button>
+  </div>
+  <div class="pinerr" id="pinerr"></div>
+</div>
+<script>
+var pinEntry='';
+function pinDots(){for(var i=0;i<4;i++)document.getElementById('pd'+i).className='pindot'+(i<pinEntry.length?' filled':'');}
+function pinCheck(){
+  if(pinEntry==='1979'){
+    localStorage.setItem('cc_pin_ts',Date.now().toString());
+    document.getElementById('pinov').style.display='none';
+    startApp();
+  }else{
+    document.getElementById('pinerr').textContent='Incorrect PIN';
+    pinEntry='';pinDots();
+    setTimeout(function(){document.getElementById('pinerr').textContent='';},2000);
+  }
+}
+document.getElementById('pinpad').addEventListener('click',function(e){
+  var btn=e.target.closest('.pinkey');if(!btn||btn.disabled)return;
+  var n=btn.dataset.n;
+  if(n==='del'){if(pinEntry.length>0){pinEntry=pinEntry.slice(0,-1);pinDots();}}
+  else{if(pinEntry.length<4){pinEntry+=n;pinDots();if(pinEntry.length===4)setTimeout(pinCheck,150);}}
+});
+(function(){var ts=localStorage.getItem('cc_pin_ts');if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)document.getElementById('pinov').style.display='none';})();
+</script>
+
+<div class="top">
+  <div class="top-row">
+    <div style="display:flex;align-items:center">
+      <div class="logo">CC</div>
+      <span class="title">Urgent Transfers</span>
+    </div>
+    <span class="sync" id="stime">loading…</span>
+  </div>
+</div>
+
+<div class="pairtabs" id="pairtabs"></div>
+<div class="timepills" id="timepills"></div>
+<div id="out"><div class="loading"><div class="spin"></div>Loading branches…</div></div>
+
+<div class="pov" id="pov">
+  <div class="pan">
+    <div class="ph"></div>
+    <div class="phero" id="phero"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+    <div class="pd">
+      <div class="pdname" id="pn"></div>
+      <div class="pdept" id="pdept"></div>
+      <div class="irow"><span class="il">Barcode</span><span class="iv" id="pbc"></span></div>
+      <div class="irow"><span class="il">Price</span><span class="iv" id="pprc"></span></div>
+      <div id="pbrows"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var BRANCHES=[
+  {name:'Roundhay',short:'Roundhay',chip:'bc-r',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
+  {name:'Chapy',short:'Chapy',chip:'bc-c',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
+  {name:'City',short:'City',chip:'bc-x',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'}
+];
+var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
+var TIME_OPTS=[{l:'Today',v:1},{l:'Yesterday',v:2},{l:'3 days',v:3},{l:'7 days',v:7},{l:'14 days',v:14},{l:'30 days',v:30}];
+
+var bd=[[],[],[]],imgs={},loaded=0,imgsLoaded=false;
+var urgFrom=0,urgTo=1,urgDays=3;
+
+function cl(v){return String(v==null?'':v).trim();}
+function pDate(s){if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;var p=s.split('/');if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d.getTime())?null:d;}var d=new Date(s);return isNaN(d.getTime())?null:d;}
+function dSince(s){var d=pDate(s);return d?Math.floor((Date.now()-d.getTime())/86400000):9999;}
+
+async function loadImgs(){
+  if(imgsLoaded)return;imgsLoaded=true;
+  try{
+    var cached=localStorage.getItem('cc_imgs');
+    if(cached){var obj=JSON.parse(cached);if(Date.now()-obj.ts<24*60*60*1000){imgs=obj.d;return;}}
+    var r=await fetch(IURL);var t=await r.text();
+    Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){var bc=cl(row['Barcode']),src=cl(row['ImageURL']);if(bc&&src&&src.startsWith('http'))imgs[bc]=src;});
+    try{localStorage.setItem('cc_imgs',JSON.stringify({ts:Date.now(),d:imgs}));}catch(e){}
+  }catch(e){}
+}
+
+async function loadBranch(bidx){
+  try{
+    var r=await fetch(BRANCHES[bidx].url);var t=await r.text();
+    bd[bidx]=Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){
+      var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
+      return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
+             qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
+             cst:parseFloat(row['AvgCost'])||0,
+             ls:(ls&&ls!=='NULL')?ls:'Never',
+             dc:(dc&&dc!=='NULL')?dc:'Unknown',
+             dp:cl(row['Department'])};
+    });
+  }catch(e){bd[bidx]=[];}
+  loaded++;
+  document.getElementById('stime').textContent=loaded<3?('loaded '+loaded+'/3…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+  if(loaded===3){
+    loadImgs().then(function(){render();});
+    render();
+  } else if(loaded>=1){
+    render();
+  }
+}
+
+function buildPairTabs(){
+  var el=document.getElementById('pairtabs');
+  var html='';
+  for(var f=0;f<3;f++){
+    for(var t=0;t<3;t++){
+      if(f===t)continue;
+      var on=(f===urgFrom&&t===urgTo);
+      html+='<div class="pairtab'+(on?' on':'')+'" data-f="'+f+'" data-t="'+t+'">'+BRANCHES[f].short+' → '+BRANCHES[t].short+'</div>';
+    }
+  }
+  el.innerHTML=html;
+  el.addEventListener('click',function(e){
+    var tab=e.target.closest('.pairtab');
+    if(!tab)return;
+    urgFrom=parseInt(tab.dataset.f);urgTo=parseInt(tab.dataset.t);
+    buildPairTabs();render();
+  });
+}
+
+function buildTimePills(){
+  var el=document.getElementById('timepills');
+  el.innerHTML=TIME_OPTS.map(function(opt){
+    return '<div class="tpill'+(urgDays===opt.v?' on':'')+'" data-v="'+opt.v+'">'+opt.l+'</div>';
+  }).join('');
+  el.addEventListener('click',function(e){
+    var pill=e.target.closest('.tpill');
+    if(!pill)return;
+    urgDays=parseInt(pill.dataset.v);
+    buildTimePills();render();
+  });
+}
+
+function imgEl(bc){
+  var src=imgs[bc];
+  if(src)return '<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:46px;height:46px;object-fit:cover">';
+  return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+}
+
+function render(){
+  if(loaded===0)return;
+
+  // Build barcode map
+  var map={};
+  for(var b=0;b<3;b++){
+    bd[b].forEach(function(p){
+      if(!p.bc)return;
+      if(!map[p.bc])map[p.bc]={nm:p.nm,sz:p.sz,bc:p.bc,dp:p.dp,prc:p.prc,cst:p.cst,branches:[null,null,null]};
+      map[p.bc].branches[b]=p;
+    });
+  }
+
+  // Find items: dest branch went out of stock within urgDays, source has stock
+  var canSend=[],noStock=[];
+  Object.values(map).forEach(function(item){
+    var src=item.branches[urgFrom];
+    var dst=item.branches[urgTo];
+    if(!dst)return;                          // not stocked at dest
+    if(dst.qty>0)return;                     // dest still has stock
+    if(dst.ls==='Never')return;              // never sold there, not urgent
+    var dstAge=dSince(dst.ls);
+    if(dstAge>urgDays)return;               // went out too long ago
+
+    var hasSrc=src&&src.qty>0;
+    var suggest=hasSrc?Math.min(Math.floor(src.qty/2),Math.max(3,src.qty-3)):0;
+    var entry={item:item,src:src,dst:dst,dstAge:dstAge,suggest:suggest,hasSrc:hasSrc};
+    if(hasSrc)canSend.push(entry);
+    else noStock.push(entry);
+  });
+
+  // Sort: most recent first (smallest dstAge)
+  canSend.sort(function(a,b){return a.dstAge-b.dstAge;});
+  noStock.sort(function(a,b){return a.dstAge-b.dstAge;});
+
+  var el=document.getElementById('out');
+
+  if(loaded<3&&canSend.length===0&&noStock.length===0){
+    el.innerHTML='<div class="loading"><div class="spin"></div>Loading '+BRANCHES[urgFrom].name+' &amp; '+BRANCHES[urgTo].name+'…</div>';
+    return;
+  }
+
+  // Metrics
+  var html='<div class="metrics">';
+  html+='<div class="m r"><div class="mlbl">Out of stock</div><div class="mval">'+(canSend.length+noStock.length)+'</div></div>';
+  html+='<div class="m g"><div class="mlbl">Can transfer</div><div class="mval" style="color:#1a7f3c">'+canSend.length+'</div></div>';
+  html+='<div class="m a"><div class="mlbl">Need reorder</div><div class="mval" style="color:#e87000">'+noStock.length+'</div></div>';
+  html+='</div>';
+
+  if(canSend.length===0&&noStock.length===0){
+    var label=urgDays===1?'today':urgDays===2?'in the last 2 days':'in the last '+urgDays+' days';
+    html+='<div class="empty">No items went out of stock at '+BRANCHES[urgTo].name+'<br>'+label+'<br><span style="font-size:11px">Try a wider time window</span></div>';
+    el.innerHTML=html;return;
+  }
+
+  function urgLabel(age){return age===0?'Today':age===1?'Yesterday':age+'d ago';}
+  function urgColor(age){return age===0?'#cc0000':age<=2?'#e87000':'#888';}
+  function urgBg(age){return age===0?'#fff0f0':age<=2?'#fff8f0':'#fff';}
+  function urgBadgeBg(age){return age===0?'#fef2f2':age<=2?'#fff8f0':'#f4f4f4';}
+
+  if(canSend.length){
+    html+='<div class="sec green"><span style="color:#166534">Transfer now — '+BRANCHES[urgFrom].name+' has stock</span><span class="badge" style="background:#dcfce7;color:#166534">'+canSend.length+'</span></div>';
+    canSend.forEach(function(x){
+      html+='<div class="card" style="background:'+urgBg(x.dstAge)+'" onclick=\'openPanel("'+x.item.bc+'")\'>';
+      html+='<div class="card-top">';
+      html+='<span class="urgbadge" style="background:'+urgBadgeBg(x.dstAge)+';color:'+urgColor(x.dstAge)+'">'+urgLabel(x.dstAge)+'</span>';
+      html+='<span style="font-size:9px;color:#999">sold out at '+BRANCHES[urgTo].name+'</span>';
+      html+='<span style="font-size:10px;font-weight:600;color:#1a7f3c;margin-left:auto">'+BRANCHES[urgFrom].name+': '+x.src.qty+' avail</span>';
+      html+='</div>';
+      html+='<div class="card-body">';
+      html+='<div class="ci">'+imgEl(x.item.bc)+'</div>';
+      html+='<div class="cm">';
+      html+='<div class="cname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>';
+      html+='<div class="cbc">'+x.item.bc+'</div>';
+      html+='<div class="ctags">';
+      html+='<span class="ctag out">'+BRANCHES[urgTo].short+': OUT</span>';
+      html+='<span class="ctag info">Last sold: '+x.dst.ls+'</span>';
+      html+='<span class="ctag ok">'+BRANCHES[urgFrom].short+': '+x.src.qty+'</span>';
+      if(x.item.prc>0)html+='<span class="ctag info">£'+x.item.prc.toFixed(2)+'</span>';
+      html+='</div></div>';
+      html+='<div class="csend"><div class="sendbox">'+x.suggest+'</div><div class="sendlbl">send</div></div>';
+      html+='</div></div>';
+    });
+  }
+
+  if(noStock.length){
+    html+='<div class="sec amber"><span style="color:#b45309">Need reorder — no stock at '+BRANCHES[urgFrom].name+' either</span><span class="badge" style="background:#fed7aa;color:#b45309">'+noStock.length+'</span></div>';
+    noStock.forEach(function(x){
+      var srcQty=x.src?x.src.qty:null;
+      html+='<div class="card" style="background:'+urgBg(x.dstAge)+'" onclick=\'openPanel("'+x.item.bc+'")\'>';
+      html+='<div class="card-top">';
+      html+='<span class="urgbadge" style="background:'+urgBadgeBg(x.dstAge)+';color:'+urgColor(x.dstAge)+'">'+urgLabel(x.dstAge)+'</span>';
+      html+='<span style="font-size:9px;color:#999">sold out at '+BRANCHES[urgTo].name+'</span>';
+      html+='<span style="font-size:10px;font-weight:600;color:#e87000;margin-left:auto">'+(srcQty!==null?BRANCHES[urgFrom].name+': '+srcQty:'Not stocked')+'</span>';
+      html+='</div>';
+      html+='<div class="card-body">';
+      html+='<div class="ci">'+imgEl(x.item.bc)+'</div>';
+      html+='<div class="cm">';
+      html+='<div class="cname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>';
+      html+='<div class="cbc">'+x.item.bc+'</div>';
+      html+='<div class="ctags">';
+      html+='<span class="ctag out">'+BRANCHES[urgTo].short+': OUT</span>';
+      html+='<span class="ctag info">Last sold: '+x.dst.ls+'</span>';
+      html+='<span class="ctag na">'+BRANCHES[urgFrom].short+': '+(srcQty!==null?srcQty:'N/A')+'</span>';
+      if(x.item.prc>0)html+='<span class="ctag info">£'+x.item.prc.toFixed(2)+'</span>';
+      html+='</div></div></div></div>';
+    });
+  }
+
+  el.innerHTML=html;
+}
+
+function openPanel(bc){
+  var info=null;var found=[null,null,null];
+  for(var b=0;b<3;b++){var p=bd[b].find(function(x){return x.bc===bc;});if(p){found[b]=p;if(!info)info=p;}}
+  if(!info)return;
+  var hero=document.getElementById('phero');hero.innerHTML='';
+  var src=imgs[bc];
+  if(src){var img=document.createElement('img');img.src=src;img.style.cssText='max-height:146px;max-width:100%;object-fit:contain';hero.appendChild(img);}
+  else hero.innerHTML='<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  document.getElementById('pn').textContent=info.nm+(info.sz?' · '+info.sz:'');
+  document.getElementById('pdept').textContent=info.dp;
+  document.getElementById('pbc').textContent=bc||'—';
+  document.getElementById('pprc').textContent=info.prc>0?'£'+info.prc.toFixed(2):'—';
+  var brows='<div style="margin-top:10px;font-size:9px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Stock by branch</div>';
+  var chips=['bc-r','bc-c','bc-x'];
+  for(var b=0;b<3;b++){
+    var p=found[b];
+    brows+='<div class="brow"><span class="bchip '+chips[b]+'">'+BRANCHES[b].name+'</span>';
+    if(!p){brows+='<span style="color:#999;font-size:11px">Not stocked</span></div>';continue;}
+    var qc=p.qty<=0?'#cc0000':p.qty>0?'#1a7f3c':'#999';
+    var qs=p.qty<=0?'Out of stock':p.qty+' in stock';
+    brows+='<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;color:'+qc+'">'+qs+'</div><div style="font-size:9px;color:#999;margin-top:1px">Last sold: '+p.ls+'</div></div>';
+    brows+='<span style="font-size:14px;font-weight:700;font-family:monospace;color:'+qc+'">'+p.qty+'</span>';
+    brows+='</div>';
+  }
+  document.getElementById('pbrows').innerHTML=brows;
+  document.getElementById('pov').classList.add('open');
+}
+
+document.getElementById('pov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+
+function startApp(){
+  buildPairTabs();
+  buildTimePills();
+  // Load sequentially — one branch at a time, show data as it arrives
+  loadBranch(0).then(function(){return loadBranch(1);}).then(function(){return loadBranch(2);});
+}
+
+(function(){var ts=localStorage.getItem('cc_pin_ts');if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)startApp();})();
+</script>
+</body>
+</html>
