@@ -399,36 +399,42 @@ function renderUrgent(){
   }
 
   el.innerHTML=html;
+  // Wire up card clicks via delegation (avoids inline onclick quote issues)
+  el.addEventListener('click',function(e){var c=e.target.closest('[data-bc]');if(c)openPanel(c.dataset.bc);});
 }
 
 function mkUrgentCard(x,canSend){
   var whenStr=x.dstLastSold===0?'Today':x.dstLastSold===1?'Yesterday':x.dstLastSold+'d ago';
   var urgBg=x.dstLastSold===0?'#fef2f2':x.dstLastSold<=2?'#fff8f0':'#fff';
-  return '<div class="tcard" style="background:'+urgBg+'" onclick='openPanel("'+x.item.bc+'")'>' +
-    '<div class="tcard-top">'+
-      '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:'+(x.dstLastSold===0?'#fef2f2':x.dstLastSold<=2?'#fff8f0':'#f0f0f0')+';color:'+(x.dstLastSold===0?'#cc0000':x.dstLastSold<=2?'#b45309':'#666')+'">'+whenStr+'</span>'+
-      '<span style="font-size:9px;color:#999;margin-left:5px">last sold at '+BRANCHES[urgentTo].name+'</span>'+
-      (canSend?'<span style="font-size:9px;font-weight:600;color:#1a7f3c;margin-left:auto">'+BRANCHES[urgentFrom].name+' has '+x.src.qty+'</span>':'<span style="font-size:9px;color:#e87000;margin-left:auto">no source stock</span>')+
-    '</div>'+
-    '<div class="tcard-body">'+
-      '<div class="tpi">'+imgEl(x.item.bc,44)+'</div>'+
-      '<div class="tinfo">'+
-        '<div class="tname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>'+
-        '<div class="tbc">'+x.item.bc+'</div>'+
-        '<div class="tstats">'+
-          '<span class="tstat zero">'+BRANCHES[urgentTo].short+': OUT</span>'+
-          '<span class="tstat" style="background:#f4f4f4;color:#555">Last sold: '+x.dst.ls+'</span>'+
-          (x.src?'<span class="tstat '+(x.src.qty>0?'ok':'zero')+'">'+BRANCHES[urgentFrom].short+': '+x.src.qty+'</span>':'<span class="tstat na">'+BRANCHES[urgentFrom].short+': not stocked</span>')+
-          (x.item.prc>0?'<span class="tstat" style="background:#f4f4f4;color:#555">£'+x.item.prc.toFixed(2)+'</span>':'')+
-        '</div>'+
-      '</div>'+
-      (canSend?
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">'+
-          '<div class="tmove">'+x.suggest+'</div>'+
-          '<div class="tmove-lbl">send</div>'+
-        '</div>':'')+
-    '</div>'+
-  '</div>';
+  var urgTxtBg=x.dstLastSold===0?'#fef2f2':x.dstLastSold<=2?'#fff8f0':'#f0f0f0';
+  var urgTxt=x.dstLastSold===0?'#cc0000':x.dstLastSold<=2?'#b45309':'#666';
+  var srcInfo=canSend?'<span style="font-size:9px;font-weight:600;color:#1a7f3c;margin-left:auto">'+BRANCHES[urgentFrom].name+': '+x.src.qty+'</span>':'<span style="font-size:9px;color:#e87000;margin-left:auto">no source stock</span>';
+  var srcTag=x.src?'<span class="tstat '+(x.src.qty>0?'ok':'zero')+'">'+BRANCHES[urgentFrom].short+': '+x.src.qty+'</span>':'<span class="tstat na">'+BRANCHES[urgentFrom].short+': N/A</span>';
+  var moveBox=canSend?'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0"><div class="tmove">'+x.suggest+'</div><div class="tmove-lbl">send</div></div>':'';
+  var priceTag=x.item.prc>0?'<span class="tstat" style="background:#f4f4f4;color:#555">£'+x.item.prc.toFixed(2)+'</span>':'';
+  return [
+    '<div class="tcard" style="background:'+urgBg+';cursor:pointer" data-bc="'+x.item.bc+'">',
+      '<div class="tcard-top">',
+        '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:'+urgTxtBg+';color:'+urgTxt+'">'+whenStr+'</span>',
+        '<span style="font-size:9px;color:#999;margin-left:5px">sold out at '+BRANCHES[urgentTo].name+'</span>',
+        srcInfo,
+      '</div>',
+      '<div class="tcard-body">',
+        '<div class="tpi">'+imgEl(x.item.bc,44)+'</div>',
+        '<div class="tinfo">',
+          '<div class="tname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>',
+          '<div class="tbc">'+x.item.bc+'</div>',
+          '<div class="tstats">',
+            '<span class="tstat zero">'+BRANCHES[urgentTo].short+': OUT</span>',
+            '<span class="tstat" style="background:#f4f4f4;color:#555">Last sold: '+x.dst.ls+'</span>',
+            srcTag,
+            priceTag,
+          '</div>',
+        '</div>',
+        moveBox,
+      '</div>',
+    '</div>'
+  ].join('');
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────
