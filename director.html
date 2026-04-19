@@ -165,7 +165,6 @@ document.getElementById('pinpad').addEventListener('click',function(e){
 
 <div class="mainnav">
   <div class="mnbtn on" onclick="switchMain('overview',this)">Overview</div>
-  <div class="mnbtn" onclick="switchMain('urgent',this)">Urgent</div>
   <div class="mnbtn" onclick="switchMain('dead',this)">Dead stock</div>
   <div class="mnbtn" onclick="switchMain('transfer',this)">Transfers</div>
   <div class="mnbtn" onclick="switchMain('fast',this)">Fast sellers</div>
@@ -177,7 +176,6 @@ document.getElementById('pinpad').addEventListener('click',function(e){
 <!-- BOTTOM NAV -->
 <nav class="bnav">
   <div class="bni on" data-sec="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></div>
-  <div class="bni" data-sec="urgent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Urgent</span></div>
   <div class="bni" data-sec="dead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Dead</span></div>
   <div class="bni" data-sec="transfer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span>Transfer</span></div>
   <div class="bni" data-sec="fast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><span>Fast</span></div>
@@ -297,145 +295,12 @@ function switchMain(s,el){
 
 function render(){
   if(section==='overview')renderOverview();
-  else if(section==='urgent')renderUrgent();
   else if(section==='dead')renderDead();
   else if(section==='transfer')renderTransfer();
   else if(section==='fast')renderFast();
   else renderCompare();
 }
 
-// ── URGENT TRANSFERS — just went out of stock ─────────────
-var urgentFrom=0,urgentTo=1,urgentDays=1;
-
-function renderUrgent(){
-  var el=document.getElementById('out');
-  var map=buildMap();
-
-  // Time filter options
-  var timeOpts=[
-    {l:'Today',v:1},{l:'Yesterday',v:2},{l:'3 days',v:3},
-    {l:'7 days',v:7},{l:'14 days',v:14},{l:'30 days',v:30}
-  ];
-
-  // Branch pair tabs
-  var pairs=[];
-  for(var f=0;f<3;f++){for(var t=0;t<3;t++){if(f!==t)pairs.push({f:f,t:t});}}
-
-  var html='';
-
-  // Branch pair selector
-  html+='<div style="display:flex;background:#fff;border-bottom:1px solid #eee;overflow-x:auto;scrollbar-width:none">';
-  pairs.forEach(function(pair){
-    var on=(pair.f===urgentFrom&&pair.t===urgentTo);
-    html+='<div onclick="urgentFrom='+pair.f+';urgentTo='+pair.t+';renderUrgent()" style="flex-shrink:0;padding:9px 12px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;border-bottom:2px solid '+(on?'#cc0000':'transparent')+';color:'+(on?'#cc0000':'#999')+'">';
-    html+=BRANCHES[pair.f].short+' → '+BRANCHES[pair.t].short+'</div>';
-  });
-  html+='</div>';
-
-  // Time filter pills
-  html+='<div class="pill-row">';
-  timeOpts.forEach(function(opt){
-    html+='<div class="apill'+(urgentDays===opt.v?' on':'')+'" onclick="urgentDays='+opt.v+';renderUrgent()">'+opt.l+'</div>';
-  });
-  html+='</div>';
-
-  // Find items: zero stock at DEST, last sold at SOURCE within urgentDays
-  // Logic: product sold in source recently but dest is now out of stock
-  // Also: items that JUST went to zero at dest (last sold within urgentDays at DEST)
-  var results=[];
-  Object.values(map).forEach(function(item){
-    var src=item.branches[urgentFrom];
-    var dst=item.branches[urgentTo];
-    if(!dst)return;
-    if(src&&src.qty<0)return; // can't transfer negatives
-    if(dst.qty>0)return; // dest has stock, skip
-
-    // Dest is zero or negative — when did it last sell at dest?
-    var dstLastSold=dSince(dst.ls);
-    if(dst.ls==='Never')return; // never sold there, not urgent
-    if(dstLastSold>urgentDays)return; // sold too long ago
-
-    // Source has stock available to send
-    var srcQty=src?src.qty:0;
-    var canSend=src&&src.qty>0;
-    var suggest=canSend?Math.min(Math.floor(src.qty/2),Math.max(3,src.qty-3)):0;
-
-    results.push({
-      item:item,src:src,dst:dst,
-      dstLastSold:dstLastSold,
-      canSend:canSend,
-      suggest:suggest
-    });
-  });
-
-  results.sort(function(a,b){return a.dstLastSold-b.dstLastSold;});
-
-  // Metrics
-  var canSendCount=results.filter(function(x){return x.canSend;}).length;
-  var noStockCount=results.filter(function(x){return !x.canSend;}).length;
-
-  html+='<div class="metrics">';
-  html+='<div class="m r"><div class="mlbl">Just out of stock</div><div class="mval">'+results.length+'</div><div class="msub">at '+BRANCHES[urgentTo].name+'</div></div>';
-  html+='<div class="m g"><div class="mlbl">Can transfer</div><div class="mval" style="color:#1a7f3c">'+canSendCount+'</div><div class="msub">'+BRANCHES[urgentFrom].name+' has stock</div></div>';
-  html+='<div class="m a"><div class="mlbl">No source stock</div><div class="mval" style="color:#e87000">'+noStockCount+'</div><div class="msub">need to reorder</div></div>';
-  html+='</div>';
-
-  if(!results.length){
-    html+='<div class="empty">No items went out of stock<br>at '+BRANCHES[urgentTo].name+'<br>in the last '+urgentDays+' day'+(urgentDays>1?'s':'')+'</div>';
-    el.innerHTML=html;return;
-  }
-
-  // Urgent — can transfer now
-  var canSend=results.filter(function(x){return x.canSend;});
-  var noSend=results.filter(function(x){return !x.canSend;});
-
-  if(canSend.length){
-    html+='<div class="sec" style="background:#f0fdf4"><span style="color:#166534">Transfer now — '+BRANCHES[urgentFrom].name+' has stock</span><span class="badge" style="background:#dcfce7;color:#166534">'+canSend.length+'</span></div>';
-    canSend.forEach(function(x){html+=mkUrgentCard(x,true);});
-  }
-  if(noSend.length){
-    html+='<div class="sec" style="background:#fff8f0"><span style="color:#b45309">Reorder needed — no stock at '+BRANCHES[urgentFrom].name+'</span><span class="badge" style="background:#fed7aa;color:#b45309">'+noSend.length+'</span></div>';
-    noSend.forEach(function(x){html+=mkUrgentCard(x,false);});
-  }
-
-  el.innerHTML=html;
-  // Wire up card clicks via delegation (avoids inline onclick quote issues)
-  el.addEventListener('click',function(e){var c=e.target.closest('[data-bc]');if(c)openPanel(c.dataset.bc);});
-}
-
-function mkUrgentCard(x,canSend){
-  var whenStr=x.dstLastSold===0?'Today':x.dstLastSold===1?'Yesterday':x.dstLastSold+'d ago';
-  var urgBg=x.dstLastSold===0?'#fef2f2':x.dstLastSold<=2?'#fff8f0':'#fff';
-  var urgTxtBg=x.dstLastSold===0?'#fef2f2':x.dstLastSold<=2?'#fff8f0':'#f0f0f0';
-  var urgTxt=x.dstLastSold===0?'#cc0000':x.dstLastSold<=2?'#b45309':'#666';
-  var srcInfo=canSend?'<span style="font-size:9px;font-weight:600;color:#1a7f3c;margin-left:auto">'+BRANCHES[urgentFrom].name+': '+x.src.qty+'</span>':'<span style="font-size:9px;color:#e87000;margin-left:auto">no source stock</span>';
-  var srcTag=x.src?'<span class="tstat '+(x.src.qty>0?'ok':'zero')+'">'+BRANCHES[urgentFrom].short+': '+x.src.qty+'</span>':'<span class="tstat na">'+BRANCHES[urgentFrom].short+': N/A</span>';
-  var moveBox=canSend?'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0"><div class="tmove">'+x.suggest+'</div><div class="tmove-lbl">send</div></div>':'';
-  var priceTag=x.item.prc>0?'<span class="tstat" style="background:#f4f4f4;color:#555">£'+x.item.prc.toFixed(2)+'</span>':'';
-  return [
-    '<div class="tcard" style="background:'+urgBg+';cursor:pointer" data-bc="'+x.item.bc+'">',
-      '<div class="tcard-top">',
-        '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:'+urgTxtBg+';color:'+urgTxt+'">'+whenStr+'</span>',
-        '<span style="font-size:9px;color:#999;margin-left:5px">sold out at '+BRANCHES[urgentTo].name+'</span>',
-        srcInfo,
-      '</div>',
-      '<div class="tcard-body">',
-        '<div class="tpi">'+imgEl(x.item.bc,44)+'</div>',
-        '<div class="tinfo">',
-          '<div class="tname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>',
-          '<div class="tbc">'+x.item.bc+'</div>',
-          '<div class="tstats">',
-            '<span class="tstat zero">'+BRANCHES[urgentTo].short+': OUT</span>',
-            '<span class="tstat" style="background:#f4f4f4;color:#555">Last sold: '+x.dst.ls+'</span>',
-            srcTag,
-            priceTag,
-          '</div>',
-        '</div>',
-        moveBox,
-      '</div>',
-    '</div>'
-  ].join('');
-}
 
 // ── OVERVIEW ──────────────────────────────────────────────
 function renderOverview(){
