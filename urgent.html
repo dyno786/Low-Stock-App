@@ -619,15 +619,46 @@ function render(){
 
   function renderGroup(list,isSend){
     if(!list.length)return'';
+
+    // For the "no source stock" group, split into:
+    // a) Items where another branch HAS stock (suggest going there)
+    // b) Items where truly no stock anywhere (reorder needed)
+    var renderList=list;
+    var html='';
+
+    if(!isSend){
+      var hasAlt=list.filter(function(x){
+        for(var b=0;b<3;b++){if(b===urgFrom&&b===urgTo)continue;if(b===urgTo)continue;var p=x.item.branches[b];if(p&&p.qty>0)return true;}
+        return false;
+      });
+      var noAlt=list.filter(function(x){
+        for(var b=0;b<3;b++){if(b===urgTo)continue;var p=x.item.branches[b];if(p&&p.qty>0)return false;}
+        return true;
+      });
+      // Render "check other branch" section first
+      if(hasAlt.length){
+        html+=renderDeptGroup(hasAlt,'check','Check other branch — not at '+BRANCHES[urgFrom].name,'#0369a1','var(--blue-bg)');
+      }
+      if(noAlt.length){
+        html+=renderDeptGroup(noAlt,'reorder','Need reorder — no stock anywhere','var(--amber)','var(--amber-bg)');
+      }
+      return html;
+    }
+
+    // canSend — normal render
+    html+=renderDeptGroup(list,'send','Transfer now — '+BRANCHES[urgFrom].name+' has stock','var(--green)','var(--green-bg)');
+    return html;
+  }
+
+  function renderDeptGroup(list,prefix,secLabel,secColor,secBg){
+    if(!list.length)return'';
     var byDept=groupByDept(list);
     var html='';
-    var secLabel=isSend?'Transfer now — '+BRANCHES[urgFrom].name+' has stock':'Need reorder — no stock at '+BRANCHES[urgFrom].name;
-    var secCls=isSend?'green':'amber';
-    html+='<div class="sec '+secCls+'"><span style="color:'+(isSend?'var(--green)':'var(--amber)')+'">'+secLabel+'</span><span class="badge">'+list.length+'</span></div>';
+    html+='<div class="sec" style="background:'+secBg+'"><span style="color:'+secColor+'">'+secLabel+'</span><span class="badge">'+list.length+'</span></div>';
     Object.keys(byDept).sort().forEach(function(dept){
       var items=byDept[dept];
       var doneCnt=items.filter(function(x){return isTicked(x.item.bc);}).length;
-      var did='dg_'+(isSend?'s':'n')+'_'+dept.replace(/\W/g,'_');
+      var did='dg_'+prefix+'_'+dept.replace(/\W/g,'_');
       html+='<div class="dept-hdr" data-toggle="'+did+'">';
       html+='<div class="dept-hdr-left">';
       html+='<div class="dept-hdr-name">'+dept+'</div>';
@@ -639,7 +670,7 @@ function render(){
       html+='<span class="dept-arrow open" id="darr_'+did+'">›</span>';
       html+='</div></div>';
       html+='<div class="dept-body open" id="'+did+'">';
-      items.forEach(function(x){html+=mkCard(x,isSend);});
+      items.forEach(function(x){html+=mkCard(x,prefix==='send');});
       html+='</div>';
     });
     return html;
@@ -664,25 +695,24 @@ function render(){
 
 // ── ALT SOURCE TAG — shows other branch stock when chosen source has none ──────
 function altSrcTag(item){
-  // Look at all branches except urgFrom and urgTo — find any with stock
+  // Check all branches (except the destination) for available stock
   var alts=[];
   for(var b=0;b<3;b++){
-    if(b===urgFrom||b===urgTo)continue;
+    if(b===urgTo)continue;
     var p=item.branches[b];
-    if(p&&p.qty>0)alts.push({b:b,qty:p.qty});
+    if(p&&p.qty>0)alts.push({b:b,qty:p.qty,name:BRANCHES[b].name});
   }
-  // Also check if urgFrom has ANY stock at all (negative or zero)
-  var srcP=item.branches[urgFrom];
-  var srcQty=srcP?srcP.qty:null;
   if(alts.length>0){
-    // There's stock at another branch — highlight it green
-    var altStr=alts.map(function(a){return BRANCHES[a.b].name+': '+a.qty;}).join(', ');
-    return '<span class="ctag ok" style="background:#e0f2fe;color:#0369a1">Try: '+altStr+'</span>';
-  }else if(srcQty!==null&&srcQty<=0){
-    return '<span class="ctag na">'+BRANCHES[urgFrom].short+': '+srcQty+' (out)</span>';
-  }else{
-    return '<span class="ctag na">No stock anywhere</span>';
+    // Show the best alt (most stock first)
+    alts.sort(function(a,b2){return b2.qty-a.qty;});
+    var best=alts[0];
+    var label=best.b===urgFrom
+      ? BRANCHES[urgFrom].short+': '+best.qty
+      : '→ Try '+best.name+' ('+best.qty+')';
+    var style=best.b!==urgFrom?'background:#e0f2fe;color:#0369a1':'';
+    return '<span class="ctag ok"'+(style?' style="'+style+'"':'')+'>'+label+'</span>';
   }
+  return '<span class="ctag na">No stock anywhere</span>';
 }
 
 // ── LONG OUT OF STOCK — items OOS 30+ days at dest ───────────────────────────
