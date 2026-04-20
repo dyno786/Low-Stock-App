@@ -26,11 +26,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .pill-red{background:rgba(192,57,43,.35);color:#fca5a5}
 .pill-green{background:rgba(21,128,61,.3);color:#86efac}
 .pill-time{background:rgba(255,255,255,.07);color:#888;font-family:var(--mono)}
-.branch-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;position:sticky;top:80px;z-index:99}
+/* SESSION COUNTER BAR */
+.session-bar{background:#1a1a1a;border-bottom:1px solid #2a2a2a;padding:8px 14px;display:flex;align-items:center;gap:0;overflow-x:auto;scrollbar-width:none}
+.session-bar::-webkit-scrollbar{display:none}
+.sstat{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:0 12px;border-right:1px solid #2a2a2a}
+.sstat:last-child{border-right:none}
+.sstat-val{font-size:18px;font-weight:700;font-family:var(--mono);color:#fff}
+.sstat-lbl{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+.sstat-val.red{color:#f87171}
+.sstat-val.green{color:#4ade80}
+.sstat-val.amber{color:#fbbf24}
+.branch-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;position:sticky;top:106px;z-index:99}
 .branch-bar::-webkit-scrollbar{display:none}
 .branch-tab{padding:12px 18px;font-size:13px;font-weight:500;color:var(--ink3);border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
 .branch-tab.active{color:var(--ink);border-bottom-color:var(--ink)}
-.view-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:124px;z-index:98}
+.view-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:150px;z-index:98}
 .view-tab{flex:1;padding:11px 4px;text-align:center;font-size:12px;font-weight:500;color:var(--ink3);border-bottom:2px solid transparent;cursor:pointer;transition:all .15s}
 .view-tab.active{color:var(--ink);border-bottom-color:var(--ink)}
 .toolbar{padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:8px}
@@ -44,7 +54,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .wa-bar input::placeholder{color:var(--ink3);font-family:var(--font);font-size:11px}
 .wa-bar button{background:var(--ink);color:#fff;border:none;border-radius:var(--r);padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer}
 .wa-lbl{font-size:11px;color:var(--ink3);white-space:nowrap}
-.sec-head{padding:12px 14px 5px;font-size:10px;font-weight:600;letter-spacing:.9px;text-transform:uppercase;color:var(--ink3);background:var(--bg);display:flex;justify-content:space-between}
 .group-row{display:flex;align-items:center;background:var(--surface);padding:13px 14px;border-bottom:1px solid var(--border);gap:11px;cursor:pointer;transition:background .1s}
 .group-row:active{background:var(--s2)}
 .g-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -75,7 +84,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .product-card.ticked .p-name{text-decoration:line-through;color:var(--ink3)}
 .done-bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);display:none}
 .product-card.ticked .done-bar{display:block}
-.back-bar{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--surface);border-bottom:1px solid var(--border);cursor:pointer;position:sticky;top:162px;z-index:50}
+.back-bar{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--surface);border-bottom:1px solid var(--border);cursor:pointer;position:sticky;top:188px;z-index:50}
 .back-bar:active{background:var(--s2)}
 .loading{padding:60px 20px;text-align:center;color:var(--ink3)}
 .spin-ring{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--ink);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
@@ -128,6 +137,44 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .scan-manual{padding:0 14px 28px;display:flex;gap:8px}
 .scan-manual input{flex:1;background:#1a1a1a;border:1px solid #333;border-radius:var(--r);padding:10px 12px;font-size:14px;color:#fff;font-family:var(--font);outline:none}
 .scan-manual button{background:var(--wa);color:#fff;border:none;border-radius:var(--r);padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+/* HISTORY LOG STYLES */
+.hday{background:var(--s2);border-radius:var(--r);margin-bottom:12px;overflow:hidden;border:1px solid var(--border)}
+.hday-hdr{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.hday-hdr:active{background:var(--border)}
+.hday-date{font-size:13px;font-weight:600}
+.hday-meta{font-size:11px;color:var(--ink3);margin-top:2px}
+.hday-badges{display:flex;gap:6px;align-items:center}
+.hbadge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+.hbadge-g{background:var(--green-bg);color:var(--green)}
+.hbadge-r{background:var(--red-bg);color:var(--red)}
+.hday-arrow{color:var(--ink3);font-size:14px;transition:transform .2s}
+.hday-arrow.open{transform:rotate(90deg)}
+.hday-body{display:none;border-top:1px solid var(--border)}
+.hday-body.open{display:block}
+.hsession{padding:10px 14px;border-bottom:1px solid var(--border)}
+.hsession:last-child{border-bottom:none}
+.hsession-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.hsession-branch{font-size:11px;font-weight:600;color:var(--purple)}
+.hsession-time{font-size:10px;color:var(--ink3);font-family:var(--mono)}
+.hsession-stats{display:flex;gap:8px}
+.hstat{font-size:10px;color:var(--ink3)}
+.hstat span{font-weight:600;color:var(--ink)}
+.hitems{margin-top:6px}
+.hitem{font-size:11px;color:var(--ink2);padding:3px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
+.hitem:last-child{border-bottom:none}
+.hitem-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hitem-qty{font-family:var(--mono);font-size:10px;color:var(--green);font-weight:600;flex-shrink:0}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
+.progress-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s}
+.today-banner{background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:var(--r);margin:12px 12px 0;padding:14px;color:#fff}
+.today-title{font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.today-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tstat{background:rgba(255,255,255,.06);border-radius:8px;padding:10px;text-align:center}
+.tstat-val{font-size:20px;font-weight:700;font-family:var(--mono);color:#fff}
+.tstat-val.red{color:#f87171}
+.tstat-val.green{color:#4ade80}
+.tstat-val.amber{color:#fbbf24}
+.tstat-lbl{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
 </style>
 </head>
 <body>
@@ -148,6 +195,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Refresh
       </button>
+      <button class="tb-btn" onclick="showHistoryLog()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        History
+      </button>
       <button class="tb-btn" onclick="showSyncLog()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Log
@@ -158,8 +209,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
     <div class="pill pill-red" id="pill-left">—</div>
     <div class="pill pill-green" id="pill-done">0 done ✓</div>
     <div class="pill pill-time" id="pill-time">loading…</div>
-    <div class="pill pill-time" id="pill-imgs" style="display:none"></div>
   </div>
+</div>
+
+<!-- LIVE SESSION COUNTER -->
+<div class="session-bar" id="session-bar">
+  <div class="sstat"><div class="sstat-val red" id="ss-total">—</div><div class="sstat-lbl">Total issues</div></div>
+  <div class="sstat"><div class="sstat-val green" id="ss-done">0</div><div class="sstat-lbl">Checked ✓</div></div>
+  <div class="sstat"><div class="sstat-val amber" id="ss-left">—</div><div class="sstat-lbl">Remaining</div></div>
+  <div class="sstat"><div class="sstat-val" id="ss-pct" style="color:#fff">0%</div><div class="sstat-lbl">Progress</div></div>
+  <div class="sstat"><div class="sstat-val" id="ss-restock" style="color:#60a5fa">0</div><div class="sstat-lbl">Restocked</div></div>
 </div>
 
 <div class="branch-bar" id="branch-bar"></div>
@@ -232,6 +291,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </div>
 </div>
 
+<!-- HISTORY LOG PANEL -->
+<div class="panel-ov" id="hist-ov" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="panel" style="padding-bottom:20px">
+    <div class="p-handle"></div>
+    <div style="padding:16px 14px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:16px;font-weight:600">Activity History</div>
+        <button onclick="clearHistory()" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;font-family:var(--font)">Clear all</button>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:14px">Daily log of what each branch checked and restocked</div>
+    </div>
+    <div id="hist-content" style="padding:0 12px 20px"></div>
+  </div>
+</div>
+
 <!-- Sync log panel -->
 <div class="panel-ov" id="log-ov" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="panel" style="padding-bottom:20px">
@@ -262,46 +336,183 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────────────────────
-// Image lookup sheet — all Shopify product images by barcode
 const IMAGE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
 
-// ── BRANCHES ───────────────────────────────────────────────────────────────────
-// To add a new branch:
-// 1. Run the stock_export bat file on that branch PC
-// 2. Set up the Google Sheet + Apps Script import for that branch
-// 3. Publish the Sheet as CSV
-// 4. Add the branch here with the published CSV URL
 const BRANCHES = [
-  {
-    id:   'roundhay',
-    name: 'Roundhay Road',
-    // ✅ LIVE — updated every 30 mins via Apps Script from SQL export
-    url:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'
-  },
-  {
-    id:   'chapeltown',
-    name: 'Chapeltown Road',
-    // ✅ LIVE — updated every 30 mins via Apps Script
-    url:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'
-  },
-  {
-    id:   'citycenter',
-    name: 'City Center',
-    // ✅ LIVE — updated every 30 mins via Apps Script
-    url:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'
-  },
+  {id:'roundhay',   name:'Roundhay Road',   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
+  {id:'chapeltown', name:'Chapeltown Road',  url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
+  {id:'citycenter',  name:'City Center',     url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
 ];
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
-let imageMap      = {};
-let branchData    = {};
-let currentBranch = BRANCHES[0].id;
-let currentView   = 'brand';
-let currentProduct = null;
+let imageMap = {}, branchData = {};
+let currentBranch = BRANCHES[0].id, currentView = 'brand', currentProduct = null;
 let waNumber  = localStorage.getItem('cc_wa') || '';
 let ticks     = JSON.parse(localStorage.getItem('cc_ticks')   || '{}');
 let restocks  = JSON.parse(localStorage.getItem('cc_restock') || '{}');
 let scanStream = null, scanInterval = null;
+
+// Session tracking — starts fresh each time the page loads
+let sessionId = Date.now().toString();
+let sessionStart = new Date();
+
+// ── HISTORY LOG SYSTEM ─────────────────────────────────────────────────────────
+// History stored as: { "YYYY-MM-DD": [ {sessionId, branch, time, totalFound, checked, restockedCount, items:[{name,variant,qty}]} ] }
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('cc_history') || '{}'); } catch(e) { return {}; }
+}
+function saveHistory(h) {
+  try { localStorage.setItem('cc_history', JSON.stringify(h)); } catch(e) {}
+}
+
+function todayKey() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function recordSessionSnapshot() {
+  var data = branchData[currentBranch];
+  if (!Array.isArray(data) || data.length === 0) return;
+  var checked   = data.filter(function(p) { return p.ticked; });
+  var restocked = checked.filter(function(p) { return p.restock != null && p.restock > 0; });
+  var hist = getHistory();
+  var key  = todayKey();
+  if (!hist[key]) hist[key] = [];
+  // Find existing session entry for this branch, update it
+  var idx = hist[key].findIndex(function(s) { return s.sessionId === sessionId && s.branch === currentBranch; });
+  var entry = {
+    sessionId: sessionId,
+    branch: currentBranch,
+    branchName: BRANCHES.find(function(b){return b.id===currentBranch;}).name,
+    sessionStart: sessionStart.toISOString(),
+    lastUpdated: new Date().toISOString(),
+    totalFound: data.length,
+    checked: checked.length,
+    restockedCount: restocked.length,
+    items: checked.map(function(p) {
+      return {name: p.title, variant: p.variant||'', qty: p.restock||0, sku: p.sku||''};
+    })
+  };
+  if (idx >= 0) hist[key][idx] = entry;
+  else hist[key].push(entry);
+  saveHistory(hist);
+}
+
+function showHistoryLog() {
+  var hist = getHistory();
+  var days = Object.keys(hist).sort().reverse(); // newest first
+  var html = '';
+
+  if (!days.length) {
+    html = '<div class="empty" style="padding:30px 0">No history yet.<br><span style="font-size:12px">Start checking items and they\'ll appear here.</span></div>';
+    document.getElementById('hist-content').innerHTML = html;
+    document.getElementById('hist-ov').classList.add('open');
+    return;
+  }
+
+  days.forEach(function(day) {
+    var sessions = hist[day];
+    var totalChecked = sessions.reduce(function(s,x){return s+x.checked;},0);
+    var totalFound   = sessions.reduce(function(s,x){return s+x.totalFound;},0);
+    var totalRestock = sessions.reduce(function(s,x){return s+x.restockedCount;},0);
+    var date = new Date(day + 'T12:00:00');
+    var dateStr = date.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+    var isToday = day === todayKey();
+    var did = 'hd_' + day;
+
+    html += '<div class="hday">';
+    html += '<div class="hday-hdr" onclick="toggleHistDay(\''+did+'\')">';
+    html += '<div>';
+    html += '<div class="hday-date">'+(isToday?'📅 Today — ':'')+dateStr+'</div>';
+    html += '<div class="hday-meta">'+sessions.length+' session'+(sessions.length>1?'s':'')+' · '+totalFound+' total issues found</div>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:6px">';
+    html += '<span class="hbadge hbadge-g">✓ '+totalChecked+'</span>';
+    if(totalRestock>0) html += '<span class="hbadge" style="background:var(--purple-bg);color:var(--purple)">+'+totalRestock+' restocked</span>';
+    html += '<span class="hday-arrow" id="arr_'+did+'"'+(isToday?' style="transform:rotate(90deg)"':'')+'>›</span>';
+    html += '</div></div>';
+
+    html += '<div class="hday-body'+(isToday?' open':'')+'" id="'+did+'">';
+
+    sessions.forEach(function(sess) {
+      var t = new Date(sess.sessionStart);
+      var timeStr = t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      var lu = new Date(sess.lastUpdated);
+      var luStr = lu.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      var pct = sess.totalFound > 0 ? Math.round(sess.checked/sess.totalFound*100) : 0;
+
+      html += '<div class="hsession">';
+      html += '<div class="hsession-hdr">';
+      html += '<div class="hsession-branch">'+sess.branchName+'</div>';
+      html += '<div class="hsession-time">Started '+timeStr+' · Last update '+luStr+'</div>';
+      html += '</div>';
+      html += '<div class="hsession-stats">';
+      html += '<div class="hstat">Found: <span>'+sess.totalFound+'</span></div>';
+      html += '<div class="hstat">Checked: <span style="color:var(--green)">'+sess.checked+'</span></div>';
+      html += '<div class="hstat">Restocked: <span style="color:#6d28d9">'+sess.restockedCount+'</span></div>';
+      html += '<div class="hstat">Progress: <span>'+pct+'%</span></div>';
+      html += '</div>';
+      html += '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+
+      if (sess.items && sess.items.length > 0) {
+        html += '<div class="hitems" style="margin-top:8px">';
+        sess.items.forEach(function(item) {
+          html += '<div class="hitem">';
+          html += '<span class="hitem-name">'+item.name+(item.variant?' · <span style="color:var(--ink3)">'+item.variant+'</span>':'')+'</span>';
+          html += (item.qty > 0 ? '<span class="hitem-qty">+'+item.qty+' restocked</span>' : '<span style="font-size:10px;color:var(--green)">✓ checked</span>');
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>'; // hsession
+    });
+
+    html += '</div></div>'; // hday-body, hday
+  });
+
+  document.getElementById('hist-content').innerHTML = html;
+  document.getElementById('hist-ov').classList.add('open');
+}
+
+function toggleHistDay(id) {
+  var el = document.getElementById(id);
+  var arr = document.getElementById('arr_' + id);
+  if (!el) return;
+  var open = el.classList.toggle('open');
+  if (arr) arr.style.transform = open ? 'rotate(90deg)' : '';
+}
+
+function clearHistory() {
+  if (!confirm('Clear all history? This cannot be undone.')) return;
+  localStorage.removeItem('cc_history');
+  document.getElementById('hist-content').innerHTML = '<div class="empty" style="padding:30px 0">History cleared.</div>';
+}
+
+// ── SESSION COUNTER ────────────────────────────────────────────────────────────
+function updateSessionCounter() {
+  var data = branchData[currentBranch];
+  if (!Array.isArray(data)) {
+    document.getElementById('ss-total').textContent = '—';
+    document.getElementById('ss-left').textContent  = '—';
+    document.getElementById('ss-done').textContent  = '0';
+    document.getElementById('ss-pct').textContent   = '0%';
+    document.getElementById('ss-restock').textContent = '0';
+    return;
+  }
+  var total    = data.length;
+  var done     = data.filter(function(p){return p.ticked;}).length;
+  var left     = total - done;
+  var restock  = data.filter(function(p){return p.restock!=null&&p.restock>0;}).length;
+  var pct      = total > 0 ? Math.round(done/total*100) : 0;
+
+  document.getElementById('ss-total').textContent   = total;
+  document.getElementById('ss-done').textContent    = done;
+  document.getElementById('ss-left').textContent    = left;
+  document.getElementById('ss-pct').textContent     = pct + '%';
+  document.getElementById('ss-restock').textContent = restock;
+
+  // Update history snapshot whenever counter changes
+  recordSessionSnapshot();
+}
 
 // ── INIT ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
@@ -310,7 +521,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (waNumber) document.getElementById('wa-num').value = waNumber;
   buildBranchTabs();
   loadImages().then(function() { fetchBranch(currentBranch); });
-  // Auto refresh every 30 mins (matches scheduler)
   setInterval(function() { delete branchData[currentBranch]; fetchBranch(currentBranch); }, 30 * 60 * 1000);
 });
 
@@ -325,7 +535,6 @@ async function loadImages() {
       var img = String(row['ImageURL'] || '').trim();
       if (bc && img && img.startsWith('http')) imageMap[bc] = img;
     });
-    console.log('Images loaded: ' + Object.keys(imageMap).length);
   } catch(e) { console.log('Image load failed:', e.message); }
 }
 
@@ -342,7 +551,7 @@ function switchBranch(id) {
   buildBranchTabs();
   document.getElementById('search-input').value = '';
   if (!branchData[id]) fetchBranch(id);
-  else renderAll();
+  else { renderAll(); updateSessionCounter(); }
 }
 
 // ── DATA FETCH ─────────────────────────────────────────────────────────────────
@@ -370,7 +579,7 @@ async function fetchBranch(id) {
     branchData[id] = {error: e.message};
     saveLog(id, {count: 0, status: 'error', msg: e.message});
   }
-  if (id === currentBranch) renderAll();
+  if (id === currentBranch) { renderAll(); updateSessionCounter(); }
 }
 
 async function refreshBranch() {
@@ -402,7 +611,6 @@ function parseProducts(rows, branchId) {
     var img = (barcode && imageMap[barcode]) ? imageMap[barcode] : null;
     return {id:id, vendor:dept, title:name, variant:size, sku:barcode, stock:stock, img:img, category:dept||'General'};
   });
-  // Sort: images first, then alphabetical
   products.sort(function(a, b) {
     if (a.img && !b.img) return -1;
     if (!a.img && b.img) return 1;
@@ -412,7 +620,6 @@ function parseProducts(rows, branchId) {
 }
 
 function cl(v) { return String(v || '').trim(); }
-
 function fv(row, keys) {
   var rk = Object.keys(row);
   for (var i = 0; i < keys.length; i++) {
@@ -441,20 +648,12 @@ function updateSummary() {
   var data     = branchData[currentBranch];
   var products = Array.isArray(data) ? data : [];
   var done     = products.filter(function(p) { return p.ticked; }).length;
-  var withImg  = products.filter(function(p) { return p.img; }).length;
   document.getElementById('pill-left').textContent = (products.length - done) + ' to check';
   document.getElementById('pill-done').textContent = done + ' done ✓';
   var allDone = Object.values(branchData)
     .flatMap(function(d) { return Array.isArray(d) ? d : []; })
     .filter(function(p) { return p.ticked; }).length;
   document.getElementById('wa-cnt').textContent = allDone;
-  var imgPill = document.getElementById('pill-imgs');
-  if (products.length > 0) {
-    imgPill.style.display = '';
-    imgPill.textContent = withImg + '/' + products.length + ' images (' + Math.round(withImg/products.length*100) + '%)';
-  } else {
-    imgPill.style.display = 'none';
-  }
 }
 
 function switchView(v) {
@@ -470,7 +669,6 @@ function renderList() {
   var data = branchData[currentBranch];
 
   if (!data || data === 'loading') { showLoading(); return; }
-
   if (data.error) {
     el.innerHTML = '<div class="error-box"><p>⚠️ Could not load data.</p><code>' + data.error + '</code></div>';
     return;
@@ -498,18 +696,14 @@ function renderList() {
   var html = '';
   sorted.forEach(function(entry) {
     var name = entry[0], ps = entry[1];
-    var min     = Math.min.apply(null, ps.map(function(p){return p.stock;}));
-    var total   = ps.reduce(function(s,p){return s+p.stock;},0);
-    var done    = ps.filter(function(p){return p.ticked;}).length;
-    var withImg = ps.filter(function(p){return p.img;}).length;
-    var imgPct  = Math.round(withImg/ps.length*100);
-    var dot  = min <= -5 ? '#c0392b' : min <= -2 ? '#d97706' : '#9ca3af';
-    var bc   = min <= -4 ? 'b-red' : 'b-amber';
-    var imgStr = imgPct === 100 ? '' :
-      ' · <span style="color:' + (imgPct === 0 ? 'var(--red)' : 'var(--amber)') + '">' + imgPct + '% online</span>';
-    var sub = done > 0
-      ? done + '/' + ps.length + ' <span style="color:var(--green);font-weight:600">done ✓</span>' + imgStr
-      : ps.length + ' item' + (ps.length > 1 ? 's' : '') + imgStr;
+    var min   = Math.min.apply(null, ps.map(function(p){return p.stock;}));
+    var total = ps.reduce(function(s,p){return s+p.stock;},0);
+    var done  = ps.filter(function(p){return p.ticked;}).length;
+    var dot   = min <= -5 ? '#c0392b' : min <= -2 ? '#d97706' : '#9ca3af';
+    var bc    = min <= -4 ? 'b-red' : 'b-amber';
+    var sub   = done > 0
+      ? done + '/' + ps.length + ' <span style="color:var(--green);font-weight:600">done ✓</span>'
+      : ps.length + ' item' + (ps.length > 1 ? 's' : '');
     var esc = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     html += '<div class="group-row" onclick="showGroup(\'' + esc + '\')">' +
       '<div class="g-dot" style="background:' + dot + '"></div>' +
@@ -566,6 +760,7 @@ function quickTick(e, id) {
   ticks[id] = p.ticked;
   localStorage.setItem('cc_ticks', JSON.stringify(ticks));
   updateSummary();
+  updateSessionCounter();
   var card = document.getElementById('c_' + id.replace(/[^a-zA-Z0-9]/g,'_'));
   if (card) {
     card.className = 'product-card ' + (p.ticked ? 'ticked' : '');
@@ -626,6 +821,7 @@ function saveCount() {
   db.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Marked done';
   document.getElementById('pd-saved').style.display = 'block';
   updateSummary();
+  updateSessionCounter();
   setTimeout(function() { closePanel(); renderList(); }, 900);
 }
 
@@ -638,6 +834,7 @@ function toggleTick() {
   db.className = 'pd-done ' + (currentProduct.ticked ? 'active' : '');
   db.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ' + (currentProduct.ticked ? 'Marked done' : 'Mark done');
   updateSummary();
+  updateSessionCounter();
 }
 
 // ── WHATSAPP ───────────────────────────────────────────────────────────────────
