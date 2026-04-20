@@ -138,6 +138,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .scan-manual input{flex:1;background:#1a1a1a;border:1px solid #333;border-radius:var(--r);padding:10px 12px;font-size:14px;color:#fff;font-family:var(--font);outline:none}
 .scan-manual button{background:var(--wa);color:#fff;border:none;border-radius:var(--r);padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
 /* HISTORY LOG STYLES */
+/* STOCK WATCH — auto count log */
+.sw-day{border-radius:var(--r);margin-bottom:10px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+.sw-day-hdr{padding:11px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--s2)}
+.sw-day-hdr:active{background:var(--border)}
+.sw-day-title{font-size:13px;font-weight:600}
+.sw-day-sub{font-size:10px;color:var(--ink3);margin-top:1px}
+.sw-day-body{display:none}
+.sw-day-body.open{display:block}
+.sw-branch-block{border-top:1px solid var(--border);padding:10px 14px}
+.sw-branch-name{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.sw-entry{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dotted var(--border)}
+.sw-entry:last-child{border-bottom:none}
+.sw-time{font-size:10px;font-family:var(--mono);color:var(--ink3);width:44px;flex-shrink:0}
+.sw-count{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--red);width:28px;flex-shrink:0;text-align:right}
+.sw-delta{font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;flex-shrink:0;min-width:36px;text-align:center}
+.sw-delta.better{background:var(--green-bg);color:var(--green)}
+.sw-delta.worse{background:var(--red-bg);color:var(--red)}
+.sw-delta.same{background:var(--s2);color:var(--ink3)}
+.sw-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.sw-bar-fill{height:100%;border-radius:3px;background:var(--red);transition:width .4s}
+
 .hday{background:var(--s2);border-radius:var(--r);margin-bottom:12px;overflow:hidden;border:1px solid var(--border)}
 .hday-hdr{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
 .hday-hdr:active{background:var(--border)}
@@ -194,6 +215,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
       <button class="tb-btn" id="refresh-btn" onclick="refreshBranch()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Refresh
+      </button>
+      <button class="tb-btn" onclick="showStockWatch()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Count
       </button>
       <button class="tb-btn" onclick="showHistoryLog()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -288,6 +313,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
       </div>
       <div class="pd-saved" id="pd-saved">✓ Saved — included in WhatsApp report</div>
     </div>
+  </div>
+</div>
+
+<!-- STOCK COUNT WATCH PANEL -->
+<div class="panel-ov" id="sw-ov" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="panel" style="padding-bottom:20px">
+    <div class="p-handle"></div>
+    <div style="padding:16px 14px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:16px;font-weight:600">Stock Count Watch</div>
+        <button onclick="clearStockWatch()" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;font-family:var(--font)">Clear</button>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:14px">Automatic count of negative stock items recorded every load — no ticking required</div>
+    </div>
+    <div id="sw-content" style="padding:0 12px 20px"></div>
   </div>
 </div>
 
@@ -514,6 +554,138 @@ function updateSessionCounter() {
   recordSessionSnapshot();
 }
 
+
+// ── STOCK WATCH — automatic count log (no ticking needed) ─────────────────────
+// Records negative stock count every time data loads for any branch
+// Stored as: { "YYYY-MM-DD": { "branchId": [{time, count, firstOfDay}] } }
+function getStockWatch() {
+  try { return JSON.parse(localStorage.getItem('cc_stockwatch') || '{}'); } catch(e) { return {}; }
+}
+function saveStockWatch(sw) {
+  try { localStorage.setItem('cc_stockwatch', JSON.stringify(sw)); } catch(e) {}
+}
+
+function logStockCount(branchId, count) {
+  var sw  = getStockWatch();
+  var day = todayKey();
+  if (!sw[day]) sw[day] = {};
+  if (!sw[day][branchId]) sw[day][branchId] = [];
+  var entries = sw[day][branchId];
+  // Don't log duplicate counts within 5 minutes
+  var now = Date.now();
+  if (entries.length > 0) {
+    var last = entries[entries.length - 1];
+    if ((now - last.ts) < 5 * 60 * 1000 && last.count === count) return;
+  }
+  entries.push({
+    ts: now,
+    time: new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}),
+    count: count,
+    firstOfDay: entries.length === 0
+  });
+  // Keep max 48 entries per branch per day (every 30 mins for 24hrs)
+  if (entries.length > 48) entries.splice(0, entries.length - 48);
+  saveStockWatch(sw);
+}
+
+function showStockWatch() {
+  var sw   = getStockWatch();
+  var days = Object.keys(sw).sort().reverse();
+  var html = '';
+
+  if (!days.length) {
+    html = '<div class="empty" style="padding:30px 0">No data yet.<br><span style="font-size:12px">Stock counts are recorded automatically every time data loads.</span></div>';
+    document.getElementById('sw-content').innerHTML = html;
+    document.getElementById('sw-ov').classList.add('open');
+    return;
+  }
+
+  days.forEach(function(day) {
+    var branches = sw[day];
+    var date = new Date(day + 'T12:00:00');
+    var dateStr = date.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'short'});
+    var isToday = day === todayKey();
+    var did = 'swd_' + day;
+
+    // Summary for the day header
+    var summary = [];
+    BRANCHES.forEach(function(b) {
+      if (!branches[b.id] || !branches[b.id].length) return;
+      var entries = branches[b.id];
+      var first = entries[0].count;
+      var last  = entries[entries.length-1].count;
+      var diff  = first - last; // positive = improved
+      summary.push(b.name.split(' ')[0] + ': ' + last + (diff>0?' (↓'+diff+' fixed)':diff<0?' (↑'+Math.abs(diff)+' new)':''));
+    });
+
+    html += '<div class="sw-day">';
+    html += '<div class="sw-day-hdr" data-did="'+did+'">';
+    html += '<div><div class="sw-day-title">'+(isToday?'📊 Today — ':'')+dateStr+'</div>';
+    html += '<div class="sw-day-sub">'+summary.join(' · ')+'</div></div>';
+    html += '<span id="sarr_'+did+'" style="color:var(--ink3);font-size:14px;transition:transform .2s'+(isToday?';transform:rotate(90deg)':'')+'">'+'›</span>';
+    html += '</div>';
+    html += '<div class="sw-day-body'+(isToday?' open':'')+'" id="'+did+'">';
+
+    BRANCHES.forEach(function(b) {
+      var entries = branches[b.id];
+      if (!entries || !entries.length) return;
+      var maxCount = Math.max.apply(null, entries.map(function(e){return e.count;}));
+      html += '<div class="sw-branch-block">';
+      html += '<div class="sw-branch-name">'+b.name+'</div>';
+
+      entries.forEach(function(e, i) {
+        var prev  = i > 0 ? entries[i-1].count : e.count;
+        var diff  = prev - e.count; // positive = items fixed
+        var deltaClass = diff > 0 ? 'better' : diff < 0 ? 'worse' : 'same';
+        var deltaStr   = diff > 0 ? '↓'+diff+' fixed' : diff < 0 ? '↑'+Math.abs(diff)+' new' : '—';
+        var barPct = maxCount > 0 ? Math.round((e.count / maxCount) * 100) : 0;
+        var barColor = diff < 0 ? '#c0392b' : diff > 0 ? '#15803d' : '#e87000';
+
+        html += '<div class="sw-entry">';
+        html += '<span class="sw-time">'+e.time+'</span>';
+        html += '<span class="sw-count">'+e.count+'</span>';
+        html += '<span class="sw-delta '+deltaClass+'">'+(i===0?'start':deltaStr)+'</span>';
+        html += '<div class="sw-bar"><div class="sw-bar-fill" style="width:'+barPct+'%;background:'+barColor+'"></div></div>';
+        html += '</div>';
+      });
+
+      // Summary row
+      var first = entries[0].count;
+      var last  = entries[entries.length-1].count;
+      var net   = first - last;
+      html += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px">';
+      html += '<span style="color:var(--ink3)">Started at '+first+' items</span>';
+      html += '<span style="font-weight:600;color:'+(net>0?'var(--green)':net<0?'var(--red)':'var(--ink3)')+'">'+
+              (net>0?net+' fixed ✓':net<0?Math.abs(net)+' new issues':'No change')+'</span>';
+      html += '</div>';
+      html += '</div>'; // sw-branch-block
+    });
+
+    html += '</div></div>'; // sw-day-body, sw-day
+  });
+
+  document.getElementById('sw-content').innerHTML = html;
+  // Wire up day header clicks via delegation
+  document.getElementById('sw-content').querySelectorAll('.sw-day-hdr').forEach(function(hdr){
+    hdr.addEventListener('click', function(){toggleSwDay(this.dataset.did);});
+  });
+  document.getElementById('sw-ov').classList.add('open');
+}
+
+function toggleSwDay(id) {
+  var el = document.getElementById(id);
+  var arr = document.getElementById('sarr_' + id);
+  if (!el) return;
+  var open = el.classList.toggle('open');
+  if (arr) arr.style.transform = open ? 'rotate(90deg)' : '';
+}
+
+function clearStockWatch() {
+  if (!confirm('Clear all stock count history?')) return;
+  localStorage.removeItem('cc_stockwatch');
+  document.getElementById('sw-content').innerHTML = '<div class="empty" style="padding:30px 0">Cleared.</div>';
+}
+
 // ── INIT ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('top-date').textContent =
@@ -575,6 +747,7 @@ async function fetchBranch(id) {
     var now = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
     document.getElementById('pill-time').textContent = 'Live · ' + now;
     saveLog(id, {count: products.length, status: 'ok'});
+    logStockCount(id, products.length);
   } catch(e) {
     branchData[id] = {error: e.message};
     saveLog(id, {count: 0, status: 'error', msg: e.message});
