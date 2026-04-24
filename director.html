@@ -388,7 +388,10 @@ async function loadBranch(bidx){
   updateStime();
   var t0=Date.now();
   try{
-    var r=await fetch(BRANCHES[bidx].url+'&t='+Date.now());
+    var ctrl=new AbortController();
+    var timer=setTimeout(function(){ctrl.abort();},20000); // 20s timeout
+    var r=await fetch(BRANCHES[bidx].url+'&t='+Date.now(),{signal:ctrl.signal});
+    clearTimeout(timer);
     lg(BRANCHES[bidx].name+' HTTP '+r.status+' in '+(Date.now()-t0)+'ms',r.ok?'ok':'err');
     if(!r.ok)throw new Error('HTTP '+r.status+' '+r.statusText);
     var txt=await r.text();
@@ -412,8 +415,9 @@ async function loadBranch(bidx){
     lg(BRANCHES[bidx].name+' mapped '+bd[bidx].length+' products','ok');
   }catch(e){
     branchStatus[bidx].state='error';
-    branchStatus[bidx].err=e.message;
-    lg(BRANCHES[bidx].name+' FAILED: '+e.message,'err');
+    var errMsg=e.name==='AbortError'?'Timed out after 20s — check connection':e.message;
+    branchStatus[bidx].err=errMsg;
+    lg(BRANCHES[bidx].name+' FAILED: '+errMsg,'err');
     bd[bidx]=[];
   }
   loaded++;
@@ -484,7 +488,9 @@ function renderOverview(){
   var html=renderLoadStatus();
 
   if(totalProds===0&&loaded<3){
-    html+='<div class="loading"><div class="spin"></div>Loading branches…<br><span style="font-size:10px;color:#aaa;margin-top:6px;display:block">Tap 📋 LOG to see progress</span></div>';
+    html+='<div class="loading"><div class="spin"></div>Loading '+BRANCHES[loaded<1?0:loaded].name+'…<br>';
+    html+='<span style="font-size:10px;color:#aaa;margin-top:6px;display:block">'+loaded+'/3 branches loaded</span>';
+    html+='<br><span style="font-size:10px;color:#aaa">Tap 📋 LOG to see progress</span></div>';
     el.innerHTML=html;return;
   }
 
@@ -946,18 +952,17 @@ document.getElementById('bnav').addEventListener('click',function(e){
 // ── START ─────────────────────────────────────────────────────
 function startApp(){
   lg('App started','step');
-  lg('PapaParse available: '+(typeof Papa!=='undefined'),'info');
-  lg('Starting sequential branch load','step');
-  // Sequential: Roundhay → Chapy → City
-  loadBranch(0)
-    .then(function(){return loadBranch(1);})
-    .then(function(){
-      return loadBranch(2);
-    })
-    .then(function(){
-      lg('All 3 branches loaded — fetching images in background','step');
-      loadImgs().then(function(){render();});
-    });
+  lg('PapaParse: '+(typeof Papa!=='undefined'),'info');
+  // PARALLEL loading — all 3 at once, render after each arrives
+  // Much faster on mobile than sequential
+  lg('Starting parallel branch load','step');
+  var p0=loadBranch(0);
+  var p1=loadBranch(1);
+  var p2=loadBranch(2);
+  Promise.all([p0,p1,p2]).then(function(){
+    lg('All 3 loaded — loading images','step');
+    loadImgs().then(function(){render();});
+  });
 }
 
 // Auto-start if PIN session still valid
