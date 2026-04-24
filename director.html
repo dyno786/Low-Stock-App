@@ -795,7 +795,7 @@ function renderLostSales(){
       var destDaily=items.reduce(function(s,x){return s+x.dailyLoss;},0);
       var destLost=items.reduce(function(s,x){return s+x.lostSoFar;},0);
       var did='ls_'+dest;
-      html+='<div class="dept-hdr" onclick="toggleDept(''+did+'')">';
+      html+='<div class="dept-hdr" data-did="'+ did +'">';
       html+='<div class="dept-hdr-left"><div class="dept-hdr-name">Needed at '+BRANCHES[parseInt(dest)].name+'</div>';
       html+='<div class="dept-meta" style="color:#f87171">-£'+Math.round(destDaily)+'/day · £'+Math.round(destLost)+' lost</div></div>';
       html+='<span id="arr_'+did+'" style="color:#999">▾</span></div>';
@@ -848,6 +848,7 @@ function renderLostSales(){
 
   el.innerHTML=html;
   el.querySelectorAll('[data-bc]').forEach(function(card){card.addEventListener('click',function(){openPanel(this.dataset.bc);});});
+  el.querySelectorAll('[data-did]').forEach(function(hdr){hdr.addEventListener('click',function(){toggleDept(this.dataset.did);});});
 }
 
 // ── COMPARE ──────────────────────────────────────────────────
