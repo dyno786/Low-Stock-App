@@ -134,6 +134,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .load-name{font-weight:600;width:70px;flex-shrink:0}
 .load-info{color:#999;flex:1;font-size:10px;font-family:monospace}
+
+/* ── SHARED NAV BAR ── */
+.cc-nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#111;border-top:0.5px solid rgba(255,255,255,.12);display:flex;align-items:stretch;z-index:9000;padding:0 0 env(safe-area-inset-bottom)}
+.cc-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px 10px;cursor:pointer;text-decoration:none;color:rgba(255,255,255,.35);transition:color .15s;user-select:none;min-height:52px;position:relative}
+.cc-nav-item:active{color:#fff}
+.cc-nav-item.active{color:#cc0000}
+.cc-nav-item svg{width:20px;height:20px;flex-shrink:0}
+.cc-nav-item span{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.cc-nav-item .cc-nav-dot{position:absolute;top:6px;right:calc(50% - 14px);width:6px;height:6px;border-radius:50%;background:#cc0000;display:none}
+.cc-nav-item .cc-nav-dot.show{display:block}
+.cc-nav-home{background:#cc0000 !important;border-radius:10px;padding:6px 10px;margin:6px 4px}
+.cc-nav-home svg{width:18px;height:18px}
+.cc-nav-home span{font-size:8px;letter-spacing:.3px}
+.cc-nav-home.active,.cc-nav-home:active{opacity:.85}
+/* body padding for nav */
+body{padding-bottom:calc(60px + env(safe-area-inset-bottom)) !important}
+
 </style>
 </head>
 <body>
@@ -202,6 +219,7 @@ document.getElementById('pinpad').addEventListener('click',function(e){
   <div class="mnbtn" data-sec="transfer">Transfers</div>
   <div class="mnbtn" data-sec="fast">Fast sellers</div>
   <div class="mnbtn" data-sec="compare">Compare</div>
+  <div class="mnbtn" data-sec="lostsales">Lost Sales</div>
 </div>
 
 <div id="out"><div class="loading"><div class="spin"></div>Waiting to start…</div></div>
@@ -212,6 +230,7 @@ document.getElementById('pinpad').addEventListener('click',function(e){
   <div class="bni" data-sec="transfer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span>Transfer</span></div>
   <div class="bni" data-sec="fast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><span>Fast</span></div>
   <div class="bni" data-sec="compare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>Compare</span></div>
+  <div class="bni" data-sec="lostsales"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Lost £</span></div>
 </nav>
 
 <!-- PRODUCT PANEL -->
@@ -448,6 +467,7 @@ function render(){
   else if(section==='dead')renderDead();
   else if(section==='transfer')renderTransfer();
   else if(section==='fast')renderFast();
+  else if(section==='lostsales')renderLostSales();
   else renderCompare();
 }
 
@@ -702,6 +722,134 @@ function renderFast(){
   if(sf2)sf2.addEventListener('change',function(){tfrom=parseInt(this.value);renderFast();});
 }
 
+
+// ── LOST SALES & TRANSFER VALUE AT STAKE ────────────────────
+var lostDept='All',lostBranch=-1;
+function setLostDept(d){lostDept=d;renderLostSales();}
+function setLostBranch(b){lostBranch=b;renderLostSales();}
+
+function renderLostSales(){
+  var el=document.getElementById('out');
+  var map=buildMap();
+  var pendingTransfers=[],trulyOut=[];
+  var totalLostPerDay=0,totalStockAtStake=0;
+
+  Object.values(map).forEach(function(item){
+    if(lostDept!=='All'&&item.dp!==lostDept)return;
+    for(var dest=0;dest<3;dest++){
+      var dst=item.branches[dest];
+      if(!dst||dst.qty>0)return;
+      if(dst.ls==='Never')return;
+      var dstAge=dSince(dst.ls);
+      if(dstAge>60)return;
+      if(lostBranch>=0&&dest!==lostBranch)return;
+      var dailyRate=dstAge<=3?1.0:dstAge<=7?0.5:dstAge<=14?0.3:dstAge<=30?0.15:0.05;
+      var dailyLoss=item.prc>0?dailyRate*item.prc:0;
+      var lostSoFar=dailyLoss*dstAge;
+      var srcBranch=-1,srcQty=0;
+      for(var s=0;s<3;s++){
+        if(s===dest)continue;
+        var src=item.branches[s];
+        if(src&&src.qty>0&&src.qty>srcQty){srcQty=src.qty;srcBranch=s;}
+      }
+      var entry={item:item,dest:dest,dstAge:dstAge,srcBranch:srcBranch,srcQty:srcQty,
+                 dailyRate:dailyRate,dailyLoss:dailyLoss,lostSoFar:lostSoFar};
+      if(srcBranch>=0){pendingTransfers.push(entry);totalStockAtStake+=srcQty*(item.prc||0);}
+      else{trulyOut.push(entry);}
+      totalLostPerDay+=dailyLoss;
+    }
+  });
+
+  pendingTransfers.sort(function(a,b){return b.lostSoFar-a.lostSoFar;});
+  trulyOut.sort(function(a,b){return b.lostSoFar-a.lostSoFar;});
+  var totalLostAlready=pendingTransfers.concat(trulyOut).reduce(function(s,x){return s+x.lostSoFar;},0);
+
+  var html=pillRow(allDepts(),lostDept,'setLostDept');
+  html+='<div class="pill-row"><div class="apill'+(lostBranch===-1?' on':'')+'" onclick="setLostBranch(-1)">All branches</div>';
+  BRANCHES.forEach(function(b,i){html+='<div class="apill'+(lostBranch===i?' on':'')+'" onclick="setLostBranch('+i+')">'+b.name+'</div>';});
+  html+='</div>';
+
+  // Dark headline metrics
+  html+='<div style="background:#111;padding:12px;border-bottom:1px solid #222;margin-bottom:0">';
+  html+='<div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Revenue at risk — transfers not done</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+  html+='<div style="background:#1a0000;border:1px solid #3a0000;border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:700;font-family:monospace;color:#f87171">£'+Math.round(totalLostPerDay).toLocaleString()+'</div><div style="font-size:10px;color:#555;margin-top:2px">Lost every day (est.)</div></div>';
+  html+='<div style="background:#1a0500;border:1px solid #3a1000;border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:700;font-family:monospace;color:#fb923c">£'+Math.round(totalLostAlready).toLocaleString()+'</div><div style="font-size:10px;color:#555;margin-top:2px">Already lost (est.)</div></div>';
+  html+='<div style="background:#001a05;border:1px solid #003a10;border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:700;font-family:monospace;color:#4ade80">£'+Math.round(totalStockAtStake).toLocaleString()+'</div><div style="font-size:10px;color:#555;margin-top:2px">Stock ready to transfer</div></div>';
+  html+='<div style="background:#00101a;border:1px solid #003a5a;border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:700;font-family:monospace;color:#60a5fa">'+pendingTransfers.length+'</div><div style="font-size:10px;color:#555;margin-top:2px">Pending transfers</div></div>';
+  html+='</div>';
+  if(totalLostPerDay>0){
+    html+='<div style="margin-top:8px;padding:8px 10px;background:#1a0a00;border-radius:6px;border-left:3px solid #f97316;font-size:11px;color:#fdba74">';
+    html+='Every day without action costs <strong style="color:#fb923c">£'+Math.round(totalLostPerDay).toLocaleString()+'</strong> in missed sales.</div>';
+  }
+  html+='</div>';
+
+  if(loaded<3){html+='<div class="loading"><div class="spin"></div>Loading branches…</div>';el.innerHTML=html;return;}
+
+  // Pending transfers — grouped by destination
+  if(pendingTransfers.length){
+    html+='<div class="sec" style="background:#001208"><span style="color:#4ade80">Move now — stock exists ('+pendingTransfers.length+')</span><span class="badge" style="background:#002a10;color:#4ade80">£'+Math.round(pendingTransfers.reduce(function(s,x){return s+x.lostSoFar;},0)).toLocaleString()+' lost so far</span></div>';
+    var byDest={};pendingTransfers.forEach(function(x){if(!byDest[x.dest])byDest[x.dest]=[];byDest[x.dest].push(x);});
+    Object.keys(byDest).sort().forEach(function(dest){
+      var items=byDest[dest];
+      var destDaily=items.reduce(function(s,x){return s+x.dailyLoss;},0);
+      var destLost=items.reduce(function(s,x){return s+x.lostSoFar;},0);
+      var did='ls_'+dest;
+      html+='<div class="dept-hdr" onclick="toggleDept(''+did+'')">';
+      html+='<div class="dept-hdr-left"><div class="dept-hdr-name">Needed at '+BRANCHES[parseInt(dest)].name+'</div>';
+      html+='<div class="dept-meta" style="color:#f87171">-£'+Math.round(destDaily)+'/day · £'+Math.round(destLost)+' lost</div></div>';
+      html+='<span id="arr_'+did+'" style="color:#999">▾</span></div>';
+      html+='<div id="'+did+'">';
+      items.forEach(function(x){
+        var urg=x.dstAge<=3?'rgba(220,38,38,.08)':x.dstAge<=7?'rgba(234,88,12,.05)':'transparent';
+        var dStr=x.dstAge===0?'Today':x.dstAge===1?'Yesterday':x.dstAge+'d ago';
+        var sug=Math.min(Math.floor(x.srcQty/2),Math.max(2,x.srcQty-2));
+        html+='<div class="tcard" style="background:'+urg+';cursor:pointer" data-bc="'+x.item.bc+'">';
+        html+='<div class="tcard-top"><span style="font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;background:rgba(220,38,38,.2);color:#f87171">OUT '+dStr+'</span>';
+        html+='<span style="font-size:9px;color:#888;margin-left:5px">at '+BRANCHES[x.dest].name+'</span>';
+        html+='<span style="font-size:10px;font-weight:700;color:#4ade80;margin-left:auto">'+BRANCHES[x.srcBranch].name+' has '+x.srcQty+'</span></div>';
+        html+='<div class="tcard-body"><div class="tpi">'+imgEl(x.item.bc,44)+'</div>';
+        html+='<div class="tinfo"><div class="tname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>';
+        html+='<div class="tbc">'+x.item.bc+'</div>';
+        html+='<div class="tstats">';
+        html+='<span class="tstat" style="background:#1a0000;color:#f87171">-£'+Math.round(x.dailyLoss)+'/day</span>';
+        html+='<span class="tstat" style="background:#2a0a00;color:#fb923c">-£'+Math.round(x.lostSoFar)+' lost</span>';
+        html+='<span class="tstat ok">src: '+x.srcQty+'</span>';
+        if(x.item.prc>0)html+='<span class="tstat" style="background:#f4f4f4;color:#555">£'+x.item.prc.toFixed(2)+'</span>';
+        html+='</div></div>';
+        html+='<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">';
+        html+='<div class="tmove" style="background:#001a08;color:#4ade80">'+sug+'</div>';
+        html+='<div class="tmove-lbl" style="color:#4ade80">move</div>';
+        html+='</div></div></div>';
+      });
+      html+='</div>';
+    });
+  }
+
+  // Truly out — needs reorder
+  if(trulyOut.length){
+    var roLost=trulyOut.reduce(function(s,x){return s+x.lostSoFar;},0);
+    html+='<div class="sec" style="background:#1a0800"><span style="color:#fb923c">No stock anywhere — reorder ('+trulyOut.length+')</span><span class="badge" style="background:#3a1500;color:#fb923c">£'+Math.round(roLost).toLocaleString()+' lost</span></div>';
+    trulyOut.slice(0,60).forEach(function(x){
+      html+='<div class="prow" data-bc="'+x.item.bc+'">';
+      html+='<div class="pi">'+imgEl(x.item.bc,46)+'</div>';
+      html+='<div class="pm"><div class="pname">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>';
+      html+='<div class="pbc">'+x.item.bc+'</div>';
+      html+='<div class="pbranches"><span class="pbr zero">ALL OUT</span><span class="pbr" style="background:#1a0000;color:#f87171">'+x.dstAge+'d OOS</span>';
+      html+='<span class="pbr" style="background:#2a0a00;color:#fb923c">-£'+Math.round(x.lostSoFar)+'</span></div></div>';
+      html+='<div class="pr"><div style="font-size:12px;font-weight:700;color:#f87171">-£'+Math.round(x.dailyLoss)+'</div><div style="font-size:9px;color:#999">per day</div></div>';
+      html+='</div>';
+    });
+  }
+
+  if(!pendingTransfers.length&&!trulyOut.length){
+    html+='<div class="empty">No out-of-stock items found within 60 days<br><small style="font-size:11px">Try checking urgent transfers</small></div>';
+  }
+
+  el.innerHTML=html;
+  el.querySelectorAll('[data-bc]').forEach(function(card){card.addEventListener('click',function(){openPanel(this.dataset.bc);});});
+}
+
 // ── COMPARE ──────────────────────────────────────────────────
 function renderCompare(){
   var el=document.getElementById('out');
@@ -822,5 +970,46 @@ function startApp(){
   }
 })();
 </script>
+
+<!-- CC SHARED NAV -->
+<nav class="cc-nav" id="cc-nav">
+  <a href="home.html" class="cc-nav-item cc-nav-home" title="Home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span>Home</span>
+  </a>
+  <a href="index.html" class="cc-nav-item" id="ccnav-index" title="Low Stock">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+    <div class="cc-nav-dot" id="ccnav-neg-dot"></div>
+    <span>Negatives</span>
+  </a>
+  <a href="stock.html" class="cc-nav-item" id="ccnav-stock" title="Stock">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>Stock</span>
+  </a>
+  <a href="urgent.html" class="cc-nav-item" id="ccnav-urgent" title="Urgent">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="cc-nav-dot" id="ccnav-urg-dot"></div>
+    <span>Urgent</span>
+  </a>
+  <a href="director.html" class="cc-nav-item" id="ccnav-director" title="Director" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span>Director</span>
+  </a>
+</nav>
+<script>
+(function(){
+  // Highlight current page
+  var page=window.location.pathname.split('/').pop()||'home.html';
+  var map={'index.html':'ccnav-index','stock.html':'ccnav-stock','urgent.html':'ccnav-urgent','director.html':'ccnav-director','home.html':null};
+  var activeId=map[page];
+  if(activeId){var el=document.getElementById(activeId);if(el)el.classList.add('active');}
+  // Show director link if role is manager/director
+  var role=localStorage.getItem('cc_role');
+  if(role==='manager'||role==='director'){
+    var d=document.getElementById('ccnav-director');if(d)d.style.display='flex';
+  }
+})();
+</script>
+
 </body>
 </html>
