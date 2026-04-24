@@ -263,11 +263,14 @@ document.getElementById('pinpad').addEventListener('click',function(e){
 
 <script>
 var BRANCHES=[
-  {name:'Roundhay', short:'R', chip:'bc-r',
+  {name:'Roundhay',short:'R',chip:'bc-r',
+   api:'/api/stock-data?branch=roundhay',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
-  {name:'Chapy',    short:'C', chip:'bc-c',
+  {name:'Chapy',   short:'C',chip:'bc-c',
+   api:'/api/stock-data?branch=chapy',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
-  {name:'City',     short:'X', chip:'bc-x',
+  {name:'City',    short:'X',chip:'bc-x',
+   api:'/api/stock-data?branch=city',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'}
 ];
 var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
@@ -388,37 +391,66 @@ async function loadBranch(bidx){
   updateStime();
   var t0=Date.now();
   try{
+    // Try fast cached API endpoint first
+    var apiUrl=BRANCHES[bidx].api;
+    lg(BRANCHES[bidx].name+' trying fast API…','step');
     var ctrl=new AbortController();
-    var timer=setTimeout(function(){ctrl.abort();},20000); // 20s timeout
-    var r=await fetch(BRANCHES[bidx].url+'&t='+Date.now(),{signal:ctrl.signal});
+    var timer=setTimeout(function(){ctrl.abort();},15000);
+    var r=await fetch(apiUrl,{signal:ctrl.signal});
     clearTimeout(timer);
-    lg(BRANCHES[bidx].name+' HTTP '+r.status+' in '+(Date.now()-t0)+'ms',r.ok?'ok':'err');
-    if(!r.ok)throw new Error('HTTP '+r.status+' '+r.statusText);
-    var txt=await r.text();
-    lg(BRANCHES[bidx].name+' got '+txt.length+' chars','ok');
-    var parsed=Papa.parse(txt,{header:true,skipEmptyLines:true});
-    if(parsed.errors.length>0)lg(BRANCHES[bidx].name+' parse warnings: '+parsed.errors.length,'warn');
-    bd[bidx]=parsed.data.map(function(row){
-      var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
+    if(!r.ok)throw new Error('API HTTP '+r.status);
+    var json=await r.json();
+    if(json.error)throw new Error(json.error);
+    // Fast API returns compact array format
+    lg(BRANCHES[bidx].name+' API: '+json.count+' rows in '+(Date.now()-t0)+'ms','ok');
+    bd[bidx]=json.rows.map(function(row){
       return{
-        bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
-        qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
-        cst:parseFloat(row['AvgCost'])||0,
-        ls:(ls&&ls!=='NULL')?ls:'Never',
-        dc:(dc&&dc!=='NULL')?dc:'Unknown',
-        dp:cl(row['Department'])
+        bc:row[0]||'',nm:row[1]||'',sz:row[2]||'',
+        qty:row[3]||0,prc:row[4]||0,cst:row[5]||0,
+        ls:(row[6]&&row[6]!=='NULL')?row[6]:'Never',
+        dc:(row[7]&&row[7]!=='NULL')?row[7]:'Unknown',
+        dp:row[8]||''
       };
     });
     branchStatus[bidx].state='done';
     branchStatus[bidx].rows=bd[bidx].length;
     branchStatus[bidx].ms=Date.now()-t0;
-    lg(BRANCHES[bidx].name+' mapped '+bd[bidx].length+' products','ok');
+    lg(BRANCHES[bidx].name+' ✓ via fast API','ok');
   }catch(e){
-    branchStatus[bidx].state='error';
-    var errMsg=e.name==='AbortError'?'Timed out after 20s — check connection':e.message;
-    branchStatus[bidx].err=errMsg;
-    lg(BRANCHES[bidx].name+' FAILED: '+errMsg,'err');
-    bd[bidx]=[];
+    // Fast API failed — fall back to Google Sheets CSV directly
+    lg(BRANCHES[bidx].name+' API failed ('+e.message+') — trying CSV fallback…','warn');
+    try{
+      var t1=Date.now();
+      var ctrl2=new AbortController();
+      var timer2=setTimeout(function(){ctrl2.abort();},25000);
+      var r2=await fetch(BRANCHES[bidx].url+'&t='+Date.now(),{signal:ctrl2.signal});
+      clearTimeout(timer2);
+      if(!r2.ok)throw new Error('CSV HTTP '+r2.status);
+      var txt=await r2.text();
+      lg(BRANCHES[bidx].name+' CSV: '+txt.length+' chars in '+(Date.now()-t1)+'ms','warn');
+      var parsed=Papa.parse(txt,{header:true,skipEmptyLines:true});
+      bd[bidx]=parsed.data.map(function(row){
+        var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
+        return{
+          bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
+          qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
+          cst:parseFloat(row['AvgCost'])||0,
+          ls:(ls&&ls!=='NULL')?ls:'Never',
+          dc:(dc&&dc!=='NULL')?dc:'Unknown',
+          dp:cl(row['Department'])
+        };
+      });
+      branchStatus[bidx].state='done';
+      branchStatus[bidx].rows=bd[bidx].length;
+      branchStatus[bidx].ms=Date.now()-t0;
+      lg(BRANCHES[bidx].name+' ✓ via CSV fallback','ok');
+    }catch(e2){
+      var errMsg=e2.name==='AbortError'?'Timed out — check connection':e2.message;
+      branchStatus[bidx].state='error';
+      branchStatus[bidx].err=errMsg;
+      lg(BRANCHES[bidx].name+' FAILED: '+errMsg,'err');
+      bd[bidx]=[];
+    }
   }
   loaded++;
   updateStime();
