@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CC Branch Compare</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{--bg:#0a0a0a;--s1:#111;--s2:#1a1a1a;--s3:#222;--border:#1e1e1e;--text:#fff;--sub:#555;--red:#f87171;--redbg:#2a0000;--amber:#fbbf24;--amberbg:#1a1500;--green:#4ade80;--greenbg:#001a08;--blue:#60a5fa;--bluebg:#00101a;--r:10px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px;-webkit-font-smoothing:antialiased}
+/* PIN */
+.pinov{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:480px;margin:0 auto}
+.pinlogo{width:64px;height:64px;background:#cc0000;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;color:#fff;margin-bottom:18px}
+.pintitle{font-size:20px;font-weight:700;margin-bottom:4px}
+.pinsub{font-size:13px;color:var(--sub);margin-bottom:40px}
+.pindots{display:flex;gap:16px;margin-bottom:36px}
+.pindot{width:14px;height:14px;border-radius:50%;background:var(--s3);transition:all .15s}
+.pindot.filled{background:#cc0000;transform:scale(1.1)}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:260px}
+.pinkey{background:var(--s2);border:0.5px solid var(--s3);border-radius:14px;height:68px;font-size:24px;font-weight:500;color:#fff;cursor:pointer;touch-action:manipulation}
+.pinkey:active{background:var(--s3)}
+.pinerr{color:var(--red);font-size:13px;margin-top:18px;height:20px;text-align:center}
+/* HEADER */
+.hdr{background:var(--s1);border-bottom:1px solid var(--border);padding:14px 16px;position:sticky;top:0;z-index:100}
+.hdr-row{display:flex;align-items:center;justify-content:space-between}
+.hdr-logo{width:32px;height:32px;background:#cc0000;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff}
+.hdr-title{font-size:15px;font-weight:700;margin-left:10px}
+.hdr-sub{font-size:10px;color:var(--sub);font-family:monospace;margin-top:2px;margin-left:10px}
+/* TABS */
+.tabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:11px 16px;font-size:11px;font-weight:600;color:var(--sub);border-bottom:2px solid transparent;cursor:pointer;user-select:none;white-space:nowrap}
+.tab.on{color:#cc0000;border-bottom-color:#cc0000}
+/* LOADING */
+.loading{padding:60px 20px;text-align:center;color:var(--sub);font-size:12px}
+.spin{width:28px;height:28px;border:2px solid var(--s3);border-top-color:#cc0000;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* SECTION */
+.section{padding:12px 12px 4px}
+.section-title{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px}
+/* TROPHY ROW — best/worst */
+.trophy-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.trophy-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:12px;position:relative;overflow:hidden}
+.trophy-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.trophy-card.best::before{background:var(--green)}
+.trophy-card.worst::before{background:var(--red)}
+.trophy-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.trophy-label.best{color:var(--green)}
+.trophy-label.worst{color:var(--red)}
+.trophy-branch{font-size:16px;font-weight:700;margin-bottom:2px}
+.trophy-val{font-size:11px;font-family:monospace}
+.trophy-val.green{color:var(--green)}
+.trophy-val.red{color:var(--red)}
+.trophy-val.amber{color:var(--amber)}
+/* SCORE CARD — overall health */
+.score-section{padding:0 12px 12px}
+.score-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
+.score-hdr{padding:10px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.score-branch{font-size:14px;font-weight:700}
+.score-rank{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.rank-1{background:rgba(74,222,128,.15);color:var(--green)}
+.rank-2{background:rgba(251,191,36,.1);color:var(--amber)}
+.rank-3{background:rgba(248,113,113,.15);color:var(--red)}
+.score-body{padding:10px 12px}
+.score-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.score-bar-row:last-child{margin-bottom:0}
+.score-lbl{font-size:10px;color:var(--sub);width:80px;flex-shrink:0}
+.score-bar{flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px;transition:width .6s}
+.score-val{font-size:10px;font-family:monospace;width:44px;text-align:right;flex-shrink:0}
+.score-total{display:flex;justify-content:space-between;align-items:center;padding-top:8px;margin-top:6px;border-top:1px solid var(--border)}
+.score-total-lbl{font-size:11px;color:var(--sub)}
+.score-total-val{font-size:18px;font-weight:700;font-family:monospace}
+/* METRIC TABLE */
+.metric-table{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.mt-hdr{display:grid;grid-template-columns:1fr repeat(3,70px);background:var(--s2);border-bottom:1px solid var(--border)}
+.mt-hcell{padding:8px 6px;font-size:9px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;text-align:center}
+.mt-hcell:first-child{text-align:left;padding-left:12px}
+.mt-row{display:grid;grid-template-columns:1fr repeat(3,70px);border-bottom:0.5px solid var(--border)}
+.mt-row:last-child{border-bottom:none}
+.mt-row.highlight{background:rgba(255,255,255,.02)}
+.mt-cell{padding:9px 6px;font-size:11px;text-align:center;font-family:monospace;font-weight:600;position:relative}
+.mt-cell:first-child{text-align:left;font-family:inherit;font-size:11px;color:var(--sub);padding-left:12px;font-weight:400}
+.mt-cell.best{color:var(--green)}
+.mt-cell.worst{color:var(--red)}
+.mt-cell .crown{position:absolute;top:2px;right:2px;font-size:8px}
+/* TRANSFER BALANCE */
+.transfer-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px}
+.tc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.tc-branch{font-size:14px;font-weight:700}
+.tc-balance{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.balance-pos{background:var(--greenbg);color:var(--green)}
+.balance-neg{background:var(--redbg);color:var(--red)}
+.balance-neu{background:var(--s2);color:var(--sub)}
+.tc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:11px}
+.tc-row:last-child{border-bottom:none}
+.tc-lbl{color:var(--sub)}
+.tc-val{font-family:monospace;font-weight:600}
+/* DEPT BREAKDOWN */
+.dept-row{background:var(--s1);border-bottom:1px solid var(--border);padding:10px 14px;cursor:pointer}
+.dept-row:active{background:var(--s2)}
+.dept-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.dept-name{font-size:13px;font-weight:600}
+.dept-winner{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--greenbg);color:var(--green)}
+.dept-loser{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--redbg);color:var(--red)}
+.dept-bars{display:flex;flex-direction:column;gap:4px}
+.dept-bar-row{display:flex;align-items:center;gap:6px}
+.dept-br-name{font-size:9px;color:var(--sub);width:54px;flex-shrink:0}
+.dept-br-bar{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.dept-br-fill{height:100%;border-radius:3px}
+.dept-br-val{font-size:9px;font-family:monospace;color:var(--sub);width:30px;text-align:right;flex-shrink:0}
+/* NAV */
+.nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--s1);border-top:0.5px solid var(--border);display:flex;z-index:200;padding:5px 0 16px}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;text-decoration:none;padding:4px 0;user-select:none}
+.ni svg{width:20px;height:20px;color:var(--sub)}
+.ni span{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+.ni.home{background:#cc0000;border-radius:10px;margin:4px;padding:4px 8px}
+.ni.home svg,.ni.home span{color:#fff}
+</style>
+</head>
+<body>
+
+<!-- PIN -->
+<div class="pinov" id="pinov">
+  <div class="pinlogo">CC</div>
+  <div class="pintitle">Branch Compare</div>
+  <div class="pinsub">CC Hair &amp; Beauty</div>
+  <div class="pindots"><div class="pindot" id="pd0"></div><div class="pindot" id="pd1"></div><div class="pindot" id="pd2"></div><div class="pindot" id="pd3"></div></div>
+  <div class="pinpad" id="pinpad">
+    <button class="pinkey" data-n="1">1</button><button class="pinkey" data-n="2">2</button><button class="pinkey" data-n="3">3</button>
+    <button class="pinkey" data-n="4">4</button><button class="pinkey" data-n="5">5</button><button class="pinkey" data-n="6">6</button>
+    <button class="pinkey" data-n="7">7</button><button class="pinkey" data-n="8">8</button><button class="pinkey" data-n="9">9</button>
+    <button class="pinkey" data-n="del" style="font-size:18px">⌫</button><button class="pinkey" data-n="0">0</button>
+    <button class="pinkey" style="opacity:0;pointer-events:none" disabled></button>
+  </div>
+  <div class="pinerr" id="pinerr"></div>
+</div>
+<script>
+var pe='';
+function pd(){for(var i=0;i<4;i++)document.getElementById('pd'+i).className='pindot'+(i<pe.length?' filled':'');}
+function pc(){
+  if(pe==='2025'){localStorage.setItem('cc_cmp_ts',Date.now().toString());document.getElementById('pinov').style.display='none';startApp();}
+  else{document.getElementById('pinerr').textContent='Incorrect PIN';pe='';pd();setTimeout(function(){document.getElementById('pinerr').textContent='';},2000);}
+}
+document.getElementById('pinpad').addEventListener('click',function(e){
+  var b=e.target.closest('.pinkey');if(!b||b.disabled)return;
+  var n=b.dataset.n;
+  if(n==='del'){if(pe.length>0){pe=pe.slice(0,-1);pd();}}
+  else{if(pe.length<4){pe+=n;pd();if(pe.length===4)setTimeout(pc,150);}}
+});
+(function(){var ts=localStorage.getItem('cc_cmp_ts');if(ts&&Date.now()-parseInt(ts)<8*3600*1000)document.getElementById('pinov').style.display='none';})();
+</script>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-row">
+    <div style="display:flex;align-items:center">
+      <div class="hdr-logo">CC</div>
+      <div><div class="hdr-title">Branch Compare</div><div class="hdr-sub" id="stime">loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs" id="tabs">
+  <div class="tab on" data-t="overview">Overview</div>
+  <div class="tab" data-t="stockcontrol">Stock control</div>
+  <div class="tab" data-t="transfers">Transfers</div>
+  <div class="tab" data-t="deadstock">Dead stock</div>
+  <div class="tab" data-t="departments">By dept</div>
+</div>
+
+<div id="out"><div class="loading"><div class="spin"></div>Loading all 3 branches…</div></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="home.html" class="ni home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></a>
+  <a href="stock.html" class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Stock</span></a>
+  <a href="urgent.html" class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg><span>Urgent</span></a>
+  <a href="lostsales.html" class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Lost £</span></a>
+  <a href="director.html" class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>Director</span></a>
+</nav>
+
+<script>
+var BRANCHES=[
+  {name:'Roundhay',short:'R',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
+  {name:'Chapy',short:'C',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
+  {name:'City',short:'X',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
+];
+
+var bd=[[],[],[]],loaded=0,section='overview';
+var COLORS=['#60a5fa','#fb923c','#4ade80'];
+
+function cl(v){return String(v==null?'':v).trim();}
+function pDate(s){
+  if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;
+  var p=s.split('/');
+  if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d)?null:d;}
+  var d=new Date(s);return isNaN(d)?null:d;
+}
+function dSince(s){var d=pDate(s);return d?Math.floor((Date.now()-d)/86400000):9999;}
+function isVD(s){var d=pDate(s);return d&&d.getFullYear()>=2000;}
+function isDead(p){
+  if(!p||p.qty<=5)return false;
+  if(p.ls==='Never'&&isVD(p.dc)&&dSince(p.dc)>=90)return true;
+  if(isVD(p.ls)&&dSince(p.ls)>=90)return true;
+  return false;
+}
+
+async function loadBranch(i){
+  try{
+    var r=await fetch(BRANCHES[i].url+'&t='+Date.now());
+    var t=await r.text();
+    bd[i]=Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){
+      var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
+      return{
+        bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
+        qty:parseInt(row['StockQty'])||0,
+        prc:parseFloat(row['Price'])||0,
+        cst:parseFloat(row['AvgCost'])||0,
+        ls:(ls&&ls!=='NULL')?ls:'Never',
+        dc:(dc&&dc!=='NULL')?dc:'Unknown',
+        dp:cl(row['Department'])
+      };
+    });
+  }catch(e){bd[i]=[];}
+  loaded++;
+  document.getElementById('stime').textContent='loaded '+loaded+'/3'+(loaded===3?' · live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'…');
+  if(loaded>=1)render();
+}
+
+// ── COMPUTE STATS FOR EACH BRANCH ─────────────────────────────
+function computeStats(){
+  return BRANCHES.map(function(b,i){
+    var data=bd[i];
+    if(!data.length)return null;
+    var total=data.length;
+    var neg=data.filter(function(p){return p.qty<0;});
+    var zero=data.filter(function(p){return p.qty===0;});
+    var pos=data.filter(function(p){return p.qty>0;});
+    var dead=data.filter(isDead);
+    var neverSold=data.filter(function(p){return p.qty>0&&p.ls==='Never';});
+    var soldW1=data.filter(function(p){return p.ls!=='Never'&&dSince(p.ls)<=7;});
+    var soldW2=data.filter(function(p){return p.ls!=='Never'&&dSince(p.ls)<=14;});
+    var soldM1=data.filter(function(p){return p.ls!=='Never'&&dSince(p.ls)<=30;});
+    var deadVal=dead.reduce(function(s,p){return s+p.qty*p.prc;},0);
+    var totalVal=pos.reduce(function(s,p){return s+p.qty*p.prc;},0);
+    var negPct=total?Math.round(neg.length/total*100):0;
+    var deadPct=total?Math.round(dead.length/total*100):0;
+    var activePct=total?Math.round(soldM1.length/total*100):0;
+
+    // Health score out of 100 (higher = better)
+    // +40 for low negatives, +30 for low dead, +30 for high recent sales
+    var healthNeg=Math.max(0,40-negPct*2);
+    var healthDead=Math.max(0,30-deadPct*1.5);
+    var healthActive=Math.min(30,activePct*0.5);
+    var health=Math.round(healthNeg+healthDead+healthActive);
+
+    return{
+      name:b.name,idx:i,total:total,
+      neg:neg.length,zero:zero.length,dead:dead.length,neverSold:neverSold.length,
+      soldW1:soldW1.length,soldW2:soldW2.length,soldM1:soldM1.length,
+      deadVal:deadVal,totalVal:totalVal,
+      negPct:negPct,deadPct:deadPct,activePct:activePct,
+      health:health,healthNeg:healthNeg,healthDead:healthDead,healthActive:healthActive
+    };
+  }).filter(Boolean);
+}
+
+// ── COMPUTE TRANSFER STATS ────────────────────────────────────
+function computeTransfers(stats){
+  // Build barcode map
+  var map={};
+  for(var b=0;b<3;b++){
+    bd[b].forEach(function(p){
+      if(!p.bc)return;
+      if(!map[p.bc])map[p.bc]={prc:p.prc,branches:[null,null,null]};
+      map[p.bc].branches[b]=p;
+    });
+  }
+  // For each branch: how many items can they send? How many do they need?
+  return BRANCHES.map(function(b,dest){
+    var canReceive=0,receiveVal=0; // items out at dest, stock elsewhere
+    var canSend=0,sendVal=0;       // items out elsewhere, this branch has stock
+    var needReorder=0;             // out at dest, nowhere has it
+
+    Object.values(map).forEach(function(item){
+      var dst=item.branches[dest];
+      if(!dst||dst.qty>0)return;
+      if(dst.ls==='Never')return;
+      if(dSince(dst.ls)>60)return;
+
+      var srcFound=false;
+      for(var s=0;s<3;s++){
+        if(s===dest)continue;
+        var src=item.branches[s];
+        if(src&&src.qty>0){srcFound=true;canReceive++;receiveVal+=item.prc||0;break;}
+      }
+      if(!srcFound)needReorder++;
+    });
+
+    // Items this branch HAS that another branch needs
+    for(var other=0;other<3;other++){
+      if(other===dest)continue;
+      Object.values(map).forEach(function(item){
+        var dst=item.branches[other];
+        var src=item.branches[dest];
+        if(!dst||dst.qty>0)return;
+        if(dst.ls==='Never')return;
+        if(dSince(dst.ls)>60)return;
+        if(src&&src.qty>0){canSend++;sendVal+=item.prc||0;}
+      });
+    }
+
+    // De-dupe canSend (counted per other branch)
+    canSend=Math.round(canSend/2);
+    sendVal=Math.round(sendVal/2);
+
+    return{name:b.name,canReceive:canReceive,receiveVal:Math.round(receiveVal),
+           canSend:canSend,sendVal:Math.round(sendVal),needReorder:needReorder,
+           balance:canSend-canReceive};
+  });
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function render(){
+  if(loaded===0)return;
+  var el=document.getElementById('out');
+  var stats=computeStats();
+  if(!stats.length){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
+
+  if(section==='overview')renderOverview(el,stats);
+  else if(section==='stockcontrol')renderStockControl(el,stats);
+  else if(section==='transfers')renderTransfers(el,stats);
+  else if(section==='deadstock')renderDeadStock(el,stats);
+  else renderDepartments(el,stats);
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────
+function renderOverview(el,stats){
+  // Rank by health score
+  var ranked=stats.slice().sort(function(a,b){return b.health-a.health;});
+  var html='';
+
+  // HEADLINE: Best vs worst stock control
+  html+='<div class="section"><div class="section-title">Stock control ranking</div>';
+  html+='<div class="trophy-grid">';
+  html+=trophyCard('best','🏆 Best controlled',ranked[0].name,ranked[0].health+'/100 health score','green');
+  html+=trophyCard('worst','⚠ Needs attention',ranked[ranked.length-1].name,ranked[ranked.length-1].health+'/100 health score','red');
+  html+='</div>';
+
+  // Quick best/worst per category
+  var bestNeg=stats.reduce(function(a,b){return a.negPct<b.negPct?a:b;});
+  var worstNeg=stats.reduce(function(a,b){return a.negPct>b.negPct?a:b;});
+  var bestDead=stats.reduce(function(a,b){return a.deadPct<b.deadPct?a:b;});
+  var worstDead=stats.reduce(function(a,b){return a.deadVal>b.deadVal?a:b;});
+  var bestActive=stats.reduce(function(a,b){return a.activePct>b.activePct?a:b;});
+
+  html+='<div class="trophy-grid">';
+  html+=trophyCard('best','✅ Fewest negatives',bestNeg.name,bestNeg.neg+' items ('+bestNeg.negPct+'%)','green');
+  html+=trophyCard('worst','🔴 Most negatives',worstNeg.name,worstNeg.neg+' items ('+worstNeg.negPct+'%)','red');
+  html+='</div>';
+  html+='<div class="trophy-grid">';
+  html+=trophyCard('best','✅ Least dead stock',bestDead.name,bestDead.dead+' items ('+bestDead.deadPct+'%)','green');
+  html+=trophyCard('worst','💀 Most dead value',worstDead.name,'£'+Math.round(worstDead.deadVal/1000)+'k tied up','red');
+  html+='</div>';
+  html+='<div class="trophy-grid">';
+  html+=trophyCard('best','🔥 Most active',bestActive.name,bestActive.soldM1+' sold in 30d ('+bestActive.activePct+'%)','green');
+  html+='</div>';
+  html+='</div>';
+
+  // OVERALL HEALTH SCORES
+  html+='<div class="score-section">';
+  html+='<div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;padding:0 2px">Overall health scores</div>';
+
+  ranked.forEach(function(s,rank){
+    var rankCls=['rank-1','rank-2','rank-3'][rank]||'rank-3';
+    var rankLbl=['🥇 Best','🥈 2nd','🥉 Worst'][rank]||'';
+    html+='<div class="score-card">';
+    html+='<div class="score-hdr"><span class="score-branch">'+s.name+'</span>';
+    html+='<span class="score-rank '+rankCls+'">'+rankLbl+' · '+s.health+'/100</span></div>';
+    html+='<div class="score-body">';
+    html+=scoreBar('Negative control',s.healthNeg,40,'#4ade80',s.negPct+'% neg');
+    html+=scoreBar('Dead stock control',s.healthDead,30,'#60a5fa',s.deadPct+'% dead');
+    html+=scoreBar('Recent sales',s.healthActive,30,'#fbbf24',s.activePct+'% sold 30d');
+    html+='</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function trophyCard(cls,label,branch,val,valCls){
+  return '<div class="trophy-card '+cls+'"><div class="trophy-label '+cls+'">'+label+'</div>'+
+    '<div class="trophy-branch">'+branch+'</div>'+
+    '<div class="trophy-val '+valCls+'">'+val+'</div></div>';
+}
+function scoreBar(label,val,max,color,suffix){
+  var pct=max>0?Math.round(val/max*100):0;
+  return '<div class="score-bar-row"><span class="score-lbl">'+label+'</span>'+
+    '<div class="score-bar"><div class="score-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
+    '<span class="score-val" style="color:'+color+'">'+suffix+'</span></div>';
+}
+
+// ── STOCK CONTROL ─────────────────────────────────────────────
+function renderStockControl(el,stats){
+  var html='<div style="padding:12px 12px 0"><div class="section-title">Stock control — full breakdown</div></div>';
+
+  // Metric comparison table
+  var metrics=[
+    {lbl:'Total products',fn:function(s){return s.total.toLocaleString();},best:'high'},
+    {lbl:'Negative stock',fn:function(s){return s.neg+' ('+s.negPct+'%)';},best:'low',raw:function(s){return s.neg;}},
+    {lbl:'Zero stock',fn:function(s){return s.zero.toLocaleString();},best:'low',raw:function(s){return s.zero;}},
+    {lbl:'Dead stock items',fn:function(s){return s.dead.toLocaleString();},best:'low',raw:function(s){return s.dead;}},
+    {lbl:'Dead stock value',fn:function(s){return '£'+Math.round(s.deadVal/1000)+'k';},best:'low',raw:function(s){return s.deadVal;}},
+    {lbl:'Never sold',fn:function(s){return s.neverSold.toLocaleString();},best:'low',raw:function(s){return s.neverSold;}},
+    {lbl:'Sold in 7 days',fn:function(s){return s.soldW1.toLocaleString();},best:'high',raw:function(s){return s.soldW1;}},
+    {lbl:'Sold in 30 days',fn:function(s){return s.soldM1.toLocaleString();},best:'high',raw:function(s){return s.soldM1;}},
+    {lbl:'Health score',fn:function(s){return s.health+'/100';},best:'high',raw:function(s){return s.health;}},
+  ];
+
+  html+='<div style="padding:0 12px 12px">';
+  html+='<div class="metric-table">';
+  html+='<div class="mt-hdr"><div class="mt-hcell">Metric</div>';
+  BRANCHES.forEach(function(b){html+='<div class="mt-hcell">'+b.name+'</div>';});
+  html+='</div>';
+
+  metrics.forEach(function(m,mi){
+    var rawVals=m.raw?stats.map(function(s){return m.raw(s);}):null;
+    var bestIdx=-1,worstIdx=-1;
+    if(rawVals){
+      bestIdx=rawVals.indexOf(m.best==='low'?Math.min.apply(null,rawVals):Math.max.apply(null,rawVals));
+      worstIdx=rawVals.indexOf(m.best==='low'?Math.max.apply(null,rawVals):Math.min.apply(null,rawVals));
+    }
+    html+='<div class="mt-row'+(mi%2===0?' highlight':'')+'">';
+    html+='<div class="mt-cell">'+m.lbl+'</div>';
+    stats.forEach(function(s,i){
+      var cls=i===bestIdx?'best':i===worstIdx?'worst':'';
+      var crown=i===bestIdx?'<span class="crown">✓</span>':i===worstIdx?'<span class="crown">✗</span>':'';
+      html+='<div class="mt-cell '+cls+'">'+m.fn(s)+crown+'</div>';
+    });
+    html+='</div>';
+  });
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
+// ── TRANSFERS ─────────────────────────────────────────────────
+function renderTransfers(el,stats){
+  var transfers=computeTransfers(stats);
+  var html='<div style="padding:12px 12px 0"><div class="section-title">Transfer performance — who gives, who takes</div></div>';
+
+  // Best/worst
+  var bestSend=transfers.reduce(function(a,b){return a.canSend>b.canSend?a:b;});
+  var worstReceive=transfers.reduce(function(a,b){return a.canReceive>b.canReceive?a:b;});
+  html+='<div class="section">';
+  html+='<div class="trophy-grid">';
+  html+=trophyCard('best','📦 Best supplier',bestSend.name,bestSend.canSend+' items to give','green');
+  html+=trophyCard('worst','🚨 Most urgent need',worstReceive.name,worstReceive.canReceive+' items needed','red');
+  html+='</div></div>';
+
+  // Per branch transfer cards
+  html+='<div style="padding:0 12px 16px">';
+  var sorted=transfers.slice().sort(function(a,b){return b.balance-a.balance;});
+  sorted.forEach(function(t,rank){
+    var balCls=t.balance>5?'balance-pos':t.balance<-5?'balance-neg':'balance-neu';
+    var balStr=t.balance>0?'+'+t.balance+' (net giver)':t.balance<0?t.balance+' (net taker)':'Balanced';
+    var rankLabel=['🥇 Best supplier','🥈 Balanced','🥉 Needs most'].slice(0,sorted.length)[rank]||'';
+    html+='<div class="transfer-card">';
+    html+='<div class="tc-hdr"><div><span class="score-branch">'+t.name+'</span><div style="font-size:10px;color:var(--sub);margin-top:2px">'+rankLabel+'</div></div>';
+    html+='<span class="tc-balance '+balCls+'">'+balStr+'</span></div>';
+    html+='<div class="tc-row"><span class="tc-lbl">Can send to other branches</span><span class="tc-val" style="color:var(--green)">'+t.canSend+' items</span></div>';
+    html+='<div class="tc-row"><span class="tc-lbl">Needs from other branches</span><span class="tc-val" style="color:var(--red)">'+t.canReceive+' items</span></div>';
+    html+='<div class="tc-row"><span class="tc-lbl">Needs reorder (no stock anywhere)</span><span class="tc-val" style="color:var(--amber)">'+t.needReorder+' items</span></div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+// ── DEAD STOCK ────────────────────────────────────────────────
+function renderDeadStock(el,stats){
+  var html='<div style="padding:12px 12px 0"><div class="section-title">Dead stock analysis — money tied up</div></div>';
+  var sorted=stats.slice().sort(function(a,b){return b.deadVal-a.deadVal;});
+
+  // Best/worst
+  html+='<div class="section"><div class="trophy-grid">';
+  html+=trophyCard('best','✅ Least money tied up',sorted[sorted.length-1].name,'£'+Math.round(sorted[sorted.length-1].deadVal/1000)+'k dead stock','green');
+  html+=trophyCard('worst','💀 Most money tied up',sorted[0].name,'£'+Math.round(sorted[0].deadVal/1000)+'k dead stock','red');
+  html+='</div></div>';
+
+  // Per branch dead stock breakdown
+  html+='<div style="padding:0 12px 16px">';
+  sorted.forEach(function(s,rank){
+    var valPct=sorted[0].deadVal>0?Math.round(s.deadVal/sorted[0].deadVal*100):0;
+    html+='<div class="transfer-card">';
+    html+='<div class="tc-hdr"><span class="score-branch">'+s.name+'</span>';
+    html+='<span class="score-rank '+(['rank-3','rank-2','rank-1'][rank]||'rank-3')+'">'+(['🥉 Worst','🥈 Mid','🥇 Best'][rank]||'')+'</span></div>';
+    html+='<div class="tc-row"><span class="tc-lbl">Dead items (90+ days)</span><span class="tc-val" style="color:var(--amber)">'+s.dead.toLocaleString()+' items</span></div>';
+    html+='<div class="tc-row"><span class="tc-lbl">Dead % of total</span><span class="tc-val" style="color:var(--amber)">'+s.deadPct+'%</span></div>';
+    html+='<div class="tc-row"><span class="tc-lbl">Value tied up</span><span class="tc-val" style="color:var(--red)">£'+Math.round(s.deadVal).toLocaleString()+'</span></div>';
+    html+='<div class="tc-row"><span class="tc-lbl">Never been sold</span><span class="tc-val" style="color:var(--sub)">'+s.neverSold.toLocaleString()+' items</span></div>';
+    // Dead value bar
+    html+='<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--sub);margin-bottom:4px"><span>Dead value vs worst branch</span><span>'+valPct+'%</span></div>';
+    html+='<div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:'+valPct+'%;height:100%;background:var(--red);border-radius:3px"></div></div></div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+// ── DEPARTMENTS ───────────────────────────────────────────────
+function renderDepartments(el,stats){
+  // Build dept-level stats per branch
+  var deptMap={};
+  for(var b=0;b<3;b++){
+    bd[b].forEach(function(p){
+      if(!p.dp)return;
+      if(!deptMap[p.dp])deptMap[p.dp]={name:p.dp,branches:[{neg:0,dead:0,total:0},{neg:0,dead:0,total:0},{neg:0,dead:0,total:0}]};
+      deptMap[p.dp].branches[b].total++;
+      if(p.qty<0)deptMap[p.dp].branches[b].neg++;
+      if(isDead(p))deptMap[p.dp].branches[b].dead++;
+    });
+  }
+
+  var depts=Object.values(deptMap).filter(function(d){return d.branches.some(function(b){return b.total>0;});});
+  depts.sort(function(a,b){
+    var aN=a.branches.reduce(function(s,x){return s+x.neg;},0);
+    var bN=b.branches.reduce(function(s,x){return s+x.neg;},0);
+    return bN-aN;
+  });
+
+  var html='<div style="padding:12px 12px 4px"><div class="section-title">By department — negatives per branch</div></div>';
+
+  depts.slice(0,30).forEach(function(dept){
+    var totals=dept.branches.map(function(b){return b.neg;});
+    var maxNeg=Math.max.apply(null,totals)||1;
+    var bestIdx=totals.indexOf(Math.min.apply(null,totals.filter(function(v){return v>=0;})));
+    var worstIdx=totals.indexOf(Math.max.apply(null,totals));
+    var totalNeg=totals.reduce(function(a,b){return a+b;},0);
+    if(!totalNeg)return; // skip depts with no negatives
+
+    html+='<div class="dept-row">';
+    html+='<div class="dept-top"><span class="dept-name">'+dept.name+'</span>';
+    html+='<div style="display:flex;gap:5px">';
+    if(totalNeg>0){html+='<span class="dept-winner">✓ '+BRANCHES[bestIdx].name+'</span>';
+    html+='<span class="dept-loser">✗ '+BRANCHES[worstIdx].name+'</span>';}
+    html+='</div></div>';
+    html+='<div class="dept-bars">';
+    BRANCHES.forEach(function(b,i){
+      var pct=maxNeg>0?Math.round(dept.branches[i].neg/maxNeg*100):0;
+      html+='<div class="dept-bar-row">';
+      html+='<span class="dept-br-name">'+b.name+'</span>';
+      html+='<div class="dept-br-bar"><div class="dept-br-fill" style="width:'+pct+'%;background:'+COLORS[i]+'"></div></div>';
+      html+='<span class="dept-br-val">'+dept.branches[i].neg+'</span>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+  });
+
+  el.innerHTML=html;
+}
+
+// ── CONTROLS ──────────────────────────────────────────────────
+document.getElementById('tabs').addEventListener('click',function(e){
+  var t=e.target.closest('.tab');if(!t)return;
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on');});
+  t.classList.add('on');
+  section=t.dataset.t;
+  render();
+});
+
+function startApp(){
+  document.getElementById('stime').textContent='loading…';
+  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2)]);
+}
+
+(function(){var ts=localStorage.getItem('cc_cmp_ts');if(ts&&Date.now()-parseInt(ts)<8*3600*1000)startApp();})();
+</script>
+</body>
+</html>
