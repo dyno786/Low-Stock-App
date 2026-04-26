@@ -51,6 +51,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .dept-filter{background:#fff;border-bottom:1px solid var(--border);padding:7px 10px;display:flex;gap:5px;flex-wrap:wrap;position:sticky;top:117px;z-index:49}
 .dpill{padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--sub);user-select:none;white-space:nowrap;transition:all .1s}
 .dpill.on{background:#cc0000;color:#fff;border-color:#cc0000}
+.srcpill{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--sub);user-select:none;display:flex;align-items:center;gap:6px;transition:all .1s}
+.srcpill.on{border-color:#15803d;color:#15803d;background:var(--greenbg)}
+.srcpill .sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.srcpill .scheck{width:16px;height:16px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
 /* DEPT HEADERS */
 .dept-hdr{padding:7px 14px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
 .dept-name{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
@@ -187,10 +191,37 @@ document.getElementById('pinpad').addEventListener('click',function(e){
   <div class="prog-sub" id="prog-sub">Loading…</div>
 </div>
 
-<div class="dept-filter" id="dept-filter">
-  <div class="dpill on" data-d="All">All depts</div>
+<!-- COLLAPSIBLE FILTERS -->
+<div id="filter-sections">
+  <!-- COLLECT FROM -->
+  <div style="background:#fff;border-bottom:1px solid var(--border)">
+    <div id="src-toggle" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:12px;font-weight:600;color:var(--ink)">Collect from</span>
+        <span id="src-summary" style="font-size:10px;color:var(--sub)">All sources</span>
+      </div>
+      <span id="src-arrow" style="font-size:12px;color:var(--sub);transition:transform .2s">▸</span>
+    </div>
+    <div id="src-panel" style="display:none;padding:8px 12px 10px;border-top:1px solid var(--border);display:none">
+      <div id="src-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+  <!-- DEPARTMENTS -->
+  <div style="background:#fff;border-bottom:1px solid var(--border)">
+    <div id="dept-toggle" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:12px;font-weight:600;color:var(--ink)">Departments</span>
+        <span id="dept-summary" style="font-size:10px;color:var(--sub)">All</span>
+      </div>
+      <span id="dept-arrow" style="font-size:12px;color:var(--sub);transition:transform .2s">▸</span>
+    </div>
+    <div id="dept-panel" style="display:none;padding:8px 12px 10px;border-top:1px solid var(--border)">
+      <div id="dept-filter" style="display:flex;gap:5px;flex-wrap:wrap">
+        <div class="dpill on" data-d="All">All depts</div>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="prog-bar" style="display:none" id="prog-bar2"><div class="prog-fill" id="prog-fill2" style="width:0%"></div></div>
 <div id="out"><div class="loading"><div class="spin"></div>Loading all branches…</div></div>
 
 <!-- WHATSAPP FOOTER -->
@@ -252,6 +283,63 @@ var currentDest=0;
 var currentView='collect';
 var activeDepts=['All']; // 'All' or list of selected dept names
 var ticks=JSON.parse(localStorage.getItem('cc_urg2_ticks')||'{}');
+
+// ── ACTIVE SOURCES STATE ─────────────────────────────────────
+var activeSources=[0,1,2,3]; // all 4 source indices active by default
+
+// ── COLLAPSIBLE TOGGLE HANDLERS ───────────────────────────────
+document.getElementById('src-toggle').addEventListener('click',function(){
+  var panel=document.getElementById('src-panel');
+  var arrow=document.getElementById('src-arrow');
+  var open=panel.style.display==='none'||panel.style.display==='';
+  panel.style.display=open?'block':'none';
+  arrow.style.transform=open?'rotate(90deg)':'';
+});
+
+document.getElementById('dept-toggle').addEventListener('click',function(){
+  var panel=document.getElementById('dept-panel');
+  var arrow=document.getElementById('dept-arrow');
+  var open=panel.style.display==='none'||panel.style.display==='';
+  panel.style.display=open?'block':'none';
+  arrow.style.transform=open?'rotate(90deg)':'';
+});
+
+// ── SOURCE FILTER ─────────────────────────────────────────────
+function buildSrcFilter(){
+  var sources=DEST_SOURCES[currentDest];
+  var el=document.getElementById('src-pills');
+  var html='';
+  sources.forEach(function(srcConf){
+    var b=BRANCHES[srcConf.srcIdx];
+    var on=activeSources.indexOf(srcConf.srcIdx)>=0;
+    html+='<div class="srcpill'+(on?' on':'')+'" data-sidx="'+srcConf.srcIdx+'" style="border-color:'+(on?'#15803d':b.color)+';color:'+(on?'#15803d':b.color)+';background:'+(on?'var(--greenbg)':'#fff')+'">';
+    html+='<div class="sdot" style="background:'+b.color+'"></div>';
+    html+=b.name;
+    html+='<div class="scheck">'+(on?'✓':'')+'</div>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+
+  // Update summary
+  var names=sources.filter(function(s){return activeSources.indexOf(s.srcIdx)>=0;}).map(function(s){return BRANCHES[s.srcIdx].name;});
+  document.getElementById('src-summary').textContent=
+    names.length===sources.length?'All sources':names.join(', ');
+
+  el.querySelectorAll('.srcpill').forEach(function(pill){
+    pill.addEventListener('click',function(){
+      var sidx=parseInt(this.dataset.sidx);
+      var idx=activeSources.indexOf(sidx);
+      if(idx>=0){
+        if(activeSources.length>1)activeSources.splice(idx,1); // keep at least one
+      }else{
+        activeSources.push(sidx);
+      }
+      buildSrcFilter();
+      if(currentView==='collect')renderDest(currentDest);
+      else renderOOS(currentDest);
+    });
+  });
+}
 
 // ── DEPT FILTER HELPERS ───────────────────────────────────────
 function deptVisible(dp){
@@ -361,7 +449,7 @@ async function loadBranch(idx){
   }catch(e){bd[idx]=[];}
   loaded++;
   document.getElementById('stime').textContent=loaded<4?('loaded '+loaded+'/4…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
-  if(loaded>=1){buildDeptFilter();if(currentView==='collect')renderDest(currentDest);else renderOOS(currentDest);}
+  if(loaded>=1){buildSrcFilter();buildDeptFilter();if(currentView==='collect')renderDest(currentDest);else renderOOS(currentDest);}
 }
 
 // ── RENDER COLLECT NOW ────────────────────────────────────────
@@ -380,6 +468,8 @@ function renderDest(destIdx){
   destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
 
   sources.forEach(function(srcConf){
+    // Skip if this source is deselected
+    if(activeSources.indexOf(srcConf.srcIdx)<0)return;
     var srcIdx=srcConf.srcIdx;
     var srcBranch=BRANCHES[srcIdx];
     var srcData=bd[srcIdx];
