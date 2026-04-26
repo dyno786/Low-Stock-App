@@ -259,6 +259,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="mc-title">Stock watch</div>
         <div class="mc-sub">Count history by branch</div>
       </a>
+      <a href="kpi.html" class="menu-card full" style="background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(204,0,0,.08));border-color:rgba(255,215,0,.2)">
+        <div class="mc-icon" style="background:rgba(255,215,0,.15)"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2"><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/><path d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg></div>
+        <div class="mc-badge" style="background:rgba(255,215,0,.2);color:#ffd700">Daily competition</div>
+        <div class="mc-title">Branch KPI leaderboard</div>
+        <div class="mc-sub">Google views · negatives fixed · transfers · photos · customers · daily rankings</div>
+        <div class="mc-arrow">›</div>
+      </a>
     </div>
   </div>
 
@@ -283,6 +290,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <a href="images.html" class="quick-btn">
       <div class="quick-btn-icon">📸</div>
       <div class="quick-btn-lbl">Images</div>
+    </a>
+    <a href="kpi.html" class="quick-btn" id="quick-kpi" style="display:none">
+      <div class="quick-btn-icon">🏆</div>
+      <div class="quick-btn-lbl">KPIs</div>
     </a>
     <a href="director.html" class="quick-btn" id="quick-director" style="display:none">
       <div class="quick-btn-icon">🎯</div>
@@ -375,6 +386,7 @@ function showApp(role){
     document.getElementById('quick-director').style.display='block';
     document.getElementById('quick-lostsales').style.display='block';
     document.getElementById('quick-compare').style.display='block';
+    document.getElementById('quick-kpi').style.display='block';
     // Director sees all branches — hide selector or show all
     document.getElementById('branch-sel').style.display='none';
     loadAllBranchStats();
@@ -635,6 +647,61 @@ async function loadAllBranchStats(){
     <div id="access-log-content"></div>
   </div>
 </div>
+
+
+<!-- CC SHARED NAV -->
+<nav class="cc-nav" id="cc-nav">
+  <a href="home.html" class="cc-nav-item cc-nav-home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span>Home</span>
+  </a>
+  <a href="index.html" class="cc-nav-item" id="ccn-index">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+    <span>Low stock</span>
+  </a>
+  <a href="stock.html" class="cc-nav-item" id="ccn-stock">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>Stock</span>
+  </a>
+  <a href="urgent.html" class="cc-nav-item" id="ccn-urgent">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span>Urgent</span>
+  </a>
+  <a href="lostsales.html" class="cc-nav-item" id="ccn-lostsales">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    <span>Lost £</span>
+  </a>
+  <a href="kpi.html" class="cc-nav-item" id="ccn-kpi">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/><path d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg>
+    <span>KPIs</span>
+  </a>
+  <a href="images.html" class="cc-nav-item" id="ccn-images">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    <span>Images</span>
+  </a>
+  <a href="director.html" class="cc-nav-item" id="ccn-director">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    <span>Director</span>
+  </a>
+</nav>
+<script>
+(function(){
+  var page=window.location.pathname.split('/').pop()||'home.html';
+  var idMap={
+    'index.html':'ccn-index','stock.html':'ccn-stock','urgent.html':'ccn-urgent',
+    'lostsales.html':'ccn-lostsales','compare.html':'ccn-compare',
+    'images.html':'ccn-images','director.html':'ccn-director','kpi.html':'ccn-kpi'
+  };
+  var activeId=idMap[page];
+  if(activeId){var el=document.getElementById(activeId);if(el)el.classList.add('active');}
+  var role=localStorage.getItem('cc_role');
+  if(role!=='manager'&&role!=='director'){
+    ['ccn-director','ccn-lostsales','ccn-kpi'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.style.display='none';
+    });
+  }
+})();
+</script>
 
 </body>
 </html>

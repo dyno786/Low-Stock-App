@@ -253,6 +253,8 @@ var BRANCHES=[
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
   {name:'City',short:'City',chip:'bchip-x',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
+  {name:'Warehouse',short:'WH',chip:'bc-w',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'}
 ];
 var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
 
@@ -627,6 +629,8 @@ function startApp(){
 (function(){var ts=localStorage.getItem('cc_img_ts');if(ts&&Date.now()-parseInt(ts)<8*3600*1000)startApp();})();
 </script>
 
+
+
 <!-- CC SHARED NAV -->
 <nav class="cc-nav" id="cc-nav">
   <a href="home.html" class="cc-nav-item cc-nav-home">
@@ -649,9 +653,9 @@ function startApp(){
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
     <span>Lost £</span>
   </a>
-  <a href="compare.html" class="cc-nav-item" id="ccn-compare">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-    <span>Compare</span>
+  <a href="kpi.html" class="cc-nav-item" id="ccn-kpi">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/><path d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg>
+    <span>KPIs</span>
   </a>
   <a href="images.html" class="cc-nav-item" id="ccn-images">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
@@ -668,16 +672,15 @@ function startApp(){
   var idMap={
     'index.html':'ccn-index','stock.html':'ccn-stock','urgent.html':'ccn-urgent',
     'lostsales.html':'ccn-lostsales','compare.html':'ccn-compare',
-    'images.html':'ccn-images','director.html':'ccn-director'
+    'images.html':'ccn-images','director.html':'ccn-director','kpi.html':'ccn-kpi'
   };
   var activeId=idMap[page];
   if(activeId){var el=document.getElementById(activeId);if(el)el.classList.add('active');}
-  // Hide director link for staff
   var role=localStorage.getItem('cc_role');
   if(role!=='manager'&&role!=='director'){
-    var d=document.getElementById('ccn-director');if(d)d.style.display='none';
-    var ls=document.getElementById('ccn-lostsales');if(ls)ls.style.display='none';
-    var cmp=document.getElementById('ccn-compare');if(cmp)cmp.style.display='none';
+    ['ccn-director','ccn-lostsales','ccn-kpi'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.style.display='none';
+    });
   }
 })();
 </script>
