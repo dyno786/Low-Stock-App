@@ -399,10 +399,14 @@ function buildDeptFilter(){
 
 // ── HELPERS ───────────────────────────────────────────────────
 function cl(v){return String(v==null?'':v).trim();}
-function calcCollect(srcQty,rule){
+function calcCollect(srcQty,rule,destQty){
   if(rule==='wh'){
-    if(srcQty>=WH_MIN)return 0;
-    return WH_MIN-srcQty;
+    if(srcQty<=0)return 0;
+    // How many to bring to dest so dest reaches WH_MIN (12)
+    var destNeeds=WH_MIN-(destQty||0);
+    if(destNeeds<=0)return 0; // dest already has 12+
+    // Can't take more than warehouse has
+    return Math.min(destNeeds,srcQty);
   }
   // half: send half, keep half
   if(srcQty<=0)return 0;
@@ -489,8 +493,8 @@ function renderDest(destIdx){
       // SOURCE MUST HAVE POSITIVE STOCK — this is the key fix
       if(srcProd.qty<=0)return;
       // Calculate how many to take
-      var qty=calcCollect(srcProd.qty,srcConf.rule);
-      if(qty<=0)return; // warehouse already has 12+ there
+      var qty=calcCollect(srcProd.qty,srcConf.rule,destQty);
+      if(qty<=0)return;
       // Only if dest is out or very low
       var destProd=destMap[srcProd.bc];
       var destQty=destProd?destProd.qty:0;
@@ -594,7 +598,6 @@ function renderDest(destIdx){
 
 // ── VIEW SWITCHING ────────────────────────────────────────────
 var currentView = 'collect';
-document.querySelector('.vtabs-wrap') // handled via delegation below
 
 // ── RENDER ALL OUT OF STOCK ───────────────────────────────────
 var oosFilter='all'; // 'all' | '7' | '14' | '30' | '60'
@@ -751,6 +754,82 @@ function updateOOSProgress(total,withSrc,destIdx){
   document.getElementById('prog-sub').textContent=total+' out of stock at '+BRANCHES[destIdx].name+' · '+withSrc+' can be collected · '+(total-withSrc)+' need reorder';
   document.getElementById('wa-progress').textContent=total+' items OOS';
 }
+
+// ── CONTROLS ─────────────────────────────────────────────────
+
+// Branch tabs
+document.querySelector('.btabs').addEventListener('click',function(e){
+  var tab=e.target.closest('.btab');if(!tab)return;
+  document.querySelectorAll('.btab').forEach(function(t){t.classList.remove('on');});
+  tab.classList.add('on');
+  currentDest=parseInt(tab.dataset.b);
+  activeDepts=['All'];
+  activeSources=[0,1,2,3];
+  buildSrcFilter();
+  buildDeptFilter();
+  if(currentView==='collect')renderDest(currentDest);
+  else renderOOS(currentDest);
+});
+
+// View tabs (Collect now / All out of stock)
+document.addEventListener('click',function(e){
+  var vt=e.target.closest('.vtab');if(!vt)return;
+  document.querySelectorAll('.vtab').forEach(function(t){
+    t.style.color='var(--sub)';
+    t.style.borderBottomColor='transparent';
+  });
+  vt.style.color='#cc0000';
+  vt.style.borderBottomColor='#cc0000';
+  currentView=vt.dataset.v;
+  if(currentView==='collect')renderDest(currentDest);
+  else renderOOS(currentDest);
+});
+
+// WhatsApp button
+document.getElementById('wa-btn').addEventListener('click',function(){
+  var destName=BRANCHES[currentDest].name;
+  var sources=DEST_SOURCES[currentDest];
+  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var msg='CC Hair & Beauty — Transfer Update\n'+date+' '+time+'\n\n';
+  msg+='Branch collecting: '+destName+'\n\n';
+  var totalDone=0,totalPending=0;
+  sources.forEach(function(srcConf){
+    if(activeSources.indexOf(srcConf.srcIdx)<0)return;
+    var srcData=bd[srcConf.srcIdx];if(!srcData)return;
+    var destData=bd[currentDest]||[];
+    var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+    var done=[],pending=[];
+    srcData.forEach(function(p){
+      if(!p.bc||p.qty<=0)return;
+      var destProd=destMap[p.bc];
+      var destQty=destProd?destProd.qty:0;
+      var qty=calcCollect(p.qty,srcConf.rule,destQty);
+      if(qty<=0)return;
+      if(destQty>3)return;
+      if(!deptVisible(p.dp))return;
+      var label=p.nm+(p.sz?' ('+p.sz+')':'')+' × '+qty;
+      if(isTicked(currentDest,srcConf.srcIdx,p.bc))done.push(label);
+      else pending.push(label);
+    });
+    if(!done.length&&!pending.length)return;
+    msg+='From '+BRANCHES[srcConf.srcIdx].name+':\n';
+    if(done.length){msg+='Collected ('+done.length+'):\n';done.forEach(function(d){msg+='  '+d+'\n';});}
+    if(pending.length){msg+='Still to collect ('+pending.length+'):\n';pending.forEach(function(d){msg+='  '+d+'\n';});}
+    msg+='\n';
+    totalDone+=done.length;totalPending+=pending.length;
+  });
+  msg+='Total: '+totalDone+' done, '+totalPending+' remaining\n';
+  msg+='Sent from CC Transfer App';
+  window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
+});
+
+// Reset ticks
+document.getElementById('reset-btn').addEventListener('click',function(){
+  if(!confirm('Reset all ticks?'))return;
+  ticks={};localStorage.setItem('cc_urg2_ticks',JSON.stringify(ticks));
+  renderDest(currentDest);
+});
 
 // ── START ─────────────────────────────────────────────────────
 function startApp(){
