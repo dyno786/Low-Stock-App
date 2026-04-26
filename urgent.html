@@ -298,7 +298,7 @@ var TIME_OPTS=[{l:'Today',v:1},{l:'Yesterday',v:2},{l:'3 days',v:3},{l:'7 days',
 // Pairs: Chapy→City first, then Chapy→Roundhay, then Roundhay→*
 var PAIRS=[{f:1,t:2},{f:1,t:0},{f:0,t:1},{f:0,t:2},{f:2,t:0},{f:2,t:1},{f:3,t:0},{f:3,t:1},{f:3,t:2},{f:0,t:3},{f:1,t:3},{f:2,t:3}];
 
-var bd=[[],[],[]],imgs={},loaded=0,imgsLoaded=false;
+var bd=[[],[],[],[]],imgs={},loaded=0,imgsLoaded=false;
 var urgFrom=1,urgTo=2,urgDays=3;
 var selectedDepts=null; // null = all selected
 var ticks=JSON.parse(localStorage.getItem('cc_urgent_ticks')||'{}');
@@ -324,7 +324,7 @@ function getHistory(){try{return JSON.parse(localStorage.getItem('cc_urg_hist')|
 function saveHistory(h){try{localStorage.setItem('cc_urg_hist',JSON.stringify(h));}catch(e){}}
 
 function logOutOfStockCounts(){
-  if(loaded<3)return;
+  if(loaded<4)return;
   var h=getHistory();
   var day=todayKey();
   if(!h[day])h[day]={};
@@ -454,8 +454,8 @@ async function loadBranch(bidx){
     });
   }catch(e){bd[bidx]=[];}
   loaded++;
-  document.getElementById('stime').textContent=loaded<3?('loaded '+loaded+'/3…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
-  if(loaded===3){
+  document.getElementById('stime').textContent=loaded<4?('loaded '+loaded+'/4…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
+  if(loaded===4){
     logOutOfStockCounts();
     buildDeptFilter();
     loadImgs().then(function(){render();});
@@ -516,10 +516,10 @@ function toggleAllDepts(){
 // ── BUILD MAP ──────────────────────────────────────────────────────
 function buildMap(){
   var m={};
-  for(var b=0;b<3;b++){
+  for(var b=0;b<4;b++){
     bd[b].forEach(function(p){
       if(!p.bc)return;
-      if(!m[p.bc])m[p.bc]={nm:p.nm,sz:p.sz,bc:p.bc,dp:p.dp,prc:p.prc,branches:[null,null,null]};
+      if(!m[p.bc])m[p.bc]={nm:p.nm,sz:p.sz,bc:p.bc,dp:p.dp,prc:p.prc,branches:[null,null,null,null]};
       m[p.bc].branches[b]=p;
     });
   }
@@ -647,11 +647,11 @@ function render(){
 
     if(!isSend){
       var hasAlt=list.filter(function(x){
-        for(var b=0;b<3;b++){if(b===urgFrom&&b===urgTo)continue;if(b===urgTo)continue;var p=x.item.branches[b];if(p&&p.qty>0)return true;}
+        for(var b=0;b<4;b++){if(b===urgFrom&&b===urgTo)continue;if(b===urgTo)continue;var p=x.item.branches[b];if(p&&p.qty>0)return true;}
         return false;
       });
       var noAlt=list.filter(function(x){
-        for(var b=0;b<3;b++){if(b===urgTo)continue;var p=x.item.branches[b];if(p&&p.qty>0)return false;}
+        for(var b=0;b<4;b++){if(b===urgTo)continue;var p=x.item.branches[b];if(p&&p.qty>0)return false;}
         return true;
       });
       // Render "check other branch" section first
@@ -736,7 +736,7 @@ function altSrcTag(item){
 
 // ── LONG OUT OF STOCK — items OOS 30+ days at dest ───────────────────────────
 function renderLongOOS(){
-  if(loaded<2)return'';
+  if(loaded<4)return'';
   var map=buildMap();
   var MIN_DAYS=30;
   var results=[];
@@ -835,8 +835,8 @@ function renderLongOOS(){
 
 // ── PRODUCT PANEL ──────────────────────────────────────────────────
 function openPanel(bc){
-  var info=null;var found=[null,null,null];
-  for(var b=0;b<3;b++){var p=bd[b].find(function(x){return x.bc===bc;});if(p){found[b]=p;if(!info)info=p;}}
+  var info=null;var found=[null,null,null,null];
+  for(var b=0;b<4;b++){var p=bd[b].find(function(x){return x.bc===bc;});if(p){found[b]=p;if(!info)info=p;}}
   if(!info)return;
   var hero=document.getElementById('phero');hero.innerHTML='';
   var src=imgs[bc];
@@ -848,7 +848,7 @@ function openPanel(bc){
   document.getElementById('pp-prc').textContent=info.prc>0?'£'+info.prc.toFixed(2):'—';
   var dst=found[urgTo];
   document.getElementById('pp-ls').textContent=dst?dst.ls:'—';
-  var chips=['bc-r','bc-c','bc-x'];
+  var chips=['bc-r','bc-c','bc-x','bc-w'];
   var brows='<div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Stock by branch</div>';
   for(var b=0;b<3;b++){
     var p=found[b];
@@ -917,7 +917,7 @@ function startApp(){
   buildPairTabs();
   buildTimePills();
   // Sequential loading
-  loadBranch(0).then(function(){return loadBranch(1);}).then(function(){return loadBranch(2);});
+  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
 }
 
 (function(){
