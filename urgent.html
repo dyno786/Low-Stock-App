@@ -47,7 +47,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .src-name{font-size:13px;font-weight:700;flex:1}
 .src-rule{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
 .src-progress{font-size:10px;color:var(--sub)}
-/* DEPT */
+/* DEPT FILTER PILLS */
+.dept-filter{background:#fff;border-bottom:1px solid var(--border);padding:7px 10px;display:flex;gap:5px;flex-wrap:wrap;position:sticky;top:117px;z-index:49}
+.dpill{padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--sub);user-select:none;white-space:nowrap;transition:all .1s}
+.dpill.on{background:#cc0000;color:#fff;border-color:#cc0000}
+/* DEPT HEADERS */
 .dept-hdr{padding:7px 14px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
 .dept-name{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
 .dept-count{font-size:10px;color:var(--sub)}
@@ -183,6 +187,10 @@ document.getElementById('pinpad').addEventListener('click',function(e){
   <div class="prog-sub" id="prog-sub">Loading…</div>
 </div>
 
+<div class="dept-filter" id="dept-filter">
+  <div class="dpill on" data-d="All">All depts</div>
+</div>
+<div class="prog-bar" style="display:none" id="prog-bar2"><div class="prog-fill" id="prog-fill2" style="width:0%"></div></div>
 <div id="out"><div class="loading"><div class="spin"></div>Loading all branches…</div></div>
 
 <!-- WHATSAPP FOOTER -->
@@ -237,11 +245,69 @@ var DEST_SOURCES = [
 ];
 
 // ── STATE ─────────────────────────────────────────────────────
-var bd=[null,null,null,null]; // data per branch index
+var bd=[null,null,null,null];
 var imgs={};
 var loaded=0;
-var currentDest=0; // which dest branch tab is shown
+var currentDest=0;
+var currentView='collect';
+var activeDepts=['All']; // 'All' or list of selected dept names
 var ticks=JSON.parse(localStorage.getItem('cc_urg2_ticks')||'{}');
+
+// ── DEPT FILTER HELPERS ───────────────────────────────────────
+function deptVisible(dp){
+  if(activeDepts.indexOf('All')>=0)return true;
+  return activeDepts.indexOf(dp||'General')>=0;
+}
+
+function buildDeptFilter(){
+  // Gather all depts from current source data for this dest
+  var deptSet={};
+  var sources=DEST_SOURCES[currentDest];
+  var destData=bd[currentDest]||[];
+  var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+
+  sources.forEach(function(srcConf){
+    var srcData=bd[srcConf.srcIdx];
+    if(!srcData)return;
+    srcData.forEach(function(p){
+      if(p.qty<=0)return;
+      var qty=calcCollect(p.qty,srcConf.rule);
+      if(qty<=0)return;
+      var dp=destMap[p.bc];
+      if(dp&&dp.qty>3)return;
+      if(p.dp)deptSet[p.dp]=true;
+    });
+  });
+
+  var depts=Object.keys(deptSet).sort();
+  if(!depts.length)return;
+
+  var el=document.getElementById('dept-filter');
+  var html='<div class="dpill'+(activeDepts.indexOf('All')>=0?' on':'')+'" data-d="All">All depts</div>';
+  depts.forEach(function(d){
+    var on=activeDepts.indexOf('All')<0&&activeDepts.indexOf(d)>=0;
+    html+='<div class="dpill'+(on?' on':'')+'" data-d="'+d.replace(/"/g,'&quot;')+'">'+d+'</div>';
+  });
+  el.innerHTML=html;
+
+  el.querySelectorAll('.dpill').forEach(function(pill){
+    pill.addEventListener('click',function(){
+      var d=this.dataset.d;
+      if(d==='All'){
+        activeDepts=['All'];
+      }else{
+        activeDepts=activeDepts.filter(function(x){return x!=='All';});
+        var idx=activeDepts.indexOf(d);
+        if(idx>=0)activeDepts.splice(idx,1);
+        else activeDepts.push(d);
+        if(!activeDepts.length)activeDepts=['All'];
+      }
+      buildDeptFilter();
+      if(currentView==='collect')renderDest(currentDest);
+      else renderOOS(currentDest);
+    });
+  });
+}
 
 // ── HELPERS ───────────────────────────────────────────────────
 function cl(v){return String(v==null?'':v).trim();}
@@ -295,10 +361,13 @@ async function loadBranch(idx){
   }catch(e){bd[idx]=[];}
   loaded++;
   document.getElementById('stime').textContent=loaded<4?('loaded '+loaded+'/4…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
-  if(loaded>=1){if(currentView==='collect')renderDest(currentDest);else renderOOS(currentDest);}
+  if(loaded>=1){buildDeptFilter();if(currentView==='collect')renderDest(currentDest);else renderOOS(currentDest);}
 }
 
-// ── RENDER ────────────────────────────────────────────────────
+// ── RENDER COLLECT NOW ────────────────────────────────────────
+// ONLY shows items physically IN the source branch (qty > 0)
+// Warehouse: bring enough to make dest have 12 minimum
+// Other branches: bring half their stock
 function renderDest(destIdx){
   currentDest=destIdx;
   var el=document.getElementById('out');
@@ -306,78 +375,93 @@ function renderDest(destIdx){
   var totalItems=0,doneItems=0;
   var html='';
 
+  var destData=bd[destIdx]||[];
+  var destMap={};
+  destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+
   sources.forEach(function(srcConf){
     var srcIdx=srcConf.srcIdx;
     var srcBranch=BRANCHES[srcIdx];
     var srcData=bd[srcIdx];
+
     if(!srcData){
-      html+='<div class="src-section"><div class="src-hdr"><div class="src-dot" style="background:'+srcBranch.color+'"></div><div class="src-name">Collect from '+srcBranch.name+'</div><div class="src-rule" style="background:'+srcBranch.color+'22;color:'+srcBranch.color+'">Loading…</div></div></div>';
+      html+='<div class="src-section"><div class="src-hdr">'+
+        '<div class="src-dot" style="background:'+srcBranch.color+'"></div>'+
+        '<div class="src-name">Collect from '+srcBranch.name+'</div>'+
+        '<div class="src-rule" style="background:'+srcBranch.color+'22;color:'+srcBranch.color+'">Loading…</div>'+
+        '</div></div>';
       return;
     }
 
-    // Find items that are OUT at destination but IN STOCK at source
-    var destData=bd[destIdx]||[];
-    var destMap={};
-    destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-
-    // Items in source with positive stock where dest is out or low
     var eligible=[];
     srcData.forEach(function(srcProd){
-      if(!srcProd.bc)return;
+      if(!srcProd.bc||!srcProd.nm)return;
+      // SOURCE MUST HAVE POSITIVE STOCK — this is the key fix
+      if(srcProd.qty<=0)return;
+      // Calculate how many to take
       var qty=calcCollect(srcProd.qty,srcConf.rule);
-      if(qty<=0)return; // nothing to send
+      if(qty<=0)return; // warehouse already has 12+ there
+      // Only if dest is out or very low
       var destProd=destMap[srcProd.bc];
-      // Only show if dest is out of stock (<=0) or has very low stock (<=3)
-      if(destProd&&destProd.qty>3)return;
-      eligible.push({bc:srcProd.bc,nm:srcProd.nm,sz:srcProd.sz,dp:srcProd.dp||'General',
-                     prc:srcProd.prc,srcQty:srcProd.qty,destQty:destProd?destProd.qty:0,qty:qty});
+      var destQty=destProd?destProd.qty:0;
+      if(destQty>3)return; // dest has enough
+      eligible.push({bc:srcProd.bc,nm:srcProd.nm,sz:srcProd.sz,
+                     dp:srcProd.dp||'General',prc:srcProd.prc,
+                     srcQty:srcProd.qty,destQty:destQty,qty:qty});
     });
 
+    // Apply dept filter
+    eligible=eligible.filter(function(item){return deptVisible(item.dp);});
     if(!eligible.length)return;
 
-    // Group by department
     var byDept={};
     eligible.forEach(function(item){
       var d=item.dp||'General';
-      if(!byDept[d])byDept[d]=[];
-      byDept[d].push(item);
+      if(!byDept[d])byDept[d]=[];byDept[d].push(item);
     });
 
     var srcDone=eligible.filter(function(x){return isTicked(destIdx,srcIdx,x.bc);}).length;
     totalItems+=eligible.length;doneItems+=srcDone;
 
-    html+='<div class="src-section">';
-    html+='<div class="src-hdr">';
-    html+='<div class="src-dot" style="background:'+srcBranch.color+'"></div>';
-    html+='<div class="src-name">Collect from '+srcBranch.name+'</div>';
-    html+='<div class="src-rule" style="background:'+srcBranch.color+'22;color:'+srcBranch.color+'">'+srcConf.label+'</div>';
-    html+='<div class="src-progress">'+srcDone+'/'+eligible.length+'</div>';
-    html+='</div>';
+    html+='<div class="src-section">'+
+      '<div class="src-hdr">'+
+        '<div class="src-dot" style="background:'+srcBranch.color+'"></div>'+
+        '<div class="src-name">Collect from '+srcBranch.name+'</div>'+
+        '<div class="src-rule" style="background:'+srcBranch.color+'22;color:'+srcBranch.color+'">'+srcConf.label+'</div>'+
+        '<div class="src-progress">'+srcDone+'/'+eligible.length+'</div>'+
+      '</div>';
 
     Object.keys(byDept).sort().forEach(function(dept){
       var items=byDept[dept];
-      html+='<div class="dept-hdr" data-dept="'+dept.replace(/"/g,'&quot;')+'"><span class="dept-name">'+dept+'</span><span class="dept-count">'+items.length+' items</span></div>';
-      html+='<div class="dept-body" id="dept_'+srcIdx+'_'+dept.replace(/\W/g,'_')+'">';
+      var deptId='d_'+srcIdx+'_'+dept.replace(/\W/g,'_');
+      html+='<div class="dept-hdr" data-did="'+deptId+'">'+
+        '<span class="dept-name">'+dept+'</span>'+
+        '<span class="dept-count">'+items.length+'</span>'+
+      '</div>'+
+      '<div class="dept-body" id="'+deptId+'">';
       items.forEach(function(item){
         var done=isTicked(destIdx,srcIdx,item.bc);
-        html+='<div class="item-card'+(done?' done':'')+'" data-bc="'+item.bc+'" data-srcidx="'+srcIdx+'">';
-        html+='<div class="item-img">'+imgEl(item.bc,52)+'</div>';
-        html+='<div class="item-body">';
-        html+='<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>';
-        html+='<div class="item-bc">'+item.bc+'</div>';
-        html+='<div class="item-tags">';
-        html+='<span class="itag '+(srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>';
-        html+='<span class="itag itag-info">'+BRANCHES[destIdx].name+': '+(item.destQty<=0?'OUT':item.destQty)+'</span>';
-        if(item.prc>0)html+='<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>';
-        html+='</div></div>';
-        html+='<div class="item-right">';
-        html+='<div class="collect-box'+(done?' done-box':'')+'">';
-        html+='<div class="collect-num'+(done?' done-num':'')+'">'+item.qty+'</div>';
-        html+='<div class="collect-lbl">collect</div>';
-        html+='</div>';
-        html+='<div class="tick-btn'+(done?' done':'')+' " data-tick="1" data-bc="'+item.bc+'" data-srcidx="'+srcIdx+'">';
-        html+='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-        html+='</div></div></div>';
+        html+='<div class="item-card'+(done?' done':'')+'" data-bc="'+item.bc+'" data-srcidx="'+srcIdx+'">'+
+          '<div class="item-img">'+imgEl(item.bc,52)+'</div>'+
+          '<div class="item-body">'+
+            '<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
+            '<div class="item-bc">'+item.bc+'</div>'+
+            '<div class="item-tags">'+
+              '<span class="itag '+(srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>'+
+              '<span class="itag itag-info">'+BRANCHES[destIdx].name+': '+(item.destQty<=0?'OUT':item.destQty)+'</span>'+
+              (item.prc>0?'<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>':'')+
+            '</div>'+
+          '</div>'+
+          '<div class="item-right">'+
+            '<div class="collect-box'+(done?' done-box':'')+'">'+
+              '<div class="collect-num'+(done?' done-num':'')+'">'+item.qty+'</div>'+
+              '<div class="collect-lbl">collect</div>'+
+            '</div>'+
+            '<div class="tick-btn'+(done?' done':'')+'" data-tick="1" data-bc="'+item.bc+'" data-srcidx="'+srcIdx+'">'+
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
+            '</div>'+
+          '</div>'+
+        '</div>';
       });
       html+='</div>';
     });
@@ -385,114 +469,46 @@ function renderDest(destIdx){
   });
 
   if(!html){
-    html='<div class="empty">'+
-      (loaded<4?'<div class="loading"><div class="spin"></div>Loading branches…</div>':'All branches loaded. No items to collect for '+BRANCHES[destIdx].name+' right now.')+
+    html='<div class="empty">'+(loaded<4?
+      '<div class="spin" style="margin:20px auto"></div>Loading branches…':
+      'Nothing to collect for '+BRANCHES[destIdx].name+' right now.<br><small style="font-size:11px">All source branches are also out of stock.<br>Switch to the ⏱ All out of stock tab.</small>')+
     '</div>';
   }
 
   el.innerHTML=html;
 
-  // Update progress
   var pct=totalItems>0?Math.round(doneItems/totalItems*100):0;
   document.getElementById('prog-fill').style.width=pct+'%';
   document.getElementById('prog-txt').textContent=pct+'%';
-  document.getElementById('prog-sub').textContent=doneItems+' of '+totalItems+' items collected for '+BRANCHES[destIdx].name;
-  document.getElementById('wa-progress').textContent=doneItems+' items ticked';
+  document.getElementById('prog-sub').textContent=
+    totalItems?doneItems+' of '+totalItems+' items collected for '+BRANCHES[destIdx].name:
+    'No stock available to collect right now';
+  document.getElementById('wa-progress').textContent=doneItems+' collected';
 
-  // Wire tick buttons
   el.querySelectorAll('[data-tick]').forEach(function(btn){
     btn.addEventListener('click',function(e){
       e.stopPropagation();
-      var bc=this.dataset.bc;
-      var srcIdx=parseInt(this.dataset.srcidx);
-      var cur=isTicked(destIdx,srcIdx,bc);
-      setTick(destIdx,srcIdx,bc,!cur);
+      var bc=this.dataset.bc;var srcIdx=parseInt(this.dataset.srcidx);
+      setTick(destIdx,srcIdx,bc,!isTicked(destIdx,srcIdx,bc));
       renderDest(destIdx);
     });
   });
 
-  // Wire dept toggles
-  el.querySelectorAll('.dept-hdr').forEach(function(hdr){
+  el.querySelectorAll('.dept-hdr[data-did]').forEach(function(hdr){
     hdr.addEventListener('click',function(){
-      var dept=this.dataset.dept;
-      var srcDot=this.previousElementSibling&&this.previousElementSibling.classList.contains('src-hdr');
-      var next=this.nextElementSibling;
-      if(next&&next.classList.contains('dept-body')){
-        next.style.display=next.style.display==='none'?'block':'none';
-      }
+      var body=document.getElementById(this.dataset.did);
+      if(body)body.style.display=body.style.display==='none'?'block':'none';
     });
   });
 }
-
-// ── WHATSAPP ──────────────────────────────────────────────────
-document.getElementById('wa-btn').addEventListener('click',function(){
-  var destName=BRANCHES[currentDest].name;
-  var sources=DEST_SOURCES[currentDest];
-  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  var msg='*CC Hair & Beauty — Transfer Update*\n'+date+' '+time+'\n\n';
-  msg+='Branch collecting: *'+destName+'*\n\n';
-
-  sources.forEach(function(srcConf){
-    var srcIdx=srcConf.srcIdx;
-    var srcData=bd[srcIdx];if(!srcData)return;
-    var destData=bd[currentDest]||[];
-    var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-    var done=[];var pending=[];
-    srcData.forEach(function(p){
-      if(!p.bc)return;
-      var qty=calcCollect(p.qty,srcConf.rule);if(qty<=0)return;
-      var dp=destMap[p.bc];if(dp&&dp.qty>3)return;
-      var tickd=isTicked(currentDest,srcIdx,p.bc);
-      if(tickd)done.push(p.nm+(p.sz?' ('+p.sz+')':'')+' × '+qty);
-      else pending.push(p.nm+(p.sz?' ('+p.sz+')':'')+' × '+qty);
-    });
-    if(!done.length&&!pending.length)return;
-    msg+='*From '+BRANCHES[srcIdx].name+'*\n';
-    if(done.length){msg+='✅ Collected ('+done.length+'):\n';done.forEach(function(d){msg+='  • '+d+'\n';});}
-    if(pending.length){msg+='⏳ Still to collect ('+pending.length+'):\n';pending.forEach(function(d){msg+='  • '+d+'\n';});}
-    msg+='\n';
-  });
-  msg+='_Sent from CC Transfer App_';
-  window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
-});
-
-// ── CONTROLS ──────────────────────────────────────────────────
-document.querySelector('.btabs').addEventListener('click',function(e){
-  var tab=e.target.closest('.btab');if(!tab)return;
-  document.querySelectorAll('.btab').forEach(function(t){t.classList.remove('on');});
-  tab.classList.add('on');
-  currentDest=parseInt(tab.dataset.b);
-  if(currentView==='collect')renderDest(currentDest);
-  else renderOOS(currentDest);
-});
-
-document.addEventListener('click',function(e){
-  var vt=e.target.closest('.vtab');if(!vt)return;
-  document.querySelectorAll('.vtab').forEach(function(t){
-    t.style.color='var(--sub)';
-    t.style.borderBottomColor='transparent';
-    t.classList.remove('on');
-  });
-  vt.style.color='#cc0000';
-  vt.style.borderBottomColor='#cc0000';
-  vt.classList.add('on');
-  currentView=vt.dataset.v;
-  if(currentView==='collect')renderDest(currentDest);
-  else renderOOS(currentDest);
-});
-
-document.getElementById('reset-btn').addEventListener('click',function(){
-  if(!confirm('Reset all ticks?'))return;
-  ticks={};localStorage.setItem('cc_urg2_ticks',JSON.stringify(ticks));
-  renderDest(currentDest);
-});
 
 // ── VIEW SWITCHING ────────────────────────────────────────────
 var currentView = 'collect';
 document.querySelector('.vtabs-wrap') // handled via delegation below
 
 // ── RENDER ALL OUT OF STOCK ───────────────────────────────────
+var oosFilter='all'; // 'all' | '7' | '14' | '30' | '60'
+
 function renderOOS(destIdx){
   var el=document.getElementById('out');
   var destData=bd[destIdx];
@@ -512,7 +528,8 @@ function renderOOS(destIdx){
 
   // All OOS items at dest — qty <= 0, must have sold before (not Never)
   var oosItems=destData.filter(function(p){
-    return p.bc&&p.nm&&p.qty<=0&&p.ls!=='Never'&&p.ls&&p.ls!=='Unknown';
+    if(!p.bc||!p.nm||p.qty>0||p.ls==='Never'||!p.ls||p.ls==='Unknown')return false;
+    return deptVisible(p.dp);
   });
 
   if(!oosItems.length){
@@ -550,15 +567,49 @@ function renderOOS(destIdx){
     byDept[d].push(p);
   });
 
+  // OOS filter pills
+  var filterOpts=[
+    {v:'all',l:'All'},
+    {v:'7',l:'7+ days'},
+    {v:'14',l:'14+ days'},
+    {v:'30',l:'30+ days'},
+    {v:'60',l:'60+ days'},
+  ];
+  var filteredOOS=oosItems.filter(function(p){
+    if(oosFilter==='all')return true;
+    return p.daysOut>=parseInt(oosFilter);
+  });
+
   // Metrics bar
-  var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px;background:var(--bg)">';
+  var withSrcF=filteredOOS.filter(function(p){return availMap[p.bc]&&availMap[p.bc].length>0;}).length;
+  var html='<div style="display:flex;gap:5px;padding:8px 10px;background:#fff;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none">';
+  filterOpts.forEach(function(opt){
+    var on=oosFilter===opt.v;
+    html+='<div class="oos-pill'+(on?' oos-pill-on':'')+'" data-oof="'+opt.v+'" style="flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid '+(on?'#cc0000':'var(--border)')+';background:'+(on?'#cc0000':'#fff')+';color:'+(on?'#fff':'var(--sub)')+'">'+opt.l+'</div>';
+  });
+  html+='</div>';
+
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px;background:var(--bg)">';
   html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid #cc0000"><div style="font-size:18px;font-weight:700;font-family:monospace;color:#cc0000">'+oosItems.length+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Total OOS</div></div>';
   html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid var(--green)"><div style="font-size:18px;font-weight:700;font-family:monospace;color:var(--green)">'+withSrc+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Can collect</div></div>';
   html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid var(--amber)"><div style="font-size:18px;font-weight:700;font-family:monospace;color:var(--amber)">'+noSrc+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Need reorder</div></div>';
   html+='</div>';
 
-  Object.keys(byDept).sort().forEach(function(dept){
-    var items=byDept[dept];
+  // Regroup using filtered list
+  var byDeptF={};
+  filteredOOS.forEach(function(p){
+    var d=p.dp||'General';if(!byDeptF[d])byDeptF[d]=[];byDeptF[d].push(p);
+  });
+
+  if(!filteredOOS.length){
+    html+='<div class="empty">No items out of stock for '+parseInt(oosFilter)+'+ days at '+BRANCHES[destIdx].name+'</div>';
+    el.innerHTML=html;
+    el.querySelectorAll('.oos-pill').forEach(function(p){p.addEventListener('click',function(){oosFilter=this.dataset.oof;renderOOS(destIdx);});});
+    return;
+  }
+
+  Object.keys(byDeptF).sort().forEach(function(dept){
+    var items=byDeptF[dept];
     html+='<div class="oos-dept-hdr"><span class="oos-dept-name">'+dept+'</span><span style="font-size:10px;color:var(--sub)">'+items.length+' items</span></div>';
     items.forEach(function(p){
       var avail=availMap[p.bc]||[];
@@ -593,6 +644,14 @@ function renderOOS(destIdx){
   });
 
   el.innerHTML=html;
+
+  // Wire filter pills
+  el.querySelectorAll('.oos-pill').forEach(function(p){
+    p.addEventListener('click',function(){
+      oosFilter=this.dataset.oof;
+      renderOOS(destIdx);
+    });
+  });
 }
 
 function updateOOSProgress(total,withSrc,destIdx){
