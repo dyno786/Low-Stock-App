@@ -241,6 +241,10 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom)) !important}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         History
       </button>
+      <button class="tb-btn" onclick="showChangeLog()" style="position:relative">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+        Changes
+      </button>
       <button class="tb-btn" onclick="showSyncLog()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Log
@@ -360,6 +364,38 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom)) !important}
       <div style="font-size:11px;color:var(--ink3);margin-bottom:14px">Daily log of what each branch checked and restocked</div>
     </div>
     <div id="hist-content" style="padding:0 12px 20px"></div>
+  </div>
+</div>
+
+<!-- STOCK CHANGE LOG PANEL -->
+<div class="panel-ov" id="chlog-ov" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="panel" style="padding-bottom:20px">
+    <div class="p-handle"></div>
+    <div style="padding:14px 16px 10px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:16px;font-weight:600">Stock change log</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">Changes detected from EPOS via auto-refresh</div>
+        </div>
+        <button onclick="clearChangeLog()" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;font-family:var(--font)">Clear</button>
+      </div>
+      <!-- Filters -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <select id="chlog-branch" onchange="showChangeLog()" style="flex:1;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;background:var(--bg);font-family:var(--font);outline:none">
+          <option value="all">All branches</option>
+          <option value="roundhay">Roundhay</option>
+          <option value="chapeltown">Chapeltown</option>
+          <option value="citycenter">City Center</option>
+        </select>
+        <select id="chlog-type" onchange="showChangeLog()" style="flex:1;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;background:var(--bg);font-family:var(--font);outline:none">
+          <option value="all">All changes</option>
+          <option value="improved">Improved ↑</option>
+          <option value="worse">Got worse ↓</option>
+          <option value="suspicious">⚠ Suspicious</option>
+        </select>
+      </div>
+    </div>
+    <div id="chlog-content"></div>
   </div>
 </div>
 
@@ -704,6 +740,155 @@ function clearStockWatch() {
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────────
+
+// ── STOCK CHANGE LOG ────────────────────────────────────────────────────────
+// Every time we fetch fresh data from EPOS (via Google Sheets),
+// compare new stock qty vs what we saw last time.
+// Log any changes: product X went from -1 to +5 at Roundhay at 14:32
+// This catches EPOS changes made via handheld scanners etc — no staff ticking needed
+
+function getChangeLog(){
+  try{return JSON.parse(localStorage.getItem('cc_change_log')||'[]');}catch(e){return[];}
+}
+function saveChangeLog(log){
+  try{localStorage.setItem('cc_change_log',JSON.stringify(log));}catch(e){}
+}
+
+// Called after each branch fetch — compares new data vs snapshot
+function detectChanges(branchId, branchName, newProducts){
+  var snapshotKey='cc_snap_'+branchId;
+  var prevSnap={};
+  try{prevSnap=JSON.parse(localStorage.getItem(snapshotKey)||'{}');}catch(e){}
+
+  var log=getChangeLog();
+  var now=Date.now();
+  var timeStr=new Date().toLocaleString('en-GB',{
+    day:'2-digit',month:'short',year:'numeric',
+    hour:'2-digit',minute:'2-digit',second:'2-digit'
+  });
+  var changes=[];
+
+  newProducts.forEach(function(p){
+    if(!p.sku)return;
+    var prev=prevSnap[p.sku];
+    var curr=p.stock;
+    if(prev===undefined)return; // first time seeing this product
+    if(prev===curr)return;       // no change
+    // Stock changed!
+    var entry={
+      ts: now,
+      time: timeStr,
+      branch: branchName,
+      branchId: branchId,
+      bc: p.sku,
+      name: p.title,
+      variant: p.variant||'',
+      dept: p.vendor||'',
+      prev: prev,
+      curr: curr,
+      diff: curr-prev,
+      // Flag suspicious changes
+      suspicious: curr<0&&prev<0&&curr<prev, // went more negative
+      improved: curr>prev // got better
+    };
+    changes.push(entry);
+    log.unshift(entry);
+  });
+
+  // Keep last 500 entries
+  if(log.length>500)log=log.slice(0,500);
+  saveChangeLog(log);
+
+  // Save new snapshot
+  var newSnap={};
+  newProducts.forEach(function(p){if(p.sku)newSnap[p.sku]=p.stock;});
+  try{localStorage.setItem(snapshotKey,JSON.stringify(newSnap));}catch(e){}
+
+  return changes;
+}
+
+function showChangeLog(){
+  var log=getChangeLog();
+  var el=document.getElementById('chlog-content');
+
+  if(!log.length){
+    el.innerHTML='<div style="padding:30px;text-align:center;color:var(--ink3);font-size:13px">No changes recorded yet.<br>Changes appear after the next auto-refresh.</div>';
+    document.getElementById('chlog-ov').classList.add('open');
+    return;
+  }
+
+  // Filter controls
+  var filterBranch=document.getElementById('chlog-branch')?document.getElementById('chlog-branch').value:'all';
+  var filterType=document.getElementById('chlog-type')?document.getElementById('chlog-type').value:'all';
+
+  var filtered=log.filter(function(e){
+    if(filterBranch!=='all'&&e.branchId!==filterBranch)return false;
+    if(filterType==='improved'&&!e.improved)return false;
+    if(filterType==='worse'&&e.improved)return false;
+    if(filterType==='suspicious'&&!e.suspicious)return false;
+    return true;
+  });
+
+  // Group by date
+  var byDay={};
+  filtered.forEach(function(e){
+    var day=e.time.split(',')[0];
+    if(!byDay[day])byDay[day]=[];
+    byDay[day].push(e);
+  });
+
+  var html='';
+  Object.keys(byDay).forEach(function(day){
+    var entries=byDay[day];
+    var improved=entries.filter(function(e){return e.improved;}).length;
+    var worse=entries.filter(function(e){return !e.improved;}).length;
+    html+='<div style="padding:8px 14px 4px;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between">';
+    html+='<span>'+day+'</span>';
+    html+='<span style="font-weight:400"><span style="color:var(--green)">↑'+improved+' improved</span> · <span style="color:var(--red)">↓'+worse+' worse</span></span>';
+    html+='</div>';
+    entries.forEach(function(e){
+      var timePart=e.time.split(',')[1]||'';
+      var improved=e.curr>e.prev;
+      var suspicious=e.suspicious;
+      var diffStr=(e.diff>0?'+':'')+e.diff;
+      var bgColor=suspicious?'#fff0f0':improved?'#f0fff4':'#fff8f0';
+      var diffColor=improved?'var(--green)':'var(--red)';
+      var arrow=improved?'↑':'↓';
+
+      html+='<div style="padding:10px 14px;border-bottom:0.5px solid var(--border);background:'+bgColor+'">';
+      // Row 1: branch + time
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+      html+='<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--s2);color:var(--ink2)">'+e.branch+'</span>';
+      if(suspicious)html+='<span style="font-size:9px;font-weight:700;color:var(--red);background:var(--red-bg);padding:2px 7px;border-radius:4px">⚠ Getting worse</span>';
+      html+='<span style="font-size:10px;color:var(--ink3);font-family:monospace">'+timePart.trim()+'</span>';
+      html+='</div>';
+      // Row 2: product name
+      html+='<div style="font-size:13px;font-weight:500;margin-bottom:2px">'+e.name+(e.variant?' · <span style="color:var(--ink3)">'+e.variant+'</span>':'')+'</div>';
+      html+='<div style="font-size:10px;color:var(--ink3);margin-bottom:6px">'+e.bc+(e.dept?' · '+e.dept:'')+'</div>';
+      // Row 3: before → after
+      html+='<div style="display:flex;align-items:center;gap:8px">';
+      html+='<span style="font-size:20px;font-weight:700;font-family:monospace;color:'+(e.prev<0?'var(--red)':'var(--ink)')+'">'+e.prev+'</span>';
+      html+='<span style="font-size:16px;color:var(--ink3)">→</span>';
+      html+='<span style="font-size:20px;font-weight:700;font-family:monospace;color:'+(e.curr<0?'var(--red)':e.curr===0?'var(--ink3)':'var(--green)')+'">'+e.curr+'</span>';
+      html+='<span style="font-size:12px;font-weight:700;color:'+diffColor+';padding:3px 8px;border-radius:20px;background:'+(improved?'var(--green-bg)':'var(--red-bg)')+'">'+arrow+' '+diffStr+'</span>';
+      html+='</div>';
+      html+='</div>';
+    });
+  });
+
+  el.innerHTML=html||'<div style="padding:20px;text-align:center;color:var(--ink3)">No entries match filter</div>';
+  document.getElementById('chlog-ov').classList.add('open');
+}
+
+function clearChangeLog(){
+  if(!confirm('Clear all stock change history?'))return;
+  localStorage.removeItem('cc_change_log');
+  // Clear snapshots too
+  BRANCHES.forEach(function(b){localStorage.removeItem('cc_snap_'+b.id);});
+  document.getElementById('chlog-content').innerHTML='<div style="padding:20px;text-align:center;color:var(--ink3)">Cleared.</div>';
+}
+
+
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('top-date').textContent =
     new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
@@ -760,6 +945,12 @@ async function fetchBranch(id) {
       p.ticked  = ticks[p.id]    || false;
       p.restock = restocks[p.id] != null ? restocks[p.id] : null;
     });
+    // Detect changes vs last snapshot before overwriting
+    var branch = BRANCHES.find(function(b){return b.id===id;});
+    var changes = detectChanges(id, branch?branch.name:id, products);
+    if(changes.length>0){
+      console.log('Stock changes at '+id+':', changes.length);
+    }
     branchData[id] = products;
     var now = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
     document.getElementById('pill-time').textContent = 'Live · ' + now;
