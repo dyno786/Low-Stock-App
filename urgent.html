@@ -6,165 +6,113 @@
 <title>CC Urgent Transfers</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-:root{--bg:#f2f0ec;--surface:#fff;--s2:#f7f6f3;--border:#e4e0d8;--ink:#17150e;--ink3:#9a9588;--red:#c0392b;--red-bg:#fef2f2;--amber:#b45309;--amber-bg:#fffbeb;--green:#15803d;--green-bg:#f0fdf4;--blue:#0055cc;--blue-bg:#e6f1fb;--r:10px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+:root{--bg:#f4f4f4;--s1:#fff;--s2:#f8f8f8;--border:#eee;--ink:#111;--sub:#999;--red:#cc0000;--redbg:#fff0f0;--green:#15803d;--greenbg:#f0fdf4;--amber:#b45309;--amberbg:#fffbeb;--purple:#6d28d9;--purplebg:#ede9fe;--blue:#0055cc;--bluebg:#e6f1fb;--r:10px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:20px}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:140px}
 /* PIN */
 .pinov{position:fixed;inset:0;background:#cc0000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:480px;margin:0 auto}
-.pinlogo{width:60px;height:60px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#cc0000;margin-bottom:16px}
-.pintitle{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
-.pinsub{color:rgba(255,255,255,.7);font-size:13px;margin-bottom:36px}
-.pindots{display:flex;gap:14px;margin-bottom:32px}
-.pindot{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);transition:background .15s}
-.pindot.filled{background:#fff}
-.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:240px}
-.pinkey{background:rgba(255,255,255,.15);border:none;border-radius:12px;height:64px;font-size:22px;font-weight:600;color:#fff;cursor:pointer;touch-action:manipulation}
-.pinkey:active{background:rgba(255,255,255,.35)}
-.pinerr{color:#ffcccc;font-size:13px;margin-top:16px;height:20px;text-align:center}
-/* TOP */
-.top{background:#cc0000;padding:12px 14px 8px;position:sticky;top:0;z-index:100}
-.top-row{display:flex;align-items:center;justify-content:space-between}
-.logo{width:28px;height:28px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:#cc0000}
-.title{color:#fff;font-size:14px;font-weight:700;margin-left:8px}
-.topbtns{display:flex;gap:6px}
-.topbtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap}
-.sync{color:rgba(255,255,255,.7);font-size:10px;font-family:monospace;margin-top:4px}
-/* PAIR TABS */
-.pairtabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
-.pairtabs::-webkit-scrollbar{display:none}
-.pairtab{flex-shrink:0;padding:10px 13px;font-size:11px;font-weight:600;color:var(--ink3);border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;user-select:none}
-.pairtab.on{color:#cc0000;border-bottom-color:#cc0000}
-/* TIME PILLS */
-.timepills{display:flex;gap:5px;padding:8px 10px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
-.timepills::-webkit-scrollbar{display:none}
-.tpill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;border:1.5px solid var(--border);background:var(--surface);color:var(--ink3);user-select:none}
-.tpill.on{background:#cc0000;color:#fff;border-color:#cc0000}
-/* DEPT FILTER */
-.dept-filter{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 10px}
-.df-title{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
-.df-clear{font-size:10px;color:#cc0000;cursor:pointer;font-weight:600;text-transform:none;letter-spacing:0}
-.df-chips{display:flex;gap:5px;flex-wrap:wrap}
-.df-chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);color:var(--ink3);user-select:none;transition:all .1s;display:flex;align-items:center;gap:4px}
-.df-chip.on{border-color:#cc0000;color:#cc0000;background:var(--red-bg)}
-.df-chip .tick{width:12px;height:12px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:8px}
-.df-chip.on .tick::after{content:'✓'}
-/* METRICS */
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px;background:var(--bg)}
-.m{background:var(--surface);border-radius:var(--r);padding:9px 8px;text-align:center;border-top:2px solid var(--border)}
-.m.r{border-top-color:#cc0000}.m.g{border-top-color:var(--green)}.m.a{border-top-color:var(--amber)}
-.mlbl{font-size:8px;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
-.mval{font-size:18px;font-weight:700;font-family:monospace}
-/* SECTION HEADER */
-.sec{padding:6px 10px;font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
-.sec.green{background:var(--green-bg)}.sec.amber{background:var(--amber-bg)}.sec.red-bg{background:var(--red-bg)}
-.badge{font-size:10px;padding:1px 7px;background:rgba(0,0,0,.06);border-radius:20px}
-/* DEPT GROUP */
-.dept-hdr{padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
-.dept-hdr-left{min-width:0}
-.dept-hdr-name{font-size:12px;font-weight:600;color:var(--ink)}
-.dept-hdr-meta{font-size:10px;color:var(--ink3);margin-top:1px}
-.dept-hdr-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.dept-progress{font-size:10px;font-weight:600;color:var(--green)}
-.dept-arrow{color:var(--ink3);font-size:12px;transition:transform .2s}
-.dept-arrow.open{transform:rotate(90deg)}
-.dept-body{display:none}
-.dept-body.open{display:block}
-/* CARDS */
-.card{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;cursor:pointer;transition:background .1s}
-.card:active{background:var(--s2)}
-.card.ticked{background:var(--green-bg)}
-.card.ticked .card-name{text-decoration:line-through;color:var(--ink3)}
-.card-img{width:44px;height:44px;border-radius:7px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.card-img img{width:44px;height:44px;object-fit:cover}
-.card-body{flex:1;min-width:0}
-.card-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
-.card-bc{font-size:9px;color:var(--ink3);font-family:monospace;margin-bottom:4px}
-.card-tags{display:flex;gap:3px;flex-wrap:wrap}
-.ctag{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:500}
-.ctag.out{background:var(--red-bg);color:var(--red)}
-.ctag.ok{background:var(--green-bg);color:var(--green)}
-.ctag.na{background:var(--bg);color:var(--ink3)}
-.ctag.info{background:var(--bg);color:var(--ink3)}
-.ctag.blue{background:var(--blue-bg);color:var(--blue)}
-.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
-.sendbox{font-size:13px;font-weight:700;background:var(--green-bg);color:var(--green);padding:4px 7px;border-radius:6px;text-align:center;min-width:34px}
-.sendlbl{font-size:8px;color:var(--green);text-align:center}
-/* TICK BUTTON */
-.tick-btn{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;cursor:pointer;background:var(--surface)}
+.pinlogo{width:64px;height:64px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;color:#cc0000;margin-bottom:18px}
+.pintitle{color:#fff;font-size:20px;font-weight:700;margin-bottom:4px}
+.pinsub{color:rgba(255,255,255,.7);font-size:13px;margin-bottom:40px}
+.pindots{display:flex;gap:16px;margin-bottom:36px}
+.pindot{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.3);transition:all .15s}
+.pindot.filled{background:#fff;transform:scale(1.1)}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:260px}
+.pinkey{background:rgba(255,255,255,.15);border:none;border-radius:14px;height:68px;font-size:24px;font-weight:500;color:#fff;cursor:pointer;touch-action:manipulation}
+.pinkey:active{background:rgba(255,255,255,.3)}
+.pinerr{color:#ffcccc;font-size:13px;margin-top:18px;height:20px;text-align:center}
+/* HEADER */
+.hdr{background:#cc0000;padding:12px 16px 0;position:sticky;top:0;z-index:100}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.hdr-logo{width:30px;height:30px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#cc0000}
+.hdr-title{color:#fff;font-size:14px;font-weight:700;margin-left:8px}
+.hdr-sub{color:rgba(255,255,255,.7);font-size:10px;font-family:monospace}
+.hdr-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:600;cursor:pointer}
+/* BRANCH TABS */
+.btabs{display:flex;background:#cc0000;overflow-x:auto;scrollbar-width:none;padding:0 4px}
+.btabs::-webkit-scrollbar{display:none}
+.btab{flex:1;padding:10px 8px;text-align:center;font-size:12px;font-weight:600;color:rgba(255,255,255,.6);border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;user-select:none;min-width:80px}
+.btab.on{color:#fff;border-bottom-color:#fff}
+/* PROGRESS */
+.prog-wrap{background:#fff;padding:8px 14px;border-bottom:1px solid var(--border)}
+.prog-row{display:flex;align-items:center;gap:8px}
+.prog-bar{flex:1;height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s}
+.prog-txt{font-size:11px;font-weight:600;color:var(--green)}
+.prog-sub{font-size:10px;color:var(--sub);margin-top:3px}
+/* SOURCE SECTION */
+.src-section{margin:0;border-bottom:4px solid var(--bg)}
+.src-hdr{background:#fff;padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);position:sticky;top:117px;z-index:50}
+.src-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.src-name{font-size:13px;font-weight:700;flex:1}
+.src-rule{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+.src-progress{font-size:10px;color:var(--sub)}
+/* DEPT */
+.dept-hdr{padding:7px 14px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.dept-name{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
+.dept-count{font-size:10px;color:var(--sub)}
+.dept-body{display:block}
+/* ITEM CARD */
+.item-card{display:flex;background:#fff;border-bottom:1px solid var(--border);padding:10px 12px;gap:10px;cursor:pointer;transition:background .1s}
+.item-card:active{background:var(--bg)}
+.item-card.done{background:var(--greenbg)}
+.item-card.done .item-name{text-decoration:line-through;color:var(--sub)}
+.item-img{width:52px;height:52px;border-radius:8px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.item-img img{width:52px;height:52px;object-fit:cover}
+.item-body{flex:1;min-width:0}
+.item-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.item-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:5px}
+.item-tags{display:flex;gap:3px;flex-wrap:wrap}
+.itag{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600}
+.itag-src{background:var(--greenbg);color:var(--green)}
+.itag-info{background:var(--bg);color:var(--sub)}
+.itag-wh{background:var(--purplebg);color:var(--purple)}
+.item-right{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
+.collect-box{background:var(--redbg);border-radius:8px;padding:5px 8px;text-align:center;min-width:44px}
+.collect-box.done-box{background:var(--greenbg)}
+.collect-num{font-size:18px;font-weight:700;color:#cc0000;line-height:1}
+.collect-num.done-num{color:var(--green)}
+.collect-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+.tick-btn{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .15s;cursor:pointer;background:#fff}
 .tick-btn.done{background:var(--green);border-color:var(--green)}
 .tick-btn svg{opacity:0;transition:opacity .1s}
 .tick-btn.done svg{opacity:1}
-/* PROGRESS BAR */
-.prog-bar{height:3px;background:var(--border);margin:0}
-.prog-fill{height:100%;background:var(--green);transition:width .4s}
+/* OOS TABLE */
+.oos-section{background:#fff;border-bottom:4px solid var(--bg)}
+.oos-dept-hdr{padding:7px 14px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.oos-dept-name{font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
+.oos-row{display:flex;background:#fff;border-bottom:1px solid var(--border);padding:9px 12px;gap:10px;align-items:center}
+.oos-row.has-src{background:#f0fdf4}
+.oos-img{width:42px;height:42px;border-radius:7px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.oos-img img{width:42px;height:42px;object-fit:cover}
+.oos-body{flex:1;min-width:0}
+.oos-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.oos-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
+.oos-tags{display:flex;gap:3px;flex-wrap:wrap}
+.oos-right{flex-shrink:0;text-align:right}
+.days-badge{font-size:13px;font-weight:700;font-family:monospace}
+.days-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+/* VIEW TABS */
+.vtab{transition:all .15s}
 /* LOADING */
-.loading{padding:40px 14px;text-align:center;color:var(--ink3);font-size:12px}
+.loading{padding:40px 14px;text-align:center;color:var(--sub);font-size:12px}
 .spin{width:24px;height:24px;border:2px solid var(--border);border-top-color:#cc0000;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty{padding:36px 14px;text-align:center;color:var(--ink3);font-size:12px;line-height:2}
-/* PANEL */
-.pov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;max-width:480px;margin:0 auto}
-.pov.open{display:block}
-.pan{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
-.ph{width:36px;height:3px;background:var(--border);border-radius:2px;margin:12px auto 0}
-/* HISTORY PANEL */
-.hist-day{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
-.hist-day-hdr{padding:11px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--s2)}
-.hist-day-hdr:active{background:var(--border)}
-.hist-day-title{font-size:13px;font-weight:600}
-.hist-day-sub{font-size:10px;color:var(--ink3);margin-top:1px}
-.hist-arrow{color:var(--ink3);font-size:13px;transition:transform .2s}
-.hist-arrow.open{transform:rotate(90deg)}
-.hist-body{display:none;border-top:1px solid var(--border)}
-.hist-body.open{display:block}
-.hist-branch{padding:10px 12px;border-bottom:1px solid var(--border)}
-.hist-branch:last-child{border-bottom:none}
-.hist-bname{font-size:11px;font-weight:600;color:var(--blue);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px}
-.hist-entry{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dotted var(--border)}
-.hist-entry:last-child{border-bottom:none}
-.hist-time{font-size:10px;font-family:monospace;color:var(--ink3);width:40px;flex-shrink:0}
-.hist-count{font-size:13px;font-weight:700;font-family:monospace;width:30px;text-align:right;flex-shrink:0}
-.hist-delta{font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;min-width:50px;text-align:center;flex-shrink:0}
-.hd-better{background:var(--green-bg);color:var(--green)}
-.hd-worse{background:var(--red-bg);color:var(--red)}
-.hd-same{background:var(--bg);color:var(--ink3)}
-.hist-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
-.hist-bar-fill{height:100%;border-radius:3px}
-.hist-summary{margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px}
-/* PRODUCT PANEL */
-.phero{width:100%;height:150px;background:var(--bg);display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);overflow:hidden}
-.phero img{max-height:146px;max-width:100%;object-fit:contain}
-.ppd{padding:12px 14px}
-.ppd-name{font-size:15px;font-weight:700;margin-bottom:2px}
-.ppd-dept{font-size:10px;color:var(--ink3);margin-bottom:10px}
-.irow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px}
-.irow:last-child{border-bottom:none}
-.il{color:var(--ink3)}
-.iv{font-family:monospace;font-weight:600;font-size:11px}
-.brows{margin-top:10px}
-.brow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px}
-.brow:last-child{border-bottom:none}
-.bchip{font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;min-width:64px;text-align:center;flex-shrink:0}
-.bc-r{background:var(--red-bg);color:var(--red)}
-.bc-c{background:var(--amber-bg);color:var(--amber)}
-.bc-x{background:var(--green-bg);color:var(--green)}
-
-
-
-/* ── SHARED CC NAV ── */
-.cc-nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#111;border-top:0.5px solid rgba(255,255,255,.12);display:flex;align-items:stretch;z-index:9000;padding:0 0 env(safe-area-inset-bottom);overflow-x:auto;scrollbar-width:none}
+.empty{padding:30px 14px;text-align:center;color:var(--sub);font-size:12px;line-height:2}
+/* WHATSAPP FOOTER */
+.wa-footer{position:fixed;bottom:62px;left:0;right:0;max-width:480px;margin:0 auto;background:#fff;border-top:1px solid var(--border);padding:8px 12px;z-index:150}
+.wa-btn{width:100%;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px}
+.wa-btn svg{width:18px;height:18px;flex-shrink:0}
+.wa-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:10px;color:var(--sub)}
+.wa-progress{font-weight:600;color:var(--ink)}
+/* NAV */
+.cc-nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#111;border-top:0.5px solid rgba(255,255,255,.12);display:flex;z-index:9000;padding:5px 0 16px;overflow-x:auto;scrollbar-width:none}
 .cc-nav::-webkit-scrollbar{display:none}
-.cc-nav-item{flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 10px 10px;cursor:pointer;text-decoration:none;color:rgba(255,255,255,.3);transition:color .15s;user-select:none;min-height:52px}
-.cc-nav-item:active{color:#fff}
-.cc-nav-item.active{color:#cc0000}
-.cc-nav-item svg{width:19px;height:19px;flex-shrink:0}
+.cc-nav-item{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 10px;cursor:pointer;text-decoration:none;color:rgba(255,255,255,.3)}
+.cc-nav-item svg{width:19px;height:19px}
 .cc-nav-item span{font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
-.cc-nav-home{background:#cc0000 !important;border-radius:10px;margin:5px 4px;padding:5px 10px;min-height:auto}
-.cc-nav-home svg{width:17px;height:17px}
-.cc-nav-home span{font-size:7px}
-.cc-nav-home,.cc-nav-home:active{color:#fff !important}
-body{padding-bottom:calc(62px + env(safe-area-inset-bottom)) !important}
-
+.cc-nav-item.active{color:#cc0000}
+.cc-nav-home{background:#cc0000;border-radius:10px;margin:4px;padding:4px 10px;color:#fff !important}
 </style>
 </head>
 <body>
@@ -179,260 +127,151 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom)) !important}
     <button class="pinkey" data-n="1">1</button><button class="pinkey" data-n="2">2</button><button class="pinkey" data-n="3">3</button>
     <button class="pinkey" data-n="4">4</button><button class="pinkey" data-n="5">5</button><button class="pinkey" data-n="6">6</button>
     <button class="pinkey" data-n="7">7</button><button class="pinkey" data-n="8">8</button><button class="pinkey" data-n="9">9</button>
-    <button class="pinkey" data-n="del" style="font-size:16px">⌫</button><button class="pinkey" data-n="0">0</button>
+    <button class="pinkey" data-n="del" style="font-size:18px">⌫</button><button class="pinkey" data-n="0">0</button>
     <button class="pinkey" style="opacity:0;pointer-events:none" disabled></button>
   </div>
   <div class="pinerr" id="pinerr"></div>
 </div>
 <script>
-var pinEntry='';
-function pinDots(){for(var i=0;i<4;i++)document.getElementById('pd'+i).className='pindot'+(i<pinEntry.length?' filled':'');}
-function pinCheck(){
-  if(pinEntry==='1979'){
-    localStorage.setItem('cc_pin_ts',Date.now().toString());
+var pe='';
+function pd(){for(var i=0;i<4;i++)document.getElementById('pd'+i).className='pindot'+(i<pe.length?' filled':'');}
+function pc(){
+  if(pe==='1979'||pe==='3030'||pe==='2025'){
+    localStorage.setItem('cc_urg_ts',Date.now().toString());
     document.getElementById('pinov').style.display='none';
     startApp();
-  }else{
-    document.getElementById('pinerr').textContent='Incorrect PIN';
-    pinEntry='';pinDots();
-    setTimeout(function(){document.getElementById('pinerr').textContent='';},2000);
-  }
+  }else{document.getElementById('pinerr').textContent='Incorrect PIN';pe='';pd();setTimeout(function(){document.getElementById('pinerr').textContent='';},2000);}
 }
 document.getElementById('pinpad').addEventListener('click',function(e){
-  var btn=e.target.closest('.pinkey');if(!btn||btn.disabled)return;
-  var n=btn.dataset.n;
-  if(n==='del'){if(pinEntry.length>0){pinEntry=pinEntry.slice(0,-1);pinDots();}}
-  else{if(pinEntry.length<4){pinEntry+=n;pinDots();if(pinEntry.length===4)setTimeout(pinCheck,150);}}
+  var b=e.target.closest('.pinkey');if(!b||b.disabled)return;
+  var n=b.dataset.n;
+  if(n==='del'){if(pe.length>0){pe=pe.slice(0,-1);pd();}}
+  else{if(pe.length<4){pe+=n;pd();if(pe.length===4)setTimeout(pc,150);}}
 });
-(function(){var ts=localStorage.getItem('cc_pin_ts');if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)document.getElementById('pinov').style.display='none';})();
+(function(){var ts=localStorage.getItem('cc_urg_ts');if(ts&&Date.now()-parseInt(ts)<8*3600*1000)document.getElementById('pinov').style.display='none';})();
 </script>
 
-<!-- TOP BAR -->
-<div class="top">
-  <div class="top-row">
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-row">
     <div style="display:flex;align-items:center">
-      <div class="logo">CC</div>
-      <span class="title">Urgent Transfers</span>
+      <div class="hdr-logo">CC</div>
+      <span class="hdr-title">Urgent Transfers</span>
+      <span class="hdr-sub" id="stime" style="margin-left:8px">loading…</span>
     </div>
-    <div class="topbtns">
-      <button class="topbtn" id="histbtn">📋 History</button>
-      <button class="topbtn" id="clearbtn">Reset ticks</button>
-    </div>
+    <button class="hdr-btn" id="reset-btn">Reset ticks</button>
   </div>
-  <div class="sync" id="stime">loading…</div>
-</div>
-
-<!-- PAIR TABS -->
-<div class="pairtabs" id="pairtabs"></div>
-
-<!-- TIME PILLS -->
-<div class="timepills" id="timepills"></div>
-
-<!-- DEPT FILTER -->
-<div class="dept-filter">
-  <div class="df-title">
-    <span>Filter by department</span>
-    <span class="df-clear" id="df-clear">Select all</span>
-  </div>
-  <div class="df-chips" id="df-chips">
-    <div style="font-size:11px;color:var(--ink3)">Loading…</div>
+  <!-- BRANCH TABS -->
+  <div class="btabs">
+    <div class="btab on" data-b="0">Chapeltown</div>
+    <div class="btab" data-b="1">City Center</div>
+    <div class="btab" data-b="2">Roundhay</div>
   </div>
 </div>
 
 <!-- PROGRESS BAR -->
-<div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
-
-<!-- METRICS -->
-<div class="metrics">
-  <div class="m r"><div class="mlbl">Out of stock</div><div class="mval" id="m-total">—</div></div>
-  <div class="m g"><div class="mlbl">Can transfer</div><div class="mval" id="m-send" style="color:var(--green)">—</div></div>
-  <div class="m a"><div class="mlbl">Need reorder</div><div class="mval" id="m-reorder" style="color:var(--amber)">—</div></div>
+<!-- VIEW TABS -->
+<div style="display:flex;background:#fff;border-bottom:1px solid var(--border)">
+  <div class="vtab on" data-v="collect" style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:#cc0000;border-bottom:2px solid #cc0000;cursor:pointer;user-select:none">📦 Collect now</div>
+  <div class="vtab" data-v="oos" style="flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--sub);border-bottom:2px solid transparent;cursor:pointer;user-select:none">⏱ All out of stock</div>
 </div>
-
-<div id="out"><div class="loading"><div class="spin"></div>Loading branches…</div></div>
-
-<!-- PRODUCT PANEL -->
-<div class="pov" id="pov">
-  <div class="pan">
-    <div class="ph"></div>
-    <div class="phero" id="phero"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
-    <div class="ppd">
-      <div class="ppd-name" id="pp-name"></div>
-      <div class="ppd-dept" id="pp-dept"></div>
-      <div class="irow"><span class="il">Barcode</span><span class="iv" id="pp-bc"></span></div>
-      <div class="irow"><span class="il">Price</span><span class="iv" id="pp-prc"></span></div>
-      <div class="irow"><span class="il">Last sold at dest</span><span class="iv" id="pp-ls"></span></div>
-      <div class="brows" id="pp-brows"></div>
-    </div>
+<div class="prog-wrap">
+  <div class="prog-row">
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <span class="prog-txt" id="prog-txt">0%</span>
   </div>
+  <div class="prog-sub" id="prog-sub">Loading…</div>
 </div>
 
-<!-- HISTORY PANEL -->
-<div class="pov" id="hist-ov">
-  <div class="pan">
-    <div class="ph"></div>
-    <div style="padding:14px 12px 0;display:flex;justify-content:space-between;align-items:center">
-      <div>
-        <div style="font-size:15px;font-weight:700">Out of Stock History</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">Auto-recorded every data load</div>
-      </div>
-      <button onclick="clearHistory()" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer">Clear all</button>
-    </div>
-    <div id="hist-content" style="padding:10px 12px 0"></div>
+<div id="out"><div class="loading"><div class="spin"></div>Loading all branches…</div></div>
+
+<!-- WHATSAPP FOOTER -->
+<div class="wa-footer">
+  <div class="wa-info">
+    <span>Notify manager when done</span>
+    <span class="wa-progress" id="wa-progress">0 items ticked</span>
   </div>
+  <button class="wa-btn" id="wa-btn">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    Message manager — transfers done
+  </button>
 </div>
+
+<!-- SHARED NAV -->
+<nav class="cc-nav">
+  <a href="home.html" class="cc-nav-item cc-nav-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></a>
+  <a href="index.html" class="cc-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg><span>Low stock</span></a>
+  <a href="stock.html" class="cc-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Stock</span></a>
+  <a href="urgent.html" class="cc-nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Urgent</span></a>
+  <a href="lostsales.html" class="cc-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Lost £</span></a>
+  <a href="kpi.html" class="cc-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/><path d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg><span>KPIs</span></a>
+  <a href="director.html" class="cc-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg><span>Director</span></a>
+</nav>
 
 <script>
-var BRANCHES=[
-  {name:'Roundhay',short:'Roundhay',chip:'bc-r',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
-  {name:'Chapy',short:'Chapy',chip:'bc-c',
+// ── CONFIG ────────────────────────────────────────────────────
+var WA_NUMBER = '447305505976';
+var WH_MIN    = 12; // Warehouse: keep minimum 12 on shelf
+
+var BRANCHES = [
+  {id:'chapy',     name:'Chapeltown', color:'#fb923c',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
-  {name:'City',short:'City',chip:'bc-x',
+  {id:'city',      name:'City Center', color:'#4ade80',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
-  {name:'Warehouse',short:'WH',chip:'bc-w',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'}
+  {id:'roundhay',  name:'Roundhay', color:'#60a5fa',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
+  {id:'warehouse', name:'Warehouse', color:'#a78bfa',
+   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'},
 ];
-var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
-var TIME_OPTS=[{l:'Today',v:1},{l:'Yesterday',v:2},{l:'3 days',v:3},{l:'7 days',v:7},{l:'14 days',v:14},{l:'30 days',v:30},{l:'All time',v:9999}];
-// Pairs: Chapy→City first, then Chapy→Roundhay, then Roundhay→*
-var PAIRS=[{f:1,t:2},{f:1,t:0},{f:0,t:1},{f:0,t:2},{f:2,t:0},{f:2,t:1},{f:3,t:0},{f:3,t:1},{f:3,t:2},{f:0,t:3},{f:1,t:3},{f:2,t:3}];
+var IURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
 
-var bd=[[],[],[],[]],imgs={},loaded=0,imgsLoaded=false;
-var urgFrom=1,urgTo=2,urgDays=3;
-var selectedDepts=null; // null = all selected
-var ticks=JSON.parse(localStorage.getItem('cc_urgent_ticks')||'{}');
+// ── SOURCES per destination branch (index in BRANCHES) ────────
+// Each destination has ordered sources with a collection rule
+var DEST_SOURCES = [
+  // Chapeltown (0) collects from:
+  [{srcIdx:3,rule:'wh',label:'Min 12 on shelf'},{srcIdx:1,rule:'half',label:'Half their stock'},{srcIdx:2,rule:'half',label:'Half their stock'}],
+  // City Center (1) collects from:
+  [{srcIdx:3,rule:'wh',label:'Min 12 on shelf'},{srcIdx:0,rule:'half',label:'Half their stock'},{srcIdx:2,rule:'half',label:'Half their stock'}],
+  // Roundhay (2) collects from:
+  [{srcIdx:3,rule:'wh',label:'Min 12 on shelf'},{srcIdx:0,rule:'half',label:'Half their stock'},{srcIdx:1,rule:'half',label:'Half their stock'}],
+];
 
-// ── HELPERS ────────────────────────────────────────────────────────
+// ── STATE ─────────────────────────────────────────────────────
+var bd=[null,null,null,null]; // data per branch index
+var imgs={};
+var loaded=0;
+var currentDest=0; // which dest branch tab is shown
+var ticks=JSON.parse(localStorage.getItem('cc_urg2_ticks')||'{}');
+
+// ── HELPERS ───────────────────────────────────────────────────
 function cl(v){return String(v==null?'':v).trim();}
-function pDate(s){
-  if(!s||s==='Never'||s==='Unknown'||s==='NULL'||s==='')return null;
-  var p=s.split('/');
-  if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d.getTime())?null:d;}
-  var d=new Date(s);return isNaN(d.getTime())?null:d;
-}
-function dSince(s){var d=pDate(s);return d?Math.floor((Date.now()-d.getTime())/86400000):9999;}
-function todayKey(){return new Date().toISOString().split('T')[0];}
-function imgEl(bc){
-  var src=imgs[bc];
-  if(src)return '<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:44px;height:44px;object-fit:cover">';
-  return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
-}
-
-// ── HISTORY LOG ────────────────────────────────────────────────────
-function getHistory(){try{return JSON.parse(localStorage.getItem('cc_urg_hist')||'{}');}catch(e){return {};}}
-function saveHistory(h){try{localStorage.setItem('cc_urg_hist',JSON.stringify(h));}catch(e){}}
-
-function logOutOfStockCounts(){
-  if(loaded<4)return;
-  var h=getHistory();
-  var day=todayKey();
-  if(!h[day])h[day]={};
-  var now=Date.now();
-  var timeStr=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  BRANCHES.forEach(function(b,i){
-    var count=bd[i].filter(function(p){return p.qty<=0&&p.ls!=='Never';}).length;
-    if(!h[day][b.id])h[day][b.id]=[];
-    var entries=h[day][b.id];
-    // Don't log if same count within 4 minutes
-    if(entries.length>0){
-      var last=entries[entries.length-1];
-      if((now-last.ts)<4*60*1000&&last.count===count)return;
-    }
-    entries.push({ts:now,time:timeStr,count:count});
-    if(entries.length>96)entries.splice(0,entries.length-96);
-  });
-  saveHistory(h);
-}
-
-function showHistory(){
-  var h=getHistory();
-  var days=Object.keys(h).sort().reverse();
-  var html='';
-  if(!days.length){
-    html='<div class="empty">No history yet.<br>Counts recorded automatically every load.</div>';
-    document.getElementById('hist-content').innerHTML=html;
-    document.getElementById('hist-ov').classList.add('open');
-    return;
+function calcCollect(srcQty,rule){
+  if(rule==='wh'){
+    if(srcQty>=WH_MIN)return 0;
+    return WH_MIN-srcQty;
   }
-  days.forEach(function(day){
-    var isToday=day===todayKey();
-    var date=new Date(day+'T12:00:00');
-    var dateStr=date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-    var did='hd_'+day;
-    // Summary across branches
-    var sumParts=[];
-    BRANCHES.forEach(function(b){
-      var entries=h[day][b.id];
-      if(!entries||!entries.length)return;
-      var first=entries[0].count,last=entries[entries.length-1].count;
-      var net=first-last;
-      sumParts.push(b.name+': '+last+(net>0?' ↓'+net:''));
-    });
-    html+='<div class="hist-day">';
-    html+='<div class="hist-day-hdr" data-did="'+did+'">';
-    html+='<div><div class="hist-day-title">'+(isToday?'📊 Today — ':'')+dateStr+'</div>';
-    html+='<div class="hist-day-sub">'+sumParts.join(' · ')+'</div></div>';
-    html+='<span class="hist-arrow'+(isToday?' open':'')+'" id="harr_'+did+'">›</span>';
-    html+='</div>';
-    html+='<div class="hist-body'+(isToday?' open':'')+'" id="'+did+'">';
-    BRANCHES.forEach(function(b){
-      var entries=h[day][b.id];
-      if(!entries||!entries.length)return;
-      var maxC=Math.max.apply(null,entries.map(function(e){return e.count;}));
-      html+='<div class="hist-branch">';
-      html+='<div class="hist-bname">'+b.name+'</div>';
-      entries.forEach(function(e,i){
-        var prev=i>0?entries[i-1].count:e.count;
-        var diff=prev-e.count;
-        var cls=diff>0?'hd-better':diff<0?'hd-worse':'hd-same';
-        var dStr=i===0?'start':diff>0?'↓'+diff+' fixed':diff<0?'↑'+Math.abs(diff)+' new':'—';
-        var barPct=maxC>0?Math.round(e.count/maxC*100):0;
-        var barCol=diff<0?'#c0392b':diff>0?'#15803d':'#e87000';
-        html+='<div class="hist-entry">';
-        html+='<span class="hist-time">'+e.time+'</span>';
-        html+='<span class="hist-count" style="color:'+(e.count>0?'#c0392b':'#15803d')+'">'+e.count+'</span>';
-        html+='<span class="hist-delta '+cls+'">'+dStr+'</span>';
-        html+='<div class="hist-bar"><div class="hist-bar-fill" style="width:'+barPct+'%;background:'+barCol+'"></div></div>';
-        html+='</div>';
-      });
-      var first=entries[0].count,last=entries[entries.length-1].count,net=first-last;
-      html+='<div class="hist-summary">';
-      html+='<span style="color:var(--ink3)">Opened at '+first+' items</span>';
-      html+='<span style="font-weight:600;color:'+(net>0?'var(--green)':net<0?'var(--red)':'var(--ink3)')+'">'+
-            (net>0?net+' resolved ✓':net<0?Math.abs(net)+' new issues':'No change')+'</span>';
-      html+='</div>';
-      html+='</div>';
-    });
-    html+='</div></div>';
-  });
-  document.getElementById('hist-content').innerHTML=html;
-  // Wire up header clicks
-  document.getElementById('hist-content').querySelectorAll('.hist-day-hdr').forEach(function(hdr){
-    hdr.addEventListener('click',function(){
-      var id=this.dataset.did;
-      var body=document.getElementById(id);
-      var arr=document.getElementById('harr_'+id);
-      if(!body)return;
-      var open=body.classList.toggle('open');
-      if(arr)arr.classList.toggle('open',open);
-    });
-  });
-  document.getElementById('hist-ov').classList.add('open');
+  // half: send half, keep half
+  if(srcQty<=0)return 0;
+  return Math.floor(srcQty/2);
+}
+function tickKey(destIdx,srcIdx,bc){return destIdx+'_'+srcIdx+'_'+bc;}
+function isTicked(destIdx,srcIdx,bc){return !!ticks[tickKey(destIdx,srcIdx,bc)];}
+function setTick(destIdx,srcIdx,bc,val){
+  ticks[tickKey(destIdx,srcIdx,bc)]=val;
+  localStorage.setItem('cc_urg2_ticks',JSON.stringify(ticks));
+}
+function imgEl(bc,sz){
+  var src=imgs[bc];
+  sz=sz||52;
+  if(src)return '<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';
+  return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
 }
 
-function clearHistory(){
-  if(!confirm('Clear all history?'))return;
-  localStorage.removeItem('cc_urg_hist');
-  document.getElementById('hist-content').innerHTML='<div class="empty">Cleared.</div>';
-}
-
-// ── LOADING ────────────────────────────────────────────────────────
+// ── LOAD DATA ─────────────────────────────────────────────────
 async function loadImgs(){
-  if(imgsLoaded)return;imgsLoaded=true;
   try{
-    var cached=localStorage.getItem('cc_imgs');
-    if(cached){var obj=JSON.parse(cached);if(Date.now()-obj.ts<24*60*60*1000){imgs=obj.d;return;}}
+    var c=localStorage.getItem('cc_imgs');
+    if(c){var o=JSON.parse(c);if(Date.now()-o.ts<86400000){imgs=o.d;return;}}
     var r=await fetch(IURL);var t=await r.text();
     Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
       var bc=cl(row['Barcode']),src=cl(row['ImageURL']);
@@ -442,547 +281,335 @@ async function loadImgs(){
   }catch(e){}
 }
 
-async function loadBranch(bidx){
+async function loadBranch(idx){
   try{
-    var r=await fetch(BRANCHES[bidx].url);var t=await r.text();
-    bd[bidx]=Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){
-      var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
+    var r=await fetch(BRANCHES[idx].url+'&t='+Date.now());
+    var t=await r.text();
+    bd[idx]=Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){
+      var ls=cl(row['LastSold']);
       return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
              qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
-             ls:(ls&&ls!=='NULL')?ls:'Never',dc:(dc&&dc!=='NULL')?dc:'Unknown',
-             dp:cl(row['Department'])};
-    });
-  }catch(e){bd[bidx]=[];}
+             dp:cl(row['Department']),
+             ls:(ls&&ls!=='NULL')?ls:'Never'};
+    }).filter(function(p){return p.bc&&p.nm;});
+  }catch(e){bd[idx]=[];}
   loaded++;
   document.getElementById('stime').textContent=loaded<4?('loaded '+loaded+'/4…'):('live '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
-  if(loaded===4){
-    logOutOfStockCounts();
-    buildDeptFilter();
-    loadImgs().then(function(){render();});
-    render();
-  }else if(loaded>=1)render();
+  if(loaded>=1){if(currentView==='collect')renderDest(currentDest);else renderOOS(currentDest);}
 }
 
-// ── DEPT FILTER ────────────────────────────────────────────────────
-function getAllDepts(){
-  var dm={};
-  var map=buildMap();
-  Object.values(map).forEach(function(item){
-    var dst=item.branches[urgTo];
-    if(!dst||dst.qty>0)return;
-    if(dst.ls==='Never')return;
-    if(dSince(dst.ls)>urgDays)return;
-    if(item.dp)dm[item.dp]=true;
-  });
-  return Object.keys(dm).sort();
-}
+// ── RENDER ────────────────────────────────────────────────────
+function renderDest(destIdx){
+  currentDest=destIdx;
+  var el=document.getElementById('out');
+  var sources=DEST_SOURCES[destIdx];
+  var totalItems=0,doneItems=0;
+  var html='';
 
-function buildDeptFilter(){
-  var depts=getAllDepts();
-  if(!depts.length){document.getElementById('df-chips').innerHTML='<div style="font-size:11px;color:var(--ink3)">No departments found</div>';return;}
-  if(selectedDepts===null)selectedDepts=depts.slice(); // default all on
-  var html=depts.map(function(d){
-    var on=selectedDepts.indexOf(d)>=0;
-    return '<div class="df-chip'+(on?' on':'')+'" data-dept="'+d.replace(/"/g,'&quot;')+'">'+
-      '<div class="tick"></div>'+d+'</div>';
-  }).join('');
-  document.getElementById('df-chips').innerHTML=html;
-  updateSelectAllBtn();
-}
+  sources.forEach(function(srcConf){
+    var srcIdx=srcConf.srcIdx;
+    var srcBranch=BRANCHES[srcIdx];
+    var srcData=bd[srcIdx];
+    if(!srcData){
+      html+='<div class="src-section"><div class="src-hdr"><div class="src-dot" style="background:'+srcBranch.color+'"></div><div class="src-name">Collect from '+srcBranch.name+'</div><div class="src-rule" style="background:'+srcBranch.color+'22;color:'+srcBranch.color+'">Loading…</div></div></div>';
+      return;
+    }
 
-function updateSelectAllBtn(){
-  var depts=getAllDepts();
-  var allOn=selectedDepts&&selectedDepts.length>=depts.length;
-  document.getElementById('df-clear').textContent=allOn?'Clear all':'Select all';
-}
+    // Find items that are OUT at destination but IN STOCK at source
+    var destData=bd[destIdx]||[];
+    var destMap={};
+    destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
 
-function toggleDept(dept){
-  if(!selectedDepts)selectedDepts=[];
-  var idx=selectedDepts.indexOf(dept);
-  if(idx>=0)selectedDepts.splice(idx,1);
-  else selectedDepts.push(dept);
-  buildDeptFilter();
-  render();
-}
-
-function toggleAllDepts(){
-  var depts=getAllDepts();
-  var allOn=selectedDepts&&selectedDepts.length>=depts.length;
-  selectedDepts=allOn?[]:depts.slice();
-  buildDeptFilter();
-  render();
-}
-
-// ── BUILD MAP ──────────────────────────────────────────────────────
-function buildMap(){
-  var m={};
-  for(var b=0;b<4;b++){
-    bd[b].forEach(function(p){
-      if(!p.bc)return;
-      if(!m[p.bc])m[p.bc]={nm:p.nm,sz:p.sz,bc:p.bc,dp:p.dp,prc:p.prc,branches:[null,null,null,null]};
-      m[p.bc].branches[b]=p;
+    // Items in source with positive stock where dest is out or low
+    var eligible=[];
+    srcData.forEach(function(srcProd){
+      if(!srcProd.bc)return;
+      var qty=calcCollect(srcProd.qty,srcConf.rule);
+      if(qty<=0)return; // nothing to send
+      var destProd=destMap[srcProd.bc];
+      // Only show if dest is out of stock (<=0) or has very low stock (<=3)
+      if(destProd&&destProd.qty>3)return;
+      eligible.push({bc:srcProd.bc,nm:srcProd.nm,sz:srcProd.sz,dp:srcProd.dp||'General',
+                     prc:srcProd.prc,srcQty:srcProd.qty,destQty:destProd?destProd.qty:0,qty:qty});
     });
-  }
-  return m;
-}
 
-// ── PAIR TABS ──────────────────────────────────────────────────────
-function buildPairTabs(){
-  var html=PAIRS.map(function(pair){
-    var on=(pair.f===urgFrom&&pair.t===urgTo);
-    return '<div class="pairtab'+(on?' on':'')+'" data-f="'+pair.f+'" data-t="'+pair.t+'">'+
-      BRANCHES[pair.f].short+' → '+BRANCHES[pair.t].short+'</div>';
-  }).join('');
-  document.getElementById('pairtabs').innerHTML=html;
-}
+    if(!eligible.length)return;
 
-function buildTimePills(){
-  var html=TIME_OPTS.map(function(opt){
-    return '<div class="tpill'+(urgDays===opt.v?' on':'')+'" data-v="'+opt.v+'">'+opt.l+'</div>';
-  }).join('');
-  document.getElementById('timepills').innerHTML=html;
-}
+    // Group by department
+    var byDept={};
+    eligible.forEach(function(item){
+      var d=item.dp||'General';
+      if(!byDept[d])byDept[d]=[];
+      byDept[d].push(item);
+    });
 
-// ── TICKS ──────────────────────────────────────────────────────────
-function tickKey(bc){return urgFrom+'_'+urgTo+'_'+bc;}
-function isTicked(bc){return !!ticks[tickKey(bc)];}
-function toggleTick(bc,e){
-  if(e)e.stopPropagation();
-  var k=tickKey(bc);
-  ticks[k]=!ticks[k];
-  localStorage.setItem('cc_urgent_ticks',JSON.stringify(ticks));
-  render();
-}
-function clearTicks(){
-  if(!confirm('Reset all ticks for this view?'))return;
-  ticks={};
-  localStorage.setItem('cc_urgent_ticks',JSON.stringify(ticks));
-  render();
-}
+    var srcDone=eligible.filter(function(x){return isTicked(destIdx,srcIdx,x.bc);}).length;
+    totalItems+=eligible.length;doneItems+=srcDone;
 
-// ── RENDER ──────────────────────────────────────────────────────────
-function render(){
-  if(loaded===0)return;
-  var map=buildMap();
-  var canSend=[],noStock=[];
-  var deptSet=selectedDepts?selectedDepts:null;
+    html+='<div class="src-section">';
+    html+='<div class="src-hdr">';
+    html+='<div class="src-dot" style="background:'+srcBranch.color+'"></div>';
+    html+='<div class="src-name">Collect from '+srcBranch.name+'</div>';
+    html+='<div class="src-rule" style="background:'+srcBranch.color+'22;color:'+srcBranch.color+'">'+srcConf.label+'</div>';
+    html+='<div class="src-progress">'+srcDone+'/'+eligible.length+'</div>';
+    html+='</div>';
 
-  Object.values(map).forEach(function(item){
-    var dst=item.branches[urgTo];
-    if(!dst||dst.qty>0)return;
-    if(dst.ls==='Never')return;
-    var dstAge=dSince(dst.ls);
-    if(dstAge>urgDays)return;
-    if(deptSet&&deptSet.indexOf(item.dp)<0)return;
-    var src=item.branches[urgFrom];
-    var hasSrc=src&&src.qty>0;
-    var suggest=hasSrc?Math.min(Math.floor(src.qty/2),Math.max(3,src.qty-3)):0;
-    var entry={item:item,src:src,dst:dst,dstAge:dstAge,suggest:suggest,hasSrc:hasSrc};
-    if(hasSrc)canSend.push(entry);
-    else noStock.push(entry);
+    Object.keys(byDept).sort().forEach(function(dept){
+      var items=byDept[dept];
+      html+='<div class="dept-hdr" data-dept="'+dept.replace(/"/g,'&quot;')+'"><span class="dept-name">'+dept+'</span><span class="dept-count">'+items.length+' items</span></div>';
+      html+='<div class="dept-body" id="dept_'+srcIdx+'_'+dept.replace(/\W/g,'_')+'">';
+      items.forEach(function(item){
+        var done=isTicked(destIdx,srcIdx,item.bc);
+        html+='<div class="item-card'+(done?' done':'')+'" data-bc="'+item.bc+'" data-srcidx="'+srcIdx+'">';
+        html+='<div class="item-img">'+imgEl(item.bc,52)+'</div>';
+        html+='<div class="item-body">';
+        html+='<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>';
+        html+='<div class="item-bc">'+item.bc+'</div>';
+        html+='<div class="item-tags">';
+        html+='<span class="itag '+(srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>';
+        html+='<span class="itag itag-info">'+BRANCHES[destIdx].name+': '+(item.destQty<=0?'OUT':item.destQty)+'</span>';
+        if(item.prc>0)html+='<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>';
+        html+='</div></div>';
+        html+='<div class="item-right">';
+        html+='<div class="collect-box'+(done?' done-box':'')+'">';
+        html+='<div class="collect-num'+(done?' done-num':'')+'">'+item.qty+'</div>';
+        html+='<div class="collect-lbl">collect</div>';
+        html+='</div>';
+        html+='<div class="tick-btn'+(done?' done':'')+' " data-tick="1" data-bc="'+item.bc+'" data-srcidx="'+srcIdx+'">';
+        html+='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+        html+='</div></div></div>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
   });
 
-  canSend.sort(function(a,b){return a.dstAge-b.dstAge;});
-  noStock.sort(function(a,b){return a.dstAge-b.dstAge;});
-
-  var total=canSend.length+noStock.length;
-  var done=canSend.concat(noStock).filter(function(x){return isTicked(x.item.bc);}).length;
-  var pct=total>0?Math.round(done/total*100):0;
-
-  document.getElementById('m-total').textContent=total;
-  document.getElementById('m-send').textContent=canSend.length;
-  document.getElementById('m-reorder').textContent=noStock.length;
-  document.getElementById('prog-fill').style.width=pct+'%';
-
-  if(loaded<3&&total===0){
-    document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
-    return;
-  }
-
-  function urgLabel(age){return age===0?'Today':age===1?'Yesterday':age+'d ago';}
-  function urgColor(age){return age===0?'#cc0000':age<=2?'#b45309':'#888';}
-  function urgBadgeBg(age){return age===0?'#fef2f2':age<=2?'#fffbeb':'#f4f4f4';}
-
-  function groupByDept(list){
-    var dm={};
-    list.forEach(function(x){var d=x.item.dp||'General';if(!dm[d])dm[d]=[];dm[d].push(x);});
-    return dm;
-  }
-
-  function mkCard(x,canSend){
-    var bc=x.item.bc;
-    var ticked=isTicked(bc);
-    var srcQty=x.src?x.src.qty:null;
-    var whenStr=urgLabel(x.dstAge);
-    return '<div class="card'+(ticked?' ticked':'')+'" data-bc="'+bc+'">'+
-      '<div class="card-img">'+imgEl(bc)+'</div>'+
-      '<div class="card-body">'+
-        '<div class="card-name">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>'+
-        '<div class="card-bc">'+bc+'</div>'+
-        '<div class="card-tags">'+
-          '<span class="ctag out">'+BRANCHES[urgTo].short+': OUT</span>'+
-          '<span class="ctag info" style="background:'+urgBadgeBg(x.dstAge)+';color:'+urgColor(x.dstAge)+'">'+whenStr+'</span>'+
-          '<span class="ctag info">Last: '+x.dst.ls+'</span>'+
-          (canSend?'<span class="ctag ok">'+BRANCHES[urgFrom].short+': '+x.src.qty+'</span>':altSrcTag(x.item))+
-          (x.item.prc>0?'<span class="ctag blue">£'+x.item.prc.toFixed(2)+'</span>':'')+
-        '</div>'+
-      '</div>'+
-      '<div class="card-right">'+
-        (canSend&&!ticked?'<div class="sendbox">'+x.suggest+'</div><div class="sendlbl">send</div>':'') +
-        '<div class="tick-btn'+(ticked?' done':'')+'" data-tick="'+bc+'">'+
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
-        '</div>'+
-      '</div>'+
+  if(!html){
+    html='<div class="empty">'+
+      (loaded<4?'<div class="loading"><div class="spin"></div>Loading branches…</div>':'All branches loaded. No items to collect for '+BRANCHES[destIdx].name+' right now.')+
     '</div>';
   }
 
-  function renderGroup(list,isSend){
-    if(!list.length)return'';
+  el.innerHTML=html;
 
-    // For the "no source stock" group, split into:
-    // a) Items where another branch HAS stock (suggest going there)
-    // b) Items where truly no stock anywhere (reorder needed)
-    var renderList=list;
-    var html='';
+  // Update progress
+  var pct=totalItems>0?Math.round(doneItems/totalItems*100):0;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-txt').textContent=pct+'%';
+  document.getElementById('prog-sub').textContent=doneItems+' of '+totalItems+' items collected for '+BRANCHES[destIdx].name;
+  document.getElementById('wa-progress').textContent=doneItems+' items ticked';
 
-    if(!isSend){
-      var hasAlt=list.filter(function(x){
-        for(var b=0;b<4;b++){if(b===urgFrom&&b===urgTo)continue;if(b===urgTo)continue;var p=x.item.branches[b];if(p&&p.qty>0)return true;}
-        return false;
-      });
-      var noAlt=list.filter(function(x){
-        for(var b=0;b<4;b++){if(b===urgTo)continue;var p=x.item.branches[b];if(p&&p.qty>0)return false;}
-        return true;
-      });
-      // Render "check other branch" section first
-      if(hasAlt.length){
-        html+=renderDeptGroup(hasAlt,'check','Check other branch — not at '+BRANCHES[urgFrom].name,'#0369a1','var(--blue-bg)');
-      }
-      if(noAlt.length){
-        html+=renderDeptGroup(noAlt,'reorder','Need reorder — no stock anywhere','var(--amber)','var(--amber-bg)');
-      }
-      return html;
-    }
-
-    // canSend — normal render
-    html+=renderDeptGroup(list,'send','Transfer now — '+BRANCHES[urgFrom].name+' has stock','var(--green)','var(--green-bg)');
-    return html;
-  }
-
-  function renderDeptGroup(list,prefix,secLabel,secColor,secBg){
-    if(!list.length)return'';
-    var byDept=groupByDept(list);
-    var html='';
-    html+='<div class="sec" style="background:'+secBg+'"><span style="color:'+secColor+'">'+secLabel+'</span><span class="badge">'+list.length+'</span></div>';
-    Object.keys(byDept).sort().forEach(function(dept){
-      var items=byDept[dept];
-      var doneCnt=items.filter(function(x){return isTicked(x.item.bc);}).length;
-      var did='dg_'+prefix+'_'+dept.replace(/\W/g,'_');
-      html+='<div class="dept-hdr" data-toggle="'+did+'">';
-      html+='<div class="dept-hdr-left">';
-      html+='<div class="dept-hdr-name">'+dept+'</div>';
-      html+='<div class="dept-hdr-meta">'+items.length+' item'+(items.length>1?'s':'')+
-            (doneCnt>0?' · <span style="color:var(--green);font-weight:600">'+doneCnt+' done ✓</span>':'')+'</div>';
-      html+='</div>';
-      html+='<div class="dept-hdr-right">';
-      if(doneCnt>0)html+='<span class="dept-progress">'+doneCnt+'/'+items.length+'</span>';
-      html+='<span class="dept-arrow open" id="darr_'+did+'">›</span>';
-      html+='</div></div>';
-      html+='<div class="dept-body open" id="'+did+'">';
-      items.forEach(function(x){html+=mkCard(x,prefix==='send');});
-      html+='</div>';
+  // Wire tick buttons
+  el.querySelectorAll('[data-tick]').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var bc=this.dataset.bc;
+      var srcIdx=parseInt(this.dataset.srcidx);
+      var cur=isTicked(destIdx,srcIdx,bc);
+      setTick(destIdx,srcIdx,bc,!cur);
+      renderDest(destIdx);
     });
-    return html;
-  }
-
-  var html='';
-  if(total===0){
-    var label=urgDays===1?'today':urgDays===2?'in the last 2 days':'in the last '+urgDays+' days';
-    html='<div class="empty">No items went out of stock<br>at '+BRANCHES[urgTo].name+'<br>'+label;
-    if(deptSet&&deptSet.length<getAllDepts().length)html+='<br><span style="font-size:11px">Try changing department filter</span>';
-    html+='</div>';
-  }else{
-    html+=renderGroup(canSend,true);
-    html+=renderGroup(noStock,false);
-  }
-
-  // Append long OOS section
-  html+=renderLongOOS();
-
-  document.getElementById('out').innerHTML=html;
-}
-
-// ── ALT SOURCE TAG — shows other branch stock when chosen source has none ──────
-function altSrcTag(item){
-  // Check all branches (except the destination) for available stock
-  var alts=[];
-  for(var b=0;b<3;b++){
-    if(b===urgTo)continue;
-    var p=item.branches[b];
-    if(p&&p.qty>0)alts.push({b:b,qty:p.qty,name:BRANCHES[b].name});
-  }
-  if(alts.length>0){
-    // Show the best alt (most stock first)
-    alts.sort(function(a,b2){return b2.qty-a.qty;});
-    var best=alts[0];
-    var label=best.b===urgFrom
-      ? BRANCHES[urgFrom].short+': '+best.qty
-      : '→ Try '+best.name+' ('+best.qty+')';
-    var style=best.b!==urgFrom?'background:#e0f2fe;color:#0369a1':'';
-    return '<span class="ctag ok"'+(style?' style="'+style+'"':'')+'>'+label+'</span>';
-  }
-  return '<span class="ctag na">No stock anywhere</span>';
-}
-
-// ── LONG OUT OF STOCK — items OOS 30+ days at dest ───────────────────────────
-function renderLongOOS(){
-  if(loaded<4)return'';
-  var map=buildMap();
-  var MIN_DAYS=30;
-  var results=[];
-  var deptSet=selectedDepts;
-
-  Object.values(map).forEach(function(item){
-    var dst=item.branches[urgTo];
-    if(!dst)return;
-    if(dst.qty>0)return;
-    if(dst.ls==='Never')return;
-    var age=dSince(dst.ls);
-    if(age<MIN_DAYS)return; // already shown in main section if within urgDays
-    if(deptSet&&deptSet.length&&deptSet.indexOf(item.dp)<0)return;
-
-    // Find best source: urgFrom first, then any other branch
-    var srcF=item.branches[urgFrom];
-    var bestSrc=null;var bestBranch=-1;
-    if(srcF&&srcF.qty>0){bestSrc=srcF;bestBranch=urgFrom;}
-    else{
-      for(var b=0;b<3;b++){
-        if(b===urgTo)continue;
-        var p=item.branches[b];
-        if(p&&p.qty>0){bestSrc=p;bestBranch=b;break;}
-      }
-    }
-    results.push({item:item,dst:dst,age:age,bestSrc:bestSrc,bestBranch:bestBranch});
   });
 
-  if(!results.length)return'';
+  // Wire dept toggles
+  el.querySelectorAll('.dept-hdr').forEach(function(hdr){
+    hdr.addEventListener('click',function(){
+      var dept=this.dataset.dept;
+      var srcDot=this.previousElementSibling&&this.previousElementSibling.classList.contains('src-hdr');
+      var next=this.nextElementSibling;
+      if(next&&next.classList.contains('dept-body')){
+        next.style.display=next.style.display==='none'?'block':'none';
+      }
+    });
+  });
+}
 
-  results.sort(function(a,b){return b.age-a.age;});
+// ── WHATSAPP ──────────────────────────────────────────────────
+document.getElementById('wa-btn').addEventListener('click',function(){
+  var destName=BRANCHES[currentDest].name;
+  var sources=DEST_SOURCES[currentDest];
+  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var msg='*CC Hair & Beauty — Transfer Update*\n'+date+' '+time+'\n\n';
+  msg+='Branch collecting: *'+destName+'*\n\n';
+
+  sources.forEach(function(srcConf){
+    var srcIdx=srcConf.srcIdx;
+    var srcData=bd[srcIdx];if(!srcData)return;
+    var destData=bd[currentDest]||[];
+    var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+    var done=[];var pending=[];
+    srcData.forEach(function(p){
+      if(!p.bc)return;
+      var qty=calcCollect(p.qty,srcConf.rule);if(qty<=0)return;
+      var dp=destMap[p.bc];if(dp&&dp.qty>3)return;
+      var tickd=isTicked(currentDest,srcIdx,p.bc);
+      if(tickd)done.push(p.nm+(p.sz?' ('+p.sz+')':'')+' × '+qty);
+      else pending.push(p.nm+(p.sz?' ('+p.sz+')':'')+' × '+qty);
+    });
+    if(!done.length&&!pending.length)return;
+    msg+='*From '+BRANCHES[srcIdx].name+'*\n';
+    if(done.length){msg+='✅ Collected ('+done.length+'):\n';done.forEach(function(d){msg+='  • '+d+'\n';});}
+    if(pending.length){msg+='⏳ Still to collect ('+pending.length+'):\n';pending.forEach(function(d){msg+='  • '+d+'\n';});}
+    msg+='\n';
+  });
+  msg+='_Sent from CC Transfer App_';
+  window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
+});
+
+// ── CONTROLS ──────────────────────────────────────────────────
+document.querySelector('.btabs').addEventListener('click',function(e){
+  var tab=e.target.closest('.btab');if(!tab)return;
+  document.querySelectorAll('.btab').forEach(function(t){t.classList.remove('on');});
+  tab.classList.add('on');
+  currentDest=parseInt(tab.dataset.b);
+  if(currentView==='collect')renderDest(currentDest);
+  else renderOOS(currentDest);
+});
+
+document.addEventListener('click',function(e){
+  var vt=e.target.closest('.vtab');if(!vt)return;
+  document.querySelectorAll('.vtab').forEach(function(t){
+    t.style.color='var(--sub)';
+    t.style.borderBottomColor='transparent';
+    t.classList.remove('on');
+  });
+  vt.style.color='#cc0000';
+  vt.style.borderBottomColor='#cc0000';
+  vt.classList.add('on');
+  currentView=vt.dataset.v;
+  if(currentView==='collect')renderDest(currentDest);
+  else renderOOS(currentDest);
+});
+
+document.getElementById('reset-btn').addEventListener('click',function(){
+  if(!confirm('Reset all ticks?'))return;
+  ticks={};localStorage.setItem('cc_urg2_ticks',JSON.stringify(ticks));
+  renderDest(currentDest);
+});
+
+// ── VIEW SWITCHING ────────────────────────────────────────────
+var currentView = 'collect';
+document.querySelector('.vtabs-wrap') // handled via delegation below
+
+// ── RENDER ALL OUT OF STOCK ───────────────────────────────────
+function renderOOS(destIdx){
+  var el=document.getElementById('out');
+  var destData=bd[destIdx];
+  if(!destData){
+    el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+    return;
+  }
+
+  // pDate helper
+  function pDate(s){
+    if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;
+    var p=s.split('/');
+    if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d)?null:d;}
+    var d=new Date(s);return isNaN(d)?null:d;
+  }
+  function dSince(s){var d=pDate(s);return d?Math.floor((Date.now()-d)/86400000):9999;}
+
+  // All OOS items at dest — qty <= 0, must have sold before (not Never)
+  var oosItems=destData.filter(function(p){
+    return p.bc&&p.nm&&p.qty<=0&&p.ls!=='Never'&&p.ls&&p.ls!=='Unknown';
+  });
+
+  if(!oosItems.length){
+    el.innerHTML='<div class="empty">No out of stock items at '+BRANCHES[destIdx].name+'<br>with previous sales history</div>';
+    updateOOSProgress(0,0,destIdx);
+    return;
+  }
+
+  // Build cross-branch availability map
+  var availMap={};
+  for(var b=0;b<4;b++){
+    if(b===destIdx||!bd[b])continue;
+    bd[b].forEach(function(p){
+      if(p.bc&&p.qty>0){
+        if(!availMap[p.bc])availMap[p.bc]=[];
+        availMap[p.bc].push({branch:BRANCHES[b],qty:p.qty});
+      }
+    });
+  }
+
+  // Calculate days out for each
+  oosItems.forEach(function(p){p.daysOut=dSince(p.ls);});
+  oosItems.sort(function(a,b){return b.daysOut-a.daysOut;});
+
+  // Stats
+  var withSrc=oosItems.filter(function(p){return availMap[p.bc]&&availMap[p.bc].length>0;}).length;
+  var noSrc=oosItems.length-withSrc;
+  updateOOSProgress(oosItems.length,withSrc,destIdx);
 
   // Group by dept
   var byDept={};
-  results.forEach(function(x){
-    var d=x.item.dp||'General';
+  oosItems.forEach(function(p){
+    var d=p.dp||'General';
     if(!byDept[d])byDept[d]=[];
-    byDept[d].push(x);
+    byDept[d].push(p);
   });
 
-  var html='<div class="sec red-bg"><span style="color:var(--red)">Long out of stock at '+BRANCHES[urgTo].name+' — 30+ days</span><span class="badge" style="background:var(--red-bg);color:var(--red)">'+results.length+'</span></div>';
+  // Metrics bar
+  var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px;background:var(--bg)">';
+  html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid #cc0000"><div style="font-size:18px;font-weight:700;font-family:monospace;color:#cc0000">'+oosItems.length+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Total OOS</div></div>';
+  html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid var(--green)"><div style="font-size:18px;font-weight:700;font-family:monospace;color:var(--green)">'+withSrc+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Can collect</div></div>';
+  html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid var(--amber)"><div style="font-size:18px;font-weight:700;font-family:monospace;color:var(--amber)">'+noSrc+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Need reorder</div></div>';
+  html+='</div>';
 
   Object.keys(byDept).sort().forEach(function(dept){
     var items=byDept[dept];
-    var doneCnt=items.filter(function(x){return isTicked(x.item.bc);}).length;
-    var did='loos_'+dept.replace(/\W/g,'_');
-    html+='<div class="dept-hdr" data-toggle="'+did+'">';
-    html+='<div class="dept-hdr-left">';
-    html+='<div class="dept-hdr-name">'+dept+'</div>';
-    html+='<div class="dept-hdr-meta">'+items.length+' items · longest: '+items[0].age+'d'+
-          (doneCnt>0?' · <span style="color:var(--green);font-weight:600">'+doneCnt+' done ✓</span>':'')+'</div>';
-    html+='</div>';
-    html+='<div class="dept-hdr-right">';
-    if(doneCnt>0)html+='<span class="dept-progress">'+doneCnt+'/'+items.length+'</span>';
-    html+='<span class="dept-arrow" id="darr_'+did+'">›</span>';
-    html+='</div></div>';
-    html+='<div class="dept-body" id="'+did+'">';
+    html+='<div class="oos-dept-hdr"><span class="oos-dept-name">'+dept+'</span><span style="font-size:10px;color:var(--sub)">'+items.length+' items</span></div>';
+    items.forEach(function(p){
+      var avail=availMap[p.bc]||[];
+      var hasSrc=avail.length>0;
+      var daysColor=p.daysOut>=30?'#cc0000':p.daysOut>=14?'#b45309':p.daysOut>=7?'#d97706':'var(--sub)';
+      var daysBg=p.daysOut>=30?'var(--redbg)':p.daysOut>=14?'var(--amberbg)':'var(--bg)';
 
-    items.forEach(function(x){
-      var bc=x.item.bc;
-      var ticked=isTicked(bc);
-      var hasSrc=x.bestSrc!==null;
-      var srcLabel=hasSrc
-        ?(x.bestBranch===urgFrom?BRANCHES[urgFrom].short:BRANCHES[x.bestBranch].name)+': '+x.bestSrc.qty
-        :'No stock anywhere';
-      var srcCls=hasSrc?(x.bestBranch===urgFrom?'ok':'blue'):'na';
-      var srcStyle=hasSrc&&x.bestBranch!==urgFrom?'background:#e0f2fe;color:#0369a1':'';
-
-      html+='<div class="card'+(ticked?' ticked':'')+'" data-bc="'+bc+'">'+
-        '<div class="card-img">'+imgEl(bc)+'</div>'+
-        '<div class="card-body">'+
-          '<div class="card-name">'+x.item.nm+(x.item.sz?' · '+x.item.sz:'')+'</div>'+
-          '<div class="card-bc">'+bc+'</div>'+
-          '<div class="card-tags">'+
-            '<span class="ctag out">'+BRANCHES[urgTo].short+': OUT</span>'+
-            '<span class="ctag" style="background:var(--red-bg);color:var(--red)">'+x.age+'d ago</span>'+
-            '<span class="ctag info">Last: '+x.dst.ls+'</span>'+
-            '<span class="ctag '+srcCls+'"'+(srcStyle?' style="'+srcStyle+'"':'')+'>'+srcLabel+'</span>'+
-            (x.item.prc>0?'<span class="ctag blue">£'+x.item.prc.toFixed(2)+'</span>':'')+
-          '</div>'+
-        '</div>'+
-        '<div class="card-right">'+
-          (hasSrc&&!ticked?'<div class="sendbox" style="'+(x.bestBranch!==urgFrom?'background:#e0f2fe;color:#0369a1':'')+'">'+
-            (x.bestSrc?Math.min(Math.floor(x.bestSrc.qty/2),Math.max(3,x.bestSrc.qty-3)):0)+'</div><div class="sendlbl" style="'+(x.bestBranch!==urgFrom?'color:#0369a1':'')+'">'+
-            (x.bestBranch!==urgFrom?'from '+BRANCHES[x.bestBranch].name:'send')+'</div>':'')+
-          '<div class="tick-btn'+(ticked?' done':'')+'" data-tick="'+bc+'">'+
-            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
-          '</div>'+
-        '</div>'+
-      '</div>';
+      html+='<div class="oos-row'+(hasSrc?' has-src':'')+'">';
+      html+='<div class="oos-img">'+imgEl(p.bc,42)+'</div>';
+      html+='<div class="oos-body">';
+      html+='<div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>';
+      html+='<div class="oos-bc">'+p.bc+'</div>';
+      html+='<div class="oos-tags">';
+      html+='<span class="itag" style="background:'+daysBg+';color:'+daysColor+'">'+
+            (p.daysOut>=9999?'Unknown':(p.daysOut===0?'Today':p.daysOut==='1'?'Yesterday':p.daysOut+'d OOS'))+'</span>';
+      html+='<span class="itag itag-info">Last sold: '+p.ls+'</span>';
+      if(hasSrc){
+        avail.forEach(function(a){
+          html+='<span class="itag itag-src">'+a.branch.name+': '+a.qty+'</span>';
+        });
+      }else{
+        html+='<span class="itag" style="background:var(--amberbg);color:var(--amber)">Reorder needed</span>';
+      }
+      if(p.prc>0)html+='<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>';
+      html+='</div></div>';
+      html+='<div class="oos-right">';
+      html+='<div class="days-badge" style="color:'+daysColor+'">'+
+            (p.daysOut>=9999?'?':p.daysOut)+'</div>';
+      html+='<div class="days-lbl">days out</div>';
+      html+='</div></div>';
     });
-    html+='</div>';
   });
-  return html;
+
+  el.innerHTML=html;
 }
 
-// ── PRODUCT PANEL ──────────────────────────────────────────────────
-function openPanel(bc){
-  var info=null;var found=[null,null,null,null];
-  for(var b=0;b<4;b++){var p=bd[b].find(function(x){return x.bc===bc;});if(p){found[b]=p;if(!info)info=p;}}
-  if(!info)return;
-  var hero=document.getElementById('phero');hero.innerHTML='';
-  var src=imgs[bc];
-  if(src){var img=document.createElement('img');img.src=src;img.style.cssText='max-height:146px;max-width:100%;object-fit:contain';hero.appendChild(img);}
-  else hero.innerHTML='<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
-  document.getElementById('pp-name').textContent=info.nm+(info.sz?' · '+info.sz:'');
-  document.getElementById('pp-dept').textContent=info.dp;
-  document.getElementById('pp-bc').textContent=bc||'—';
-  document.getElementById('pp-prc').textContent=info.prc>0?'£'+info.prc.toFixed(2):'—';
-  var dst=found[urgTo];
-  document.getElementById('pp-ls').textContent=dst?dst.ls:'—';
-  var chips=['bc-r','bc-c','bc-x','bc-w'];
-  var brows='<div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Stock by branch</div>';
-  for(var b=0;b<3;b++){
-    var p=found[b];
-    brows+='<div class="brow"><span class="bchip '+chips[b]+'">'+BRANCHES[b].name+'</span>';
-    if(!p){brows+='<span style="color:var(--ink3);font-size:11px">Not stocked</span></div>';continue;}
-    var qc=p.qty<=0?'var(--red)':'var(--green)';
-    brows+='<div style="flex:1"><div style="font-size:11px;font-weight:600;color:'+qc+'">'+(p.qty<=0?'Out of stock':p.qty+' in stock')+'</div>'+
-           '<div style="font-size:9px;color:var(--ink3);margin-top:1px">Last sold: '+p.ls+'</div></div>'+
-           '<span style="font-size:14px;font-weight:700;font-family:monospace;color:'+qc+'">'+p.qty+'</span></div>';
-  }
-  document.getElementById('pp-brows').innerHTML=brows;
-  document.getElementById('pov').classList.add('open');
+function updateOOSProgress(total,withSrc,destIdx){
+  var pct=total>0?Math.round(withSrc/total*100):0;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-txt').textContent=pct+'%';
+  document.getElementById('prog-sub').textContent=total+' out of stock at '+BRANCHES[destIdx].name+' · '+withSrc+' can be collected · '+(total-withSrc)+' need reorder';
+  document.getElementById('wa-progress').textContent=total+' items OOS';
 }
 
-// ── EVENT DELEGATION ───────────────────────────────────────────────
-document.getElementById('out').addEventListener('click',function(e){
-  // Tick button
-  var tb=e.target.closest('[data-tick]');
-  if(tb){toggleTick(tb.dataset.tick,e);return;}
-  // Dept toggle
-  var dh=e.target.closest('[data-toggle]');
-  if(dh){
-    var id=dh.dataset.toggle;
-    var body=document.getElementById(id);
-    var arr=document.getElementById('darr_'+id);
-    if(!body)return;
-    var open=body.classList.toggle('open');
-    if(arr){arr.classList.toggle('open',open);}
-    return;
-  }
-  // Card tap → open panel
-  var card=e.target.closest('[data-bc]');
-  if(card)openPanel(card.dataset.bc);
-});
-
-document.getElementById('pairtabs').addEventListener('click',function(e){
-  var tab=e.target.closest('.pairtab');
-  if(!tab)return;
-  urgFrom=parseInt(tab.dataset.f);urgTo=parseInt(tab.dataset.t);
-  selectedDepts=null;
-  buildPairTabs();buildDeptFilter();render();
-});
-
-document.getElementById('timepills').addEventListener('click',function(e){
-  var pill=e.target.closest('.tpill');
-  if(!pill)return;
-  urgDays=parseInt(pill.dataset.v);
-  selectedDepts=null;
-  buildTimePills();buildDeptFilter();render();
-});
-
-document.getElementById('df-chips').addEventListener('click',function(e){
-  var chip=e.target.closest('.df-chip');
-  if(chip)toggleDept(chip.dataset.dept);
-});
-
-document.getElementById('df-clear').addEventListener('click',toggleAllDepts);
-
-document.getElementById('pov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
-document.getElementById('hist-ov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
-document.getElementById('histbtn').addEventListener('click',showHistory);
-document.getElementById('clearbtn').addEventListener('click',clearTicks);
-
-// ── START ──────────────────────────────────────────────────────────
+// ── START ─────────────────────────────────────────────────────
 function startApp(){
-  buildPairTabs();
-  buildTimePills();
-  // Sequential loading
+  loadImgs().then(function(){renderDest(0);});
   Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
 }
 
-(function(){
-  var ts=localStorage.getItem('cc_pin_ts');
-  if(ts&&(Date.now()-parseInt(ts))<8*60*60*1000)startApp();
-})();
+(function(){var ts=localStorage.getItem('cc_urg_ts');if(ts&&Date.now()-parseInt(ts)<8*3600*1000)startApp();})();
 </script>
-
-
-
-
-
-<!-- CC SHARED NAV -->
-<nav class="cc-nav" id="cc-nav">
-  <a href="home.html" class="cc-nav-item cc-nav-home">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-    <span>Home</span>
-  </a>
-  <a href="index.html" class="cc-nav-item" id="ccn-index">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-    <span>Low stock</span>
-  </a>
-  <a href="stock.html" class="cc-nav-item" id="ccn-stock">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-    <span>Stock</span>
-  </a>
-  <a href="urgent.html" class="cc-nav-item" id="ccn-urgent">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    <span>Urgent</span>
-  </a>
-  <a href="lostsales.html" class="cc-nav-item" id="ccn-lostsales">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-    <span>Lost £</span>
-  </a>
-  <a href="kpi.html" class="cc-nav-item" id="ccn-kpi">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/><path d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg>
-    <span>KPIs</span>
-  </a>
-  <a href="images.html" class="cc-nav-item" id="ccn-images">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-    <span>Images</span>
-  </a>
-  <a href="director.html" class="cc-nav-item" id="ccn-director">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-    <span>Director</span>
-  </a>
-</nav>
-<script>
-(function(){
-  var page=window.location.pathname.split('/').pop()||'home.html';
-  var idMap={
-    'index.html':'ccn-index','stock.html':'ccn-stock','urgent.html':'ccn-urgent',
-    'lostsales.html':'ccn-lostsales','compare.html':'ccn-compare',
-    'images.html':'ccn-images','director.html':'ccn-director','kpi.html':'ccn-kpi'
-  };
-  var activeId=idMap[page];
-  if(activeId){var el=document.getElementById(activeId);if(el)el.classList.add('active');}
-  var role=localStorage.getItem('cc_role');
-  if(role!=='manager'&&role!=='director'){
-    ['ccn-director','ccn-lostsales','ccn-kpi'].forEach(function(id){
-      var el=document.getElementById(id);if(el)el.style.display='none';
-    });
-  }
-})();
-</script>
-
 </body>
 </html>
