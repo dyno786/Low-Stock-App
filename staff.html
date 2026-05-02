@@ -12,172 +12,232 @@
   --amber:#b45309;--amberbg:#fffbeb;--ambertxt:#92400e;
   --purple:#6d28d9;--purplebg:#ede9fe;--purpletxt:#4c1d95;
   --blue:#1d4ed8;--bluebg:#eff6ff;--bluetxt:#1e3a8a;
-  --bg:#f4f4f4;--s1:#fff;--s2:#f8f8f8;--border:#e5e5e5;
-  --ink:#111;--sub:#888;--r:10px;
+  --bg:#f0f0f0;--s1:#fff;--s2:#f8f8f8;--border:#e0e0e0;
+  --ink:#111;--sub:#777;--r:12px;
   --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:70px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:20px;-webkit-font-smoothing:antialiased}
 
 /* ── HEADER ── */
-.hdr{background:var(--red);padding:12px 14px 0;position:sticky;top:0;z-index:100}
-.hdr-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.hdr-logo{width:30px;height:30px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--red);flex-shrink:0}
-.hdr-info{margin-left:8px;flex:1}
-.hdr-title{color:#fff;font-size:14px;font-weight:600}
-.hdr-sub{color:rgba(255,255,255,.65);font-size:10px;font-family:monospace;margin-top:1px}
-.hdr-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.hdr{background:var(--red);padding:14px 16px 16px}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.hdr-logo{width:36px;height:36px;background:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--red)}
+.hdr-title{color:#fff;font-size:18px;font-weight:700;margin-left:10px}
+.hdr-sub{color:rgba(255,255,255,.65);font-size:11px;font-family:monospace;margin-left:10px}
+.hdr-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)}
 
-/* ── BRANCH TABS (top) ── */
-.branch-bar{display:flex;background:var(--red);padding:0 4px;overflow-x:auto;scrollbar-width:none}
-.branch-bar::-webkit-scrollbar{display:none}
-.btab{flex:1;min-width:70px;text-align:center;padding:9px 6px;font-size:12px;font-weight:600;color:rgba(255,255,255,.55);border-bottom:2.5px solid transparent;cursor:pointer;user-select:none;white-space:nowrap}
-.btab.on{color:#fff;border-bottom-color:#fff}
+/* ── BRANCH BUTTONS (large) ── */
+.branch-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.branch-btn{background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);border-radius:12px;padding:12px 10px;text-align:center;cursor:pointer;user-select:none;transition:all .15s}
+.branch-btn.on{background:#fff;border-color:#fff}
+.branch-btn-name{font-size:16px;font-weight:700;color:rgba(255,255,255,.7);line-height:1.2}
+.branch-btn.on .branch-btn-name{color:var(--red)}
+.branch-btn-sub{font-size:10px;font-weight:500;color:rgba(255,255,255,.5);margin-top:3px}
+.branch-btn.on .branch-btn-sub{color:var(--red);opacity:.7}
 
-/* ── VIEW TABS (below header) ── */
-.vtabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+/* WAREHOUSE MANAGER BUTTON */
+.wh-mgr-btn{width:100%;background:rgba(167,139,250,.25);border:2px solid rgba(167,139,250,.5);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;transition:all .15s;margin-top:0}
+.wh-mgr-btn.on{background:#fff;border-color:#fff}
+.wh-mgr-icon{width:36px;height:36px;background:rgba(167,139,250,.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.wh-mgr-btn.on .wh-mgr-icon{background:var(--purplebg)}
+.wh-mgr-name{font-size:16px;font-weight:700;color:rgba(255,255,255,.8);line-height:1.2}
+.wh-mgr-btn.on .wh-mgr-name{color:var(--purpletxt)}
+.wh-mgr-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
+.wh-mgr-btn.on .wh-mgr-sub{color:var(--purpletxt);opacity:.7}
+
+/* ── VIEW TABS ── */
+.vtabs{display:flex;background:var(--s1);border-bottom:2px solid var(--bg);overflow-x:auto;scrollbar-width:none}
 .vtabs::-webkit-scrollbar{display:none}
-.vtab{flex-shrink:0;flex:1;padding:10px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--sub);border-bottom:2.5px solid transparent;cursor:pointer;user-select:none;white-space:nowrap}
+.vtab{flex-shrink:0;flex:1;padding:13px 8px;text-align:center;font-size:13px;font-weight:700;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer;user-select:none;white-space:nowrap}
 .vtab.on{color:var(--red);border-bottom-color:var(--red)}
+.vtab-wh{flex-shrink:0;flex:1;padding:13px 8px;text-align:center;font-size:13px;font-weight:700;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer;user-select:none;white-space:nowrap}
+.vtab-wh.on{color:var(--purple);border-bottom-color:var(--purple)}
 
-/* ── STATS STRIP ── */
-.stats-strip{display:grid;gap:0;background:var(--s1);border-bottom:1px solid var(--border)}
-.stats-grid{display:grid;gap:6px;padding:8px 10px}
-.stat-card{background:var(--bg);border-radius:var(--r);padding:8px 10px;text-align:center}
-.stat-val{font-size:20px;font-weight:600;font-family:monospace;line-height:1}
-.stat-lbl{font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+/* ── SECTION HEADINGS (large) ── */
+.sec-heading{padding:16px 16px 8px;background:var(--bg)}
+.sec-heading-title{font-size:22px;font-weight:700;color:var(--ink);line-height:1.2}
+.sec-heading-sub{font-size:13px;color:var(--sub);margin-top:4px}
+.src-heading{background:var(--s1);border-bottom:1px solid var(--border);padding:14px 16px;position:sticky;top:0;z-index:40}
+.src-heading-name{font-size:18px;font-weight:700;color:var(--ink)}
+.src-heading-rule{font-size:12px;font-weight:600;margin-top:3px}
+.src-heading-prog{font-size:11px;color:var(--sub);margin-top:2px}
+.dept-heading{padding:10px 16px 6px;background:var(--bg)}
+.dept-heading-title{font-size:15px;font-weight:700;color:var(--ink)}
+.dept-heading-sub{font-size:11px;color:var(--sub);margin-top:2px}
 
-/* ── PROGRESS ── */
-.prog-wrap{background:var(--s1);padding:7px 12px;border-bottom:1px solid var(--border)}
-.prog-row{display:flex;align-items:center;gap:7px}
-.prog-bar{flex:1;height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
-.prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s}
-.prog-txt{font-size:11px;font-weight:600;color:var(--green);min-width:30px;text-align:right}
-.prog-sub{font-size:10px;color:var(--sub);margin-top:3px}
-
-/* ── FILTER SECTIONS (collapsible) ── */
-.filter-sections{background:var(--s1);border-bottom:2px solid var(--bg)}
-.fsec{border-bottom:0.5px solid var(--border)}
-.fsec:last-child{border-bottom:none}
-.fsec-hdr{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;user-select:none}
-.fsec-title{font-size:12px;font-weight:600;color:var(--ink)}
-.fsec-sum{font-size:10px;color:var(--sub);margin-left:6px}
-.fsec-arrow{font-size:11px;color:var(--sub);transition:transform .2s}
+/* ── FILTER SECTIONS ── */
+.filter-card{background:var(--s1);margin:0 0 2px;border-bottom:1px solid var(--border)}
+.fsec-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none}
+.fsec-title{font-size:15px;font-weight:700;color:var(--ink)}
+.fsec-sum{font-size:11px;color:var(--sub);margin-left:8px;font-weight:400}
+.fsec-arrow{font-size:13px;color:var(--sub);transition:transform .2s}
 .fsec-arrow.open{transform:rotate(90deg)}
-.fsec-body{display:none;padding:7px 12px 10px;border-top:0.5px solid var(--border)}
+.fsec-body{display:none;padding:8px 14px 12px;border-top:1px solid var(--border)}
 .fsec-body.open{display:block}
-.pill-row{display:flex;gap:5px;flex-wrap:wrap}
-.pill{padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--s1);color:var(--sub);user-select:none;white-space:nowrap;transition:all .1s}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap}
+.pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--s1);color:var(--sub);user-select:none;white-space:nowrap;transition:all .1s}
 .pill.on{background:var(--red);color:#fff;border-color:var(--red)}
-.srcpill{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--s1);color:var(--sub);user-select:none;transition:all .1s}
+.srcpill{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--s1);color:var(--sub);user-select:none;transition:all .12s;margin-bottom:5px}
+.srcpill:last-child{margin-bottom:0}
 .srcpill.on{border-color:var(--green);color:var(--green);background:var(--greenbg)}
-.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.scheck{width:16px;height:16px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.sdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.scheck{width:18px;height:18px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-left:auto}
 
 /* ── OOS DAY FILTER ── */
-.day-filter{background:var(--s1);border-bottom:1px solid var(--border);padding:7px 10px;overflow-x:auto;scrollbar-width:none;display:none}
+.day-filter{background:var(--s1);border-bottom:1px solid var(--border);padding:8px 12px;overflow-x:auto;scrollbar-width:none;display:none}
 .day-filter::-webkit-scrollbar{display:none}
-.day-filter-inner{display:flex;gap:5px;min-width:max-content}
+.day-filter-inner{display:flex;gap:6px;min-width:max-content}
 
-/* ── SOURCE SECTION ── */
-.src-section{border-bottom:3px solid var(--bg)}
-.src-hdr{background:var(--s1);padding:9px 14px;display:flex;align-items:center;gap:8px;border-bottom:0.5px solid var(--border);position:sticky;top:112px;z-index:40}
-.src-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.src-name{font-size:13px;font-weight:600;flex:1}
-.src-rule{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
-.src-prog{font-size:10px;color:var(--sub)}
-
-/* ── DEPT HEADER ── */
-.dept-hdr{padding:6px 14px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;cursor:pointer;user-select:none}
-.dept-name{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px}
-.dept-cnt{font-size:10px;color:var(--sub)}
+/* ── PROGRESS ── */
+.prog-wrap{background:var(--s1);padding:10px 16px;border-bottom:1px solid var(--border)}
+.prog-row{display:flex;align-items:center;gap:8px}
+.prog-bar{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s}
+.prog-txt{font-size:12px;font-weight:700;color:var(--green);min-width:32px;text-align:right}
+.prog-sub{font-size:11px;color:var(--sub);margin-top:4px}
 
 /* ── ITEM CARDS ── */
-.item-card{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:10px 12px;gap:9px;cursor:pointer}
+.card-list{background:var(--s1);border-radius:var(--r);margin:8px 12px;overflow:hidden;border:1px solid var(--border)}
+.item-card{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:12px 14px;gap:10px}
+.item-card:last-child{border-bottom:none}
 .item-card.done{background:var(--greenbg)}
 .item-card.done .item-name{text-decoration:line-through;color:var(--sub)}
-.item-img{width:50px;height:50px;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.item-img img{width:50px;height:50px;object-fit:cover}
+.item-img{width:54px;height:54px;border-radius:10px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.item-img img{width:54px;height:54px;object-fit:cover}
 .item-body{flex:1;min-width:0}
-.item-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
-.item-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
+.item-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
+.item-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:5px}
 .item-tags{display:flex;gap:3px;flex-wrap:wrap}
-.itag{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600}
+.itag{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600}
 .itag-wh{background:var(--purplebg);color:var(--purpletxt)}
 .itag-src{background:var(--greenbg);color:var(--greentxt)}
 .itag-out{background:var(--redbg);color:var(--redtxt)}
 .itag-day{background:var(--amberbg);color:var(--ambertxt)}
 .itag-day-red{background:var(--redbg);color:var(--redtxt)}
 .itag-info{background:var(--bg);color:var(--sub)}
-.item-right{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
-.collect-box{background:var(--redbg);border-radius:7px;padding:5px 7px;text-align:center;min-width:42px}
+.itag-purple{background:var(--purplebg);color:var(--purpletxt)}
+.item-right{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
+.collect-box{background:var(--redbg);border-radius:8px;padding:6px 8px;text-align:center;min-width:44px}
 .collect-box.done-box{background:var(--greenbg)}
-.collect-num{font-size:17px;font-weight:700;color:var(--red);line-height:1}
+.collect-num{font-size:18px;font-weight:700;color:var(--red);line-height:1}
 .collect-num.done-num{color:var(--green)}
-.collect-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:1px}
-.tick-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .12s;cursor:pointer;background:var(--s1)}
+.collect-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:2px;letter-spacing:.3px}
+.tick-btn{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .12s;cursor:pointer;background:var(--s1)}
 .tick-btn.done{background:var(--green);border-color:var(--green)}
 
-/* ── NEG STOCK CARDS ── */
-.neg-card{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:10px 12px;gap:9px;align-items:center}
+/* ── NEGATIVE CARDS ── */
+.neg-card{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:12px 14px;gap:10px;align-items:center}
+.neg-card:last-child{border-bottom:none}
 .neg-card.fixed{background:var(--greenbg)}
-.neg-img{width:44px;height:44px;border-radius:7px;background:var(--bg);border:0.5px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.neg-img img{width:44px;height:44px;object-fit:cover}
+.neg-img{width:48px;height:48px;border-radius:9px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.neg-img img{width:48px;height:48px;object-fit:cover}
 .neg-body{flex:1;min-width:0}
-.neg-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.neg-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
 .neg-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
 .neg-tags{display:flex;gap:3px;flex-wrap:wrap}
-.neg-right{flex-shrink:0;text-align:center;min-width:44px}
-.neg-qty{font-size:20px;font-weight:700;font-family:monospace;color:var(--red);line-height:1}
+.neg-right{flex-shrink:0;text-align:center;min-width:48px}
+.neg-qty{font-size:22px;font-weight:700;font-family:monospace;color:var(--red);line-height:1}
 .neg-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:2px}
-.neg-tick{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--s1);margin-top:4px}
+.neg-tick{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--s1);margin-top:6px}
 .neg-tick.done{background:var(--green);border-color:var(--green)}
 
-/* ── ALL STOCK OOS ── */
-.oos-row{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:9px 12px;gap:9px;align-items:center}
+/* ── OOS ROWS ── */
+.oos-row{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:11px 14px;gap:10px;align-items:center}
+.oos-row:last-child{border-bottom:none}
 .oos-row.has-src{background:#f0fdf4}
-.oos-img{width:40px;height:40px;border-radius:7px;background:var(--bg);border:0.5px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.oos-img img{width:40px;height:40px;object-fit:cover}
+.oos-img{width:44px;height:44px;border-radius:8px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.oos-img img{width:44px;height:44px;object-fit:cover}
 .oos-body{flex:1;min-width:0}
-.oos-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
-.oos-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:3px}
+.oos-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
+.oos-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
 .oos-tags{display:flex;gap:3px;flex-wrap:wrap}
-.oos-right{flex-shrink:0;text-align:center;min-width:36px}
-.oos-days{font-size:18px;font-weight:700;font-family:monospace;line-height:1}
+.oos-right{flex-shrink:0;text-align:center;min-width:44px}
+.oos-days{font-size:22px;font-weight:700;font-family:monospace;line-height:1}
 .oos-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:2px}
 
-/* ── LOADING / EMPTY ── */
-.loading{padding:40px 14px;text-align:center;color:var(--sub);font-size:12px;line-height:2}
-.spin{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{padding:30px 14px;text-align:center;color:var(--sub);font-size:12px;line-height:2}
+/* ── WAREHOUSE MANAGER CARDS ── */
+.wh-card{background:var(--s1);border-radius:var(--r);margin:8px 12px;border:1px solid var(--border);overflow:hidden}
+.wh-card-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.wh-card-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.wh-card-title{font-size:16px;font-weight:700;line-height:1.2}
+.wh-card-sub{font-size:11px;color:var(--sub);margin-top:2px}
+.wh-item{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:12px 14px;gap:10px}
+.wh-item:last-child{border-bottom:none}
+.wh-item.action{background:#fffbeb}
+.wh-img{width:50px;height:50px;border-radius:9px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.wh-img img{width:50px;height:50px;object-fit:cover}
+.wh-body{flex:1;min-width:0}
+.wh-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
+.wh-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:5px}
+.wh-tags{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px}
+.wh-action{background:var(--amberbg);border-radius:8px;padding:7px 10px;margin-top:6px}
+.wh-action-title{font-size:11px;font-weight:700;color:var(--ambertxt);margin-bottom:3px}
+.wh-action-row{font-size:11px;color:var(--ambertxt);line-height:1.7}
+.wh-right{flex-shrink:0;text-align:center;min-width:52px}
+.wh-qty{font-size:22px;font-weight:700;font-family:monospace;color:var(--ink);line-height:1}
+.wh-qty-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:2px}
+.wh-sold{font-size:14px;font-weight:700;font-family:monospace;color:var(--sub);line-height:1;margin-top:4px}
+.wh-sold-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:1px}
 
-/* ── WHATSAPP FOOTER ── */
-.wa-footer{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--s1);border-top:0.5px solid var(--border);padding:7px 12px 12px;z-index:150}
-.wa-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-size:10px;color:var(--sub)}
-.wa-btn{width:100%;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px}
-.wa-btn svg{width:17px;height:17px;flex-shrink:0}
+/* ── STATS GRID ── */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px;background:var(--bg)}
+.stat-card{background:var(--s1);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border)}
+.stat-val{font-size:22px;font-weight:700;font-family:monospace;line-height:1}
+.stat-lbl{font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+
+/* ── LOADING / EMPTY ── */
+.loading{padding:50px 16px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
+.spin{width:26px;height:26px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:40px 16px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
+
+/* ── WHATSAPP ── */
+.wa-footer{background:var(--s1);border-top:1px solid var(--border);padding:10px 14px 20px;margin-top:16px}
+.wa-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;font-size:11px;color:var(--sub)}
+.wa-btn{width:100%;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px}
+.wa-btn svg{width:18px;height:18px;flex-shrink:0}
+.wa-btn-purple{background:var(--purple)}
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
 <div class="hdr">
-  <div class="hdr-row">
+  <div class="hdr-top">
     <div style="display:flex;align-items:center">
       <div class="hdr-logo">CC</div>
-      <div class="hdr-info">
-        <div class="hdr-title">Staff Dashboard</div>
-        <div class="hdr-sub" id="stime">loading…</div>
+      <div>
+        <div class="hdr-title" style="margin-left:10px">CC Hair & Beauty</div>
+        <div class="hdr-sub" id="stime" style="margin-left:10px">loading…</div>
       </div>
     </div>
     <button class="hdr-btn" id="refresh-btn">↺ Refresh</button>
   </div>
-  <!-- BRANCH TABS -->
-  <div class="branch-bar" id="branch-bar">
-    <div class="btab on" data-b="0">Chapeltown</div>
-    <div class="btab" data-b="1">City Center</div>
-    <div class="btab" data-b="2">Roundhay</div>
+
+  <!-- BRANCH BUTTONS (large) -->
+  <div class="branch-grid">
+    <div class="branch-btn on" data-b="0">
+      <div class="branch-btn-name">Chapeltown</div>
+      <div class="branch-btn-sub" id="bsub0">loading…</div>
+    </div>
+    <div class="branch-btn" data-b="1">
+      <div class="branch-btn-name">City Center</div>
+      <div class="branch-btn-sub" id="bsub1">loading…</div>
+    </div>
+    <div class="branch-btn" data-b="2" style="grid-column:1/-1">
+      <div class="branch-btn-name">Roundhay</div>
+      <div class="branch-btn-sub" id="bsub2">loading…</div>
+    </div>
+  </div>
+
+  <!-- WAREHOUSE MANAGER BUTTON -->
+  <div class="wh-mgr-btn" id="wh-mgr-btn" data-b="wh">
+    <div class="wh-mgr-icon">🏭</div>
+    <div>
+      <div class="wh-mgr-name">Warehouse Manager</div>
+      <div class="wh-mgr-sub" id="whsub">Dead stock · Split actions · Slow sellers</div>
+    </div>
   </div>
 </div>
 
@@ -188,7 +248,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
 </div>
 
-<!-- OOS DAY FILTER (only shown in OOS view) -->
+<!-- OOS DAY FILTER -->
 <div class="day-filter" id="day-filter">
   <div class="day-filter-inner" id="day-filter-pills">
     <div class="pill on" data-d="all">All</div>
@@ -200,9 +260,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </div>
 </div>
 
-<!-- FILTER SECTIONS (collect view only) -->
-<div class="filter-sections" id="filter-sections">
-  <div class="fsec" id="fsec-src">
+<!-- COLLECT FILTERS -->
+<div id="collect-filters" style="background:var(--s1);border-bottom:2px solid var(--bg)">
+  <div class="filter-card">
     <div class="fsec-hdr" id="fsrc-toggle">
       <div style="display:flex;align-items:center">
         <span class="fsec-title">Collect from</span>
@@ -211,10 +271,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
       <span class="fsec-arrow" id="fsrc-arrow">▸</span>
     </div>
     <div class="fsec-body" id="fsrc-body">
-      <div class="pill-row" id="src-pills"></div>
+      <div id="src-pills"></div>
     </div>
   </div>
-  <div class="fsec" id="fsec-dept">
+  <div class="filter-card" style="border-bottom:none">
     <div class="fsec-hdr" id="fdept-toggle">
       <div style="display:flex;align-items:center">
         <span class="fsec-title">Departments</span>
@@ -228,7 +288,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </div>
 </div>
 
-<!-- PROGRESS BAR -->
+<!-- PROGRESS -->
 <div class="prog-wrap" id="prog-wrap">
   <div class="prog-row">
     <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
@@ -237,65 +297,56 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="prog-sub" id="prog-sub">Loading…</div>
 </div>
 
-<!-- CONTENT -->
 <div id="out"><div class="loading"><div class="spin"></div>Loading branches…</div></div>
-
-<!-- WHATSAPP FOOTER -->
-<div class="wa-footer" id="wa-footer">
-  <div class="wa-row">
-    <span>Notify manager when done</span>
-    <span id="wa-count">0 items ticked</span>
-  </div>
-  <button class="wa-btn" id="wa-btn">
-    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-    Message manager
-  </button>
-</div>
 
 <script>
 var WA_NUMBER='447305505976';
 var WH_MIN=12;
+// Distribution split when warehouse pushes to branches
+var SPLIT={0:12,1:12,2:6}; // chapy:12, city:12, roundhay:6
+// Dead stock = in warehouse 90+ days, sold <3 times across all branches in last 90 days
+var DEAD_DAYS=90;
+var SLOW_THRESHOLD=3; // total units sold across all branches in 90 days
 
 var BRANCHES=[
-  {id:'chapy',    name:'Chapeltown', color:'#fb923c',
+  {id:'chapy',    name:'Chapeltown', short:'Chap',color:'#fb923c',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
-  {id:'city',     name:'City Center',color:'#4ade80',
+  {id:'city',     name:'City Center',short:'City',color:'#4ade80',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
-  {id:'roundhay', name:'Roundhay',   color:'#60a5fa',
+  {id:'roundhay', name:'Roundhay',   short:'Roun',color:'#60a5fa',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
-  {id:'warehouse',name:'Warehouse',  color:'#a78bfa',
+  {id:'warehouse',name:'Warehouse',  short:'WH',  color:'#a78bfa',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'},
 ];
 var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
-
-// Sources each destination collects from (in priority order)
 var DEST_SOURCES=[
-  [{srcIdx:3,rule:'wh',label:'Min 12 on shelf'},{srcIdx:1,rule:'half',label:'Half their stock'},{srcIdx:2,rule:'half',label:'Half their stock'}],
-  [{srcIdx:3,rule:'wh',label:'Min 12 on shelf'},{srcIdx:0,rule:'half',label:'Half their stock'},{srcIdx:2,rule:'half',label:'Half their stock'}],
-  [{srcIdx:3,rule:'wh',label:'Min 12 on shelf'},{srcIdx:0,rule:'half',label:'Half their stock'},{srcIdx:1,rule:'half',label:'Half their stock'}],
+  [{srcIdx:3,rule:'wh',label:'Min 12'},{srcIdx:1,rule:'half',label:'Half stock'},{srcIdx:2,rule:'half',label:'Half stock'}],
+  [{srcIdx:3,rule:'wh',label:'Min 12'},{srcIdx:0,rule:'half',label:'Half stock'},{srcIdx:2,rule:'half',label:'Half stock'}],
+  [{srcIdx:3,rule:'wh',label:'Min 12'},{srcIdx:0,rule:'half',label:'Half stock'},{srcIdx:1,rule:'half',label:'Half stock'}],
 ];
 
 var bd=[null,null,null,null],imgs={},loaded=0;
-var currentDest=0,currentView='urgent';
+var currentDest=0,currentView='urgent',currentMode='branch'; // 'branch' or 'warehouse'
 var activeSources=[0,1,2,3],activeDepts=['All'],oosFilter='all';
-var ticks=JSON.parse(localStorage.getItem('cc_staff_ticks')||'{}');
-var negTicks=JSON.parse(localStorage.getItem('cc_neg_ticks')||'{}');
+var ticks=JSON.parse(localStorage.getItem('cc_staff2_ticks')||'{}');
+var negTicks=JSON.parse(localStorage.getItem('cc_staff2_negticks')||'{}');
 
+// ── HELPERS ──────────────────────────────────────────────────
 function cl(v){return String(v==null?'':v).trim();}
 function pD(s){
   if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;
   var p=s.split('/');
   if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d)?null:d;}
-  var d=new Date(s);return isNaN(d)?null:d;
+  return null;
 }
 function dSince(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
-function calcCollect(srcQty,rule,destQty){
-  if(rule==='wh'){if(srcQty<=0)return 0;var n=WH_MIN-(destQty||0);if(n<=0)return 0;return Math.min(n,srcQty);}
-  if(srcQty<=0)return 0;return Math.floor(srcQty/2);
+function calcCollect(sq,rule,dq){
+  if(rule==='wh'){if(sq<=0)return 0;var n=WH_MIN-(dq||0);if(n<=0)return 0;return Math.min(n,sq);}
+  if(sq<=0)return 0;return Math.floor(sq/2);
 }
-function tickKey(d,s,bc){return d+'_'+s+'_'+bc;}
-function isTicked(d,s,bc){return !!ticks[tickKey(d,s,bc)];}
-function setTick(d,s,bc,v){ticks[tickKey(d,s,bc)]=v;localStorage.setItem('cc_staff_ticks',JSON.stringify(ticks));}
+function tk(d,s,bc){return d+'_'+s+'_'+bc;}
+function isTicked(d,s,bc){return !!ticks[tk(d,s,bc)];}
+function setTick(d,s,bc,v){ticks[tk(d,s,bc)]=v;localStorage.setItem('cc_staff2_ticks',JSON.stringify(ticks));}
 function imgEl(bc,sz){
   var src=imgs[bc];sz=sz||50;
   if(src)return '<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';
@@ -303,15 +354,15 @@ function imgEl(bc,sz){
 }
 function dayBadge(days,label,redAt,amberAt){
   if(days===null)return '';
-  var c=days>=redAt?'itag-day-red':days>=(amberAt||7)?'itag-day':'itag-info';
+  var c=days>=(redAt||30)?'itag-day-red':days>=(amberAt||7)?'itag-day':'itag-info';
   return '<span class="itag '+c+'">'+days+'d '+label+'</span>';
 }
 
 // ── LOAD ─────────────────────────────────────────────────────
 async function loadImgs(){
   try{
-    var c=localStorage.getItem('cc_imgs');
-    if(c){var o=JSON.parse(c);if(Date.now()-o.ts<86400000){imgs=o.d;return;}}
+    var cached=localStorage.getItem('cc_imgs');
+    if(cached){var o=JSON.parse(cached);if(Date.now()-o.ts<86400000){imgs=o.d;return;}}
     var r=await fetch(IURL);var t=await r.text();
     Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
       var bc=cl(row['Barcode']),src=cl(row['ImageURL']);
@@ -328,18 +379,272 @@ async function loadBranch(i){
       var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
       return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
              qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
+             cst:parseFloat(row['AvgCost'])||0,
              dp:cl(row['Department']),
              ls:(ls&&ls!=='NULL')?ls:'Never',
              dc:(dc&&dc!=='NULL')?dc:'Unknown'};
     }).filter(function(p){return p.bc&&p.nm;});
   }catch(e){bd[i]=[];}
   loaded++;
-  var now=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  document.getElementById('stime').textContent=loaded<4?'loading '+loaded+'/4…':'live · '+now;
+  var t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('stime').textContent=loaded<4?'loading '+loaded+'/4…':'live · '+t;
+  // Update branch sub labels
+  for(var b=0;b<3;b++){
+    if(bd[b]){
+      var negs=bd[b].filter(function(p){return p.qty<0;}).length;
+      var oos=bd[b].filter(function(p){return p.qty===0&&p.ls!=='Never';}).length;
+      var el=document.getElementById('bsub'+b);
+      if(el)el.textContent=negs+' neg · '+oos+' OOS';
+    }
+  }
+  if(bd[3]){
+    var whDead=buildWhDeadStock().length;
+    var whEl=document.getElementById('whsub');
+    if(whEl)whEl.textContent=whDead+' dead stock items · Split actions ready';
+  }
   if(loaded>=1)render();
 }
 
-// ── COLLECT TAB ───────────────────────────────────────────────
+// ── WAREHOUSE MANAGER: DEAD STOCK LOGIC ──────────────────────
+function buildWhDeadStock(){
+  var whData=bd[3];if(!whData||!whData.length)return[];
+
+  // Build cross-branch sales map (use lastSold as proxy for activity)
+  // A product is "slow" at warehouse if:
+  // 1. Warehouse has stock (qty > 0)
+  // 2. LastSold across ALL branches (chapy, city, roundhay) is > DEAD_DAYS days ago OR never
+  // 3. Warehouse has more than the split total (chapy 12 + city 12 + roundhay 6 = 30)
+
+  var splitTotal=SPLIT[0]+SPLIT[1]+SPLIT[2]; // 30
+
+  // Build map of last sold dates across branches 0,1,2
+  var branchMap={};
+  for(var b=0;b<3;b++){
+    if(!bd[b])continue;
+    bd[b].forEach(function(p){
+      if(!p.bc)return;
+      if(!branchMap[p.bc])branchMap[p.bc]={lastSolds:[],branchQtys:[null,null,null]};
+      branchMap[p.bc].branchQtys[b]=p.qty;
+      if(p.ls&&p.ls!=='Never')branchMap[p.bc].lastSolds.push({days:dSince(p.ls),name:BRANCHES[b].name});
+    });
+  }
+
+  var results=[];
+  whData.forEach(function(p){
+    if(!p.bc||!p.nm||p.qty<=0)return; // only items with WH stock
+
+    var bInfo=branchMap[p.bc]||{lastSolds:[],branchQtys:[null,null,null]};
+
+    // Find most recent sale across all branches
+    var minDays=null;
+    bInfo.lastSolds.forEach(function(ls){if(ls.days!==null&&(minDays===null||ls.days<minDays))minDays=ls.days;});
+
+    // Classify
+    var isDead=false,isSlow=false;
+    var whDays=dSince(p.dc); // how long in warehouse
+
+    if(minDays===null){
+      // Never sold anywhere — dead if been in WH 90+ days
+      if(whDays!==null&&whDays>=DEAD_DAYS)isDead=true;
+    }else if(minDays>=DEAD_DAYS){
+      // Sold 90+ days ago across all branches — slow seller
+      isSlow=true;
+      isDead=true;
+    }else if(minDays>=30){
+      isSlow=true;
+    }
+
+    if(!isDead&&!isSlow)return; // active seller, skip
+
+    // Calculate split recommendation
+    var canSplit=p.qty>=splitTotal;
+    var action=canSplit?'split':'partial';
+
+    // How much to send each branch
+    var send={
+      0:Math.min(SPLIT[0],p.qty>0?SPLIT[0]:0),
+      1:Math.min(SPLIT[1],Math.max(0,p.qty-SPLIT[0])),
+      2:Math.min(SPLIT[2],Math.max(0,p.qty-SPLIT[0]-SPLIT[1]))
+    };
+
+    results.push({
+      bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',
+      prc:p.prc,cst:p.cst,
+      whQty:p.qty,
+      minDays:minDays,
+      whDays:whDays,
+      isDead:isDead,isSlow:isSlow,
+      bInfo:bInfo,
+      action:action,
+      send:send,
+      splitTotal:splitTotal
+    });
+  });
+
+  // Sort: dead first (never sold / longest ago), then slow
+  results.sort(function(a,b){
+    var ad=a.minDays===null?99999:(a.minDays||0);
+    var bd2=b.minDays===null?99999:(b.minDays||0);
+    return bd2-ad;
+  });
+
+  return results;
+}
+
+// ── WAREHOUSE MANAGER RENDER ──────────────────────────────────
+function renderWarehouse(){
+  var el=document.getElementById('out');
+  if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
+
+  var deadStock=buildWhDeadStock();
+  var dead=deadStock.filter(function(x){return x.isDead&&(x.minDays===null||x.minDays>=DEAD_DAYS);});
+  var slow=deadStock.filter(function(x){return x.isSlow&&!(x.minDays===null||x.minDays>=DEAD_DAYS);});
+
+  var totalVal=dead.reduce(function(s,x){return s+x.whQty*(x.cst||x.prc*0.5);},0);
+  updateProg(dead.length,0,'£'+Math.round(totalVal).toLocaleString()+' tied up in dead stock');
+
+  var html='';
+
+  // Stats
+  html+='<div class="stats-grid">'+
+    '<div class="stat-card"><div class="stat-val" style="color:var(--red)">'+dead.length+'</div><div class="stat-lbl">Dead stock</div></div>'+
+    '<div class="stat-card"><div class="stat-val" style="color:var(--amber)">'+slow.length+'</div><div class="stat-lbl">Slow sellers</div></div>'+
+    '<div class="stat-card"><div class="stat-val" style="color:var(--purple)">£'+Math.round(totalVal/1000)+'k</div><div class="stat-lbl">Value tied up</div></div>'+
+  '</div>';
+
+  // ── DEAD STOCK SECTION ──
+  if(dead.length){
+    html+='<div class="sec-heading">'+
+      '<div class="sec-heading-title">☠ Dead stock — remove from warehouse</div>'+
+      '<div class="sec-heading-sub">Not sold across any branch in 90+ days. Split to branches or return to supplier.</div>'+
+    '</div>';
+
+    var byDept={};
+    dead.forEach(function(x){if(!byDept[x.dp])byDept[x.dp]=[];byDept[x.dp].push(x);});
+
+    Object.keys(byDept).sort().forEach(function(dept){
+      var items=byDept[dept];
+      html+='<div class="dept-heading">'+
+        '<div class="dept-heading-title">'+dept+'</div>'+
+        '<div class="dept-heading-sub">'+items.length+' dead items</div>'+
+      '</div>';
+      html+='<div class="card-list">';
+      items.forEach(function(x){html+=mkWhCard(x);});
+      html+='</div>';
+    });
+  }
+
+  // ── SLOW SELLERS SECTION ──
+  if(slow.length){
+    html+='<div class="sec-heading">'+
+      '<div class="sec-heading-title">🐌 Slow sellers — split to branches now</div>'+
+      '<div class="sec-heading-sub">Selling but slowly. Push stock out to branches before it becomes dead.</div>'+
+    '</div>';
+
+    var byDept2={};
+    slow.forEach(function(x){if(!byDept2[x.dp])byDept2[x.dp]=[];byDept2[x.dp].push(x);});
+
+    Object.keys(byDept2).sort().forEach(function(dept){
+      var items=byDept2[dept];
+      html+='<div class="dept-heading">'+
+        '<div class="dept-heading-title">'+dept+'</div>'+
+        '<div class="dept-heading-sub">'+items.length+' slow sellers</div>'+
+      '</div>';
+      html+='<div class="card-list">';
+      items.forEach(function(x){html+=mkWhCard(x);});
+      html+='</div>';
+    });
+  }
+
+  if(!dead.length&&!slow.length){
+    html+='<div class="empty">No dead or slow stock in warehouse<br><span style="font-size:11px">All warehouse products are selling well across branches</span></div>';
+  }
+
+  // WhatsApp for warehouse manager
+  html+='<div class="wa-footer">'+
+    '<div class="wa-row"><span>Send split instructions to branch managers</span><span>'+dead.length+' dead · '+slow.length+' slow</span></div>'+
+    '<button class="wa-btn wa-btn-purple" id="wh-wa-btn">'+
+      '<svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'+
+      'Message branch managers — split instructions'+
+    '</button>'+
+  '</div>';
+
+  el.innerHTML=html;
+
+  document.getElementById('wh-wa-btn').addEventListener('click',function(){
+    sendWhatsAppSplit(dead.concat(slow));
+  });
+}
+
+function mkWhCard(x){
+  var daysLabel=x.minDays===null?'Never sold':x.minDays+'d since last sale';
+  var daysColor=x.minDays===null||x.minDays>=90?'var(--red)':x.minDays>=30?'var(--amber)':'var(--sub)';
+  var canSplit=x.whQty>=x.splitTotal;
+
+  var branchStocks='';
+  [0,1,2].forEach(function(b){
+    var bq=x.bInfo.branchQtys[b];
+    if(bq===null)return;
+    var bc=bq>0?'var(--greentxt)':bq<0?'var(--redtxt)':'var(--sub)';
+    branchStocks+='<span class="itag itag-info" style="color:'+bc+'">'+BRANCHES[b].short+': '+bq+'</span>';
+  });
+  branchStocks+='<span class="itag itag-purple">WH: '+x.whQty+'</span>';
+
+  var actionHtml='';
+  if(canSplit){
+    actionHtml='<div class="wh-action">'+
+      '<div class="wh-action-title">📦 Split now — send to branches</div>'+
+      '<div class="wh-action-row">'+
+        'Chapeltown: <strong>'+x.send[0]+' pcs</strong><br>'+
+        'City Center: <strong>'+x.send[1]+' pcs</strong><br>'+
+        'Roundhay: <strong>'+x.send[2]+' pcs</strong>'+
+      '</div>'+
+    '</div>';
+  }else{
+    var total=x.send[0]+x.send[1]+x.send[2];
+    actionHtml='<div class="wh-action" style="background:var(--redbg)">'+
+      '<div class="wh-action-title" style="color:var(--redtxt)">⚠ Low stock — split what you can</div>'+
+      '<div class="wh-action-row" style="color:var(--redtxt)">Only '+x.whQty+' in WH (need '+x.splitTotal+' for full split).<br>Send '+Math.min(x.whQty,x.send[0])+' to Chap, '+Math.min(Math.max(0,x.whQty-x.send[0]),x.send[1])+' to City, rest to Roundhay.</div>'+
+    '</div>';
+  }
+
+  return '<div class="wh-item '+(canSplit?'action':'')+'">'+
+    '<div class="wh-img">'+imgEl(x.bc,50)+'</div>'+
+    '<div class="wh-body">'+
+      '<div class="wh-name">'+x.nm+(x.sz?' · '+x.sz:'')+'</div>'+
+      '<div class="wh-bc">'+x.bc+'</div>'+
+      '<div class="wh-tags">'+
+        '<span class="itag itag-info" style="color:'+daysColor+'">'+daysLabel+'</span>'+
+        (x.prc>0?'<span class="itag itag-info">£'+x.prc.toFixed(2)+'</span>':'')+
+        '<span class="itag itag-info">'+x.dp+'</span>'+
+      '</div>'+
+      '<div class="wh-tags" style="margin-top:3px">'+branchStocks+'</div>'+
+      actionHtml+
+    '</div>'+
+    '<div class="wh-right">'+
+      '<div class="wh-qty">'+x.whQty+'</div>'+
+      '<div class="wh-qty-lbl">in WH</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function sendWhatsAppSplit(items){
+  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var msg='CC Hair & Beauty - Warehouse Split Instructions\\n'+date+' '+time+'\\n\\n';
+  msg+='CHAPELTOWN ('+SPLIT[0]+' pcs each):\\n';
+  items.forEach(function(x){if(x.send[0]>0)msg+='  '+x.nm+(x.sz?' ('+x.sz+')':'')+' x'+x.send[0]+'\\n';});
+  msg+='\\nCITY CENTER ('+SPLIT[1]+' pcs each):\\n';
+  items.forEach(function(x){if(x.send[1]>0)msg+='  '+x.nm+(x.sz?' ('+x.sz+')':'')+' x'+x.send[1]+'\\n';});
+  msg+='\\nROUNDHAY ('+SPLIT[2]+' pcs each):\\n';
+  items.forEach(function(x){if(x.send[2]>0)msg+='  '+x.nm+(x.sz?' ('+x.sz+')':'')+' x'+x.send[2]+'\\n';});
+  msg+='\\nTotal items to split: '+items.length+'\\nSent from CC Warehouse App';
+  window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
+}
+
+// ── BRANCH VIEWS ──────────────────────────────────────────────
+function deptVisible(dp){return activeDepts.indexOf('All')>=0||activeDepts.indexOf(dp||'General')>=0;}
+
 function buildSrcFilter(){
   var srcs=DEST_SOURCES[currentDest];
   var html='';
@@ -347,7 +652,7 @@ function buildSrcFilter(){
     var b=BRANCHES[sc.srcIdx],on=activeSources.indexOf(sc.srcIdx)>=0;
     html+='<div class="srcpill'+(on?' on':'')+'" data-sidx="'+sc.srcIdx+'" style="border-color:'+(on?'var(--green)':b.color)+';color:'+(on?'var(--green)':b.color)+';background:'+(on?'var(--greenbg)':'var(--s1)')+'">';
     html+='<div class="sdot" style="background:'+b.color+'"></div>'+b.name;
-    html+='<div class="scheck">'+(on?'✓':'')+'</div></div>';
+    html+='<div class="scheck" style="margin-left:auto">'+(on?'✓':'')+'</div></div>';
   });
   document.getElementById('src-pills').innerHTML=html;
   var names=srcs.filter(function(s){return activeSources.indexOf(s.srcIdx)>=0;}).map(function(s){return BRANCHES[s.srcIdx].name;});
@@ -372,9 +677,9 @@ function buildDeptFilter(){
     var srcData=bd[sc.srcIdx];if(!srcData)return;
     srcData.forEach(function(p){
       if(p.qty<=0)return;
-      var qty=calcCollect(p.qty,sc.rule,destMap[p.bc]?destMap[p.bc].qty:0);
-      if(qty<=0)return;
-      var dp=destMap[p.bc];if(dp&&dp.qty>3)return;
+      var dq=destMap[p.bc]?destMap[p.bc].qty:0;
+      if(calcCollect(p.qty,sc.rule,dq)<=0)return;
+      if(destMap[p.bc]&&destMap[p.bc].qty>3)return;
       if(p.dp)deptSet[p.dp]=true;
     });
   });
@@ -401,8 +706,6 @@ function buildDeptFilter(){
   });
 }
 
-function deptVisible(dp){return activeDepts.indexOf('All')>=0||activeDepts.indexOf(dp||'General')>=0;}
-
 function renderCollect(){
   var el=document.getElementById('out');
   var destData=bd[currentDest]||[];
@@ -410,24 +713,26 @@ function renderCollect(){
   var totalItems=0,doneItems=0;
   var html='';
 
+  html+='<div class="sec-heading">'+
+    '<div class="sec-heading-title">📦 Collect for '+BRANCHES[currentDest].name+'</div>'+
+    '<div class="sec-heading-sub">Items available to collect from other branches and warehouse</div>'+
+  '</div>';
+
   DEST_SOURCES[currentDest].forEach(function(sc){
     if(activeSources.indexOf(sc.srcIdx)<0)return;
     var srcData=bd[sc.srcIdx];
     var srcBranch=BRANCHES[sc.srcIdx];
-    if(!srcData){
-      html+='<div class="src-section"><div class="src-hdr"><div class="src-dot" style="background:'+srcBranch.color+'"></div><div class="src-name">'+srcBranch.name+'</div><span class="src-rule" style="background:'+srcBranch.color+'22;color:'+srcBranch.color+'">Loading…</span></div></div>';
-      return;
-    }
+    if(!srcData)return;
+
     var eligible=[];
     srcData.forEach(function(p){
       if(!p.bc||!p.nm||p.qty<=0)return;
-      var destProd=destMap[p.bc],destQty=destProd?destProd.qty:0;
-      var qty=calcCollect(p.qty,sc.rule,destQty);
-      if(qty<=0)return;
-      if(destQty>3)return;
+      var destProd=destMap[p.bc],dq=destProd?destProd.qty:0;
+      var qty=calcCollect(p.qty,sc.rule,dq);
+      if(qty<=0||dq>3)return;
       if(!deptVisible(p.dp||'General'))return;
       eligible.push({bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,
-                     srcQty:p.qty,destQty:destQty,qty:qty,
+                     srcQty:p.qty,destQty:dq,qty:qty,
                      destLs:destProd?destProd.ls:'Never'});
     });
     if(!eligible.length)return;
@@ -437,18 +742,21 @@ function renderCollect(){
     var srcDone=eligible.filter(function(x){return isTicked(currentDest,sc.srcIdx,x.bc);}).length;
     totalItems+=eligible.length;doneItems+=srcDone;
 
-    html+='<div class="src-section"><div class="src-hdr">'+
-      '<div class="src-dot" style="background:'+srcBranch.color+'"></div>'+
-      '<div class="src-name">Collect from '+srcBranch.name+'</div>'+
-      '<span class="src-rule" style="background:'+srcBranch.color+'22;color:'+srcBranch.color+'">'+sc.label+'</span>'+
-      '<span class="src-prog">'+srcDone+'/'+eligible.length+'</span>'+
+    // Source section heading
+    html+='<div class="src-heading">'+
+      '<div class="src-heading-name" style="color:'+srcBranch.color+'">Collect from '+srcBranch.name+'</div>'+
+      '<div class="src-heading-rule" style="color:'+srcBranch.color+'">'+sc.label+'</div>'+
+      '<div class="src-heading-prog">'+srcDone+' of '+eligible.length+' collected</div>'+
     '</div>';
 
     Object.keys(byDept).sort().forEach(function(dept){
       var items=byDept[dept];
       var did='dc_'+sc.srcIdx+'_'+dept.replace(/\W/g,'_');
-      html+='<div class="dept-hdr" data-did="'+did+'"><span class="dept-name">'+dept+'</span><span class="dept-cnt">'+items.length+'</span></div>';
-      html+='<div id="'+did+'">';
+      html+='<div class="dept-heading">'+
+        '<div class="dept-heading-title">'+dept+'</div>'+
+        '<div class="dept-heading-sub">'+items.length+' items</div>'+
+      '</div>';
+      html+='<div class="card-list" id="'+did+'">';
       items.forEach(function(item){
         var done=isTicked(currentDest,sc.srcIdx,item.bc);
         var destDays=dSince(item.destLs);
@@ -460,18 +768,14 @@ function renderCollect(){
           if(!bp)continue;
           var bq=bp.qty;
           var bc2=bq>0?'var(--greentxt)':bq<0?'var(--redtxt)':'var(--sub)';
-          bStocks+='<span class="itag itag-info" style="color:'+bc2+'">'+BRANCHES[bb].name.slice(0,4)+': '+bq+'</span>';
+          bStocks+='<span class="itag itag-info" style="color:'+bc2+'">'+BRANCHES[bb].short+': '+bq+'</span>';
         }
         html+='<div class="item-card'+(done?' done':'')+'" data-bc="'+item.bc+'" data-si="'+sc.srcIdx+'">'+
-          '<div class="item-img">'+imgEl(item.bc,50)+'</div>'+
+          '<div class="item-img">'+imgEl(item.bc,54)+'</div>'+
           '<div class="item-body">'+
             '<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
             '<div class="item-bc">'+item.bc+'</div>'+
-            '<div class="item-tags">'+
-              (dayTag?dayTag:'')+
-              '<span class="itag '+(sc.srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>'+
-              (item.prc>0?'<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>':'')+
-            '</div>'+
+            '<div class="item-tags">'+(dayTag?dayTag:'')+'<span class="itag '+(sc.srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>'+(item.prc>0?'<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>':'')+'</div>'+
             '<div class="item-tags" style="margin-top:3px">'+bStocks+'</div>'+
           '</div>'+
           '<div class="item-right">'+
@@ -480,24 +784,27 @@ function renderCollect(){
               '<div class="collect-lbl">collect</div>'+
             '</div>'+
             '<div class="tick-btn'+(done?' done':'')+'" data-tick="1" data-bc="'+item.bc+'" data-si="'+sc.srcIdx+'">'+
-              '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
             '</div>'+
           '</div>'+
         '</div>';
       });
       html+='</div>';
     });
-    html+='</div>';
   });
 
-  if(!html)html='<div class="empty">'+(loaded<4?'<div class="spin" style="margin:20px auto"></div>Loading…':'Nothing to collect right now — all sources are out of stock too.')+'</div>';
+  if(totalItems===0)html+='<div class="empty">'+(loaded<4?'<div class="spin" style="margin:20px auto"></div>Loading…':'Nothing to collect right now')+'</div>';
+
+  html+='<div class="wa-footer">'+
+    '<div class="wa-row"><span>Message manager when done</span><span id="wa-count">'+doneItems+' collected</span></div>'+
+    '<button class="wa-btn" id="wa-btn">'+
+      '<svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'+
+      'Message manager'+
+    '</button>'+
+  '</div>';
 
   el.innerHTML=html;
-  var pct=totalItems>0?Math.round(doneItems/totalItems*100):0;
-  document.getElementById('prog-fill').style.width=pct+'%';
-  document.getElementById('prog-txt').textContent=pct+'%';
-  document.getElementById('prog-sub').textContent=totalItems?doneItems+' of '+totalItems+' collected for '+BRANCHES[currentDest].name:'No items to collect right now';
-  document.getElementById('wa-count').textContent=doneItems+' collected';
+  updateProg(totalItems,doneItems,doneItems+' of '+totalItems+' collected for '+BRANCHES[currentDest].name);
 
   el.querySelectorAll('[data-tick]').forEach(function(btn){
     btn.addEventListener('click',function(e){
@@ -507,59 +814,89 @@ function renderCollect(){
       renderCollect();
     });
   });
-  el.querySelectorAll('.dept-hdr[data-did]').forEach(function(hdr){
-    hdr.addEventListener('click',function(){
-      var body=document.getElementById(this.dataset.did);
-      if(body)body.style.display=body.style.display==='none'?'block':'none';
-    });
-  });
+  var waBtn=document.getElementById('wa-btn');
+  if(waBtn)waBtn.addEventListener('click',sendBranchWhatsApp);
 }
 
-// ── NEGATIVE STOCK TAB ────────────────────────────────────────
+function sendBranchWhatsApp(){
+  var destName=BRANCHES[currentDest].name;
+  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var msg='CC Hair & Beauty - Transfer Update\\n'+date+' '+time+'\\nBranch: '+destName+'\\n\\n';
+  var done=0,pending=0;
+  DEST_SOURCES[currentDest].forEach(function(sc){
+    if(activeSources.indexOf(sc.srcIdx)<0)return;
+    var srcData=bd[sc.srcIdx];if(!srcData)return;
+    var destData=bd[currentDest]||[];
+    var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+    var doneList=[],pendingList=[];
+    srcData.forEach(function(p){
+      if(!p.bc||p.qty<=0)return;
+      var dq=(destMap[p.bc]?destMap[p.bc].qty:0);
+      var qty=calcCollect(p.qty,sc.rule,dq);
+      if(qty<=0||dq>3)return;
+      if(!deptVisible(p.dp||'General'))return;
+      var lbl=p.nm+(p.sz?' ('+p.sz+')':'')+' x'+qty;
+      if(isTicked(currentDest,sc.srcIdx,p.bc)){doneList.push(lbl);done++;}
+      else{pendingList.push(lbl);pending++;}
+    });
+    if(!doneList.length&&!pendingList.length)return;
+    msg+='From '+BRANCHES[sc.srcIdx].name+':\\n';
+    doneList.forEach(function(d){msg+='  Done: '+d+'\\n';});
+    pendingList.forEach(function(d){msg+='  Pending: '+d+'\\n';});
+    msg+='\\n';
+  });
+  msg+='Done: '+done+' | Pending: '+pending+'\\nSent from CC Staff App';
+  window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
+}
+
 function renderNegative(){
   var el=document.getElementById('out');
   var data=bd[currentDest];
   if(!data){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
-
   var negItems=data.filter(function(p){return p.bc&&p.nm&&p.qty<0;});
-  if(!negItems.length){el.innerHTML='<div class="empty">No negative stock at '+BRANCHES[currentDest].name+'</div>';updateProg(0,0,'No negatives — great job!');return;}
 
-  negItems.sort(function(a,b){return a.qty-b.qty;}); // worst first
+  var html='<div class="sec-heading">'+
+    '<div class="sec-heading-title">🔴 Negative stock at '+BRANCHES[currentDest].name+'</div>'+
+    '<div class="sec-heading-sub">Use handheld scanner to fix in EPOS. Tick when done.</div>'+
+  '</div>';
 
+  if(!negItems.length){
+    html+='<div class="empty">No negative stock at '+BRANCHES[currentDest].name+'</div>';
+    el.innerHTML=html;updateProg(0,0,'No negatives — great job!');return;
+  }
+  negItems.sort(function(a,b){return a.qty-b.qty;});
   var fixed=negItems.filter(function(p){return negTicks[currentDest+'_'+p.bc];}).length;
-  updateProg(negItems.length,fixed,fixed+' of '+negItems.length+' negatives fixed at '+BRANCHES[currentDest].name);
+  updateProg(negItems.length,fixed,fixed+' of '+negItems.length+' negatives fixed');
 
-  // Group by dept
   var byDept={};
   negItems.forEach(function(p){var d=p.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
 
-  var html='<div style="padding:6px 12px;background:var(--redbg);border-bottom:0.5px solid var(--border);font-size:10px;font-weight:600;color:var(--redtxt)">'+negItems.length+' negative items — use handheld scanner to correct in EPOS</div>';
   Object.keys(byDept).sort().forEach(function(dept){
     var items=byDept[dept];
     var dFixed=items.filter(function(p){return negTicks[currentDest+'_'+p.bc];}).length;
     var did='nd_'+dept.replace(/\W/g,'_');
-    html+='<div class="dept-hdr" data-did2="'+did+'"><span class="dept-name">'+dept+'</span><span class="dept-cnt" style="color:'+(dFixed===items.length?'var(--green)':'var(--sub)')+'">'+dFixed+'/'+items.length+'</span></div>';
-    html+='<div id="'+did+'">';
+    html+='<div class="dept-heading">'+
+      '<div class="dept-heading-title">'+dept+'</div>'+
+      '<div class="dept-heading-sub" style="color:'+(dFixed===items.length?'var(--green)':'var(--sub)')+'">'+dFixed+'/'+items.length+' fixed</div>'+
+    '</div>';
+    html+='<div class="card-list" id="'+did+'">';
     items.forEach(function(p){
       var isDone=!!negTicks[currentDest+'_'+p.bc];
       var days=dSince(p.ls);
       var dayTag=dayBadge(days,'neg',30,14);
       html+='<div class="neg-card'+(isDone?' fixed':'')+'">'+
-        '<div class="neg-img">'+imgEl(p.bc,44)+'</div>'+
+        '<div class="neg-img">'+imgEl(p.bc,48)+'</div>'+
         '<div class="neg-body">'+
           '<div class="neg-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
           '<div class="neg-bc">'+p.bc+'</div>'+
-          '<div class="neg-tags">'+
-            (dayTag?dayTag:'')+
-            (p.prc>0?'<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>':'')+
-            '<span class="itag itag-info">'+p.dp+'</span>'+
-          '</div>'+
+          '<div class="neg-tags">'+(dayTag?dayTag:'')+(p.prc>0?'<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>':'')+'</div>'+
         '</div>'+
         '<div class="neg-right">'+
           '<div class="neg-qty">'+p.qty+'</div>'+
           '<div class="neg-lbl">stock</div>'+
           '<div class="neg-tick'+(isDone?' done':'')+'" data-bc="'+p.bc+'" data-neg="1">'+
-            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="'+(isDone?'#fff':'var(--sub)')+'" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'+(isDone?'#fff':'var(--sub)')+'" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
           '</div>'+
         '</div>'+
       '</div>';
@@ -572,88 +909,67 @@ function renderNegative(){
     btn.addEventListener('click',function(){
       var bc=this.dataset.bc,key=currentDest+'_'+bc;
       negTicks[key]=!negTicks[key];
-      localStorage.setItem('cc_neg_ticks',JSON.stringify(negTicks));
+      localStorage.setItem('cc_staff2_negticks',JSON.stringify(negTicks));
       renderNegative();
-    });
-  });
-  el.querySelectorAll('[data-did2]').forEach(function(hdr){
-    hdr.addEventListener('click',function(){
-      var body=document.getElementById(this.dataset.did2);
-      if(body)body.style.display=body.style.display==='none'?'block':'none';
     });
   });
 }
 
-// ── OOS TAB ───────────────────────────────────────────────────
 function renderOOS(){
   var el=document.getElementById('out');
   var data=bd[currentDest];
   if(!data){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
-
-  // Build availability map
   var availMap={};
   for(var b=0;b<4;b++){
     if(b===currentDest||!bd[b])continue;
-    bd[b].forEach(function(p){
-      if(p.bc&&p.qty>0){if(!availMap[p.bc])availMap[p.bc]=[];availMap[p.bc].push({branch:BRANCHES[b],qty:p.qty});}
-    });
+    bd[b].forEach(function(p){if(p.bc&&p.qty>0){if(!availMap[p.bc])availMap[p.bc]=[];availMap[p.bc].push({branch:BRANCHES[b],qty:p.qty});}});
   }
-
   var oosItems=data.filter(function(p){
     if(!p.bc||!p.nm||p.qty>0||p.ls==='Never'||!p.ls||p.ls==='Unknown')return false;
-    var days=dSince(p.ls);
-    if(days===null)return false;
+    var days=dSince(p.ls);if(days===null)return false;
     if(oosFilter==='all')return true;
     if(oosFilter==='0')return days<=1;
     return days>=parseInt(oosFilter);
   });
-
   oosItems.forEach(function(p){p._days=dSince(p.ls);});
   oosItems.sort(function(a,b){return (b._days||0)-(a._days||0);});
-
   var withSrc=oosItems.filter(function(p){return availMap[p.bc]&&availMap[p.bc].length>0;}).length;
-  updateProg(oosItems.length,withSrc,oosItems.length+' out of stock · '+withSrc+' can collect · '+(oosItems.length-withSrc)+' need reorder');
-  document.getElementById('wa-count').textContent=oosItems.length+' items OOS';
+  updateProg(oosItems.length,withSrc,oosItems.length+' OOS · '+withSrc+' can collect · '+(oosItems.length-withSrc)+' reorder');
 
-  if(!oosItems.length){el.innerHTML='<div class="empty">No out of stock items matching this filter</div>';return;}
+  var html='<div class="sec-heading">'+
+    '<div class="sec-heading-title">⏱ Out of stock at '+BRANCHES[currentDest].name+'</div>'+
+    '<div class="sec-heading-sub">How many days each item has been missing from shelves</div>'+
+  '</div>';
 
-  // Metrics
-  var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px;background:var(--bg)">'+
-    '<div class="stat-card"><div class="stat-val" style="color:var(--red)">'+oosItems.length+'</div><div class="stat-lbl">OOS</div></div>'+
+  if(!oosItems.length){html+='<div class="empty">No out of stock items for this filter</div>';el.innerHTML=html;return;}
+  html+='<div class="stats-grid">'+
+    '<div class="stat-card"><div class="stat-val" style="color:var(--red)">'+oosItems.length+'</div><div class="stat-lbl">OOS total</div></div>'+
     '<div class="stat-card"><div class="stat-val" style="color:var(--green)">'+withSrc+'</div><div class="stat-lbl">Can collect</div></div>'+
     '<div class="stat-card"><div class="stat-val" style="color:var(--amber)">'+(oosItems.length-withSrc)+'</div><div class="stat-lbl">Reorder</div></div>'+
   '</div>';
 
   var byDept={};
   oosItems.forEach(function(p){var d=p.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
-
   Object.keys(byDept).sort().forEach(function(dept){
     var items=byDept[dept];
-    html+='<div class="dept-hdr"><span class="dept-name">'+dept+'</span><span class="dept-cnt">'+items.length+'</span></div>';
+    html+='<div class="dept-heading"><div class="dept-heading-title">'+dept+'</div><div class="dept-heading-sub">'+items.length+' items OOS</div></div>';
+    html+='<div class="card-list">';
     items.forEach(function(p){
-      var avail=availMap[p.bc]||[];
-      var hasSrc=avail.length>0;
+      var avail=availMap[p.bc]||[];var hasSrc=avail.length>0;
       var days=p._days;
       var dColor=days>=30?'var(--red)':days>=14?'var(--amber)':'var(--sub)';
       html+='<div class="oos-row'+(hasSrc?' has-src':'')+'">'+
-        '<div class="oos-img">'+imgEl(p.bc,40)+'</div>'+
+        '<div class="oos-img">'+imgEl(p.bc,44)+'</div>'+
         '<div class="oos-body">'+
           '<div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
           '<div class="oos-bc">'+p.bc+'</div>'+
-          '<div class="oos-tags">'+
-            '<span class="itag itag-info">Last sold: '+p.ls+'</span>'+
-            (hasSrc?avail.map(function(a){return '<span class="itag itag-src">'+a.branch.name+': '+a.qty+'</span>';}).join(''):'<span class="itag itag-day">Reorder needed</span>')+
-            (p.prc>0?'<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>':'')+
-          '</div>'+
+          '<div class="oos-tags"><span class="itag itag-info">Last sold: '+p.ls+'</span>'+(hasSrc?avail.map(function(a){return '<span class="itag itag-src">'+a.branch.name+': '+a.qty+'</span>';}).join(''):'<span class="itag itag-day">Reorder</span>')+(p.prc>0?'<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>':'')+'</div>'+
         '</div>'+
-        '<div class="oos-right">'+
-          '<div class="oos-days" style="color:'+dColor+'">'+days+'</div>'+
-          '<div class="oos-lbl">days OOS</div>'+
-        '</div>'+
+        '<div class="oos-right"><div class="oos-days" style="color:'+dColor+'">'+days+'</div><div class="oos-lbl">days OOS</div></div>'+
       '</div>';
     });
+    html+='</div>';
   });
-
   el.innerHTML=html;
 }
 
@@ -666,26 +982,36 @@ function updateProg(total,done,sub){
 
 // ── MASTER RENDER ─────────────────────────────────────────────
 function render(){
-  buildSrcFilter();
-  buildDeptFilter();
-  var isCollect=currentView==='urgent';
-  var isNeg=currentView==='negative';
-  document.getElementById('filter-sections').style.display=isCollect?'block':'none';
-  document.getElementById('day-filter').style.display=currentView==='oos'?'block':'none';
-  document.getElementById('wa-footer').style.display=isCollect?'block':'none';
-  if(isCollect)renderCollect();
-  else if(isNeg)renderNegative();
+  var isWH=currentMode==='warehouse';
+  var isCollect=!isWH&&currentView==='urgent';
+  document.getElementById('vtabs').style.display=isWH?'none':'flex';
+  document.getElementById('collect-filters').style.display=isCollect?'block':'none';
+  document.getElementById('day-filter').style.display=(!isWH&&currentView==='oos')?'block':'none';
+  document.getElementById('prog-wrap').style.display=isWH?'none':'block';
+  if(isWH){renderWarehouse();return;}
+  if(isCollect){buildSrcFilter();buildDeptFilter();}
+  if(currentView==='urgent')renderCollect();
+  else if(currentView==='negative')renderNegative();
   else renderOOS();
 }
 
 // ── CONTROLS ─────────────────────────────────────────────────
-document.getElementById('branch-bar').addEventListener('click',function(e){
-  var tab=e.target.closest('.btab');if(!tab)return;
-  document.querySelectorAll('.btab').forEach(function(t){t.classList.remove('on');});
-  tab.classList.add('on');
-  currentDest=parseInt(tab.dataset.b);
+document.querySelector('.branch-grid').addEventListener('click',function(e){
+  var btn=e.target.closest('.branch-btn');if(!btn)return;
+  document.querySelectorAll('.branch-btn').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('wh-mgr-btn').classList.remove('on');
+  btn.classList.add('on');
+  currentDest=parseInt(btn.dataset.b);
+  currentMode='branch';
   activeDepts=['All'];activeSources=[0,1,2,3];oosFilter='all';
   updateDayPills();
+  render();
+});
+
+document.getElementById('wh-mgr-btn').addEventListener('click',function(){
+  document.querySelectorAll('.branch-btn').forEach(function(b){b.classList.remove('on');});
+  this.classList.add('on');
+  currentMode='warehouse';
   render();
 });
 
@@ -697,63 +1023,21 @@ document.getElementById('vtabs').addEventListener('click',function(e){
   render();
 });
 
-// OOS day filter pills
 document.getElementById('day-filter-pills').addEventListener('click',function(e){
   var p=e.target.closest('.pill');if(!p)return;
-  oosFilter=p.dataset.d;
-  updateDayPills();
-  renderOOS();
+  oosFilter=p.dataset.d;updateDayPills();renderOOS();
 });
 function updateDayPills(){
-  document.querySelectorAll('#day-filter-pills .pill').forEach(function(p){
-    p.classList.toggle('on',p.dataset.d===oosFilter);
-  });
+  document.querySelectorAll('#day-filter-pills .pill').forEach(function(p){p.classList.toggle('on',p.dataset.d===oosFilter);});
 }
 
-// Collapsible filters
 document.getElementById('fsrc-toggle').addEventListener('click',function(){
   var b=document.getElementById('fsrc-body'),a=document.getElementById('fsrc-arrow');
-  var open=!b.classList.contains('open');
-  b.classList.toggle('open',open);a.classList.toggle('open',open);
+  var open=!b.classList.contains('open');b.classList.toggle('open',open);a.classList.toggle('open',open);
 });
 document.getElementById('fdept-toggle').addEventListener('click',function(){
   var b=document.getElementById('fdept-body'),a=document.getElementById('fdept-arrow');
-  var open=!b.classList.contains('open');
-  b.classList.toggle('open',open);a.classList.toggle('open',open);
-});
-
-// WhatsApp
-document.getElementById('wa-btn').addEventListener('click',function(){
-  var destName=BRANCHES[currentDest].name;
-  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  var msg='CC Hair & Beauty - Transfer Update\\n'+date+' '+time+'\\n\\nBranch: '+destName+'\\n\\n';
-  var totalDone=0,totalPending=0;
-  DEST_SOURCES[currentDest].forEach(function(sc){
-    if(activeSources.indexOf(sc.srcIdx)<0)return;
-    var srcData=bd[sc.srcIdx];if(!srcData)return;
-    var destData=bd[currentDest]||[];
-    var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-    var done=[],pending=[];
-    srcData.forEach(function(p){
-      if(!p.bc||p.qty<=0)return;
-      var dq=(destMap[p.bc]?destMap[p.bc].qty:0);
-      var qty=calcCollect(p.qty,sc.rule,dq);
-      if(qty<=0||dq>3)return;
-      if(!deptVisible(p.dp||'General'))return;
-      var lbl=p.nm+(p.sz?' ('+p.sz+')':'')+' x'+qty;
-      if(isTicked(currentDest,sc.srcIdx,p.bc))done.push(lbl);
-      else pending.push(lbl);
-    });
-    if(!done.length&&!pending.length)return;
-    msg+='From '+BRANCHES[sc.srcIdx].name+':\\n';
-    done.forEach(function(d){msg+='  Done: '+d+'\\n';});
-    pending.forEach(function(d){msg+='  Pending: '+d+'\\n';});
-    msg+='\\n';
-    totalDone+=done.length;totalPending+=pending.length;
-  });
-  msg+='Done: '+totalDone+' | Still to do: '+totalPending+'\\nSent from CC Staff App';
-  window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
+  var open=!b.classList.contains('open');b.classList.toggle('open',open);a.classList.toggle('open',open);
 });
 
 document.getElementById('refresh-btn').addEventListener('click',function(){
@@ -764,11 +1048,8 @@ document.getElementById('refresh-btn').addEventListener('click',function(){
 });
 
 // ── START ─────────────────────────────────────────────────────
-function startApp(){
-  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
-  loadImgs().then(function(){if(loaded>0)render();});
-}
-startApp();
+Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
+loadImgs().then(function(){if(loaded>0)render();});
 </script>
 </body>
 </html>
