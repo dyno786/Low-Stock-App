@@ -186,6 +186,67 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .stat-val{font-size:22px;font-weight:700;font-family:monospace;line-height:1}
 .stat-lbl{font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
 
+
+/* ── HISTORY PANEL ── */
+.hist-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;max-width:480px;margin:0 auto}
+.hist-ov.open{display:block}
+.hist-pan{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
+.hist-handle{width:36px;height:3px;background:var(--border);border-radius:2px;margin:12px auto 0}
+.hist-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.hist-title{font-size:16px;font-weight:700}
+.hist-clear{font-size:11px;color:var(--red);cursor:pointer;background:none;border:none;font-family:var(--font)}
+.hist-entry{padding:10px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;gap:10px}
+.hist-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.hist-body{flex:1}
+.hist-action{font-size:12px;font-weight:600;color:var(--ink)}
+.hist-meta{font-size:10px;color:var(--sub);margin-top:2px}
+
+/* ── DAILY PROGRESS PANEL ── */
+.dprog-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;max-width:480px;margin:0 auto}
+.dprog-ov.open{display:block}
+.dprog-pan{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
+.dprog-hdr{padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+.dprog-title{font-size:16px;font-weight:700;margin-bottom:2px}
+.dprog-sub{font-size:11px;color:var(--sub)}
+.dprog-branch{padding:12px 16px;border-bottom:1px solid var(--border)}
+.dprog-bname{font-size:15px;font-weight:700;margin-bottom:8px}
+.dprog-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.dprog-lbl{font-size:11px;color:var(--sub);width:100px;flex-shrink:0}
+.dprog-bar{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.dprog-fill{height:100%;border-radius:4px;transition:width .4s}
+.dprog-val{font-size:11px;font-weight:700;min-width:36px;text-align:right;font-family:monospace}
+
+/* ── WEEKLY LEADERBOARD PANEL ── */
+.wkly-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;max-width:480px;margin:0 auto}
+.wkly-ov.open{display:block}
+.wkly-pan{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
+.wkly-hdr{padding:14px 16px 0;border-bottom:1px solid var(--border)}
+.wkly-title{font-size:16px;font-weight:700;margin-bottom:2px}
+.wkly-sub{font-size:11px;color:var(--sub);margin-bottom:12px}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:20px 16px 12px;background:linear-gradient(180deg,#fff8f0,#fff)}
+.pod{display:flex;flex-direction:column;align-items:center;gap:4px}
+.pod-medal{font-size:24px}
+.pod-bar{border-radius:6px 6px 0 0;width:84px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:8px}
+.pod-pts{font-size:14px;font-weight:700;font-family:monospace;color:#fff}
+.pod-name{font-size:12px;font-weight:700;margin-top:4px}
+.pod-sub{font-size:9px;color:var(--sub)}
+.week-grid{padding:12px 16px}
+.week-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.week-day{font-size:11px;font-weight:600;width:36px;color:var(--sub);flex-shrink:0}
+.week-cells{display:flex;gap:4px;flex:1}
+.week-cell{flex:1;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:1px solid var(--border)}
+.week-cell.done{background:var(--greenbg);color:var(--green);border-color:var(--green)}
+.week-cell.miss{background:var(--redbg);color:var(--redtxt);border-color:#fca5a5}
+.week-cell.empty{background:var(--bg);color:var(--sub)}
+.week-branch-labels{display:flex;gap:4px;flex:1;margin-left:44px;margin-bottom:4px}
+.week-branch-label{flex:1;font-size:9px;font-weight:700;color:var(--sub);text-align:center;text-transform:uppercase;letter-spacing:.3px}
+
+/* ── TOP ACTION BUTTONS ── */
+.top-actions{display:flex;gap:6px;margin-bottom:2px}
+.tap-btn{flex:1;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);border-radius:9px;padding:8px 6px;text-align:center;cursor:pointer;user-select:none}
+.tap-btn-icon{font-size:16px;line-height:1}
+.tap-btn-lbl{font-size:9px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+
 /* ── LOADING / EMPTY ── */
 .loading{padding:50px 16px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
 .spin{width:26px;height:26px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
@@ -228,6 +289,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
     <div class="branch-btn" data-b="2" style="grid-column:1/-1">
       <div class="branch-btn-name">Roundhay</div>
       <div class="branch-btn-sub" id="bsub2">loading…</div>
+    </div>
+  </div>
+
+  <!-- TOP ACTION BUTTONS -->
+  <div class="top-actions">
+    <div class="tap-btn" id="btn-dprog">
+      <div class="tap-btn-icon">📊</div>
+      <div class="tap-btn-lbl">Daily progress</div>
+    </div>
+    <div class="tap-btn" id="btn-weekly">
+      <div class="tap-btn-icon">🏆</div>
+      <div class="tap-btn-lbl">Weekly</div>
+    </div>
+    <div class="tap-btn" id="btn-history">
+      <div class="tap-btn-icon">📋</div>
+      <div class="tap-btn-lbl">History</div>
     </div>
   </div>
 
@@ -341,12 +418,57 @@ function pD(s){
 }
 function dSince(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
 function calcCollect(sq,rule,dq){
-  if(rule==='wh'){if(sq<=0)return 0;var n=WH_MIN-(dq||0);if(n<=0)return 0;return Math.min(n,sq);}
+  if(rule==='wh'){
+    if(sq<=0)return 0;
+    var n=WH_MIN-(dq||0); // how many this branch needs to reach minimum
+    if(n<=0)return 0;
+    return n; // return what's NEEDED — actual allocation handled in calcWhSplit
+  }
+  // Branch-to-branch: only called when dq===0, so send half
   if(sq<=0)return 0;return Math.floor(sq/2);
+}
+
+// Smart warehouse split: given WH stock and all branch needs,
+// allocate by priority (lowest dest stock = highest priority)
+// Returns {0: qty, 1: qty, 2: qty} for each dest branch index
+function calcWhSplit(bc, whQty){
+  var NEEDS=[
+    {destIdx:0, target:SPLIT[0]}, // Chapy needs 12
+    {destIdx:1, target:SPLIT[1]}, // City needs 12
+    {destIdx:2, target:SPLIT[2]}, // Roundhay needs 6
+  ];
+  // Get current stock at each dest
+  NEEDS.forEach(function(n){
+    var destData=bd[n.destIdx];
+    var prod=destData?destData.find(function(p){return p.bc===bc;}):null;
+    n.current=prod?prod.qty:0;
+    n.needed=Math.max(0, n.target - n.current);
+  });
+  // Sort by priority: lowest current stock first (0 stock = most urgent)
+  NEEDS.sort(function(a,b){return a.current - b.current;});
+  var remaining=whQty;
+  var result={0:0,1:0,2:0};
+  NEEDS.forEach(function(n){
+    if(n.needed<=0||remaining<=0)return;
+    var give=Math.min(n.needed, remaining);
+    result[n.destIdx]=give;
+    remaining-=give;
+  });
+  return result;
 }
 function tk(d,s,bc){return d+'_'+s+'_'+bc;}
 function isTicked(d,s,bc){return !!ticks[tk(d,s,bc)];}
-function setTick(d,s,bc,v){ticks[tk(d,s,bc)]=v;localStorage.setItem('cc_staff2_ticks',JSON.stringify(ticks));}
+function setTick(d,s,bc,v){
+  ticks[tk(d,s,bc)]=v;
+  // If warehouse (srcIdx=3), sync tick to ALL branch tabs
+  // One person collects from WH for all 3 branches in one go
+  if(s===3){
+    for(var b=0;b<3;b++){
+      if(b!==d) ticks[tk(b,s,bc)]=v;
+    }
+  }
+  localStorage.setItem('cc_staff2_ticks',JSON.stringify(ticks));
+}
 function imgEl(bc,sz){
   var src=imgs[bc];sz=sz||50;
   if(src)return '<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';
@@ -729,10 +851,19 @@ function renderCollect(){
       if(!p.bc||!p.nm||p.qty<=0)return;
       var destProd=destMap[p.bc],dq=destProd?destProd.qty:0;
       var qty=calcCollect(p.qty,sc.rule,dq);
-      if(qty<=0||dq>3)return;
+      // Branch-to-branch: only collect when dest has 0 or negative stock
+      // Warehouse: collect to reach the minimum (12 for chapy/city, 6 for roundhay)
+      var isBranchSrc = sc.srcIdx !== 3;
+      if(isBranchSrc && dq > 0) return; // branch-to-branch: only when dest is at 0
+      if(qty <= 0) return;
       if(!deptVisible(p.dp||'General'))return;
+      // For warehouse: use smart split to get this branch's actual allocation
+      var actualQty = sc.srcIdx === 3 ? (calcWhSplit(p.bc, p.qty)[currentDest] || 0) : qty;
+      if(actualQty <= 0) return;
+      var destTarget=sc.srcIdx===3?SPLIT[currentDest]:0;
       eligible.push({bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,
-                     srcQty:p.qty,destQty:dq,qty:qty,
+                     srcQty:p.qty,destQty:dq,qty:actualQty,
+                     destTarget:destTarget,isWH:sc.srcIdx===3,
                      destLs:destProd?destProd.ls:'Never'});
     });
     if(!eligible.length)return;
@@ -745,7 +876,9 @@ function renderCollect(){
     // Source section heading
     html+='<div class="src-heading">'+
       '<div class="src-heading-name" style="color:'+srcBranch.color+'">Collect from '+srcBranch.name+'</div>'+
-      '<div class="src-heading-rule" style="color:'+srcBranch.color+'">'+sc.label+'</div>'+
+      '<div class="src-heading-rule" style="color:'+srcBranch.color+'">'+
+        (sc.srcIdx===3 ? 'Top up to target (Chap: 12 · City: 12 · Roun: 6) — collect only what is needed' : sc.label)+
+      '</div>'+
       '<div class="src-heading-prog">'+srcDone+' of '+eligible.length+' collected</div>'+
     '</div>';
 
@@ -775,13 +908,18 @@ function renderCollect(){
           '<div class="item-body">'+
             '<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
             '<div class="item-bc">'+item.bc+'</div>'+
-            '<div class="item-tags">'+(dayTag?dayTag:'')+'<span class="itag '+(sc.srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>'+(item.prc>0?'<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>':'')+'</div>'+
+            '<div class="item-tags">'+(dayTag?dayTag:'')+
+              '<span class="itag '+(sc.srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>'+
+              (item.isWH?'<span class="itag itag-info">'+item.destQty+' on shelf → target '+item.destTarget+'</span>':
+                         '<span class="itag itag-out">'+BRANCHES[currentDest].name+': 0 stock</span>')+
+              (item.prc>0?'<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>':'')+
+            '</div>'+
             '<div class="item-tags" style="margin-top:3px">'+bStocks+'</div>'+
           '</div>'+
           '<div class="item-right">'+
             '<div class="collect-box'+(done?' done-box':'')+'">'+
               '<div class="collect-num'+(done?' done-num':'')+'">'+item.qty+'</div>'+
-              '<div class="collect-lbl">collect</div>'+
+              '<div class="collect-lbl">'+(sc.srcIdx===3?'top up':'collect')+'</div>'+
             '</div>'+
             '<div class="tick-btn'+(done?' done':'')+'" data-tick="1" data-bc="'+item.bc+'" data-si="'+sc.srcIdx+'">'+
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
@@ -834,7 +972,11 @@ function sendBranchWhatsApp(){
       if(!p.bc||p.qty<=0)return;
       var dq=(destMap[p.bc]?destMap[p.bc].qty:0);
       var qty=calcCollect(p.qty,sc.rule,dq);
-      if(qty<=0||dq>3)return;
+      // Branch-to-branch: only collect when dest has 0 or negative stock
+      // Warehouse: collect to reach the minimum (12 for chapy/city, 6 for roundhay)
+      var isBranchSrc = sc.srcIdx !== 3;
+      if(isBranchSrc && dq > 0) return; // branch-to-branch: only when dest is at 0
+      if(qty <= 0) return;
       if(!deptVisible(p.dp||'General'))return;
       var lbl=p.nm+(p.sz?' ('+p.sz+')':'')+' x'+qty;
       if(isTicked(currentDest,sc.srcIdx,p.bc)){doneList.push(lbl);done++;}
@@ -1050,6 +1192,249 @@ document.getElementById('refresh-btn').addEventListener('click',function(){
 // ── START ─────────────────────────────────────────────────────
 Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
 loadImgs().then(function(){if(loaded>0)render();});
+
+// ── HISTORY LOG ──────────────────────────────────────────────
+var HIST_KEY='cc_staff_hist';
+function getHist(){try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch(e){return[];}}
+function saveHist(h){try{localStorage.setItem(HIST_KEY,JSON.stringify(h.slice(0,500)));}catch(e){}}
+function logAction(branchIdx,type,count,detail){
+  var h=getHist(),now=new Date();
+  h.unshift({ts:now.getTime(),
+    date:now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}),
+    time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
+    branch:BRANCHES[branchIdx].name,branchIdx:branchIdx,type:type,count:count,detail:detail||''});
+  saveHist(h);
+  logWeekly(branchIdx,type,count,now);
+}
+function showHistory(){
+  var h=getHist();var el=document.getElementById('hist-content');
+  if(!h.length){el.innerHTML='<div class="empty">No actions logged yet</div>';document.getElementById('hist-ov').classList.add('open');return;}
+  var byDay={};h.forEach(function(e){if(!byDay[e.date])byDay[e.date]=[];byDay[e.date].push(e);});
+  var icons={collect:'📦',negative:'🔴',oos:'⏱',warehouse:'🏭'};
+  var colors={collect:'#fb923c',negative:'#cc0000',oos:'#b45309',warehouse:'#6d28d9'};
+  var html='';
+  Object.keys(byDay).forEach(function(day){
+    html+='<div style="padding:6px 16px;background:var(--bg);font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase">'+day+'</div>';
+    byDay[day].forEach(function(e){
+      html+='<div class="hist-entry">'+
+        '<div class="hist-dot" style="background:'+(colors[e.type]||'#999')+'"></div>'+
+        '<div class="hist-body">'+
+          '<div class="hist-action">'+(icons[e.type]||'•')+' '+e.branch+' — '+e.count+' '+e.type+(e.count!==1?'s':'')+(e.type==='negative'?' fixed':' done')+'</div>'+
+          (e.detail?'<div style="font-size:10px;color:var(--sub);margin-top:2px">'+e.detail+'</div>':'')+
+          '<div class="hist-meta">'+e.time+'</div>'+
+        '</div></div>';
+    });
+  });
+  el.innerHTML=html;document.getElementById('hist-ov').classList.add('open');
+}
+
+// ── WEEKLY TRACKING ───────────────────────────────────────────
+var WEEK_KEY='cc_staff_week';
+function getWeekData(){try{return JSON.parse(localStorage.getItem(WEEK_KEY)||'{}');}catch(e){return{};}}
+function logWeekly(bi,type,count,now){
+  var d=getWeekData(),ds=now.toISOString().split('T')[0],bk='b'+bi;
+  if(!d[ds])d[ds]={};if(!d[ds][bk])d[ds][bk]={collect:0,negative:0,oos:0,pts:0};
+  d[ds][bk][type]=(d[ds][bk][type]||0)+count;
+  var pm={collect:4,negative:5,oos:3};
+  d[ds][bk].pts=(d[ds][bk].pts||0)+(count*(pm[type]||1));
+  try{localStorage.setItem(WEEK_KEY,JSON.stringify(d));}catch(e){}
+}
+
+// ── DAILY PROGRESS ────────────────────────────────────────────
+function showDailyProgress(){
+  var el=document.getElementById('dprog-content');
+  var now=new Date();
+  document.getElementById('dprog-date').textContent=now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  var ds=now.toISOString().split('T')[0];
+  var wd=getWeekData(),today=wd[ds]||{};
+  var TGTS={collect:10,negative:10,oos:5};
+  var html='';
+  [0,1,2].forEach(function(bi){
+    var b=BRANCHES[bi],bk='b'+bi,bd2=today[bk]||{collect:0,negative:0,oos:0};
+    // Count today's ticks directly
+    var collectCount=0,negCount=0;
+    var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
+    var todayStr=now.toDateString();
+    Object.keys(ticks).forEach(function(k){if(k.startsWith(bi+'_')&&ticks[k]){var t=ts2[k];if(t&&new Date(t).toDateString()===todayStr)collectCount++;}});
+    Object.keys(negTicks).forEach(function(k){if(k.startsWith(bi+'_')&&negTicks[k]){var t=ts2['n_'+k];if(t&&new Date(t).toDateString()===todayStr)negCount++;}});
+    var collect=Math.max(bd2.collect,collectCount);
+    var negative=Math.max(bd2.negative,negCount);
+    var oos=bd2.oos||0;
+    var pts=collect*4+negative*5+oos*3;
+    var maxPts=TGTS.collect*4+TGTS.negative*5+TGTS.oos*3;
+    var pct=Math.min(Math.round(pts/maxPts*100),100);
+    html+='<div class="dprog-branch">'+
+      '<div class="dprog-bname" style="color:'+b.color+'">'+b.name+
+        '<span style="float:right;font-size:13px;color:var(--sub)">'+pct+'%</span>'+
+      '</div>'+
+      mkProgRow('Collects',collect,TGTS.collect,'#fb923c')+
+      mkProgRow('Negatives fixed',negative,TGTS.negative,'#cc0000')+
+      mkProgRow('OOS cleared',oos,TGTS.oos,'#15803d')+
+    '</div>';
+  });
+  el.innerHTML=html;document.getElementById('dprog-ov').classList.add('open');
+}
+function mkProgRow(lbl,val,target,color){
+  var pct=Math.min(Math.round(val/target*100),100);
+  return '<div class="dprog-row">'+
+    '<span class="dprog-lbl">'+lbl+'</span>'+
+    '<div class="dprog-bar"><div class="dprog-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
+    '<span class="dprog-val" style="color:'+(pct>=100?'var(--green)':color)+'">'+val+'/'+target+'</span>'+
+  '</div>';
+}
+
+// ── WEEKLY LEADERBOARD ────────────────────────────────────────
+function showWeekly(){
+  var el=document.getElementById('wkly-content');
+  var now=new Date(),wd=getWeekData();
+  var dow=now.getDay(),mon=new Date(now);
+  mon.setDate(now.getDate()-(dow===0?6:dow-1));
+  var days=[];
+  for(var i=0;i<7;i++){
+    var d=new Date(mon);d.setDate(mon.getDate()+i);
+    days.push({date:d.toISOString().split('T')[0],
+      label:d.toLocaleDateString('en-GB',{weekday:'short'}),
+      isToday:d.toDateString()===now.toDateString(),isFuture:d>now});
+  }
+  var wkPts=[0,0,0];
+  days.forEach(function(day){var dd=wd[day.date]||{};[0,1,2].forEach(function(bi){wkPts[bi]+=(dd['b'+bi]?dd['b'+bi].pts:0);});});
+  var ranked=[{bi:0,pts:wkPts[0]},{bi:1,pts:wkPts[1]},{bi:2,pts:wkPts[2]}];
+  ranked.sort(function(a,b){return b.pts-a.pts;});
+  var medals=['🥇','🥈','🥉'],heights=[110,85,65];
+  var podOrder=[1,0,2];
+  var html='<div class="podium">';
+  podOrder.forEach(function(rank){
+    var item=ranked[rank],b=BRANCHES[item.bi];
+    html+='<div class="pod">'+
+      '<div class="pod-medal">'+medals[rank]+'</div>'+
+      '<div class="pod-bar" style="height:'+heights[rank]+'px;background:'+b.color+'22;border:1.5px solid '+b.color+'44">'+
+        '<div class="pod-pts" style="color:'+b.color+'">'+item.pts+'</div>'+
+      '</div>'+
+      '<div class="pod-name" style="color:'+b.color+'">'+b.name+'</div>'+
+      '<div class="pod-sub">pts this week</div>'+
+    '</div>';
+  });
+  html+='</div>';
+  html+='<div class="week-grid">';
+  html+='<div style="display:flex;align-items:center;margin-bottom:4px"><div style="width:44px"></div>';
+  [0,1,2].forEach(function(bi){html+='<div class="week-branch-label" style="color:'+BRANCHES[bi].color+'">'+BRANCHES[bi].name.slice(0,4)+'</div>';});
+  html+='</div>';
+  days.forEach(function(day){
+    var dd=wd[day.date]||{};
+    html+='<div class="week-row">'+
+      '<div class="week-day" style="color:'+(day.isToday?'var(--red)':'var(--sub)')+'">'+day.label+'</div>'+
+      '<div class="week-cells">';
+    [0,1,2].forEach(function(bi){
+      var bdata=dd['b'+bi],pts=bdata?bdata.pts:0;
+      var done=pts>=20;
+      var cls=day.isFuture?'empty':done?'done':'miss';
+      var lbl=day.isFuture?'':done?'✓':'✗';
+      if(day.isToday&&!bdata)lbl='...';
+      html+='<div class="week-cell '+cls+'">'+lbl+'</div>';
+    });
+    html+='</div></div>';
+  });
+  html+='</div>';
+  ranked.forEach(function(item,rank){
+    var b=BRANCHES[item.bi],maxPts=Math.max(wkPts[0],1);
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:0.5px solid var(--border)">'+
+      '<span style="font-size:16px">'+medals[rank]+'</span>'+
+      '<span style="font-size:13px;font-weight:700;color:'+b.color+'">'+b.name+'</span>'+
+      '<div style="flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden">'+
+        '<div style="width:'+Math.min(Math.round(item.pts/maxPts*100),100)+'%;height:100%;background:'+b.color+';border-radius:3px"></div>'+
+      '</div>'+
+      '<span style="font-size:12px;font-weight:700;font-family:monospace;color:'+b.color+'">'+item.pts+' pts</span>'+
+    '</div>';
+  });
+  el.innerHTML=html;document.getElementById('wkly-ov').classList.add('open');
+}
+
+// ── WIRE TICK LOGGING ─────────────────────────────────────────
+var _origRenderC=renderCollect;
+renderCollect=function(){
+  _origRenderC();
+  // Re-wire tick buttons to also log
+  document.getElementById('out').querySelectorAll('[data-tick]').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var bc=this.dataset.bc,si=parseInt(this.dataset.si);
+      if(isTicked(currentDest,si,bc)){
+        logAction(currentDest,'collect',1,bc);
+        var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
+        ts2[currentDest+'_'+si+'_'+bc]=Date.now();
+        localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
+      }
+    },true);
+  });
+};
+
+// Also log negative fixes
+var _origRenderN=renderNegative;
+renderNegative=function(){
+  _origRenderN();
+  document.getElementById('out').querySelectorAll('[data-neg]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var bc=this.dataset.bc;
+      if(negTicks[currentDest+'_'+bc]){
+        logAction(currentDest,'negative',1,bc);
+        var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
+        ts2['n_'+currentDest+'_'+bc]=Date.now();
+        localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
+      }
+    },true);
+  });
+};
+
+// ── PANEL CONTROLS ────────────────────────────────────────────
+document.getElementById('btn-history').addEventListener('click',showHistory);
+document.getElementById('btn-dprog').addEventListener('click',showDailyProgress);
+document.getElementById('btn-weekly').addEventListener('click',showWeekly);
+document.getElementById('hist-clear').addEventListener('click',function(){
+  if(!confirm('Clear all history?'))return;
+  localStorage.removeItem(HIST_KEY);
+  document.getElementById('hist-content').innerHTML='<div class="empty">Cleared</div>';
+});
+['hist-ov','dprog-ov','wkly-ov'].forEach(function(id){
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+});
+
 </script>
+
+<!-- HISTORY PANEL -->
+<div class="hist-ov" id="hist-ov">
+  <div class="hist-pan">
+    <div class="hist-handle"></div>
+    <div class="hist-hdr">
+      <div class="hist-title">Action history</div>
+      <button class="hist-clear" id="hist-clear">Clear all</button>
+    </div>
+    <div id="hist-content"><div class="empty">No history yet</div></div>
+  </div>
+</div>
+
+<!-- DAILY PROGRESS PANEL -->
+<div class="dprog-ov" id="dprog-ov">
+  <div class="dprog-pan">
+    <div class="hist-handle"></div>
+    <div class="dprog-hdr">
+      <div class="dprog-title">Today's progress</div>
+      <div class="dprog-sub" id="dprog-date"></div>
+    </div>
+    <div id="dprog-content"></div>
+  </div>
+</div>
+
+<!-- WEEKLY LEADERBOARD PANEL -->
+<div class="wkly-ov" id="wkly-ov">
+  <div class="wkly-pan">
+    <div class="hist-handle"></div>
+    <div class="wkly-hdr">
+      <div class="wkly-title">Weekly leaderboard</div>
+      <div class="wkly-sub">Who's doing their jobs this week</div>
+    </div>
+    <div id="wkly-content"></div>
+  </div>
+</div>
+
 </body>
 </html>
