@@ -11,7 +11,7 @@
   --green:#15803d;--greenbg:#f0fdf4;--greentxt:#14532d;
   --amber:#b45309;--amberbg:#fffbeb;--ambertxt:#92400e;
   --purple:#6d28d9;--purplebg:#ede9fe;--purpletxt:#4c1d95;
-  --blue:#1d4ed8;--bluebg:#eff6ff;--bluetxt:#1e3a8a;
+  --blue:#1d4ed8;--bluebg:#eff6ff;--bluetxt:#1e3a8a;--blue2:#3b82f6;
   --bg:#f0f0f0;--s1:#fff;--s2:#f8f8f8;--border:#e0e0e0;
   --ink:#111;--sub:#777;--r:12px;
   --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
@@ -246,6 +246,82 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .tap-btn{flex:1;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);border-radius:9px;padding:8px 6px;text-align:center;cursor:pointer;user-select:none}
 .tap-btn-icon{font-size:16px;line-height:1}
 .tap-btn-lbl{font-size:9px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+
+
+/* ── WAREHOUSE PICKER ── */
+.trolley-wrap{background:var(--s1);border-radius:var(--r);margin:8px 12px;border:1px solid var(--border);overflow:hidden}
+.trolley-hdr{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--purplebg)}
+.trolley-title{font-size:13px;font-weight:700;color:var(--purpletxt);margin-bottom:8px}
+.trolley-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tbox{border-radius:9px;padding:9px 6px;text-align:center;border:2px solid}
+.tbox-chapy{background:#fff3e0;border-color:#fb923c}
+.tbox-city{background:var(--greenbg);border-color:#4ade80}
+.tbox-roun{background:var(--bluebg);border-color:#60a5fa}
+.tbox-icon{font-size:18px;margin-bottom:3px}
+.tbox-lbl{font-size:10px;font-weight:700}
+.tbox-chapy .tbox-lbl{color:#b45309}
+.tbox-city .tbox-lbl{color:var(--green)}
+.tbox-roun .tbox-lbl{color:var(--blue)}
+.tbox-sub{font-size:9px;color:var(--sub);margin-top:1px}
+
+/* PICKER SUMMARY STRIP */
+.pk-summary{display:grid;grid-template-columns:repeat(4,1fr);background:var(--s1);border-bottom:1px solid var(--border);margin:0 0 2px}
+.pk-smc{padding:8px 4px;text-align:center;border-right:1px solid var(--border)}
+.pk-smc:last-child{border-right:none}
+.pk-smc-val{font-size:16px;font-weight:700;font-family:monospace;line-height:1}
+.pk-smc-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+
+/* PICKER SECTION */
+.pk-sec-hdr{padding:12px 16px 4px}
+.pk-sec-title{font-size:20px;font-weight:700;line-height:1.2}
+.pk-sec-sub{font-size:11px;color:var(--sub);margin-top:3px;line-height:1.5}
+
+/* PICKER DEPT */
+.pk-dept{padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.pk-dept-name{font-size:14px;font-weight:700;color:var(--ink)}
+.pk-dept-sub{font-size:10px;color:var(--sub)}
+
+/* PICK ROW — ONE HORIZONTAL LINE PER PRODUCT */
+.pk-row{background:var(--s1);border-bottom:1px solid var(--border);padding:10px 12px 12px}
+.pk-row.pk-done-all{background:var(--greenbg)}
+.pk-top{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.pk-img{width:46px;height:46px;border-radius:9px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.pk-img img{width:46px;height:46px;object-fit:cover}
+.pk-info{flex:1;min-width:0}
+.pk-name{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.pk-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
+.pk-tags{display:flex;gap:4px;flex-wrap:wrap}
+.pk-tag{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600}
+.pk-tag-wh{background:var(--purplebg);color:var(--purpletxt)}
+.pk-tag-price{background:var(--bg);color:var(--sub)}
+.pk-tag-dead{background:var(--redbg);color:var(--redtxt)}
+.pk-tag-slow{background:var(--amberbg);color:var(--ambertxt)}
+.pk-tag-fast{background:var(--greenbg);color:var(--greentxt)}
+
+/* THE HORIZONTAL 3-COLUMN PICK STRIP */
+.pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pk-cell{border-radius:10px;padding:9px 6px;border:2px solid;text-align:center;cursor:pointer;user-select:none;position:relative;transition:all .12s}
+.pk-cell-chapy{border-color:#fbd5aa;background:#fff8f0}
+.pk-cell-city{border-color:#a7f3c8;background:#f0fdf6}
+.pk-cell-roun{border-color:#bfdbfe;background:#eff6ff}
+.pk-cell-chapy.pk-ticked{border-color:#fb923c;background:#fff3e0}
+.pk-cell-city.pk-ticked{border-color:#4ade80;background:var(--greenbg)}
+.pk-cell-roun.pk-ticked{border-color:#60a5fa;background:#dbeafe}
+.pk-cell-done{border-color:var(--border)!important;background:var(--greenbg)!important;opacity:.7}
+.pc-branch-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.pk-cell-chapy .pc-branch-lbl{color:#b45309}
+.pk-cell-city .pc-branch-lbl{color:var(--green)}
+.pk-cell-roun .pc-branch-lbl{color:var(--blue)}
+.pc-has-txt{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:2px}
+.pc-take-num{font-size:22px;font-weight:700;font-family:monospace;line-height:1}
+.pk-cell-chapy .pc-take-num{color:#b45309}
+.pk-cell-city .pc-take-num{color:var(--green)}
+.pk-cell-roun .pc-take-num{color:var(--blue)}
+.pc-take-sub{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+.pc-tick-dot{position:absolute;top:5px;right:5px;width:14px;height:14px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;background:var(--s1)}
+.pk-cell.pk-ticked .pc-tick-dot{background:var(--green);border-color:var(--green);color:#fff}
+.pc-nostock{font-size:18px;font-weight:700;color:var(--sub);font-family:monospace;line-height:1}
+.pc-stocked{font-size:18px;color:var(--green);font-weight:700;line-height:1}
 
 /* ── LOADING / EMPTY ── */
 .loading{padding:50px 16px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
@@ -528,241 +604,178 @@ async function loadBranch(i){
 }
 
 // ── WAREHOUSE MANAGER: DEAD STOCK LOGIC ──────────────────────
-function buildWhDeadStock(){
-  var whData=bd[3];if(!whData||!whData.length)return[];
+function buildPickList(){
+  var whData=bd[3];if(!whData)return{dead:[],normal:[]};
+  var dead=[],normal=[];
+  var bMaps=[{},{},{}];
+  for(var b=0;b<3;b++){if(bd[b])bd[b].forEach(function(p){if(p.bc)bMaps[b][p.bc]=p.qty;});}
 
-  // Build cross-branch sales map (use lastSold as proxy for activity)
-  // A product is "slow" at warehouse if:
-  // 1. Warehouse has stock (qty > 0)
-  // 2. LastSold across ALL branches (chapy, city, roundhay) is > DEAD_DAYS days ago OR never
-  // 3. Warehouse has more than the split total (chapy 12 + city 12 + roundhay 6 = 30)
+  function getStatus(p){
+    var days=dSince(p.ls);
+    if(days===null||days>=90)return{type:'dead',days:days};
+    if(days>=30)return{type:'slow',days:days};
+    return{type:'fast',days:days};
+  }
+  function getRounTarget(st){return st.type==='slow'?6:12;}
 
-  var splitTotal=SPLIT[0]+SPLIT[1]+SPLIT[2]; // 30
-
-  // Build map of last sold dates across branches 0,1,2
-  var branchMap={};
-  for(var b=0;b<3;b++){
-    if(!bd[b])continue;
-    bd[b].forEach(function(p){
-      if(!p.bc)return;
-      if(!branchMap[p.bc])branchMap[p.bc]={lastSolds:[],branchQtys:[null,null,null]};
-      branchMap[p.bc].branchQtys[b]=p.qty;
-      if(p.ls&&p.ls!=='Never')branchMap[p.bc].lastSolds.push({days:dSince(p.ls),name:BRANCHES[b].name});
-    });
+  function calcSplit(bc,whQty,status){
+    var tgts=[SPLIT[0],SPLIT[1],getRounTarget(status)];
+    var needs=[
+      {idx:0,need:Math.max(0,tgts[0]-(bMaps[0][bc]||0)),current:bMaps[0][bc]||0},
+      {idx:1,need:Math.max(0,tgts[1]-(bMaps[1][bc]||0)),current:bMaps[1][bc]||0},
+      {idx:2,need:Math.max(0,tgts[2]-(bMaps[2][bc]||0)),current:bMaps[2][bc]||0},
+    ];
+    needs.sort(function(a,b){return a.current-b.current;});
+    var rem=whQty,result=[0,0,0];
+    needs.forEach(function(n){if(n.need>0&&rem>0){var g=Math.min(n.need,rem);result[n.idx]=g;rem-=g;}});
+    return result;
   }
 
-  var results=[];
   whData.forEach(function(p){
-    if(!p.bc||!p.nm||p.qty<=0)return; // only items with WH stock
-
-    var bInfo=branchMap[p.bc]||{lastSolds:[],branchQtys:[null,null,null]};
-
-    // Find most recent sale across all branches
-    var minDays=null;
-    bInfo.lastSolds.forEach(function(ls){if(ls.days!==null&&(minDays===null||ls.days<minDays))minDays=ls.days;});
-
-    // Classify
-    var isDead=false,isSlow=false;
-    var whDays=dSince(p.dc); // how long in warehouse
-
-    if(minDays===null){
-      // Never sold anywhere — dead if been in WH 90+ days
-      if(whDays!==null&&whDays>=DEAD_DAYS)isDead=true;
-    }else if(minDays>=DEAD_DAYS){
-      // Sold 90+ days ago across all branches — slow seller
-      isSlow=true;
-      isDead=true;
-    }else if(minDays>=30){
-      isSlow=true;
-    }
-
-    if(!isDead&&!isSlow)return; // active seller, skip
-
-    // Calculate split recommendation
-    var canSplit=p.qty>=splitTotal;
-    var action=canSplit?'split':'partial';
-
-    // How much to send each branch
-    var send={
-      0:Math.min(SPLIT[0],p.qty>0?SPLIT[0]:0),
-      1:Math.min(SPLIT[1],Math.max(0,p.qty-SPLIT[0])),
-      2:Math.min(SPLIT[2],Math.max(0,p.qty-SPLIT[0]-SPLIT[1]))
-    };
-
-    results.push({
-      bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',
-      prc:p.prc,cst:p.cst,
-      whQty:p.qty,
-      minDays:minDays,
-      whDays:whDays,
-      isDead:isDead,isSlow:isSlow,
-      bInfo:bInfo,
-      action:action,
-      send:send,
-      splitTotal:splitTotal
-    });
+    if(!p.bc||!p.nm||p.qty<=0)return;
+    var status=getStatus(p);
+    var splits=calcSplit(p.bc,p.qty,status);
+    if(splits[0]+splits[1]+splits[2]<=0)return;
+    var tgts=[SPLIT[0],SPLIT[1],getRounTarget(status)];
+    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,status:status,
+              bQty:[bMaps[0][p.bc]||0,bMaps[1][p.bc]||0,bMaps[2][p.bc]||0],
+              splits:splits,targets:tgts};
+    if(status.type==='dead')dead.push(item);else normal.push(item);
   });
-
-  // Sort: dead first (never sold / longest ago), then slow
-  results.sort(function(a,b){
-    var ad=a.minDays===null?99999:(a.minDays||0);
-    var bd2=b.minDays===null?99999:(b.minDays||0);
-    return bd2-ad;
-  });
-
-  return results;
+  function sortItems(arr){arr.sort(function(a,b){return(a.bQty[0]+a.bQty[1]+a.bQty[2])-(b.bQty[0]+b.bQty[1]+b.bQty[2]);});}
+  sortItems(dead);sortItems(normal);
+  return{dead:dead,normal:normal};
 }
 
-// ── WAREHOUSE MANAGER RENDER ──────────────────────────────────
+var pkTicks=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');
+
 function renderWarehouse(){
   var el=document.getElementById('out');
   if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
-
-  var deadStock=buildWhDeadStock();
-  var dead=deadStock.filter(function(x){return x.isDead&&(x.minDays===null||x.minDays>=DEAD_DAYS);});
-  var slow=deadStock.filter(function(x){return x.isSlow&&!(x.minDays===null||x.minDays>=DEAD_DAYS);});
-
-  var totalVal=dead.reduce(function(s,x){return s+x.whQty*(x.cst||x.prc*0.5);},0);
-  updateProg(dead.length,0,'£'+Math.round(totalVal).toLocaleString()+' tied up in dead stock');
-
+  var lists=buildPickList();
+  var dead=lists.dead,normal=lists.normal,allItems=dead.concat(normal);
+  var totalPicks=[0,0,0],donePicks=[0,0,0];
+  allItems.forEach(function(item){
+    var t=pkTicks[item.bc]||[false,false,false];
+    for(var b=0;b<3;b++){if(item.splits[b]>0){totalPicks[b]++;if(t[b])donePicks[b]++;}}
+  });
   var html='';
-
-  // Stats
-  html+='<div class="stats-grid">'+
-    '<div class="stat-card"><div class="stat-val" style="color:var(--red)">'+dead.length+'</div><div class="stat-lbl">Dead stock</div></div>'+
-    '<div class="stat-card"><div class="stat-val" style="color:var(--amber)">'+slow.length+'</div><div class="stat-lbl">Slow sellers</div></div>'+
-    '<div class="stat-card"><div class="stat-val" style="color:var(--purple)">£'+Math.round(totalVal/1000)+'k</div><div class="stat-lbl">Value tied up</div></div>'+
+  // Trolley legend
+  html+='<div class="trolley-wrap">'+
+    '<div class="trolley-hdr">'+
+      '<div class="trolley-title">🛒 Picking trolley — 3 colour-coded boxes</div>'+
+      '<div class="trolley-boxes">'+
+        '<div class="tbox tbox-chapy"><div class="tbox-icon">🟠</div><div class="tbox-lbl">Chapeltown</div><div class="tbox-sub">Orange box</div></div>'+
+        '<div class="tbox tbox-city"><div class="tbox-icon">🟢</div><div class="tbox-lbl">City Center</div><div class="tbox-sub">Green box</div></div>'+
+        '<div class="tbox tbox-roun"><div class="tbox-icon">🔵</div><div class="tbox-lbl">Roundhay</div><div class="tbox-sub">Blue box</div></div>'+
+      '</div>'+
+    '</div>'+
   '</div>';
-
-  // ── DEAD STOCK SECTION ──
+  // Summary
+  html+='<div class="pk-summary">'+
+    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--redtxt)">'+dead.length+'</div><div class="pk-smc-lbl">Dead items</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" style="color:#b45309">'+donePicks[0]+'/'+totalPicks[0]+'</div><div class="pk-smc-lbl">Chapy done</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--green)">'+donePicks[1]+'/'+totalPicks[1]+'</div><div class="pk-smc-lbl">City done</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--blue)">'+donePicks[2]+'/'+totalPicks[2]+'</div><div class="pk-smc-lbl">Roun done</div></div>'+
+  '</div>';
   if(dead.length){
-    html+='<div class="sec-heading">'+
-      '<div class="sec-heading-title">☠ Dead stock — remove from warehouse</div>'+
-      '<div class="sec-heading-sub">Not sold across any branch in 90+ days. Split to branches or return to supplier.</div>'+
-    '</div>';
-
-    var byDept={};
-    dead.forEach(function(x){if(!byDept[x.dp])byDept[x.dp]=[];byDept[x.dp].push(x);});
-
-    Object.keys(byDept).sort().forEach(function(dept){
-      var items=byDept[dept];
-      html+='<div class="dept-heading">'+
-        '<div class="dept-heading-title">'+dept+'</div>'+
-        '<div class="dept-heading-sub">'+items.length+' dead items</div>'+
-      '</div>';
-      html+='<div class="card-list">';
-      items.forEach(function(x){html+=mkWhCard(x);});
-      html+='</div>';
-    });
+    html+='<div class="pk-sec-hdr"><div class="pk-sec-title" style="color:var(--redtxt)">☠ Dead stock — clear first</div>'+
+      '<div class="pk-sec-sub">Not sold 90+ days. Split to branches then return remainder to supplier.</div></div>';
+    html+=renderPickSection(dead);
   }
-
-  // ── SLOW SELLERS SECTION ──
-  if(slow.length){
-    html+='<div class="sec-heading">'+
-      '<div class="sec-heading-title">🐌 Slow sellers — split to branches now</div>'+
-      '<div class="sec-heading-sub">Selling but slowly. Push stock out to branches before it becomes dead.</div>'+
-    '</div>';
-
-    var byDept2={};
-    slow.forEach(function(x){if(!byDept2[x.dp])byDept2[x.dp]=[];byDept2[x.dp].push(x);});
-
-    Object.keys(byDept2).sort().forEach(function(dept){
-      var items=byDept2[dept];
-      html+='<div class="dept-heading">'+
-        '<div class="dept-heading-title">'+dept+'</div>'+
-        '<div class="dept-heading-sub">'+items.length+' slow sellers</div>'+
-      '</div>';
-      html+='<div class="card-list">';
-      items.forEach(function(x){html+=mkWhCard(x);});
-      html+='</div>';
-    });
+  if(normal.length){
+    html+='<div class="pk-sec-hdr" style="padding-top:16px"><div class="pk-sec-title" style="color:var(--purpletxt)">📦 Normal restock</div>'+
+      '<div class="pk-sec-sub">Top up to shelf target. Fast = 12 all branches. Slow = Roundhay gets 6.</div></div>';
+    html+=renderPickSection(normal);
   }
-
-  if(!dead.length&&!slow.length){
-    html+='<div class="empty">No dead or slow stock in warehouse<br><span style="font-size:11px">All warehouse products are selling well across branches</span></div>';
+  if(!allItems.length){
+    html+='<div class="empty">No warehouse picks needed<br><span style="font-size:11px">All branches are at target</span></div>';
   }
-
-  // WhatsApp for warehouse manager
   html+='<div class="wa-footer">'+
-    '<div class="wa-row"><span>Send split instructions to branch managers</span><span>'+dead.length+' dead · '+slow.length+' slow</span></div>'+
-    '<button class="wa-btn wa-btn-purple" id="wh-wa-btn">'+
-      '<svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'+
-      'Message branch managers — split instructions'+
-    '</button>'+
-  '</div>';
-
+    '<div class="wa-row"><span>Send pick list to branches</span><span>'+allItems.length+' products</span></div>'+
+    '<button class="wa-btn" style="background:var(--purple)" id="pk-wa-btn">'+
+      '<svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'+
+      'Send pick list to branch managers'+
+    '</button></div>';
   el.innerHTML=html;
-
-  document.getElementById('wh-wa-btn').addEventListener('click',function(){
-    sendWhatsAppSplit(dead.concat(slow));
+  updateProg(allItems.length,allItems.filter(function(x){var t=pkTicks[x.bc]||[];return t[0]&&t[1]&&t[2];}).length,
+    'Pick for all 3 branches in one walk · '+allItems.length+' products total');
+  el.querySelectorAll('[data-pkbc]').forEach(function(cell){
+    cell.addEventListener('click',function(){
+      var bc=this.dataset.pkbc,bi=parseInt(this.dataset.pkbi);
+      if(!pkTicks[bc])pkTicks[bc]=[false,false,false];
+      pkTicks[bc][bi]=!pkTicks[bc][bi];
+      localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTicks));
+      renderWarehouse();
+    });
+  });
+  var waBtn=document.getElementById('pk-wa-btn');
+  if(waBtn)waBtn.addEventListener('click',function(){
+    var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    var msg='CC Warehouse Pick List\n'+date+' '+time+'\n\n';
+    ['Chapeltown','City Center','Roundhay'].forEach(function(bn,bi){
+      msg+=bn.toUpperCase()+':\n';
+      allItems.forEach(function(item){if(item.splits[bi]>0)msg+='  '+item.nm+(item.sz?' ('+item.sz+')':'')+' x'+item.splits[bi]+'\n';});
+      msg+='\n';
+    });
+    msg+='Sent from CC Warehouse App';
+    window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
   });
 }
 
-function mkWhCard(x){
-  var daysLabel=x.minDays===null?'Never sold':x.minDays+'d since last sale';
-  var daysColor=x.minDays===null||x.minDays>=90?'var(--red)':x.minDays>=30?'var(--amber)':'var(--sub)';
-  var canSplit=x.whQty>=x.splitTotal;
-
-  var branchStocks='';
-  [0,1,2].forEach(function(b){
-    var bq=x.bInfo.branchQtys[b];
-    if(bq===null)return;
-    var bc=bq>0?'var(--greentxt)':bq<0?'var(--redtxt)':'var(--sub)';
-    branchStocks+='<span class="itag itag-info" style="color:'+bc+'">'+BRANCHES[b].short+': '+bq+'</span>';
+function renderPickSection(items){
+  var byDept={};
+  items.forEach(function(item){if(!byDept[item.dp])byDept[item.dp]=[];byDept[item.dp].push(item);});
+  var html='';
+  Object.keys(byDept).sort().forEach(function(dept){
+    var di=byDept[dept];
+    var done=di.filter(function(x){var t=pkTicks[x.bc]||[];return t[0]&&t[1]&&t[2];}).length;
+    html+='<div class="pk-dept"><span class="pk-dept-name">'+dept+'</span><span class="pk-dept-sub">'+done+'/'+di.length+' picked</span></div>';
+    di.forEach(function(item){html+=mkPickRow(item);});
   });
-  branchStocks+='<span class="itag itag-purple">WH: '+x.whQty+'</span>';
+  return html;
+}
 
-  var actionHtml='';
-  if(canSplit){
-    actionHtml='<div class="wh-action">'+
-      '<div class="wh-action-title">📦 Split now — send to branches</div>'+
-      '<div class="wh-action-row">'+
-        'Chapeltown: <strong>'+x.send[0]+' pcs</strong><br>'+
-        'City Center: <strong>'+x.send[1]+' pcs</strong><br>'+
-        'Roundhay: <strong>'+x.send[2]+' pcs</strong>'+
-      '</div>'+
-    '</div>';
-  }else{
-    var total=x.send[0]+x.send[1]+x.send[2];
-    actionHtml='<div class="wh-action" style="background:var(--redbg)">'+
-      '<div class="wh-action-title" style="color:var(--redtxt)">⚠ Low stock — split what you can</div>'+
-      '<div class="wh-action-row" style="color:var(--redtxt)">Only '+x.whQty+' in WH (need '+x.splitTotal+' for full split).<br>Send '+Math.min(x.whQty,x.send[0])+' to Chap, '+Math.min(Math.max(0,x.whQty-x.send[0]),x.send[1])+' to City, rest to Roundhay.</div>'+
-    '</div>';
-  }
-
-  return '<div class="wh-item '+(canSplit?'action':'')+'">'+
-    '<div class="wh-img">'+imgEl(x.bc,50)+'</div>'+
-    '<div class="wh-body">'+
-      '<div class="wh-name">'+x.nm+(x.sz?' · '+x.sz:'')+'</div>'+
-      '<div class="wh-bc">'+x.bc+'</div>'+
-      '<div class="wh-tags">'+
-        '<span class="itag itag-info" style="color:'+daysColor+'">'+daysLabel+'</span>'+
-        (x.prc>0?'<span class="itag itag-info">£'+x.prc.toFixed(2)+'</span>':'')+
-        '<span class="itag itag-info">'+x.dp+'</span>'+
-      '</div>'+
-      '<div class="wh-tags" style="margin-top:3px">'+branchStocks+'</div>'+
-      actionHtml+
-    '</div>'+
-    '<div class="wh-right">'+
-      '<div class="wh-qty">'+x.whQty+'</div>'+
-      '<div class="wh-qty-lbl">in WH</div>'+
-    '</div>'+
+function mkPickRow(item){
+  var t=pkTicks[item.bc]||[false,false,false];
+  var allDone=t[0]&&t[1]&&t[2];
+  var stag=item.status.type==='dead'?'<span class="pk-tag pk-tag-dead">☠ DEAD '+(item.status.days||'?')+'d</span>':
+           item.status.type==='slow'?'<span class="pk-tag pk-tag-slow">🐌 SLOW '+item.status.days+'d</span>':
+           '<span class="pk-tag pk-tag-fast">⚡ FAST '+item.status.days+'d</span>';
+  var BNAMES=['Chapeltown','City Center','Roundhay'];
+  var BCLS=['chapy','city','roun'];
+  var BCOLORS=['#b45309','var(--green)','var(--blue)'];
+  var html='<div class="pk-row'+(allDone?' pk-done-all':'')+'">';
+  html+='<div class="pk-top">'+
+    '<div class="pk-img">'+imgEl(item.bc,46)+'</div>'+
+    '<div class="pk-info">'+
+      '<div class="pk-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
+      '<div class="pk-bc">'+item.bc+'</div>'+
+      '<div class="pk-tags"><span class="pk-tag pk-tag-wh">WH: '+item.wh+'</span>'+stag+(item.prc>0?'<span class="pk-tag pk-tag-price">£'+item.prc.toFixed(2)+'</span>':'')+'</div>'+
+    '</div>'+(allDone?'<div style="font-size:20px;flex-shrink:0">✅</div>':'')+
   '</div>';
+  html+='<div class="pk-strip">';
+  for(var bi=0;bi<3;bi++){
+    var take=item.splits[bi],has=item.bQty[bi],target=item.targets[bi],ticked=!!t[bi];
+    html+='<div class="pk-cell pk-cell-'+BCLS[bi]+(ticked?' pk-ticked':'')+'" data-pkbc="'+item.bc+'" data-pkbi="'+bi+'">';
+    html+='<div class="pc-tick-dot">'+(ticked?'✓':'')+'</div>';
+    html+='<div class="pc-branch-lbl">'+BNAMES[bi]+'</div>';
+    if(take>0){
+      html+='<div class="pc-has-txt">has '+has+' → tgt '+target+'</div>';
+      html+='<div class="pc-take-num" style="color:'+BCOLORS[bi]+'">'+take+'</div>';
+      html+='<div class="pc-take-sub">pick</div>';
+    }else if(has>=target){
+      html+='<div class="pc-has-txt">has '+has+'</div><div class="pc-stocked">✓</div><div class="pc-take-sub">full</div>';
+    }else{
+      html+='<div class="pc-has-txt">has '+has+'</div><div class="pc-nostock">—</div><div class="pc-take-sub">WH low</div>';
+    }
+    html+='</div>';
+  }
+  html+='</div></div>';
+  return html;
 }
 
-function sendWhatsAppSplit(items){
-  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  var msg='CC Hair & Beauty - Warehouse Split Instructions\\n'+date+' '+time+'\\n\\n';
-  msg+='CHAPELTOWN ('+SPLIT[0]+' pcs each):\\n';
-  items.forEach(function(x){if(x.send[0]>0)msg+='  '+x.nm+(x.sz?' ('+x.sz+')':'')+' x'+x.send[0]+'\\n';});
-  msg+='\\nCITY CENTER ('+SPLIT[1]+' pcs each):\\n';
-  items.forEach(function(x){if(x.send[1]>0)msg+='  '+x.nm+(x.sz?' ('+x.sz+')':'')+' x'+x.send[1]+'\\n';});
-  msg+='\\nROUNDHAY ('+SPLIT[2]+' pcs each):\\n';
-  items.forEach(function(x){if(x.send[2]>0)msg+='  '+x.nm+(x.sz?' ('+x.sz+')':'')+' x'+x.send[2]+'\\n';});
-  msg+='\\nTotal items to split: '+items.length+'\\nSent from CC Warehouse App';
-  window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
-}
 
 // ── BRANCH VIEWS ──────────────────────────────────────────────
 function deptVisible(dp){return activeDepts.indexOf('All')>=0||activeDepts.indexOf(dp||'General')>=0;}
