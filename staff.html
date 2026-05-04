@@ -385,11 +385,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </div>
 
   <!-- WAREHOUSE MANAGER BUTTON -->
-  <div class="wh-mgr-btn" id="wh-mgr-btn" data-b="wh">
-    <div class="wh-mgr-icon">🏭</div>
+  <div class="wh-mgr-btn" id="wh-mgr-btn" data-b="wh" style="justify-content:center;text-align:center">
     <div>
+      <div class="wh-mgr-icon" style="margin:0 auto 6px">🏭</div>
       <div class="wh-mgr-name">Warehouse Manager</div>
-      <div class="wh-mgr-sub" id="whsub">Dead stock · Split actions · Slow sellers</div>
+      <div class="wh-mgr-sub" id="whsub">Loading totals…</div>
+      <div id="wh-totals" style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap"></div>
     </div>
   </div>
 </div>
@@ -586,6 +587,7 @@ async function loadBranch(i){
   loaded++;
   var t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('stime').textContent=loaded<4?'loading '+loaded+'/4…':'live · '+t;
+  if(loaded===4){autoSnapshot();updateWhTotals();}
   // Update branch sub labels
   for(var b=0;b<3;b++){
     if(bd[b]){
@@ -1398,8 +1400,163 @@ renderNegative=function(){
   });
 };
 
+
+// ── AUTO ACCOUNTABILITY LOG ───────────────────────────────────
+// Runs every time fresh data loads (every 30 mins from EPOS)
+// Logs negatives count + collectables count per branch automatically
+// Manager sees: what the system found vs what staff actually fixed
+var AUTO_LOG_KEY='cc_auto_log';
+
+function getAutoLog(){try{return JSON.parse(localStorage.getItem(AUTO_LOG_KEY)||'[]');}catch(e){return[];}}
+function saveAutoLog(l){try{localStorage.setItem(AUTO_LOG_KEY,JSON.stringify(l.slice(0,1000)));}catch(e){}}
+
+function autoSnapshot(){
+  // Only run when all 4 branches are loaded
+  if(loaded<4)return;
+  var now=new Date();
+  var timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var dateStr=now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'});
+  var log=getAutoLog();
+  var snap={
+    ts:now.getTime(),date:dateStr,time:timeStr,
+    branches:[]
+  };
+
+  // Per branch: count negatives and collectables from warehouse
+  for(var bi=0;bi<3;bi++){
+    var data=bd[bi];if(!data){snap.branches.push(null);continue;}
+    var negItems=data.filter(function(p){return p.qty<0;});
+    var negCount=negItems.length;
+    var negWorst=negItems.length>0?negItems.reduce(function(a,b){return a.qty<b.qty?a:b;}):null;
+
+    // Count how many items this branch CAN collect from warehouse right now
+    var whData=bd[3]||[];
+    var destMap={};data.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+    var collectCount=0,collectVal=0;
+    whData.forEach(function(p){
+      if(!p.bc||p.qty<=0)return;
+      var dq=destMap[p.bc]?destMap[p.bc].qty:0;
+      if(dq>=12)return; // already stocked
+      var need=12-dq;
+      if(need>0&&p.qty>0){collectCount++;collectVal+=Math.min(need,p.qty)*(p.prc||0);}
+    });
+
+    snap.branches.push({
+      name:BRANCHES[bi].name,
+      negCount:negCount,
+      negWorst:negWorst?negWorst.qty:0,
+      collectCount:collectCount,
+      collectVal:Math.round(collectVal)
+    });
+  }
+
+  // Only add if something changed or >30 min since last snap
+  var last=log[0];
+  var changed=!last||now.getTime()-last.ts>25*60*1000; // 25 min
+  if(changed){
+    log.unshift(snap);
+    saveAutoLog(log);
+    updateWhTotals();
+  }
+}
+
+function updateWhTotals(){
+  // Update the warehouse manager button with live totals
+  var el=document.getElementById('wh-totals');
+  var subEl=document.getElementById('whsub');
+  if(!el||loaded<4)return;
+  var lists=buildPickList?buildPickList():{dead:[],normal:[]};
+  var dead=(lists.dead||[]).length;
+  var normal=(lists.normal||[]).length;
+  var total=dead+normal;
+
+  // Per-branch collectables
+  var html='';
+  for(var bi=0;bi<3;bi++){
+    var data=bd[bi];if(!data)continue;
+    var destMap={};data.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+    var cnt=0;
+    (bd[3]||[]).forEach(function(p){
+      if(!p.bc||p.qty<=0)return;
+      var dq=destMap[p.bc]?destMap[p.bc].qty:0;
+      if(dq<12&&p.qty>0)cnt++;
+    });
+    var bColors=['#b45309','var(--green)','var(--blue)'];
+    var bBgs=['#fff3e0','var(--greenbg)','var(--bluebg)'];
+    html+='<div style="background:'+bBgs[bi]+';border-radius:8px;padding:5px 10px;text-align:center">'+
+      '<div style="font-size:16px;font-weight:700;color:'+bColors[bi]+'">'+cnt+'</div>'+
+      '<div style="font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px">'+BRANCHES[bi].name.slice(0,4)+'</div>'+
+    '</div>';
+  }
+  el.innerHTML=html;
+  if(subEl)subEl.textContent=dead+' dead · '+normal+' restock items ready';
+}
+
+function showAutoLog(){
+  // Shows the auto-accountability log in the history panel
+  var log=getAutoLog();
+  var el=document.getElementById('hist-content');
+  if(!log.length){el.innerHTML='<div class="empty">No automatic snapshots yet.<br>Data will be logged on next refresh.</div>';return;}
+
+  var html='<div style="padding:8px 14px;background:var(--amberbg);border-bottom:1px solid var(--border);font-size:10px;color:var(--ambertxt);line-height:1.6">'+
+    '📊 <strong>Auto-logged every 30 mins from EPOS.</strong> Negatives and collectables tracked automatically — no staff action needed. Manager can compare what was available vs what was fixed.'+
+  '</div>';
+
+  log.forEach(function(snap){
+    html+='<div style="padding:10px 14px;border-bottom:1px solid var(--border)">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'+
+        '<span style="font-size:11px;font-weight:700;color:var(--ink)">'+snap.date+'</span>'+
+        '<span style="font-size:10px;color:var(--sub);font-family:monospace">'+snap.time+'</span>'+
+      '</div>';
+    (snap.branches||[]).forEach(function(b){
+      if(!b)return;
+      var negColor=b.negCount>10?'var(--redtxt)':b.negCount>5?'var(--ambertxt)':'var(--sub)';
+      var colColor=b.collectCount>10?'var(--green)':'var(--sub)';
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">'+
+        '<span style="font-size:11px;font-weight:600;width:72px;flex-shrink:0">'+b.name+'</span>'+
+        '<span style="font-size:10px;font-family:monospace;color:'+negColor+'">🔴 '+b.negCount+' neg</span>'+
+        '<span style="font-size:10px;font-family:monospace;color:'+colColor+'">📦 '+b.collectCount+' to collect</span>'+
+        (b.collectVal>0?'<span style="font-size:9px;color:var(--sub);margin-left:auto">£'+b.collectVal+' val</span>':'')+
+      '</div>';
+    });
+    html+='</div>';
+  });
+
+  el.innerHTML=html;
+  document.getElementById('hist-ov').classList.add('open');
+}
+
 // ── PANEL CONTROLS ────────────────────────────────────────────
-document.getElementById('btn-history').addEventListener('click',showHistory);
+document.getElementById('btn-history').addEventListener('click',function(){
+  showHistory();
+  // Also show auto log below manual history
+  var autoLog=getAutoLog();
+  if(autoLog.length){
+    var el=document.getElementById('hist-content');
+    var divider='<div style="padding:8px 14px;background:var(--bg);font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)">📊 Auto accountability log</div>';
+    var autoHtml='';
+    autoLog.slice(0,20).forEach(function(snap){
+      autoHtml+='<div style="padding:8px 14px;border-bottom:0.5px solid var(--border)">'+
+        '<div style="display:flex;justify-content:space-between;margin-bottom:5px">'+
+          '<span style="font-size:10px;font-weight:700">'+snap.date+'</span>'+
+          '<span style="font-size:9px;color:var(--sub);font-family:monospace">'+snap.time+'</span>'+
+        '</div>';
+      (snap.branches||[]).forEach(function(b){
+        if(!b)return;
+        var nc=b.negCount,cc=b.collectCount;
+        var ncol=nc>10?'var(--redtxt)':nc>5?'var(--ambertxt)':'var(--sub)';
+        var ccol=cc>10?'var(--greentxt)':'var(--sub)';
+        autoHtml+='<div style="display:flex;gap:8px;padding:3px 0;font-size:10px">'+
+          '<span style="width:68px;font-weight:600;flex-shrink:0">'+b.name+'</span>'+
+          '<span style="color:'+ncol+'">🔴 '+nc+' neg</span>'+
+          '<span style="color:'+ccol+'">📦 '+cc+' collectable</span>'+
+        '</div>';
+      });
+      autoHtml+='</div>';
+    });
+    el.innerHTML=el.innerHTML+divider+autoHtml;
+  }
+});
 document.getElementById('btn-dprog').addEventListener('click',showDailyProgress);
 document.getElementById('btn-weekly').addEventListener('click',showWeekly);
 document.getElementById('hist-clear').addEventListener('click',function(){
@@ -1419,7 +1576,11 @@ document.getElementById('hist-clear').addEventListener('click',function(){
     <div class="hist-handle"></div>
     <div class="hist-hdr">
       <div class="hist-title">Action history</div>
-      <button class="hist-clear" id="hist-clear">Clear all</button>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="hist-clear" id="hist-clear">Clear all</button>
+        <button onclick="document.getElementById('hist-ov').classList.remove('open')" 
+          style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font)">✕</button>
+      </div>
     </div>
     <div id="hist-content"><div class="empty">No history yet</div></div>
   </div>
@@ -1429,8 +1590,8 @@ document.getElementById('hist-clear').addEventListener('click',function(){
 <div class="dprog-ov" id="dprog-ov">
   <div class="dprog-pan">
     <div class="hist-handle"></div>
-    <div class="dprog-hdr">
-      <div class="dprog-title">Today's progress</div>
+    <div class="dprog-hdr" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div class="dprog-title">Today's progress<button onclick="document.getElementById('dprog-ov').classList.remove('open')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer;flex-shrink:0;margin-top:2px">✕</button></div>
       <div class="dprog-sub" id="dprog-date"></div>
     </div>
     <div id="dprog-content"></div>
@@ -1441,8 +1602,8 @@ document.getElementById('hist-clear').addEventListener('click',function(){
 <div class="wkly-ov" id="wkly-ov">
   <div class="wkly-pan">
     <div class="hist-handle"></div>
-    <div class="wkly-hdr">
-      <div class="wkly-title">Weekly leaderboard</div>
+    <div class="wkly-hdr" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div class="wkly-title">Weekly leaderboard<button onclick="document.getElementById('wkly-ov').classList.remove('open')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer;flex-shrink:0;margin-top:2px">✕</button></div>
       <div class="wkly-sub">Who's doing their jobs this week</div>
     </div>
     <div id="wkly-content"></div>
