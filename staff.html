@@ -575,23 +575,8 @@ async function loadImgs(){
   }catch(e){}
 }
 async function loadBranch(i){
-  // Check cache first — use if less than 25 mins old
-  var cacheKey='cc_bd_'+i;
   try{
-    var cached=localStorage.getItem(cacheKey);
-    if(cached){
-      var obj=JSON.parse(cached);
-      if(Date.now()-obj.ts<25*60*1000){
-        bd[i]=obj.data;
-        loaded++;
-        afterLoad(i);
-        return;
-      }
-    }
-  }catch(e){}
-  // Fetch fresh
-  try{
-    var r=await fetch(BR[i].url+'&t='+Date.now());
+    var r=await fetch(BR[i].url);
     var t=await r.text();
     bd[i]=Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){
       var ls=cl(row['LastSold']);
@@ -599,14 +584,8 @@ async function loadBranch(i){
              qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
              dp:cl(row['Department']),ls:(ls&&ls!=='NULL')?ls:'Never'};
     }).filter(function(p){return p.bc&&p.nm;});
-    // Save to cache
-    try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),data:bd[i]}));}catch(e){}
   }catch(e){bd[i]=[];}
   loaded++;
-  afterLoad(i);
-}
-
-function afterLoad(i){
   document.getElementById('stime').textContent=loaded<4?'loading '+loaded+'/4…':'live · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   if(i<3&&bd[i]){
     var n=bd[i].filter(function(p){return p.qty<0;}).length;
@@ -616,11 +595,6 @@ function afterLoad(i){
   }
   if(loaded===4)autoSnap();
   if(loaded>=1)render();
-}
-
-function clearCache(){
-  for(var i=0;i<4;i++)localStorage.removeItem('cc_bd_'+i);
-  localStorage.removeItem('cc_imgs');
 }
 
 // ── AUTO SNAPSHOT ─────────────────────────────────────────────
@@ -1250,7 +1224,6 @@ document.getElementById('dept-toggle').addEventListener('click',function(){
 });
 
 document.getElementById('refresh-btn').addEventListener('click',function(){
-  clearCache();
   loaded=0;bd=[null,null,null,null];
   document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Refreshing…</div>';
   Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();
