@@ -248,15 +248,15 @@ document.getElementById('pinpad').addEventListener('click',function(e){
 <script>
 var BRANCHES=[
   {name:'Roundhay',short:'Roundhay',chip:'bchip-r',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=roundhay'},
   {name:'Chapy',short:'Chapy',chip:'bchip-c',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=chapy'},
   {name:'City',short:'City',chip:'bchip-x',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=city'},
   {name:'Warehouse',short:'WH',chip:'bc-w',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'}
+   url:'/api/stock-data?branch=warehouse'}
 ];
-var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
+var IURL='/api/stock-data?branch=images';
 
 var bd=[[],[],[]],imgs={},loaded=0;
 var products=[];  // deduplicated product list

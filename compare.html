@@ -200,13 +200,13 @@ document.getElementById('pinpad').addEventListener('click',function(e){
 <script>
 var BRANCHES=[
   {name:'Roundhay',short:'R',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=roundhay'},
   {name:'Chapy',short:'C',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=chapy'},
   {name:'City',short:'X',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=city'},
   {name:'Warehouse',short:'WH',chip:'bc-w',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'}
+   url:'/api/stock-data?branch=warehouse'}
 ];
 
 var bd=[[],[],[]],loaded=0,section='overview';

@@ -192,6 +192,17 @@ document.getElementById('pinpad').addEventListener('click',function(e){
 </div>
 
 <!-- COLLAPSIBLE FILTERS -->
+<!-- OOS DAY FILTER - sticky, only shown in OOS view -->
+<div id="oos-filter-bar" style="display:none;background:#fff;border-bottom:1px solid var(--border);padding:7px 10px;overflow-x:auto;scrollbar-width:none">
+  <div style="display:flex;gap:5px;min-width:max-content">
+    <div class="dpill on" data-oof="all" id="oof-all">All</div>
+    <div class="dpill" data-oof="0">Today</div>
+    <div class="dpill" data-oof="7">7+ days</div>
+    <div class="dpill" data-oof="14">14+ days</div>
+    <div class="dpill" data-oof="30">30+ days</div>
+    <div class="dpill" data-oof="60">60+ days</div>
+  </div>
+</div>
 <div id="filter-sections">
   <!-- COLLECT FROM -->
   <div style="background:#fff;border-bottom:1px solid var(--border)">
@@ -254,15 +265,15 @@ var WH_MIN    = 12; // Warehouse: keep minimum 12 on shelf
 
 var BRANCHES = [
   {id:'chapy',     name:'Chapeltown', color:'#fb923c',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=chapy'},
   {id:'city',      name:'City Center', color:'#4ade80',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=city'},
   {id:'roundhay',  name:'Roundhay', color:'#60a5fa',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=roundhay'},
   {id:'warehouse', name:'Warehouse', color:'#a78bfa',
-   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'},
+   url:'/api/stock-data?branch=warehouse'},
 ];
-var IURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
+var IURL = '/api/stock-data?branch=images';
 
 // ── SOURCES per destination branch (index in BRANCHES) ────────
 // Each destination has ordered sources with a collection rule
@@ -302,6 +313,18 @@ document.getElementById('dept-toggle').addEventListener('click',function(){
   var open=panel.style.display==='none'||panel.style.display==='';
   panel.style.display=open?'block':'none';
   arrow.style.transform=open?'rotate(90deg)':'';
+});
+
+// Wire OOS sticky filter pills
+document.getElementById('oos-filter-bar').addEventListener('click',function(e){
+  var pill=e.target.closest('[data-oof]');
+  if(!pill)return;
+  oosFilter=pill.dataset.oof;
+  // Update active pill styling
+  document.querySelectorAll('#oos-filter-bar [data-oof]').forEach(function(p){
+    p.classList.toggle('on', p.dataset.oof===oosFilter);
+  });
+  renderOOS(currentDest);
 });
 
 // ── SOURCE FILTER ─────────────────────────────────────────────
@@ -399,6 +422,13 @@ function buildDeptFilter(){
 
 // ── HELPERS ───────────────────────────────────────────────────
 function cl(v){return String(v==null?'':v).trim();}
+function pDateU(s){
+  if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;
+  var p=s.split('/');
+  if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d)?null:d;}
+  var d=new Date(s);return isNaN(d)?null:d;
+}
+function dSinceU(s){var d=pDateU(s);return d?Math.floor((Date.now()-d)/86400000):null;}
 function calcCollect(srcQty,rule,destQty){
   if(rule==='wh'){
     if(srcQty<=0)return 0;
@@ -501,7 +531,8 @@ function renderDest(destIdx){
       if(destQty>3)return; // dest has enough
       eligible.push({bc:srcProd.bc,nm:srcProd.nm,sz:srcProd.sz,
                      dp:srcProd.dp||'General',prc:srcProd.prc,
-                     srcQty:srcProd.qty,destQty:destQty,qty:qty});
+                     srcQty:srcProd.qty,destQty:destQty,qty:qty,
+                     destLs:destProd?destProd.ls:'Never'});
     });
 
     // Apply dept filter
@@ -535,16 +566,35 @@ function renderDest(destIdx){
       '<div class="dept-body" id="'+deptId+'">';
       items.forEach(function(item){
         var done=isTicked(destIdx,srcIdx,item.bc);
+        // Days OOS at destination
+        var destDays=dSinceU(item.destLs);
+        var daysBadge='';
+        if(item.destQty<=0&&destDays!==null){
+          var dc=destDays>=30?'#cc0000':destDays>=14?'#b45309':destDays>=7?'#d97706':'#555';
+          var db=destDays>=30?'#fff0f0':destDays>=14?'#fffbeb':'#f4f4f4';
+          daysBadge='<span class="itag" style="background:'+db+';color:'+dc+'">'+destDays+'d OOS</span>';
+        }
+        // All branch stock
+        var branchStocks='';
+        for(var bb=0;bb<4;bb++){
+          if(!bd[bb])continue;
+          var bp=bd[bb].find(function(x){return x.bc===item.bc;});
+          var bq=bp?bp.qty:null;
+          if(bq===null)continue;
+          var bcolor=bq>0?'var(--green)':bq<0?'#cc0000':'var(--sub)';
+          branchStocks+='<span class="itag" style="background:var(--bg);color:'+bcolor+'">'+BRANCHES[bb].name.slice(0,4)+': '+(bq>0?bq:bq)+'</span>';
+        }
         html+='<div class="item-card'+(done?' done':'')+'" data-bc="'+item.bc+'" data-srcidx="'+srcIdx+'">'+
           '<div class="item-img">'+imgEl(item.bc,52)+'</div>'+
           '<div class="item-body">'+
             '<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
             '<div class="item-bc">'+item.bc+'</div>'+
             '<div class="item-tags">'+
+              (daysBadge?daysBadge:'')+
               '<span class="itag '+(srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>'+
-              '<span class="itag itag-info">'+BRANCHES[destIdx].name+': '+(item.destQty<=0?'OUT':item.destQty)+'</span>'+
               (item.prc>0?'<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>':'')+
             '</div>'+
+            '<div class="item-tags" style="margin-top:3px">'+branchStocks+'</div>'+
           '</div>'+
           '<div class="item-right">'+
             '<div class="collect-box'+(done?' done-box':'')+'">'+
@@ -660,29 +710,15 @@ function renderOOS(destIdx){
     byDept[d].push(p);
   });
 
-  // OOS filter pills
-  var filterOpts=[
-    {v:'all',l:'All'},
-    {v:'7',l:'7+ days'},
-    {v:'14',l:'14+ days'},
-    {v:'30',l:'30+ days'},
-    {v:'60',l:'60+ days'},
-  ];
+  // Filter by selected day range
   var filteredOOS=oosItems.filter(function(p){
     if(oosFilter==='all')return true;
+    if(oosFilter==='0')return p.daysOut<=1; // Today = 0 or 1 day
     return p.daysOut>=parseInt(oosFilter);
   });
 
-  // Metrics bar
   var withSrcF=filteredOOS.filter(function(p){return availMap[p.bc]&&availMap[p.bc].length>0;}).length;
-  var html='<div style="display:flex;gap:5px;padding:8px 10px;background:#fff;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none">';
-  filterOpts.forEach(function(opt){
-    var on=oosFilter===opt.v;
-    html+='<div class="oos-pill'+(on?' oos-pill-on':'')+'" data-oof="'+opt.v+'" style="flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid '+(on?'#cc0000':'var(--border)')+';background:'+(on?'#cc0000':'#fff')+';color:'+(on?'#fff':'var(--sub)')+'">'+opt.l+'</div>';
-  });
-  html+='</div>';
-
-  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px;background:var(--bg)">';
+  var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 10px;background:var(--bg)">';
   html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid #cc0000"><div style="font-size:18px;font-weight:700;font-family:monospace;color:#cc0000">'+oosItems.length+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Total OOS</div></div>';
   html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid var(--green)"><div style="font-size:18px;font-weight:700;font-family:monospace;color:var(--green)">'+withSrc+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Can collect</div></div>';
   html+='<div style="background:#fff;border-radius:var(--r);padding:8px;text-align:center;border-top:2px solid var(--amber)"><div style="font-size:18px;font-weight:700;font-family:monospace;color:var(--amber)">'+noSrc+'</div><div style="font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Need reorder</div></div>';
@@ -697,7 +733,6 @@ function renderOOS(destIdx){
   if(!filteredOOS.length){
     html+='<div class="empty">No items out of stock for '+parseInt(oosFilter)+'+ days at '+BRANCHES[destIdx].name+'</div>';
     el.innerHTML=html;
-    el.querySelectorAll('.oos-pill').forEach(function(p){p.addEventListener('click',function(){oosFilter=this.dataset.oof;renderOOS(destIdx);});});
     return;
   }
 
@@ -738,13 +773,6 @@ function renderOOS(destIdx){
 
   el.innerHTML=html;
 
-  // Wire filter pills
-  el.querySelectorAll('.oos-pill').forEach(function(p){
-    p.addEventListener('click',function(){
-      oosFilter=this.dataset.oof;
-      renderOOS(destIdx);
-    });
-  });
 }
 
 function updateOOSProgress(total,withSrc,destIdx){
@@ -765,6 +793,7 @@ document.querySelector('.btabs').addEventListener('click',function(e){
   currentDest=parseInt(tab.dataset.b);
   activeDepts=['All'];
   activeSources=[0,1,2,3];
+  document.getElementById('oos-filter-bar').style.display=currentView==='oos'?'block':'none';
   buildSrcFilter();
   buildDeptFilter();
   if(currentView==='collect')renderDest(currentDest);
@@ -781,6 +810,7 @@ document.addEventListener('click',function(e){
   vt.style.color='#cc0000';
   vt.style.borderBottomColor='#cc0000';
   currentView=vt.dataset.v;
+  document.getElementById('oos-filter-bar').style.display=currentView==='oos'?'block':'none';
   if(currentView==='collect')renderDest(currentDest);
   else renderOOS(currentDest);
 });

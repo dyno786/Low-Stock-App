@@ -429,13 +429,13 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom)) !important}
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────────────────────
-const IMAGE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
+const IMAGE_URL = '/api/stock-data?branch=images';
 
 const BRANCHES = [
-  {id:'roundhay',   name:'Roundhay Road',   url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
-  {id:'chapeltown', name:'Chapeltown Road',  url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
-  {id:'citycenter',  name:'City Center',     url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
-  {id:'warehouse',  name:'Warehouse',         url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'}
+  {id:'roundhay',   name:'Roundhay Road',   url:'/api/stock-data?branch=roundhay'},
+  {id:'chapeltown', name:'Chapeltown Road',  url:'/api/stock-data?branch=chapy'},
+  {id:'citycenter',  name:'City Center',     url:'/api/stock-data?branch=city'},
+  {id:'warehouse',  name:'Warehouse',         url:'/api/stock-data?branch=warehouse'}
 ];
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
@@ -991,7 +991,8 @@ function parseProducts(rows, branchId) {
     var dept    = cl(fv(r, ['department','category','dept']));
     var id  = branchId + '|' + (barcode || i) + '|' + size;
     var img = (barcode && imageMap[barcode]) ? imageMap[barcode] : null;
-    return {id:id, vendor:dept, title:name, variant:size, sku:barcode, stock:stock, img:img, category:dept||'General'};
+    var ls = cl(fv(r, ['lastsold','last_sold','lastSold']));
+    return {id:id, vendor:dept, title:name, variant:size, sku:barcode, stock:stock, img:img, category:dept||'General', lastSold:(ls&&ls!=='NULL')?ls:'Never'};
   });
   products.sort(function(a, b) {
     if (a.img && !b.img) return -1;
@@ -1002,6 +1003,13 @@ function parseProducts(rows, branchId) {
 }
 
 function cl(v) { return String(v || '').trim(); }
+function pDateIdx(s){
+  if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;
+  var p=s.split('/');
+  if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d)?null:d;}
+  var d=new Date(s);return isNaN(d)?null:d;
+}
+function dSinceIdx(s){var d=pDateIdx(s);return d?Math.floor((Date.now()-d)/86400000):null;}
 function fv(row, keys) {
   var rk = Object.keys(row);
   for (var i = 0; i < keys.length; i++) {
@@ -1108,27 +1116,38 @@ function showGroup(name) {
 }
 
 function cardHTML(p) {
-  var qty = p.restock != null
-    ? '<span class="p-qty qty-pos">+' + p.restock + '</span>'
-    : '<span class="p-qty qty-neg">' + p.stock + '</span>';
-  var img = p.img
-    ? '<img src="' + p.img + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-    : '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
-  var eid = p.id.replace(/[^a-zA-Z0-9]/g,'_');
-  var sid = p.id.replace(/'/g,"\\'");
-  return '<div class="product-card ' + (p.ticked ? 'ticked' : '') + '" id="c_' + eid + '" onclick="openPanel(\'' + sid + '\')">' +
-    '<div class="done-bar"></div>' +
-    '<div class="p-img">' + img + '</div>' +
-    '<div class="p-body">' +
-      '<div class="p-brand">' + p.vendor + '</div>' +
-      '<div class="p-name">' + p.title + '</div>' +
-      (p.variant ? '<div class="p-variant">' + p.variant + '</div>' : '') +
-    '</div>' +
-    '<div class="p-right">' + qty +
-      '<div class="tick ' + (p.ticked ? 'done' : '') + '" onclick="quickTick(event,\'' + sid + '\')">' +
-        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' +
-      '</div>' +
-    '</div></div>';
+  var days=dSinceIdx(p.lastSold);
+  var isNeg=p.stock<0,isZero=p.stock===0;
+  var daysBadge='';
+  if((isNeg||isZero)&&days!==null){
+    var dColor=days>=30?'#cc0000':days>=14?'#b45309':days>=7?'#d97706':'#555';
+    var dBg=days>=30?'#fff0f0':days>=14?'#fffbeb':days>=7?'#fffbeb':'#f4f4f4';
+    var dLabel=isNeg?(days+'d neg'):(days+'d OOS');
+    daysBadge='<span style="font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;background:'+dBg+';color:'+dColor+'">'+dLabel+'</span>';
+  }else if(days===null&&(isNeg||isZero)){
+    daysBadge='<span style="font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;background:#f4f4f4;color:#999">No date</span>';
+  }
+  var qty=p.restock!=null
+    ?'<span class="p-qty qty-pos">+'+p.restock+'</span>'
+    :'<span class="p-qty qty-neg">'+p.stock+'</span>';
+  var noImg='<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  var img=p.img?'<img src="'+p.img+'" alt="" loading="lazy" onerror="this.src=\'\';this.style.display=\'none\'">':noImg;
+  var eid=p.id.replace(/[^a-zA-Z0-9]/g,'_');
+  var sid=p.id.replace(/'/g,"\'");
+  return '<div class="product-card '+(p.ticked?'ticked':'')+'" id="c_'+eid+'" onclick="openPanel(\''+sid+'\')">'
+    +'<div class="done-bar"></div>'
+    +'<div class="p-img">'+img+'</div>'
+    +'<div class="p-body">'
+      +'<div class="p-brand">'+p.vendor+'</div>'
+      +'<div class="p-name">'+p.title+'</div>'
+      +(p.variant?'<div class="p-variant">'+p.variant+'</div>':'')
+      +(daysBadge?'<div style="margin-top:3px">'+daysBadge+'</div>':'')
+    +'</div>'
+    +'<div class="p-right">'+qty
+      +'<div class="tick '+(p.ticked?'done':'')+'" onclick="quickTick(event,\''+sid+'\')">'
+        +'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+      +'</div>'
+    +'</div></div>';
 }
 
 // ── INTERACTIONS ───────────────────────────────────────────────────────────────
