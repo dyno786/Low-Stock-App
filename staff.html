@@ -402,6 +402,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
 </div>
 
+<!-- SYNC STATUS -->
+<div style="display:flex;align-items:center;background:var(--greenbg);border-bottom:1px solid var(--border);padding:3px 10px;min-height:24px">
+  <div id="sync-status" style="font-size:10px;color:var(--green);font-weight:600;flex:1;transition:opacity .5s"></div>
+  <button onclick="loadSharedTicks().then(function(){render();showSyncStatus('✓ Refreshed from all phones');})" 
+    style="font-size:9px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid var(--green);background:var(--greenbg);color:var(--green);cursor:pointer;font-family:var(--font);flex-shrink:0">
+    ↺ Sync now
+  </button>
+</div>
+
+<!-- PICKING TIMER BAR -->
+<div id="pick-timer-bar" style="display:none;background:var(--purplebg);border-bottom:1px solid var(--border);padding:8px 14px">
+  <div id="pick-timer-display" style="font-size:12px;color:var(--purpletxt)"></div>
+  <div style="display:flex;gap:8px;margin-top:5px">
+    <button onclick="startPickTimer()" style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);cursor:pointer;font-family:var(--font)">▶ Start</button>
+    <button onclick="resetPickTimer()" style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--s1);color:var(--sub);cursor:pointer;font-family:var(--font)">↺ Reset</button>
+  </div>
+</div>
+
 <!-- OOS DAY FILTER -->
 <div class="day-filter" id="day-filter">
   <div class="day-filter-inner" id="day-filter-pills">
@@ -537,14 +555,9 @@ function tk(d,s,bc){return d+'_'+s+'_'+bc;}
 function isTicked(d,s,bc){return !!ticks[tk(d,s,bc)];}
 function setTick(d,s,bc,v){
   ticks[tk(d,s,bc)]=v;
-  // If warehouse (srcIdx=3), sync tick to ALL branch tabs
-  // One person collects from WH for all 3 branches in one go
-  if(s===3){
-    for(var b=0;b<3;b++){
-      if(b!==d) ticks[tk(b,s,bc)]=v;
-    }
-  }
+  if(s===3){for(var b=0;b<3;b++){if(b!==d)ticks[tk(b,s,bc)]=v;}}
   localStorage.setItem('cc_staff2_ticks',JSON.stringify(ticks));
+  debouncedSync('cc_staff2_ticks',ticks); // sync to all phones
 }
 function imgEl(bc,sz){
   var src=imgs[bc];sz=sz||50;
@@ -708,6 +721,8 @@ function renderWarehouse(){
       if(!pkTicks[bc])pkTicks[bc]=[false,false,false];
       pkTicks[bc][bi]=!pkTicks[bc][bi];
       localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTicks));
+      debouncedSync('cc_pk_ticks',pkTicks); // sync to all phones
+      if(pkTicks[bc][bi])recordPick(); // start/advance timer
       renderWarehouse();
     });
   });
@@ -963,10 +978,14 @@ function renderCollect(){
     btn.addEventListener('click',function(e){
       e.stopPropagation();
       var bc=this.dataset.bc,si=parseInt(this.dataset.si);
-      setTick(currentDest,si,bc,!isTicked(currentDest,si,bc));
+      var wasUnticked=!isTicked(currentDest,si,bc);
+      setTick(currentDest,si,bc,wasUnticked);
+      if(wasUnticked)recordPick(); // advance collection timer
       renderCollect();
     });
   });
+  // Show timer bar for collect view too
+  showTimerBar(true);
   var waBtn=document.getElementById('wa-btn');
   if(waBtn)waBtn.addEventListener('click',sendBranchWhatsApp);
 }
@@ -1065,11 +1084,15 @@ function renderNegative(){
   el.querySelectorAll('[data-neg]').forEach(function(btn){
     btn.addEventListener('click',function(){
       var bc=this.dataset.bc,key=currentDest+'_'+bc;
-      negTicks[key]=!negTicks[key];
+      var wasUnticked=!negTicks[key];
+      negTicks[key]=wasUnticked;
       localStorage.setItem('cc_staff2_negticks',JSON.stringify(negTicks));
+      debouncedSync('cc_neg_ticks',negTicks);
+      if(wasUnticked)recordPick();
       renderNegative();
     });
   });
+  showTimerBar(true);
 }
 
 function renderOOS(){
@@ -1145,7 +1168,13 @@ function render(){
   document.getElementById('collect-filters').style.display=isCollect?'block':'none';
   document.getElementById('day-filter').style.display=(!isWH&&currentView==='oos')?'block':'none';
   document.getElementById('prog-wrap').style.display=isWH?'none':'block';
-  if(isWH){renderWarehouse();return;}
+  if(isWH){
+    showTimerBar(true);
+    renderWarehouse();
+    return;
+  }
+  // Show timer for collect and negatives, hide for OOS view
+  showTimerBar(currentView!=='oos');
   if(isCollect){buildSrcFilter();buildDeptFilter();}
   if(currentView==='urgent')renderCollect();
   else if(currentView==='negative')renderNegative();
@@ -1161,6 +1190,7 @@ document.querySelector('.branch-grid').addEventListener('click',function(e){
   currentDest=parseInt(btn.dataset.b);
   currentMode='branch';
   activeDepts=['All'];activeSources=[0,1,2,3];oosFilter='all';
+  resetPickTimer();
   updateDayPills();
   render();
 });
@@ -1207,6 +1237,8 @@ document.getElementById('refresh-btn').addEventListener('click',function(){
 // ── START ─────────────────────────────────────────────────────
 Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
 loadImgs().then(function(){if(loaded>0)render();});
+// Load shared ticks from KV on startup
+loadSharedTicks().then(function(){if(loaded>0)render();});
 
 // ── HISTORY LOG ──────────────────────────────────────────────
 var HIST_KEY='cc_staff_hist';
@@ -1408,7 +1440,10 @@ renderNegative=function(){
 var AUTO_LOG_KEY='cc_auto_log';
 
 function getAutoLog(){try{return JSON.parse(localStorage.getItem(AUTO_LOG_KEY)||'[]');}catch(e){return[];}}
-function saveAutoLog(l){try{localStorage.setItem(AUTO_LOG_KEY,JSON.stringify(l.slice(0,1000)));}catch(e){}}
+function saveAutoLog(l){
+  try{localStorage.setItem(AUTO_LOG_KEY,JSON.stringify(l.slice(0,1000)));}catch(e){}
+  debouncedSync('cc_auto_log',l.slice(0,100)); // sync auto log (last 100 entries)
+}
 
 function autoSnapshot(){
   // Only run when all 4 branches are loaded
@@ -1567,6 +1602,183 @@ document.getElementById('hist-clear').addEventListener('click',function(){
 ['hist-ov','dprog-ov','wkly-ov'].forEach(function(id){
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 });
+
+
+// ── SHARED TICK SYNC (Vercel KV) ─────────────────────────────
+// Syncs ticks across all phones via Vercel KV API
+// Falls back to localStorage if KV not configured
+var SYNC_URL='/api/ticks';
+var syncEnabled=true;
+var pendingSync=null;
+
+async function syncLoad(key){
+  try{
+    var r=await fetch(SYNC_URL+'?key='+key,{signal:AbortSignal.timeout(3000)});
+    var d=await r.json();
+    if(d.fallback){syncEnabled=false;return null;}
+    return d.data||null;
+  }catch(e){syncEnabled=false;return null;}
+}
+
+async function syncSave(key,value){
+  if(!syncEnabled)return;
+  try{
+    await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key:key,value:value}),signal:AbortSignal.timeout(3000)});
+  }catch(e){}
+}
+
+// Load shared ticks on startup
+async function loadSharedTicks(){
+  // Load all shared tick types in parallel
+  var [sharedPk, sharedStaff, sharedNeg, sharedWeek, sharedAuto] = await Promise.all([
+    syncLoad('cc_pk_ticks'),
+    syncLoad('cc_staff2_ticks'),
+    syncLoad('cc_neg_ticks'),
+    syncLoad('cc_staff_week'),
+    syncLoad('cc_auto_log'),
+  ]);
+
+  if(sharedPk){
+    Object.keys(sharedPk).forEach(function(bc){
+      if(!pkTicks[bc])pkTicks[bc]=[false,false,false];
+      for(var i=0;i<3;i++){if(sharedPk[bc][i])pkTicks[bc][i]=true;}
+    });
+    localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTicks));
+  }
+  if(sharedStaff){
+    Object.assign(ticks,sharedStaff);
+    localStorage.setItem('cc_staff2_ticks',JSON.stringify(ticks));
+  }
+  if(sharedNeg){
+    Object.assign(negTicks,sharedNeg);
+    localStorage.setItem('cc_neg_ticks',JSON.stringify(negTicks));
+  }
+  if(sharedWeek){
+    // Merge week data — take highest points per day/branch
+    var localWeek=getWeekData();
+    Object.keys(sharedWeek).forEach(function(day){
+      if(!localWeek[day])localWeek[day]={};
+      Object.keys(sharedWeek[day]).forEach(function(bk){
+        if(!localWeek[day][bk]||sharedWeek[day][bk].pts>localWeek[day][bk].pts){
+          localWeek[day][bk]=sharedWeek[day][bk];
+        }
+      });
+    });
+    try{localStorage.setItem('cc_staff_week',JSON.stringify(localWeek));}catch(e){}
+  }
+  if(sharedAuto){
+    // Merge auto logs — combine and deduplicate by timestamp
+    var localAuto=getAutoLog();
+    var allTs=new Set(localAuto.map(function(e){return e.ts;}));
+    sharedAuto.forEach(function(e){if(!allTs.has(e.ts))localAuto.push(e);});
+    localAuto.sort(function(a,b){return b.ts-a.ts;});
+    saveAutoLog(localAuto.slice(0,1000));
+  }
+  showSyncStatus(syncEnabled?'✓ Synced':'Offline — local only');
+}
+
+// Debounced save — waits 500ms after last tick before syncing
+function debouncedSync(key,value){
+  if(pendingSync)clearTimeout(pendingSync);
+  pendingSync=setTimeout(function(){
+    syncSave(key,value);
+    pendingSync=null;
+    showSyncStatus('✓ Synced to all phones');
+  },500);
+}
+
+function showSyncStatus(msg){
+  var el=document.getElementById('sync-status');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.opacity='1';
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){el.style.opacity='0';},2500);
+}
+
+// ── PICKING TIMER ─────────────────────────────────────────────
+var pickTimer={
+  running:false,
+  startTime:null,
+  lastPickTime:null,
+  pickCount:0,
+  times:[], // ms between each pick
+  interval:null
+};
+
+function startPickTimer(){
+  if(pickTimer.running)return;
+  pickTimer.running=true;
+  pickTimer.startTime=Date.now();
+  pickTimer.lastPickTime=Date.now();
+  pickTimer.pickCount=0;
+  pickTimer.times=[];
+  pickTimer.interval=setInterval(updateTimerDisplay,1000);
+  updateTimerDisplay();
+  showTimerBar(true);
+}
+
+function recordPick(){
+  var now=Date.now();
+  if(!pickTimer.running)startPickTimer();
+  if(pickTimer.lastPickTime){
+    var elapsed=now-pickTimer.lastPickTime;
+    pickTimer.times.push(elapsed);
+  }
+  pickTimer.lastPickTime=now;
+  pickTimer.pickCount++;
+  updateTimerDisplay();
+}
+
+function stopPickTimer(){
+  if(!pickTimer.running)return;
+  pickTimer.running=false;
+  clearInterval(pickTimer.interval);
+  updateTimerDisplay();
+}
+
+function resetPickTimer(){
+  stopPickTimer();
+  pickTimer.startTime=null;
+  pickTimer.lastPickTime=null;
+  pickTimer.pickCount=0;
+  pickTimer.times=[];
+  showTimerBar(false);
+  updateTimerDisplay();
+}
+
+function fmtTime(ms){
+  var s=Math.floor(ms/1000);
+  var m=Math.floor(s/60);s=s%60;
+  return (m>0?m+'m ':'')+s+'s';
+}
+
+function updateTimerDisplay(){
+  var el=document.getElementById('pick-timer-display');
+  if(!el||!pickTimer.startTime)return;
+  var totalMs=Date.now()-pickTimer.startTime;
+  var avgMs=pickTimer.times.length>0?
+    pickTimer.times.reduce(function(a,b){return a+b;})/pickTimer.times.length:0;
+  var lastMs=pickTimer.times.length>0?pickTimer.times[pickTimer.times.length-1]:0;
+
+  var context=currentMode==='warehouse'?'warehouse picking':
+               currentView==='urgent'?'collecting stock':
+               currentView==='negative'?'fixing negatives':'';
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+    '<span style="font-size:12px;font-weight:700;color:var(--purpletxt)">⏱ '+fmtTime(totalMs)+' '+context+'</span>'+
+    '<span style="font-size:11px;color:var(--sub)">'+pickTimer.pickCount+' done</span>'+
+    (avgMs>0?'<span style="font-size:11px;color:var(--sub)">avg '+fmtTime(avgMs)+'/item</span>':'')+
+    (lastMs>0?'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--purplebg);color:var(--purpletxt)">last: '+fmtTime(lastMs)+'</span>':'')+
+    (!pickTimer.running&&pickTimer.pickCount>0?'<span style="font-size:10px;font-weight:700;color:var(--green);padding:2px 6px;border-radius:4px;background:var(--greenbg)">✓ Session complete!</span>':'')+
+    '</div>';
+}
+
+function showTimerBar(show){
+  var el=document.getElementById('pick-timer-bar');
+  if(el)el.style.display=show?'block':'none';
+}
 
 </script>
 
