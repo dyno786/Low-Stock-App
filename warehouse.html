@@ -317,6 +317,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .wh-btn-name{color:var(--purpletxt)}
 .wh-btn-sub{color:var(--purpletxt);opacity:.75}
 .hdr{padding-bottom:12px}
+
+/* STICKY NAV + WAREHOUSE TIME LOG */
+.app-nav{position:sticky;top:0;z-index:999;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,.08);padding:7px 8px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.nav-link,.nav-btn{border:1px solid var(--border);background:var(--s1);border-radius:10px;padding:8px 4px;text-align:center;text-decoration:none;color:var(--sub);font-size:10px;font-weight:800;font-family:var(--font);cursor:pointer;line-height:1.2}
+.nav-link.on,.nav-btn.on{background:var(--purple);border-color:var(--purple);color:#fff}
+.nav-link.staff{color:var(--red)}.nav-link.staff.on{color:#fff;background:var(--red);border-color:var(--red)}
+.wh-live-bar{position:sticky;top:50px;z-index:998;background:linear-gradient(135deg,var(--purplebg),#fff);border-bottom:1px solid var(--border);padding:8px 10px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+.wh-live-main{font-size:12px;font-weight:900;color:var(--purpletxt)}
+.wh-live-sub{font-size:10px;color:var(--sub);margin-top:2px}
+.wh-live-btn{border:1px solid var(--purple);background:var(--purple);color:#fff;border-radius:9px;padding:7px 10px;font-size:10px;font-weight:800;font-family:var(--font);cursor:pointer}
+.timer-bar{display:block;position:sticky;top:104px;z-index:997}
+.log-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 14px;background:var(--bg)}
+.log-stat{background:#fff;border:1px solid var(--border);border-radius:10px;padding:9px 6px;text-align:center}
+.log-stat-val{font-size:18px;font-weight:900;font-family:monospace;line-height:1;color:var(--purpletxt)}
+.log-stat-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:3px;font-weight:800}
+.log-table{padding:10px 12px 18px}.log-row{display:grid;grid-template-columns:54px 1fr;gap:8px;align-items:stretch;margin-bottom:8px}.log-day{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center;font-size:11px;font-weight:900}.log-day.today{background:var(--redbg);color:var(--redtxt);border-color:#fca5a5}.log-cells{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.log-cell{background:#fff;border:1px solid var(--border);border-radius:10px;padding:7px 4px;text-align:center}.log-cell.missed{background:var(--redbg);border-color:#fca5a5}.log-cell.done{background:var(--greenbg);border-color:#86efac}.log-cell.future{background:var(--bg);opacity:.65}.log-num{font-size:14px;font-weight:900;font-family:monospace}.log-lbl{font-size:7px;color:var(--sub);text-transform:uppercase;margin-top:2px}.log-time{font-size:9px;color:var(--purpletxt);font-weight:800;margin-top:3px}
+body{padding-bottom:76px}.bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#fff;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:7px 8px 10px;z-index:10000;box-shadow:0 -6px 18px rgba(0,0,0,.08)}.bottom-nav a,.bottom-nav button{border:0;background:#fff;text-decoration:none;color:var(--sub);font-size:10px;font-weight:800;font-family:var(--font);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}.bottom-nav .on{color:var(--purple)}.bottom-nav .ico{font-size:18px}
+
 </style>
 </head>
 <body>
@@ -350,6 +368,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
     <div class="wh-btn-sub" id="whsub">Loading…</div>
     <div class="wh-totals" id="wh-totals"></div>
   </div>
+</div>
+
+<nav class="app-nav">
+  <a class="nav-link" href="launcher.html">🏠 Dashboard</a>
+  <a class="nav-link staff" href="staff_only.html">👥 Staff</a>
+  <a class="nav-link on" href="warehouse.html">🏭 Warehouse</a>
+  <button class="nav-btn" id="nav-log-btn" type="button">📋 Log</button>
+</nav>
+
+<div class="wh-live-bar">
+  <div>
+    <div class="wh-live-main" id="wh-live-main">⏱ Pick timer ready</div>
+    <div class="wh-live-sub" id="wh-live-sub">Start ticking items to begin today’s warehouse timer</div>
+  </div>
+  <button class="wh-live-btn" id="wh-finish-btn" type="button">Finish day</button>
 </div>
 
 <div class="vtabs" id="vtabs">
@@ -422,6 +455,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div id="wkly-content"></div>
 </div></div>
 
+<div class="panel-ov" id="whlog-ov"><div class="panel-body"><div class="panel-handle"></div>
+  <div class="panel-hdr"><div class="panel-title">Warehouse weekly pick log</div><div style="display:flex;gap:8px;align-items:center"><button id="whlog-clear-btn" style="font-size:10px;color:var(--red);background:none;border:none;cursor:pointer;font-family:var(--font)">Clear</button><div class="panel-close" onclick="close_panel('whlog-ov')">✕</div></div></div>
+  <div id="whlog-content"></div>
+</div></div>
+
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
 var WA='447305505976';
@@ -454,12 +492,25 @@ try{negTx=JSON.parse(localStorage.getItem('cc_n')||'{}')}catch(e){}
 try{pkTx=JSON.parse(localStorage.getItem('cc_p')||'{}')}catch(e){}
 
 // ── TIMER ─────────────────────────────────────────────────────
+var WH_LOG_KEY='cc_wh_pick_log_v2';
+function todayKey(){return new Date().toISOString().slice(0,10);}
+function dayName(d){return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];}
+function getWhLog(){try{return JSON.parse(localStorage.getItem(WH_LOG_KEY)||'{}');}catch(e){return{};}}
+function saveWhLog(log){try{localStorage.setItem(WH_LOG_KEY,JSON.stringify(log));}catch(e){}}
 var tmr={on:false,start:0,last:0,count:0,gaps:[],iv:null};
+function restoreTodayTimer(){
+  var log=getWhLog(),k=todayKey(),r=log[k];
+  if(r&&r.timerStart&&!r.finished){
+    tmr.on=true;tmr.start=r.timerStart;tmr.last=Date.now();tmr.count=r.pickEvents||0;tmr.gaps=[];
+    clearInterval(tmr.iv);tmr.iv=setInterval(tmrUpdate,1000);
+  }
+  tmrUpdate();
+}
 function tmrStart(){
   if(tmr.on)return;
   tmr.on=true;tmr.start=Date.now();tmr.last=Date.now();tmr.count=0;tmr.gaps=[];
-  tmr.iv=setInterval(tmrUpdate,1000);
-  document.getElementById('timer-bar').style.display='block';
+  clearInterval(tmr.iv);tmr.iv=setInterval(tmrUpdate,1000);
+  var log=getWhLog(),k=todayKey();log[k]=log[k]||{};log[k].timerStart=tmr.start;log[k].finished=false;saveWhLog(log);
   tmrUpdate();
 }
 function tmrPick(){
@@ -467,27 +518,44 @@ function tmrPick(){
   if(!tmr.on)tmrStart();
   if(tmr.last)tmr.gaps.push(now-tmr.last);
   tmr.last=now;tmr.count++;
+  var log=getWhLog(),k=todayKey();log[k]=log[k]||{};log[k].pickEvents=(log[k].pickEvents||0)+1;saveWhLog(log);
   tmrUpdate();
 }
 function tmrReset(){
   tmr.on=false;tmr.start=0;tmr.last=0;tmr.count=0;tmr.gaps=[];
   clearInterval(tmr.iv);
-  document.getElementById('timer-bar').style.display='none';
+  var log=getWhLog(),k=todayKey();if(log[k]){delete log[k].timerStart;delete log[k].elapsedMs;log[k].finished=false;saveWhLog(log);}
   document.getElementById('timer-row').innerHTML='<span class="timer-txt">⏱ 0s</span>';
+  updateStickyTimer();
+}
+function finishWhDay(){
+  var log=getWhLog(),k=todayKey();log[k]=log[k]||{};
+  log[k].finished=true;log[k].finishedAt=Date.now();
+  if(tmr.start)log[k].elapsedMs=Date.now()-tmr.start;
+  saveWhLog(log);clearInterval(tmr.iv);tmr.on=false;
+  updateStickyTimer();showWhLog();
 }
 function tmrUpdate(){
-  if(!tmr.start)return;
   var el=document.getElementById('timer-row');if(!el)return;
-  var total=Date.now()-tmr.start;
+  var total=tmr.start?Date.now()-tmr.start:(getWhLog()[todayKey()]&&getWhLog()[todayKey()].elapsedMs)||0;
   var avg=tmr.gaps.length?tmr.gaps.reduce(function(a,b){return a+b;})/tmr.gaps.length:0;
   var last=tmr.gaps.length?tmr.gaps[tmr.gaps.length-1]:0;
-  var ctx=mode==='warehouse'?'picking':view==='collect'?'collecting':view==='neg'?'fixing':'';
-  el.innerHTML='<span class="timer-txt">⏱ '+fmt(total)+' '+ctx+'</span>'+
-    '<span class="timer-meta">'+tmr.count+' done</span>'+
+  el.innerHTML='<span class="timer-txt">⏱ '+fmt(total)+' picking</span>'+
+    '<span class="timer-meta">'+tmr.count+' ticks</span>'+
     (avg>0?'<span class="timer-meta">avg '+fmt(avg)+'/item</span>':'')+
     (last>0?'<span class="timer-last">last: '+fmt(last)+'</span>':'');
+  updateStickyTimer(total);
 }
-function fmt(ms){var s=Math.floor(ms/1000),m=Math.floor(s/60);s=s%60;return(m>0?m+'m ':'')+s+'s';}
+function updateStickyTimer(total){
+  var main=document.getElementById('wh-live-main'),sub=document.getElementById('wh-live-sub');if(!main||!sub)return;
+  if(total==null){var r=getWhLog()[todayKey()];total=tmr.start?Date.now()-tmr.start:(r&&r.elapsedMs)||0;}
+  var done=document.querySelectorAll('.pk-cell[data-take="1"].on').length;
+  var tot=document.querySelectorAll('.pk-cell[data-take="1"]').length;
+  main.textContent='⏱ '+fmt(total)+' · '+done+'/'+tot+' picks done';
+  var r=getWhLog()[todayKey()];
+  sub.textContent=(r&&r.finished)?'Today marked finished':'Timer starts automatically when first warehouse item is ticked';
+}
+function fmt(ms){var s=Math.floor((ms||0)/1000),m=Math.floor(s/60),h=Math.floor(m/60);m=m%60;s=s%60;return(h>0?h+'h ':'')+(m>0?m+'m ':'')+s+'s';}
 
 // ── SYNC ──────────────────────────────────────────────────────
 var syncOk=true,syncPending=null;
@@ -1070,6 +1138,8 @@ function updatePkProgress(){
     }).length;
     whsub.textContent=remainingProducts+' products left to pick';
   }
+  saveWarehouseSnapshot();
+  updateStickyTimer();
 }
 
 function pkSection(items){
@@ -1238,6 +1308,57 @@ function showWeekly(){
   document.getElementById('wkly-content').innerHTML=html;document.getElementById('wkly-ov').classList.add('open');
 }
 
+
+
+function saveWarehouseSnapshot(){
+  var cells=document.querySelectorAll('.pk-cell[data-take="1"]');
+  if(!cells.length)return;
+  var log=getWhLog(),k=todayKey(),r=log[k]||{};
+  r.date=k;r.day=dayName(new Date());r.updatedAt=Date.now();
+  r.required=[0,0,0];r.done=[0,0,0];
+  for(var bi=0;bi<3;bi++){
+    r.required[bi]=document.querySelectorAll('.pk-cell[data-take="1"][data-bi="'+bi+'"]').length;
+    r.done[bi]=document.querySelectorAll('.pk-cell[data-take="1"][data-bi="'+bi+'"].on').length;
+  }
+  r.requiredTotal=r.required[0]+r.required[1]+r.required[2];
+  r.doneTotal=r.done[0]+r.done[1]+r.done[2];
+  r.products=document.querySelectorAll('.pk-row').length;
+  if(tmr.start)r.elapsedMs=Date.now()-tmr.start;
+  log[k]=r;saveWhLog(log);
+}
+function weekDates(){
+  var now=new Date(),day=now.getDay(),diff=(day+6)%7;
+  var mon=new Date(now);mon.setHours(0,0,0,0);mon.setDate(now.getDate()-diff);
+  var arr=[];for(var i=0;i<7;i++){var d=new Date(mon);d.setDate(mon.getDate()+i);arr.push(d);}return arr;
+}
+function showWhLog(){
+  saveWarehouseSnapshot();
+  var log=getWhLog(),days=weekDates(),today=todayKey();
+  var totalReq=0,totalDone=0,totalTime=0,miss=0;
+  days.forEach(function(d){
+    var k=d.toISOString().slice(0,10),r=log[k];
+    if(r){
+      totalReq+=r.requiredTotal||0;totalDone+=r.doneTotal||0;totalTime+=r.elapsedMs||0;
+      if((r.requiredTotal||0)>0&&(r.doneTotal||0)<(r.requiredTotal||0))miss++;
+    }
+  });
+  var html='<div class="log-tabs"><div class="log-stat"><div class="log-stat-val">'+totalDone+'/'+totalReq+'</div><div class="log-stat-lbl">Week picks</div></div><div class="log-stat"><div class="log-stat-val">'+fmt(totalTime)+'</div><div class="log-stat-lbl">Time</div></div><div class="log-stat"><div class="log-stat-val">'+miss+'</div><div class="log-stat-lbl">Missed days</div></div></div>';
+  html+='<div class="log-table">';
+  html+='<div style="display:grid;grid-template-columns:54px 1fr;gap:8px;margin-bottom:6px"><div></div><div class="log-cells"><div class="log-lbl">Chap</div><div class="log-lbl">City</div><div class="log-lbl">Roun</div></div></div>';
+  days.forEach(function(d){
+    var k=d.toISOString().slice(0,10),r=log[k],future=k>today,isToday=k===today;
+    html+='<div class="log-row"><div class="log-day '+(isToday?'today':'')+'">'+dayName(d)+'<br><span style="font-size:9px;font-weight:600">'+d.getDate()+'/'+(d.getMonth()+1)+'</span></div><div class="log-cells">';
+    for(var bi=0;bi<3;bi++){
+      var req=r&&r.required?r.required[bi]||0:0,done=r&&r.done?r.done[bi]||0:0;
+      var cls=future?'future':(req>0&&done>=req?'done':(req>0?'missed':''));
+      html+='<div class="log-cell '+cls+'"><div class="log-num">'+done+'/'+req+'</div><div class="log-lbl">'+BR[bi].short+'</div>'+(bi===1&&r&&r.elapsedMs?'<div class="log-time">'+fmt(r.elapsedMs)+'</div>':'')+'</div>';
+    }
+    html+='</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('whlog-content').innerHTML=html;
+  document.getElementById('whlog-ov').classList.add('open');
+}
 // ── CONTROLS ──────────────────────────────────────────────────
 document.querySelector('.branch-grid').addEventListener('click',function(e){
   var btn=e.target.closest('.bb');if(!btn)return;
@@ -1284,12 +1405,15 @@ document.getElementById('timer-reset-btn').addEventListener('click',tmrReset);
 document.getElementById('btn-history').addEventListener('click',showHistory);
 document.getElementById('btn-dprog').addEventListener('click',showDailyProgress);
 document.getElementById('btn-weekly').addEventListener('click',showWeekly);
+document.getElementById('nav-log-btn').addEventListener('click',showWhLog);
+document.getElementById('wh-finish-btn').addEventListener('click',finishWhDay);
+document.getElementById('whlog-clear-btn').addEventListener('click',function(){if(!confirm('Clear warehouse weekly log?'))return;localStorage.removeItem(WH_LOG_KEY);showWhLog();});
 document.getElementById('hist-clear-btn').addEventListener('click',function(){
   if(!confirm('Clear history?'))return;
   localStorage.removeItem(HIST_KEY);
   document.getElementById('hist-content').innerHTML='<div class="empty">Cleared</div>';
 });
-['hist-ov','dprog-ov','wkly-ov'].forEach(function(id){
+['hist-ov','dprog-ov','wkly-ov','whlog-ov'].forEach(function(id){
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 });
 
@@ -1304,10 +1428,18 @@ async function loadAllData(msg){
   buildBranchMaps();
   autoSnap();
   updateWhTotals();
+  restoreTodayTimer();
   render();
 }
 function refreshApp(){loadAllData('Refreshing warehouse…');}
 loadAllData('Loading warehouse picker…');
 </script>
+
+<nav class="bottom-nav">
+  <a href="launcher.html"><span class="ico">🏠</span><span>Home</span></a>
+  <a href="staff_only.html"><span class="ico">👥</span><span>Staff</span></a>
+  <a class="on" href="warehouse.html"><span class="ico">🏭</span><span>Warehouse</span></a>
+  <button type="button" id="bottom-log-btn" onclick="showWhLog()"><span class="ico">📋</span><span>Log</span></button>
+</nav>
 </body>
 </html>
