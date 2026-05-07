@@ -980,11 +980,16 @@ function renderCollect(){
       var bc=this.dataset.bc,si=parseInt(this.dataset.si);
       var wasUnticked=!isTicked(currentDest,si,bc);
       setTick(currentDest,si,bc,wasUnticked);
-      if(wasUnticked)recordPick(); // advance collection timer
+      if(wasUnticked){
+        recordPick();
+        logAction(currentDest,'collect',1,bc);
+        var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
+        ts2[currentDest+'_'+si+'_'+bc]=Date.now();
+        localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
+      }
       renderCollect();
     });
   });
-  // Show timer bar for collect view too
   showTimerBar(true);
   var waBtn=document.getElementById('wa-btn');
   if(waBtn)waBtn.addEventListener('click',sendBranchWhatsApp);
@@ -1088,7 +1093,13 @@ function renderNegative(){
       negTicks[key]=wasUnticked;
       localStorage.setItem('cc_staff2_negticks',JSON.stringify(negTicks));
       debouncedSync('cc_neg_ticks',negTicks);
-      if(wasUnticked)recordPick();
+      if(wasUnticked){
+        recordPick();
+        logAction(currentDest,'negative',1,bc);
+        var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
+        ts2['n_'+currentDest+'_'+bc]=Date.now();
+        localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
+      }
       renderNegative();
     });
   });
@@ -1397,40 +1408,9 @@ function showWeekly(){
 }
 
 // ── WIRE TICK LOGGING ─────────────────────────────────────────
-var _origRenderC=renderCollect;
-renderCollect=function(){
-  _origRenderC();
-  // Re-wire tick buttons to also log
-  document.getElementById('out').querySelectorAll('[data-tick]').forEach(function(btn){
-    btn.addEventListener('click',function(e){
-      e.stopPropagation();
-      var bc=this.dataset.bc,si=parseInt(this.dataset.si);
-      if(isTicked(currentDest,si,bc)){
-        logAction(currentDest,'collect',1,bc);
-        var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
-        ts2[currentDest+'_'+si+'_'+bc]=Date.now();
-        localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
-      }
-    },true);
-  });
-};
+// tick logging integrated into main renderCollect listener
 
-// Also log negative fixes
-var _origRenderN=renderNegative;
-renderNegative=function(){
-  _origRenderN();
-  document.getElementById('out').querySelectorAll('[data-neg]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var bc=this.dataset.bc;
-      if(negTicks[currentDest+'_'+bc]){
-        logAction(currentDest,'negative',1,bc);
-        var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
-        ts2['n_'+currentDest+'_'+bc]=Date.now();
-        localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
-      }
-    },true);
-  });
-};
+// neg logging integrated into main renderNegative listener
 
 
 // ── AUTO ACCOUNTABILITY LOG ───────────────────────────────────
