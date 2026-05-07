@@ -982,6 +982,59 @@ function renderCollect(){
       var bc=this.dataset.bc,si=parseInt(this.dataset.si);
       var wasUnticked=!isTicked(currentDest,si,bc);
       setTick(currentDest,si,bc,wasUnticked);
+
+      // ── INSTANT DOM UPDATE — no full re-render ──
+      // Find the card for this item and update it directly
+      var card=this.closest('.item-card');
+      if(card){
+        if(wasUnticked){
+          card.classList.add('done');
+          var nameEl=card.querySelector('.item-name');
+          if(nameEl)nameEl.style.textDecoration='line-through';
+          this.classList.add('done');
+          var box=card.querySelector('.collect-box');
+          if(box){box.classList.add('done-box');}
+          var num=card.querySelector('.collect-num');
+          if(num){num.classList.add('done-num');}
+        }else{
+          card.classList.remove('done');
+          var nameEl=card.querySelector('.item-name');
+          if(nameEl)nameEl.style.textDecoration='';
+          this.classList.remove('done');
+          var box=card.querySelector('.collect-box');
+          if(box){box.classList.remove('done-box');}
+          var num=card.querySelector('.collect-num');
+          if(num){num.classList.remove('done-num');}
+        }
+      }
+
+      // Update progress bar counts without full render
+      var totalItems=0,doneItems=0;
+      DEST_SOURCES[currentDest].forEach(function(sc){
+        if(activeSources.indexOf(sc.srcIdx)<0)return;
+        var srcData=bd[sc.srcIdx];if(!srcData)return;
+        var destData=bd[currentDest]||[];
+        var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+        srcData.forEach(function(p){
+          if(!p.bc||!p.nm||p.qty<=0)return;
+          var dq=destMap[p.bc]?destMap[p.bc].qty:0;
+          var isBranchSrc=sc.srcIdx!==3;
+          if(isBranchSrc&&dq>0)return;
+          var actualQty=sc.srcIdx===3?(calcWhSplit(p.bc,p.qty)[currentDest]||0):calcCollect(p.qty,sc.rule,dq);
+          if(actualQty<=0)return;
+          if(!deptVisible(p.dp||'General'))return;
+          totalItems++;
+          if(isTicked(currentDest,sc.srcIdx,p.bc))doneItems++;
+        });
+      });
+      var pct=totalItems>0?Math.round(doneItems/totalItems*100):0;
+      document.getElementById('prog-fill').style.width=pct+'%';
+      document.getElementById('prog-txt').textContent=pct+'%';
+      document.getElementById('prog-sub').textContent=doneItems+' of '+totalItems+' collected for '+BRANCHES[currentDest].name;
+      var wac=document.getElementById('wa-count');
+      if(wac)wac.textContent=doneItems+' collected';
+
+      // Log + timer (non-blocking)
       if(wasUnticked){
         recordPick();
         logAction(currentDest,'collect',1,bc);
@@ -989,7 +1042,6 @@ function renderCollect(){
         ts2[currentDest+'_'+si+'_'+bc]=Date.now();
         localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
       }
-      renderCollect();
     });
   });
   showTimerBar(true);
@@ -1095,6 +1147,28 @@ function renderNegative(){
       negTicks[key]=wasUnticked;
       localStorage.setItem('cc_staff2_negticks',JSON.stringify(negTicks));
       debouncedSync('cc_neg_ticks',negTicks);
+
+      // ── INSTANT DOM UPDATE ──
+      var card=this.closest('.neg-card');
+      if(card){
+        if(wasUnticked){
+          card.classList.add('fixed');
+          this.classList.add('done');
+          this.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+        }else{
+          card.classList.remove('fixed');
+          this.classList.remove('done');
+          this.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+        }
+      }
+      // Update progress bar
+      var fixed=Object.keys(negTicks).filter(function(k){return k.startsWith(currentDest+'_')&&negTicks[k];}).length;
+      var total=document.querySelectorAll('[data-neg]').length;
+      var pct=total>0?Math.round(fixed/total*100):0;
+      document.getElementById('prog-fill').style.width=pct+'%';
+      document.getElementById('prog-txt').textContent=pct+'%';
+      document.getElementById('prog-sub').textContent=fixed+' of '+total+' negatives fixed';
+
       if(wasUnticked){
         recordPick();
         logAction(currentDest,'negative',1,bc);
@@ -1102,7 +1176,6 @@ function renderNegative(){
         ts2['n_'+currentDest+'_'+bc]=Date.now();
         localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
       }
-      renderNegative();
     });
   });
   showTimerBar(true);
