@@ -3,39 +3,227 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CC Staff Launcher</title>
+<title>CC Staff Dashboard</title>
 <style>
-:root{--red:#cc0000;--bg:#f0f0f0;--card:#fff;--border:#e0e0e0;--ink:#111;--sub:#777;--r:18px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+:root{
+  --red:#cc0000;
+  --dark:#111827;
+  --muted:#6b7280;
+  --bg:#f3f4f6;
+  --card:#ffffff;
+  --border:#e5e7eb;
+  --green:#15803d;
+  --purple:#6d28d9;
+  --amber:#b45309;
+  --shadow:0 12px 30px rgba(17,24,39,.10);
+  --r:18px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding:18px}
-.header{background:var(--red);color:#fff;border-radius:22px;padding:22px 18px;margin-bottom:16px;box-shadow:0 8px 22px rgba(0,0,0,.12)}
-.logo{width:46px;height:46px;background:#fff;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--red);margin-bottom:12px}
-h1{font-size:24px;line-height:1.1;margin-bottom:6px}.sub{font-size:13px;opacity:.8;line-height:1.4}
-.grid{display:grid;gap:12px}.card{display:block;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:0 5px 16px rgba(0,0,0,.06)}
-.icon{font-size:32px;margin-bottom:8px}.title{font-size:20px;font-weight:800;margin-bottom:5px}.desc{font-size:13px;color:var(--sub);line-height:1.45}.badge{display:inline-block;margin-top:12px;background:#fff0f0;color:var(--red);font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px}
-.footer{font-size:11px;color:var(--sub);text-align:center;margin-top:18px;line-height:1.5}
+body{
+  font-family:var(--font);
+  background:
+    radial-gradient(circle at top left, rgba(204,0,0,.16), transparent 35%),
+    linear-gradient(180deg,#fff 0%,var(--bg) 42%,#eef2f7 100%);
+  color:var(--dark);
+  min-height:100vh;
+  max-width:520px;
+  margin:0 auto;
+}
+.wrap{padding:18px 16px 26px}
+.header{
+  background:linear-gradient(135deg,var(--red),#8f0000);
+  color:#fff;
+  border-radius:24px;
+  padding:18px;
+  box-shadow:var(--shadow);
+  position:relative;
+  overflow:hidden;
+}
+.header:after{
+  content:"";
+  position:absolute;
+  width:160px;height:160px;
+  right:-70px;top:-70px;
+  background:rgba(255,255,255,.13);
+  border-radius:50%;
+}
+.topline{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.logo{
+  width:46px;height:46px;
+  background:#fff;
+  color:var(--red);
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+  letter-spacing:-.5px;
+  box-shadow:0 6px 18px rgba(0,0,0,.14);
+}
+.title h1{font-size:21px;line-height:1.15}
+.title p{font-size:12px;opacity:.78;margin-top:3px}
+.status{
+  display:flex;
+  gap:7px;
+  margin-top:16px;
+  flex-wrap:wrap;
+  position:relative;
+  z-index:1;
+}
+.badge{
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.24);
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:11px;
+  font-weight:700;
+}
+.section-title{
+  margin:22px 2px 11px;
+}
+.section-title h2{font-size:18px}
+.section-title p{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.45}
+.grid{display:grid;gap:13px}
+.card{
+  display:block;
+  text-decoration:none;
+  color:inherit;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:16px;
+  box-shadow:0 8px 22px rgba(17,24,39,.07);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.card:active{transform:scale(.985);box-shadow:0 4px 14px rgba(17,24,39,.09)}
+.card-top{display:flex;align-items:center;gap:13px}
+.icon{
+  width:54px;height:54px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  flex-shrink:0;
+}
+.staff .icon{background:#fff0f0}
+.wh .icon{background:#ede9fe}
+.card h3{font-size:18px;line-height:1.2}
+.card p{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.42}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:13px}
+.chip{
+  font-size:10px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.35px;
+  border-radius:999px;
+  padding:5px 8px;
+}
+.staff .chip{background:#fff0f0;color:#991b1b}
+.wh .chip{background:#ede9fe;color:#4c1d95}
+.go{
+  margin-top:14px;
+  border-radius:13px;
+  padding:11px 12px;
+  font-weight:900;
+  font-size:13px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.staff .go{background:var(--red);color:#fff}
+.wh .go{background:var(--purple);color:#fff}
+.info{
+  margin-top:14px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:12px 13px;
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.55;
+}
+.info strong{color:var(--dark)}
+.footer{
+  text-align:center;
+  color:var(--muted);
+  font-size:10px;
+  margin-top:18px;
+}
+@media(min-width:560px){
+  body{max-width:720px}
+  .grid{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo">CC</div>
-    <h1>CC Staff Dashboard</h1>
-    <div class="sub">Choose the correct app for your role. Staff branches loads branch data only. Warehouse Picker loads the warehouse picking system only.</div>
-  </div>
-  <div class="grid">
-    <a class="card" href="staff_only.html">
-      <div class="icon">👥</div>
-      <div class="title">Staff Branches</div>
-      <div class="desc">Chapeltown, City Center and Roundhay. Collect, negatives and out-of-stock checks.</div>
-      <span class="badge">FAST BRANCH MODE</span>
-    </a>
-    <a class="card" href="warehouse_fixed.html">
-      <div class="icon">🏭</div>
-      <div class="title">Warehouse Picker</div>
-      <div class="desc">Warehouse stock picking, top-up targets and picking counters.</div>
-      <span class="badge">WAREHOUSE MODE</span>
-    </a>
-  </div>
-  <div class="footer">Keep all files in the same folder/server: launcher.html, staff_only.html, warehouse_fixed.html</div>
+  <main class="wrap">
+    <section class="header">
+      <div class="topline">
+        <div class="logo">CC</div>
+        <div class="title">
+          <h1>CC Staff Dashboard</h1>
+          <p>Choose the correct section for today’s stock tasks</p>
+        </div>
+      </div>
+      <div class="status">
+        <span class="badge">⚡ Faster loading</span>
+        <span class="badge">📱 Mobile friendly</span>
+        <span class="badge">🔄 Live stock tasks</span>
+      </div>
+    </section>
+
+    <section class="section-title">
+      <h2>Select your workspace</h2>
+      <p>Branch staff should use Staff Branches. Warehouse team should use Warehouse Picker.</p>
+    </section>
+
+    <section class="grid">
+      <a class="card staff" href="staff_only.html">
+        <div class="card-top">
+          <div class="icon">👥</div>
+          <div>
+            <h3>Staff Branches</h3>
+            <p>For Chapeltown, City Center and Roundhay branch tasks.</p>
+          </div>
+        </div>
+        <div class="chips">
+          <span class="chip">Collect</span>
+          <span class="chip">Negatives</span>
+          <span class="chip">Out of stock</span>
+        </div>
+        <div class="go">
+          <span>Open Staff Branches</span>
+          <span>›</span>
+        </div>
+      </a>
+
+      <a class="card wh" href="warehouse.html">
+        <div class="card-top">
+          <div class="icon">🏭</div>
+          <div>
+            <h3>Warehouse Picker</h3>
+            <p>For picking stock from warehouse and topping up branches.</p>
+          </div>
+        </div>
+        <div class="chips">
+          <span class="chip">Picking</span>
+          <span class="chip">Top ups</span>
+          <span class="chip">Counters</span>
+        </div>
+        <div class="go">
+          <span>Open Warehouse Picker</span>
+          <span>›</span>
+        </div>
+      </a>
+    </section>
+
+    <section class="info">
+      <strong>Tip:</strong> Add this page to the phone home screen. Staff can then open the dashboard and choose the correct section without loading everything at once.
+    </section>
+
+    <div class="footer">CC Hair & Beauty · Staff Stock System</div>
+  </main>
 </body>
 </html>
