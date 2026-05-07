@@ -1046,7 +1046,9 @@ document.querySelector('.branch-grid').addEventListener('click',function(e){
 document.getElementById('vtabs').addEventListener('click',function(e){
   var vt=e.target.closest('.vtab');if(!vt)return;
   document.querySelectorAll('.vtab').forEach(function(t){t.classList.remove('on');});
-  vt.classList.add('on');view=vt.dataset.v;render();
+  vt.classList.add('on');view=vt.dataset.v;
+  document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Opening '+vt.textContent.replace(/^[^A-Za-z]+/,'')+'…</div>';
+  requestAnimationFrame(function(){ setTimeout(render,0); });
 });
 
 document.getElementById('day-pills').addEventListener('click',function(e){
@@ -1086,13 +1088,17 @@ document.getElementById('hist-clear-btn').addEventListener('click',function(){
 async function loadAllData(msg){
   loaded=0;bd=[null,null,null];branchMaps=[{},{},{}];
   document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>'+(msg||'Loading branches…')+'</div>';
-  await Promise.all([
-    loadBranch(0),loadBranch(1),loadBranch(2),
-    loadImgs(),doSync(true)
-  ]);
+
+  // FAST LOAD: show the staff page as soon as the 3 branch files are ready.
+  // Images and cloud sync are loaded afterwards in the background so they do not block the screen.
+  await Promise.all([loadBranch(0),loadBranch(1),loadBranch(2)]);
   buildBranchMaps();
   autoSnap();
   render();
+
+  // Background extras — these update the page after first display instead of delaying staff.
+  loadImgs().then(function(){ render(); }).catch(function(){});
+  doSync(true).then(function(){ render(); }).catch(function(){});
 }
 function refreshApp(){loadAllData('Refreshing…');}
 loadAllData('Loading branches…');
