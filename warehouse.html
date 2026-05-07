@@ -528,6 +528,10 @@ async function doSync(silent){
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
+
+// CSS.escape fallback for older phones
+if(!window.CSS)window.CSS={};
+if(!CSS.escape){CSS.escape=function(v){return String(v).replace(/[^a-zA-Z0-9_-]/g,'\\$&');};}
 function cl(v){return String(v==null?'':v).trim();}
 function pD(s){
   if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;
@@ -985,10 +989,10 @@ function renderWH(){
     '<div class="tbox tbox-r"><div class="tbox-icon">🔵</div><div class="tbox-lbl">Roundhay</div><div class="tbox-sub">Blue box</div></div>'+
     '</div></div></div>';
   html+='<div class="pk-summary">'+
-    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--redtxt)">'+L.dead.length+'</div><div class="pk-smc-lbl">Dead</div></div>'+
-    '<div class="pk-smc"><div class="pk-smc-val" style="color:#b45309">'+dp[0]+'/'+tp[0]+'</div><div class="pk-smc-lbl">Chapy</div></div>'+
-    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--green)">'+dp[1]+'/'+tp[1]+'</div><div class="pk-smc-lbl">City</div></div>'+
-    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--blue)">'+dp[2]+'/'+tp[2]+'</div><div class="pk-smc-lbl">Roun</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" id="pk-dead-count" style="color:var(--redtxt)">'+L.dead.length+'</div><div class="pk-smc-lbl">Dead</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" id="pk-sum-0" style="color:#b45309">'+dp[0]+'/'+tp[0]+'</div><div class="pk-smc-lbl">Chapy</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" id="pk-sum-1" style="color:var(--green)">'+dp[1]+'/'+tp[1]+'</div><div class="pk-smc-lbl">City</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" id="pk-sum-2" style="color:var(--blue)">'+dp[2]+'/'+tp[2]+'</div><div class="pk-smc-lbl">Roun</div></div>'+
   '</div>';
   if(L.dead.length){html+='<div class="pk-sec-hdr"><div class="pk-sec-title" style="color:var(--redtxt)">☠ Dead stock — clear first</div><div class="pk-sec-sub">Not sold 90+ days. Split to branches then return remainder to supplier.</div></div>';html+=pkSection(L.dead);}
   if(L.normal.length){html+='<div class="pk-sec-hdr"><div class="pk-sec-title" style="color:var(--purpletxt)">📦 Normal restock</div><div class="pk-sec-sub">Top up to shelf target. Fast sellers = 12 all. Slow = Roundhay gets 6.</div></div>';html+=pkSection(L.normal);}
@@ -1013,7 +1017,7 @@ function renderWH(){
       // Check if all 3 done for this product
       var row=this.closest('.pk-row');
       if(row){
-        var allDone=pkTx[bc][0]&&pkTx[bc][1]&&pkTx[bc][2];
+        var allDone=Array.prototype.every.call(row.querySelectorAll('.pk-cell[data-take="1"]'),function(c){return c.classList.contains('on');});
         row.classList.toggle('all-done',allDone);
         var checkEl=row.querySelector('.pk-all-check');if(checkEl)checkEl.textContent=allDone?'✅':'';
       }
@@ -1025,9 +1029,47 @@ function renderWH(){
 }
 
 function updatePkProgress(){
-  var cells=document.querySelectorAll('.pk-cell');if(!cells.length)return;
-  var tot=cells.length,dn=document.querySelectorAll('.pk-cell.on').length;
+  var cells=document.querySelectorAll('.pk-cell[data-take="1"]');if(!cells.length)return;
+  var doneCells=document.querySelectorAll('.pk-cell[data-take="1"].on');
+  var tot=cells.length,dn=doneCells.length;
   setProg(tot,dn,dn+' of '+tot+' picks done');
+
+  // Live branch counters in the warehouse summary: Chapy / City / Roundhay
+  for(var bi=0;bi<3;bi++){
+    var bcells=document.querySelectorAll('.pk-cell[data-take="1"][data-bi="'+bi+'"]');
+    var bdone=document.querySelectorAll('.pk-cell[data-take="1"][data-bi="'+bi+'"].on');
+    var el=document.getElementById('pk-sum-'+bi);
+    if(el)el.textContent=bdone.length+'/'+bcells.length;
+  }
+
+  // Live department counters
+  document.querySelectorAll('.pk-dept').forEach(function(h){
+    var dept=h.dataset.dept;
+    var rows=document.querySelectorAll('.pk-row[data-dept="'+CSS.escape(dept)+'"]');
+    var picked=0;
+    rows.forEach(function(r){
+      var need=r.querySelectorAll('.pk-cell[data-take="1"]').length;
+      var done=r.querySelectorAll('.pk-cell[data-take="1"].on').length;
+      if(need>0&&need===done)picked++;
+    });
+    var sub=h.querySelector('.pk-dept-sub');
+    if(sub)sub.textContent=picked+'/'+rows.length+' picked';
+  });
+
+  // Live header/warehouse manager mini counters: show remaining required picks
+  var rem=[0,0,0];
+  for(var b=0;b<3;b++)rem[b]=document.querySelectorAll('.pk-cell[data-take="1"][data-bi="'+b+'"]:not(.on)').length;
+  var wh=document.getElementById('wh-totals');
+  if(wh){
+    wh.querySelectorAll('div div:first-child').forEach(function(n,i){if(i<3)n.textContent=rem[i];});
+  }
+  var whsub=document.getElementById('whsub');
+  if(whsub){
+    var remainingProducts=Array.prototype.filter.call(document.querySelectorAll('.pk-row'),function(r){
+      return r.querySelectorAll('.pk-cell[data-take="1"]:not(.on)').length>0;
+    }).length;
+    whsub.textContent=remainingProducts+' products left to pick';
+  }
 }
 
 function pkSection(items){
@@ -1036,7 +1078,7 @@ function pkSection(items){
   Object.keys(byDept).sort().forEach(function(dept){
     var di=byDept[dept];
     var done=di.filter(function(x){var t=pkTx[x.bc]||[false,false,false];return t[0]&&t[1]&&t[2];}).length;
-    html+='<div class="pk-dept"><span class="pk-dept-name">'+dept+'</span><span class="pk-dept-sub">'+done+'/'+di.length+' picked</span></div>';
+    html+='<div class="pk-dept" data-dept="'+dept.replace(/"/g,'&quot;')+'"><span class="pk-dept-name">'+dept+'</span><span class="pk-dept-sub">'+done+'/'+di.length+' picked</span></div>';
     di.forEach(function(item){html+=mkPkRow(item);});
   });
   return html;
@@ -1044,12 +1086,12 @@ function pkSection(items){
 
 function mkPkRow(item){
   var t=pkTx[item.bc]||[false,false,false];
-  var allDone=t[0]&&t[1]&&t[2];
+  var allDone=true;for(var abi=0;abi<3;abi++){if(item.sp[abi]>0&&!t[abi])allDone=false;}
   var stag=item.st.type==='dead'?'<span class="pk-tag pk-tag-dead">☠ DEAD '+(item.st.d||'?')+'d</span>':
            item.st.type==='slow'?'<span class="pk-tag pk-tag-slow">🐌 SLOW '+item.st.d+'d</span>':
            '<span class="pk-tag pk-tag-fast">⚡ FAST '+item.st.d+'d</span>';
   var BN=['Chapeltown','City','Roundhay'],BC=['c','x','r'],BCOL=['#b45309','var(--green)','var(--blue)'];
-  var html='<div class="pk-row'+(allDone?' all-done':'')+'">'+
+  var html='<div class="pk-row'+(allDone?' all-done':'')+'" data-bc="'+item.bc+'" data-dept="'+item.dp.replace(/"/g,'&quot;')+'">'+
     '<div class="pk-top"><div class="pk-img">'+imgEl(item.bc,44)+'</div>'+
     '<div class="pk-info"><div class="pk-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
     '<div class="pk-bc">'+item.bc+'</div>'+
@@ -1058,7 +1100,7 @@ function mkPkRow(item){
   html+='<div class="pk-strip">';
   for(var bi=0;bi<3;bi++){
     var take=item.sp[bi],has=item.bq[bi],tgt=item.tgts[bi],ticked=!!t[bi];
-    html+='<div class="pk-cell pk-cell-'+BC[bi]+(ticked?' on':'')+'" data-bc="'+item.bc+'" data-bi="'+bi+'">'+
+    html+='<div class="pk-cell pk-cell-'+BC[bi]+(ticked?' on':'')+'" data-bc="'+item.bc+'" data-bi="'+bi+'" data-take="'+(take>0?'1':'0')+'">'+
       '<div class="pc-tdot">'+(ticked?'✓':'')+'</div>'+
       '<div class="pc-bl">'+BN[bi]+'</div>';
     if(take>0){html+='<div class="pc-has">has '+has+'→tgt'+tgt+'</div><div class="pc-num" style="color:'+BCOL[bi]+'">'+take+'</div><div class="pc-sub">pick</div>';}
