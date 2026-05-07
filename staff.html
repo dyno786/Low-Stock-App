@@ -11,418 +11,359 @@
   --green:#15803d;--greenbg:#f0fdf4;--greentxt:#14532d;
   --amber:#b45309;--amberbg:#fffbeb;--ambertxt:#92400e;
   --purple:#6d28d9;--purplebg:#ede9fe;--purpletxt:#4c1d95;
-  --blue:#1d4ed8;--bluebg:#eff6ff;--bluetxt:#1e3a8a;--blue2:#3b82f6;
-  --bg:#f0f0f0;--s1:#fff;--s2:#f8f8f8;--border:#e0e0e0;
+  --blue:#1d4ed8;--bluebg:#eff6ff;--bluetxt:#1e3a8a;
+  --bg:#f0f0f0;--s1:#fff;--border:#e0e0e0;
   --ink:#111;--sub:#777;--r:12px;
   --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:20px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:20px}
 
-/* ── HEADER ── */
-.hdr{background:var(--red);padding:14px 16px 16px}
-.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.hdr-logo{width:36px;height:36px;background:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--red)}
-.hdr-title{color:#fff;font-size:18px;font-weight:700;margin-left:10px}
-.hdr-sub{color:rgba(255,255,255,.65);font-size:11px;font-family:monospace;margin-left:10px}
-.hdr-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)}
+/* HEADER */
+.hdr{background:var(--red);padding:12px 14px 14px}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.logo{width:34px;height:34px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--red)}
+.title{color:#fff;font-size:17px;font-weight:700;margin-left:9px}
+.hdr-sub{color:rgba(255,255,255,.6);font-size:10px;font-family:monospace;margin-left:9px}
+.refresh-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)}
 
-/* ── BRANCH BUTTONS (large) ── */
-.branch-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.branch-btn{background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);border-radius:12px;padding:12px 10px;text-align:center;cursor:pointer;user-select:none;transition:all .15s}
-.branch-btn.on{background:#fff;border-color:#fff}
-.branch-btn-name{font-size:16px;font-weight:700;color:rgba(255,255,255,.7);line-height:1.2}
-.branch-btn.on .branch-btn-name{color:var(--red)}
-.branch-btn-sub{font-size:10px;font-weight:500;color:rgba(255,255,255,.5);margin-top:3px}
-.branch-btn.on .branch-btn-sub{color:var(--red);opacity:.7}
+/* BRANCH BUTTONS */
+.branch-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px}
+.bb{background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.25);border-radius:11px;padding:10px;text-align:center;cursor:pointer;user-select:none;transition:background .1s,border .1s}
+.bb.on{background:#fff;border-color:#fff}
+.bb-name{font-size:15px;font-weight:700;color:rgba(255,255,255,.65)}
+.bb.on .bb-name{color:var(--red)}
+.bb-sub{font-size:9px;color:rgba(255,255,255,.45);margin-top:2px}
+.bb.on .bb-sub{color:var(--red);opacity:.7}
 
-/* WAREHOUSE MANAGER BUTTON */
-.wh-mgr-btn{width:100%;background:rgba(167,139,250,.25);border:2px solid rgba(167,139,250,.5);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;transition:all .15s;margin-top:0}
-.wh-mgr-btn.on{background:#fff;border-color:#fff}
-.wh-mgr-icon{width:36px;height:36px;background:rgba(167,139,250,.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.wh-mgr-btn.on .wh-mgr-icon{background:var(--purplebg)}
-.wh-mgr-name{font-size:16px;font-weight:700;color:rgba(255,255,255,.8);line-height:1.2}
-.wh-mgr-btn.on .wh-mgr-name{color:var(--purpletxt)}
-.wh-mgr-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
-.wh-mgr-btn.on .wh-mgr-sub{color:var(--purpletxt);opacity:.7}
+/* TOP ACTION BUTTONS */
+.top-acts{display:flex;gap:5px;margin-bottom:7px}
+.tap-btn{flex:1;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.3);border-radius:8px;padding:7px 5px;text-align:center;cursor:pointer;user-select:none}
+.tap-btn-icon{font-size:15px}
+.tap-btn-lbl{font-size:8px;font-weight:700;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
 
-/* ── VIEW TABS ── */
-.vtabs{display:flex;background:var(--s1);border-bottom:2px solid var(--bg);overflow-x:auto;scrollbar-width:none}
-.vtabs::-webkit-scrollbar{display:none}
-.vtab{flex-shrink:0;flex:1;padding:13px 8px;text-align:center;font-size:13px;font-weight:700;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer;user-select:none;white-space:nowrap}
+/* WAREHOUSE BUTTON */
+.wh-btn{background:rgba(167,139,250,.2);border:2px solid rgba(167,139,250,.4);border-radius:11px;padding:10px 14px;cursor:pointer;user-select:none;text-align:center}
+.wh-btn.on{background:#fff;border-color:#fff}
+.wh-btn-name{font-size:15px;font-weight:700;color:rgba(255,255,255,.75)}
+.wh-btn.on .wh-btn-name{color:var(--purpletxt)}
+.wh-btn-sub{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px}
+.wh-btn.on .wh-btn-sub{color:var(--purpletxt);opacity:.7}
+.wh-totals{display:flex;gap:7px;justify-content:center;margin-top:7px;flex-wrap:wrap}
+
+/* VIEW TABS */
+.vtabs{display:flex;background:var(--s1);border-bottom:2px solid var(--bg)}
+.vtab{flex:1;padding:12px 6px;text-align:center;font-size:12px;font-weight:700;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer;user-select:none}
 .vtab.on{color:var(--red);border-bottom-color:var(--red)}
-.vtab-wh{flex-shrink:0;flex:1;padding:13px 8px;text-align:center;font-size:13px;font-weight:700;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer;user-select:none;white-space:nowrap}
-.vtab-wh.on{color:var(--purple);border-bottom-color:var(--purple)}
 
-/* ── SECTION HEADINGS (large) ── */
-.sec-heading{padding:16px 16px 8px;background:var(--bg)}
-.sec-heading-title{font-size:22px;font-weight:700;color:var(--ink);line-height:1.2}
-.sec-heading-sub{font-size:13px;color:var(--sub);margin-top:4px}
-.src-heading{background:var(--s1);border-bottom:1px solid var(--border);padding:14px 16px;position:sticky;top:0;z-index:40}
-.src-heading-name{font-size:18px;font-weight:700;color:var(--ink)}
-.src-heading-rule{font-size:12px;font-weight:600;margin-top:3px}
-.src-heading-prog{font-size:11px;color:var(--sub);margin-top:2px}
-.dept-heading{padding:10px 16px 6px;background:var(--bg)}
-.dept-heading-title{font-size:15px;font-weight:700;color:var(--ink)}
-.dept-heading-sub{font-size:11px;color:var(--sub);margin-top:2px}
+/* SYNC BAR */
+.sync-bar{display:flex;align-items:center;background:var(--greenbg);border-bottom:1px solid var(--border);padding:3px 10px;min-height:22px}
+.sync-txt{font-size:10px;color:var(--green);font-weight:600;flex:1}
+.sync-now-btn{font-size:9px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid var(--green);background:var(--greenbg);color:var(--green);cursor:pointer;font-family:var(--font)}
 
-/* ── FILTER SECTIONS ── */
-.filter-card{background:var(--s1);margin:0 0 2px;border-bottom:1px solid var(--border)}
-.fsec-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none}
-.fsec-title{font-size:15px;font-weight:700;color:var(--ink)}
-.fsec-sum{font-size:11px;color:var(--sub);margin-left:8px;font-weight:400}
-.fsec-arrow{font-size:13px;color:var(--sub);transition:transform .2s}
+/* TIMER BAR */
+.timer-bar{display:none;background:var(--purplebg);border-bottom:1px solid var(--border);padding:7px 12px}
+.timer-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.timer-txt{font-size:12px;font-weight:700;color:var(--purpletxt)}
+.timer-meta{font-size:10px;color:var(--sub)}
+.timer-last{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--purplebg);color:var(--purpletxt);font-weight:600}
+.timer-btns{display:flex;gap:6px;margin-top:5px}
+.timer-btn{font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:var(--font)}
+
+/* OOS DAY FILTER */
+.day-filter{display:none;background:var(--s1);border-bottom:1px solid var(--border);padding:7px 10px;overflow-x:auto;scrollbar-width:none}
+.day-filter::-webkit-scrollbar{display:none}
+.day-inner{display:flex;gap:5px;min-width:max-content}
+
+/* COLLECT FILTERS */
+.filter-wrap{background:var(--s1);border-bottom:2px solid var(--bg)}
+.fsec{border-bottom:0.5px solid var(--border)}
+.fsec:last-child{border-bottom:none}
+.fsec-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;user-select:none}
+.fsec-title{font-size:14px;font-weight:700}
+.fsec-sum{font-size:10px;color:var(--sub);margin-left:7px;font-weight:400}
+.fsec-arrow{font-size:11px;color:var(--sub);transition:transform .2s}
 .fsec-arrow.open{transform:rotate(90deg)}
-.fsec-body{display:none;padding:8px 14px 12px;border-top:1px solid var(--border)}
+.fsec-body{display:none;padding:7px 12px 11px;border-top:0.5px solid var(--border)}
 .fsec-body.open{display:block}
-.pill-row{display:flex;gap:6px;flex-wrap:wrap}
-.pill{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--s1);color:var(--sub);user-select:none;white-space:nowrap;transition:all .1s}
+
+/* PILLS */
+.pill-row{display:flex;gap:5px;flex-wrap:wrap}
+.pill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--s1);color:var(--sub);user-select:none;white-space:nowrap;transition:all .1s}
 .pill.on{background:var(--red);color:#fff;border-color:var(--red)}
-.srcpill{display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--s1);color:var(--sub);user-select:none;transition:all .12s;margin-bottom:5px}
+.srcpill{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--s1);color:var(--sub);user-select:none;transition:all .1s;margin-bottom:5px}
 .srcpill:last-child{margin-bottom:0}
 .srcpill.on{border-color:var(--green);color:var(--green);background:var(--greenbg)}
-.sdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.scheck{width:18px;height:18px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-left:auto}
+.sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.scheck{width:17px;height:17px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;margin-left:auto}
 
-/* ── OOS DAY FILTER ── */
-.day-filter{background:var(--s1);border-bottom:1px solid var(--border);padding:8px 12px;overflow-x:auto;scrollbar-width:none;display:none}
-.day-filter::-webkit-scrollbar{display:none}
-.day-filter-inner{display:flex;gap:6px;min-width:max-content}
+/* PROGRESS */
+.prog-wrap{background:var(--s1);padding:9px 14px;border-bottom:1px solid var(--border)}
+.prog-row{display:flex;align-items:center;gap:7px}
+.prog-bar{flex:1;height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+.prog-txt{font-size:11px;font-weight:700;color:var(--green);min-width:30px;text-align:right}
+.prog-sub{font-size:10px;color:var(--sub);margin-top:3px}
 
-/* ── PROGRESS ── */
-.prog-wrap{background:var(--s1);padding:10px 16px;border-bottom:1px solid var(--border)}
-.prog-row{display:flex;align-items:center;gap:8px}
-.prog-bar{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
-.prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s}
-.prog-txt{font-size:12px;font-weight:700;color:var(--green);min-width:32px;text-align:right}
-.prog-sub{font-size:11px;color:var(--sub);margin-top:4px}
+/* SECTION HEADING */
+.sec-hdr{padding:14px 14px 6px;background:var(--bg)}
+.sec-title{font-size:20px;font-weight:700}
+.sec-sub{font-size:12px;color:var(--sub);margin-top:3px}
 
-/* ── ITEM CARDS ── */
-.card-list{background:var(--s1);border-radius:var(--r);margin:8px 12px;overflow:hidden;border:1px solid var(--border)}
-.item-card{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:12px 14px;gap:10px}
+/* SOURCE HEADING */
+.src-hdr{background:var(--s1);border-bottom:1px solid var(--border);padding:12px 14px}
+.src-name{font-size:17px;font-weight:700}
+.src-rule{font-size:11px;font-weight:600;margin-top:2px}
+.src-prog{font-size:10px;color:var(--sub);margin-top:2px}
+
+/* DEPT HEADING */
+.dept-hdr{padding:8px 14px 5px;background:var(--bg)}
+.dept-name{font-size:14px;font-weight:700}
+.dept-sub{font-size:10px;color:var(--sub);margin-top:2px}
+
+/* CARD LIST */
+.card-list{background:var(--s1);margin:7px 11px;border-radius:var(--r);overflow:hidden;border:1px solid var(--border)}
+
+/* ITEM CARD */
+.item-card{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:11px 12px;gap:9px;transition:background .1s}
 .item-card:last-child{border-bottom:none}
 .item-card.done{background:var(--greenbg)}
 .item-card.done .item-name{text-decoration:line-through;color:var(--sub)}
-.item-img{width:54px;height:54px;border-radius:10px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.item-img img{width:54px;height:54px;object-fit:cover}
+.item-img{width:52px;height:52px;border-radius:9px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.item-img img{width:52px;height:52px;object-fit:cover}
 .item-body{flex:1;min-width:0}
-.item-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
-.item-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:5px}
+.item-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.item-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
 .item-tags{display:flex;gap:3px;flex-wrap:wrap}
-.itag{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600}
+.itag{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600}
 .itag-wh{background:var(--purplebg);color:var(--purpletxt)}
 .itag-src{background:var(--greenbg);color:var(--greentxt)}
 .itag-out{background:var(--redbg);color:var(--redtxt)}
 .itag-day{background:var(--amberbg);color:var(--ambertxt)}
 .itag-day-red{background:var(--redbg);color:var(--redtxt)}
 .itag-info{background:var(--bg);color:var(--sub)}
-.itag-purple{background:var(--purplebg);color:var(--purpletxt)}
-.item-right{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
-.collect-box{background:var(--redbg);border-radius:8px;padding:6px 8px;text-align:center;min-width:44px}
-.collect-box.done-box{background:var(--greenbg)}
-.collect-num{font-size:18px;font-weight:700;color:var(--red);line-height:1}
-.collect-num.done-num{color:var(--green)}
-.collect-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:2px;letter-spacing:.3px}
-.tick-btn{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .12s;cursor:pointer;background:var(--s1)}
-.tick-btn.done{background:var(--green);border-color:var(--green)}
+.item-right{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
+.cbox{background:var(--redbg);border-radius:7px;padding:5px 7px;text-align:center;min-width:42px}
+.cbox.done-box{background:var(--greenbg)}
+.cnum{font-size:17px;font-weight:700;color:var(--red);line-height:1}
+.cnum.done-num{color:var(--green)}
+.clbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:1px}
 
-/* ── NEGATIVE CARDS ── */
-.neg-card{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:12px 14px;gap:10px;align-items:center}
+/* TICK BUTTON — large touch target */
+.tick{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--s1);flex-shrink:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.tick.on{background:var(--green);border-color:var(--green)}
+
+/* NEG CARD */
+.neg-card{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:11px 12px;gap:9px;align-items:center;transition:background .1s}
 .neg-card:last-child{border-bottom:none}
 .neg-card.fixed{background:var(--greenbg)}
-.neg-img{width:48px;height:48px;border-radius:9px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.neg-img img{width:48px;height:48px;object-fit:cover}
+.neg-img{width:46px;height:46px;border-radius:8px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.neg-img img{width:46px;height:46px;object-fit:cover}
 .neg-body{flex:1;min-width:0}
-.neg-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
-.neg-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
+.neg-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.neg-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:3px}
 .neg-tags{display:flex;gap:3px;flex-wrap:wrap}
-.neg-right{flex-shrink:0;text-align:center;min-width:48px}
-.neg-qty{font-size:22px;font-weight:700;font-family:monospace;color:var(--red);line-height:1}
+.neg-right{flex-shrink:0;text-align:center;min-width:46px}
+.neg-qty{font-size:21px;font-weight:700;font-family:monospace;color:var(--red);line-height:1}
 .neg-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:2px}
-.neg-tick{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--s1);margin-top:6px}
-.neg-tick.done{background:var(--green);border-color:var(--green)}
+.neg-tick{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--s1);margin-top:5px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.neg-tick.on{background:var(--green);border-color:var(--green)}
 
-/* ── OOS ROWS ── */
-.oos-row{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:11px 14px;gap:10px;align-items:center}
+/* OOS ROW */
+.oos-row{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:10px 12px;gap:9px;align-items:center}
 .oos-row:last-child{border-bottom:none}
-.oos-row.has-src{background:#f0fdf4}
-.oos-img{width:44px;height:44px;border-radius:8px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.oos-img img{width:44px;height:44px;object-fit:cover}
+.oos-row.has{background:var(--greenbg)}
+.oos-img{width:42px;height:42px;border-radius:7px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.oos-img img{width:42px;height:42px;object-fit:cover}
 .oos-body{flex:1;min-width:0}
-.oos-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
-.oos-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
+.oos-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.oos-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:3px}
 .oos-tags{display:flex;gap:3px;flex-wrap:wrap}
-.oos-right{flex-shrink:0;text-align:center;min-width:44px}
-.oos-days{font-size:22px;font-weight:700;font-family:monospace;line-height:1}
+.oos-right{flex-shrink:0;text-align:center;min-width:42px}
+.oos-days{font-size:20px;font-weight:700;font-family:monospace;line-height:1}
 .oos-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:2px}
 
-/* ── WAREHOUSE MANAGER CARDS ── */
-.wh-card{background:var(--s1);border-radius:var(--r);margin:8px 12px;border:1px solid var(--border);overflow:hidden}
-.wh-card-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.wh-card-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.wh-card-title{font-size:16px;font-weight:700;line-height:1.2}
-.wh-card-sub{font-size:11px;color:var(--sub);margin-top:2px}
-.wh-item{display:flex;background:var(--s1);border-bottom:0.5px solid var(--border);padding:12px 14px;gap:10px}
-.wh-item:last-child{border-bottom:none}
-.wh-item.action{background:#fffbeb}
-.wh-img{width:50px;height:50px;border-radius:9px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.wh-img img{width:50px;height:50px;object-fit:cover}
-.wh-body{flex:1;min-width:0}
-.wh-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
-.wh-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:5px}
-.wh-tags{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px}
-.wh-action{background:var(--amberbg);border-radius:8px;padding:7px 10px;margin-top:6px}
-.wh-action-title{font-size:11px;font-weight:700;color:var(--ambertxt);margin-bottom:3px}
-.wh-action-row{font-size:11px;color:var(--ambertxt);line-height:1.7}
-.wh-right{flex-shrink:0;text-align:center;min-width:52px}
-.wh-qty{font-size:22px;font-weight:700;font-family:monospace;color:var(--ink);line-height:1}
-.wh-qty-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:2px}
-.wh-sold{font-size:14px;font-weight:700;font-family:monospace;color:var(--sub);line-height:1;margin-top:4px}
-.wh-sold-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;margin-top:1px}
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:9px 11px;background:var(--bg)}
+.stat{background:var(--s1);border-radius:9px;padding:9px;text-align:center;border:1px solid var(--border)}
+.stat-val{font-size:20px;font-weight:700;font-family:monospace;line-height:1}
+.stat-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
 
-/* ── STATS GRID ── */
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px;background:var(--bg)}
-.stat-card{background:var(--s1);border-radius:10px;padding:10px;text-align:center;border:1px solid var(--border)}
-.stat-val{font-size:22px;font-weight:700;font-family:monospace;line-height:1}
-.stat-lbl{font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
-
-
-/* ── HISTORY PANEL ── */
-.hist-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;max-width:480px;margin:0 auto}
-.hist-ov.open{display:block}
-.hist-pan{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
-.hist-handle{width:36px;height:3px;background:var(--border);border-radius:2px;margin:12px auto 0}
-.hist-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.hist-title{font-size:16px;font-weight:700}
-.hist-clear{font-size:11px;color:var(--red);cursor:pointer;background:none;border:none;font-family:var(--font)}
-.hist-entry{padding:10px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;gap:10px}
-.hist-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
-.hist-body{flex:1}
-.hist-action{font-size:12px;font-weight:600;color:var(--ink)}
-.hist-meta{font-size:10px;color:var(--sub);margin-top:2px}
-
-/* ── DAILY PROGRESS PANEL ── */
-.dprog-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;max-width:480px;margin:0 auto}
-.dprog-ov.open{display:block}
-.dprog-pan{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
-.dprog-hdr{padding:14px 16px 12px;border-bottom:1px solid var(--border)}
-.dprog-title{font-size:16px;font-weight:700;margin-bottom:2px}
-.dprog-sub{font-size:11px;color:var(--sub)}
-.dprog-branch{padding:12px 16px;border-bottom:1px solid var(--border)}
-.dprog-bname{font-size:15px;font-weight:700;margin-bottom:8px}
-.dprog-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.dprog-lbl{font-size:11px;color:var(--sub);width:100px;flex-shrink:0}
-.dprog-bar{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
-.dprog-fill{height:100%;border-radius:4px;transition:width .4s}
-.dprog-val{font-size:11px;font-weight:700;min-width:36px;text-align:right;font-family:monospace}
-
-/* ── WEEKLY LEADERBOARD PANEL ── */
-.wkly-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;max-width:480px;margin:0 auto}
-.wkly-ov.open{display:block}
-.wkly-pan{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:40px}
-.wkly-hdr{padding:14px 16px 0;border-bottom:1px solid var(--border)}
-.wkly-title{font-size:16px;font-weight:700;margin-bottom:2px}
-.wkly-sub{font-size:11px;color:var(--sub);margin-bottom:12px}
-.podium{display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:20px 16px 12px;background:linear-gradient(180deg,#fff8f0,#fff)}
-.pod{display:flex;flex-direction:column;align-items:center;gap:4px}
-.pod-medal{font-size:24px}
-.pod-bar{border-radius:6px 6px 0 0;width:84px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:8px}
-.pod-pts{font-size:14px;font-weight:700;font-family:monospace;color:#fff}
-.pod-name{font-size:12px;font-weight:700;margin-top:4px}
-.pod-sub{font-size:9px;color:var(--sub)}
-.week-grid{padding:12px 16px}
-.week-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.week-day{font-size:11px;font-weight:600;width:36px;color:var(--sub);flex-shrink:0}
-.week-cells{display:flex;gap:4px;flex:1}
-.week-cell{flex:1;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:1px solid var(--border)}
-.week-cell.done{background:var(--greenbg);color:var(--green);border-color:var(--green)}
-.week-cell.miss{background:var(--redbg);color:var(--redtxt);border-color:#fca5a5}
-.week-cell.empty{background:var(--bg);color:var(--sub)}
-.week-branch-labels{display:flex;gap:4px;flex:1;margin-left:44px;margin-bottom:4px}
-.week-branch-label{flex:1;font-size:9px;font-weight:700;color:var(--sub);text-align:center;text-transform:uppercase;letter-spacing:.3px}
-
-/* ── TOP ACTION BUTTONS ── */
-.top-actions{display:flex;gap:6px;margin-bottom:2px}
-.tap-btn{flex:1;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);border-radius:9px;padding:8px 6px;text-align:center;cursor:pointer;user-select:none}
-.tap-btn-icon{font-size:16px;line-height:1}
-.tap-btn-lbl{font-size:9px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
-
-
-/* ── WAREHOUSE PICKER ── */
-.trolley-wrap{background:var(--s1);border-radius:var(--r);margin:8px 12px;border:1px solid var(--border);overflow:hidden}
-.trolley-hdr{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--purplebg)}
-.trolley-title{font-size:13px;font-weight:700;color:var(--purpletxt);margin-bottom:8px}
-.trolley-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.tbox{border-radius:9px;padding:9px 6px;text-align:center;border:2px solid}
-.tbox-chapy{background:#fff3e0;border-color:#fb923c}
-.tbox-city{background:var(--greenbg);border-color:#4ade80}
-.tbox-roun{background:var(--bluebg);border-color:#60a5fa}
-.tbox-icon{font-size:18px;margin-bottom:3px}
-.tbox-lbl{font-size:10px;font-weight:700}
-.tbox-chapy .tbox-lbl{color:#b45309}
-.tbox-city .tbox-lbl{color:var(--green)}
-.tbox-roun .tbox-lbl{color:var(--blue)}
-.tbox-sub{font-size:9px;color:var(--sub);margin-top:1px}
-
-/* PICKER SUMMARY STRIP */
-.pk-summary{display:grid;grid-template-columns:repeat(4,1fr);background:var(--s1);border-bottom:1px solid var(--border);margin:0 0 2px}
-.pk-smc{padding:8px 4px;text-align:center;border-right:1px solid var(--border)}
+/* WAREHOUSE PICKER */
+.trolley-wrap{background:var(--s1);border-radius:var(--r);margin:7px 11px;border:1px solid var(--border);overflow:hidden}
+.trolley-hdr{padding:11px 13px;border-bottom:1px solid var(--border);background:var(--purplebg)}
+.trolley-title{font-size:12px;font-weight:700;color:var(--purpletxt);margin-bottom:7px}
+.trolley-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.tbox{border-radius:8px;padding:8px 5px;text-align:center;border:2px solid}
+.tbox-c{background:#fff3e0;border-color:#fb923c}
+.tbox-x{background:var(--greenbg);border-color:#4ade80}
+.tbox-r{background:var(--bluebg);border-color:#60a5fa}
+.tbox-icon{font-size:16px;margin-bottom:2px}
+.tbox-lbl{font-size:9px;font-weight:700}
+.tbox-c .tbox-lbl{color:#b45309}
+.tbox-x .tbox-lbl{color:var(--green)}
+.tbox-r .tbox-lbl{color:var(--blue)}
+.tbox-sub{font-size:8px;color:var(--sub);margin-top:1px}
+.pk-summary{display:grid;grid-template-columns:repeat(4,1fr);background:var(--s1);border-bottom:1px solid var(--border)}
+.pk-smc{padding:7px 3px;text-align:center;border-right:1px solid var(--border)}
 .pk-smc:last-child{border-right:none}
-.pk-smc-val{font-size:16px;font-weight:700;font-family:monospace;line-height:1}
-.pk-smc-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
-
-/* PICKER SECTION */
-.pk-sec-hdr{padding:12px 16px 4px}
-.pk-sec-title{font-size:20px;font-weight:700;line-height:1.2}
-.pk-sec-sub{font-size:11px;color:var(--sub);margin-top:3px;line-height:1.5}
-
-/* PICKER DEPT */
-.pk-dept{padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.pk-dept-name{font-size:14px;font-weight:700;color:var(--ink)}
-.pk-dept-sub{font-size:10px;color:var(--sub)}
-
-/* PICK ROW — ONE HORIZONTAL LINE PER PRODUCT */
-.pk-row{background:var(--s1);border-bottom:1px solid var(--border);padding:10px 12px 12px}
-.pk-row.pk-done-all{background:var(--greenbg)}
-.pk-top{display:flex;align-items:center;gap:9px;margin-bottom:9px}
-.pk-img{width:46px;height:46px;border-radius:9px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.pk-img img{width:46px;height:46px;object-fit:cover}
+.pk-smc-val{font-size:14px;font-weight:700;font-family:monospace}
+.pk-smc-lbl{font-size:7px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+.pk-sec-hdr{padding:11px 14px 3px}
+.pk-sec-title{font-size:19px;font-weight:700}
+.pk-sec-sub{font-size:10px;color:var(--sub);margin-top:2px;line-height:1.5}
+.pk-dept{padding:7px 13px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.pk-dept-name{font-size:13px;font-weight:700}
+.pk-dept-sub{font-size:9px;color:var(--sub)}
+.pk-row{background:var(--s1);border-bottom:1px solid var(--border);padding:9px 11px 11px}
+.pk-row.all-done{background:var(--greenbg)}
+.pk-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pk-img{width:44px;height:44px;border-radius:8px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.pk-img img{width:44px;height:44px;object-fit:cover}
 .pk-info{flex:1;min-width:0}
-.pk-name{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
-.pk-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
-.pk-tags{display:flex;gap:4px;flex-wrap:wrap}
-.pk-tag{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600}
+.pk-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.pk-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:3px}
+.pk-tags{display:flex;gap:3px;flex-wrap:wrap}
+.pk-tag{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600}
 .pk-tag-wh{background:var(--purplebg);color:var(--purpletxt)}
-.pk-tag-price{background:var(--bg);color:var(--sub)}
 .pk-tag-dead{background:var(--redbg);color:var(--redtxt)}
 .pk-tag-slow{background:var(--amberbg);color:var(--ambertxt)}
 .pk-tag-fast{background:var(--greenbg);color:var(--greentxt)}
+.pk-tag-price{background:var(--bg);color:var(--sub)}
+.pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.pk-cell{border-radius:9px;padding:8px 5px;border:2px solid;text-align:center;cursor:pointer;user-select:none;position:relative;transition:background .1s,border .1s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.pk-cell-c{border-color:#fbd5aa;background:#fff8f0}
+.pk-cell-x{border-color:#a7f3c8;background:#f0fdf6}
+.pk-cell-r{border-color:#bfdbfe;background:#eff6ff}
+.pk-cell-c.on{border-color:#fb923c;background:#fff3e0}
+.pk-cell-x.on{border-color:#4ade80;background:var(--greenbg)}
+.pk-cell-r.on{border-color:#60a5fa;background:#dbeafe}
+.pc-tdot{position:absolute;top:4px;right:4px;width:13px;height:13px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:7px;background:var(--s1)}
+.pk-cell.on .pc-tdot{background:var(--green);border-color:var(--green);color:#fff}
+.pc-bl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.pk-cell-c .pc-bl{color:#b45309}
+.pk-cell-x .pc-bl{color:var(--green)}
+.pk-cell-r .pc-bl{color:var(--blue)}
+.pc-has{font-size:8px;color:var(--sub);font-family:monospace;margin-bottom:2px}
+.pc-num{font-size:20px;font-weight:700;font-family:monospace;line-height:1}
+.pk-cell-c .pc-num{color:#b45309}
+.pk-cell-x .pc-num{color:var(--green)}
+.pk-cell-r .pc-num{color:var(--blue)}
+.pc-sub{font-size:7px;color:var(--sub);text-transform:uppercase;margin-top:2px}
+.pc-full{font-size:17px;font-weight:700;color:var(--green)}
+.pc-low{font-size:17px;font-weight:700;color:var(--sub)}
 
-/* THE HORIZONTAL 3-COLUMN PICK STRIP */
-.pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.pk-cell{border-radius:10px;padding:9px 6px;border:2px solid;text-align:center;cursor:pointer;user-select:none;position:relative;transition:all .12s}
-.pk-cell-chapy{border-color:#fbd5aa;background:#fff8f0}
-.pk-cell-city{border-color:#a7f3c8;background:#f0fdf6}
-.pk-cell-roun{border-color:#bfdbfe;background:#eff6ff}
-.pk-cell-chapy.pk-ticked{border-color:#fb923c;background:#fff3e0}
-.pk-cell-city.pk-ticked{border-color:#4ade80;background:var(--greenbg)}
-.pk-cell-roun.pk-ticked{border-color:#60a5fa;background:#dbeafe}
-.pk-cell-done{border-color:var(--border)!important;background:var(--greenbg)!important;opacity:.7}
-.pc-branch-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
-.pk-cell-chapy .pc-branch-lbl{color:#b45309}
-.pk-cell-city .pc-branch-lbl{color:var(--green)}
-.pk-cell-roun .pc-branch-lbl{color:var(--blue)}
-.pc-has-txt{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:2px}
-.pc-take-num{font-size:22px;font-weight:700;font-family:monospace;line-height:1}
-.pk-cell-chapy .pc-take-num{color:#b45309}
-.pk-cell-city .pc-take-num{color:var(--green)}
-.pk-cell-roun .pc-take-num{color:var(--blue)}
-.pc-take-sub{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
-.pc-tick-dot{position:absolute;top:5px;right:5px;width:14px;height:14px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8px;background:var(--s1)}
-.pk-cell.pk-ticked .pc-tick-dot{background:var(--green);border-color:var(--green);color:#fff}
-.pc-nostock{font-size:18px;font-weight:700;color:var(--sub);font-family:monospace;line-height:1}
-.pc-stocked{font-size:18px;color:var(--green);font-weight:700;line-height:1}
+/* WA FOOTER */
+.wa-footer{background:var(--s1);border-top:1px solid var(--border);padding:9px 13px 18px;margin-top:14px}
+.wa-row{display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:6px}
+.wa-btn{width:100%;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px}
 
-/* ── LOADING / EMPTY ── */
-.loading{padding:50px 16px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
-.spin{width:26px;height:26px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+/* PANELS */
+.panel-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;max-width:480px;margin:0 auto}
+.panel-ov.open{display:block}
+.panel-body{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:16px 16px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:30px}
+.panel-handle{width:34px;height:3px;background:var(--border);border-radius:2px;margin:11px auto 0}
+.panel-hdr{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.panel-title{font-size:15px;font-weight:700}
+.panel-close{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.dprog-branch{padding:11px 14px;border-bottom:1px solid var(--border)}
+.dprog-bname{font-size:14px;font-weight:700;margin-bottom:7px}
+.dprog-row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.dprog-lbl{font-size:10px;color:var(--sub);width:96px;flex-shrink:0}
+.dprog-bar{flex:1;height:7px;background:var(--bg);border-radius:3px;overflow:hidden}
+.dprog-fill{height:100%;border-radius:3px}
+.dprog-val{font-size:10px;font-weight:700;min-width:32px;text-align:right;font-family:monospace}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:7px;padding:18px 14px 10px;background:linear-gradient(180deg,#fff8f0,#fff)}
+.pod{display:flex;flex-direction:column;align-items:center;gap:3px}
+.pod-medal{font-size:22px}
+.pod-bar{border-radius:5px 5px 0 0;width:80px;display:flex;align-items:center;justify-content:center}
+.pod-pts{font-size:13px;font-weight:700;font-family:monospace}
+.pod-name{font-size:11px;font-weight:700;margin-top:3px}
+.pod-sub{font-size:8px;color:var(--sub)}
+.week-grid{padding:10px 14px}
+.week-row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.week-day{font-size:10px;font-weight:600;width:34px;color:var(--sub);flex-shrink:0}
+.week-cells{display:flex;gap:4px;flex:1}
+.week-cell{flex:1;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:1px solid var(--border)}
+.week-cell.done{background:var(--greenbg);color:var(--green);border-color:var(--green)}
+.week-cell.miss{background:var(--redbg);color:var(--redtxt);border-color:#fca5a5}
+.week-cell.empty{background:var(--bg);color:var(--sub)}
+.week-blbl{flex:1;font-size:8px;font-weight:700;color:var(--sub);text-align:center;text-transform:uppercase}
+.hist-entry{padding:9px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;gap:9px}
+.hist-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.hist-body{flex:1}
+.hist-act{font-size:11px;font-weight:600}
+.hist-meta{font-size:9px;color:var(--sub);margin-top:1px}
+.auto-snap{padding:8px 14px;border-bottom:0.5px solid var(--border)}
+.auto-snap-hdr{display:flex;justify-content:space-between;margin-bottom:5px}
+.auto-snap-date{font-size:10px;font-weight:700}
+.auto-snap-time{font-size:9px;color:var(--sub);font-family:monospace}
+.auto-branch-row{display:flex;gap:7px;padding:3px 0;font-size:10px}
+.auto-branch-name{width:66px;font-weight:600;flex-shrink:0}
+
+/* LOADING */
+.loading{padding:46px 14px;text-align:center;color:var(--sub);font-size:12px;line-height:2}
+.spin{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty{padding:40px 16px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
+.empty{padding:36px 14px;text-align:center;color:var(--sub);font-size:12px;line-height:2}
 
-/* ── WHATSAPP ── */
-.wa-footer{background:var(--s1);border-top:1px solid var(--border);padding:10px 14px 20px;margin-top:16px}
-.wa-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;font-size:11px;color:var(--sub)}
-.wa-btn{width:100%;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px}
-.wa-btn svg{width:18px;height:18px;flex-shrink:0}
-.wa-btn-purple{background:var(--purple)}
+/* SVG PLACEHOLDER */
+.no-img-svg{width:20px;height:20px;opacity:.3}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="hdr">
   <div class="hdr-top">
     <div style="display:flex;align-items:center">
-      <div class="hdr-logo">CC</div>
+      <div class="logo">CC</div>
       <div>
-        <div class="hdr-title" style="margin-left:10px">CC Hair & Beauty</div>
-        <div class="hdr-sub" id="stime" style="margin-left:10px">loading…</div>
+        <div class="title" style="margin-left:8px">CC Hair & Beauty</div>
+        <div class="hdr-sub" id="stime" style="margin-left:8px">loading…</div>
       </div>
     </div>
-    <button class="hdr-btn" id="refresh-btn">↺ Refresh</button>
+    <button class="refresh-btn" id="refresh-btn">↺ Refresh</button>
   </div>
 
-  <!-- BRANCH BUTTONS (large) -->
   <div class="branch-grid">
-    <div class="branch-btn on" data-b="0">
-      <div class="branch-btn-name">Chapeltown</div>
-      <div class="branch-btn-sub" id="bsub0">loading…</div>
-    </div>
-    <div class="branch-btn" data-b="1">
-      <div class="branch-btn-name">City Center</div>
-      <div class="branch-btn-sub" id="bsub1">loading…</div>
-    </div>
-    <div class="branch-btn" data-b="2" style="grid-column:1/-1">
-      <div class="branch-btn-name">Roundhay</div>
-      <div class="branch-btn-sub" id="bsub2">loading…</div>
-    </div>
+    <div class="bb on" data-b="0"><div class="bb-name">Chapeltown</div><div class="bb-sub" id="bsub0">…</div></div>
+    <div class="bb" data-b="1"><div class="bb-name">City Center</div><div class="bb-sub" id="bsub1">…</div></div>
+    <div class="bb" data-b="2" style="grid-column:1/-1"><div class="bb-name">Roundhay</div><div class="bb-sub" id="bsub2">…</div></div>
   </div>
 
-  <!-- TOP ACTION BUTTONS -->
-  <div class="top-actions">
-    <div class="tap-btn" id="btn-dprog">
-      <div class="tap-btn-icon">📊</div>
-      <div class="tap-btn-lbl">Daily progress</div>
-    </div>
-    <div class="tap-btn" id="btn-weekly">
-      <div class="tap-btn-icon">🏆</div>
-      <div class="tap-btn-lbl">Weekly</div>
-    </div>
-    <div class="tap-btn" id="btn-history">
-      <div class="tap-btn-icon">📋</div>
-      <div class="tap-btn-lbl">History</div>
-    </div>
+  <div class="top-acts">
+    <div class="tap-btn" id="btn-dprog"><div class="tap-btn-icon">📊</div><div class="tap-btn-lbl">Progress</div></div>
+    <div class="tap-btn" id="btn-weekly"><div class="tap-btn-icon">🏆</div><div class="tap-btn-lbl">Weekly</div></div>
+    <div class="tap-btn" id="btn-history"><div class="tap-btn-icon">📋</div><div class="tap-btn-lbl">History</div></div>
   </div>
 
-  <!-- WAREHOUSE MANAGER BUTTON -->
-  <div class="wh-mgr-btn" id="wh-mgr-btn" data-b="wh" style="justify-content:center;text-align:center">
-    <div>
-      <div class="wh-mgr-icon" style="margin:0 auto 6px">🏭</div>
-      <div class="wh-mgr-name">Warehouse Manager</div>
-      <div class="wh-mgr-sub" id="whsub">Loading totals…</div>
-      <div id="wh-totals" style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap"></div>
-    </div>
+  <div class="wh-btn" id="wh-btn">
+    <div class="wh-btn-name">🏭 Warehouse Manager</div>
+    <div class="wh-btn-sub" id="whsub">Loading…</div>
+    <div class="wh-totals" id="wh-totals"></div>
   </div>
 </div>
 
-<!-- VIEW TABS -->
 <div class="vtabs" id="vtabs">
-  <div class="vtab on" data-v="urgent">📦 Collect</div>
-  <div class="vtab" data-v="negative">🔴 Negatives</div>
+  <div class="vtab on" data-v="collect">📦 Collect</div>
+  <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
 </div>
 
-<!-- SYNC STATUS -->
-<div style="display:flex;align-items:center;background:var(--greenbg);border-bottom:1px solid var(--border);padding:3px 10px;min-height:24px">
-  <div id="sync-status" style="font-size:10px;color:var(--green);font-weight:600;flex:1;transition:opacity .5s"></div>
-  <button onclick="loadSharedTicks().then(function(){render();showSyncStatus('✓ Refreshed from all phones');})" 
-    style="font-size:9px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid var(--green);background:var(--greenbg);color:var(--green);cursor:pointer;font-family:var(--font);flex-shrink:0">
-    ↺ Sync now
-  </button>
+<div class="sync-bar">
+  <div class="sync-txt" id="sync-txt"></div>
+  <button class="sync-now-btn" id="sync-now-btn">↺ Sync now</button>
 </div>
 
-<!-- PICKING TIMER BAR -->
-<div id="pick-timer-bar" style="display:none;background:var(--purplebg);border-bottom:1px solid var(--border);padding:8px 14px">
-  <div id="pick-timer-display" style="font-size:12px;color:var(--purpletxt)"></div>
-  <div style="display:flex;gap:8px;margin-top:5px">
-    <button onclick="startPickTimer()" style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);cursor:pointer;font-family:var(--font)">▶ Start</button>
-    <button onclick="resetPickTimer()" style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--s1);color:var(--sub);cursor:pointer;font-family:var(--font)">↺ Reset</button>
+<div class="timer-bar" id="timer-bar">
+  <div class="timer-row" id="timer-row"><span class="timer-txt">⏱ 0s</span></div>
+  <div class="timer-btns">
+    <button class="timer-btn" style="border:1px solid var(--purple);background:var(--purplebg);color:var(--purpletxt)" id="timer-reset-btn">↺ Reset timer</button>
   </div>
 </div>
 
-<!-- OOS DAY FILTER -->
 <div class="day-filter" id="day-filter">
-  <div class="day-filter-inner" id="day-filter-pills">
+  <div class="day-inner" id="day-pills">
     <div class="pill on" data-d="all">All</div>
     <div class="pill" data-d="0">Today</div>
     <div class="pill" data-d="7">7+ days</div>
@@ -432,149 +373,199 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </div>
 </div>
 
-<!-- COLLECT FILTERS -->
-<div id="collect-filters" style="background:var(--s1);border-bottom:2px solid var(--bg)">
-  <div class="filter-card">
-    <div class="fsec-hdr" id="fsrc-toggle">
-      <div style="display:flex;align-items:center">
-        <span class="fsec-title">Collect from</span>
-        <span class="fsec-sum" id="src-sum">All sources</span>
-      </div>
-      <span class="fsec-arrow" id="fsrc-arrow">▸</span>
+<div id="collect-filters" class="filter-wrap">
+  <div class="fsec">
+    <div class="fsec-hdr" id="src-toggle">
+      <div style="display:flex;align-items:center"><span class="fsec-title">Collect from</span><span class="fsec-sum" id="src-sum">All sources</span></div>
+      <span class="fsec-arrow" id="src-arrow">▸</span>
     </div>
-    <div class="fsec-body" id="fsrc-body">
-      <div id="src-pills"></div>
-    </div>
+    <div class="fsec-body" id="src-body"><div id="src-pills"></div></div>
   </div>
-  <div class="filter-card" style="border-bottom:none">
-    <div class="fsec-hdr" id="fdept-toggle">
-      <div style="display:flex;align-items:center">
-        <span class="fsec-title">Departments</span>
-        <span class="fsec-sum" id="dept-sum">All</span>
-      </div>
-      <span class="fsec-arrow" id="fdept-arrow">▸</span>
+  <div class="fsec">
+    <div class="fsec-hdr" id="dept-toggle">
+      <div style="display:flex;align-items:center"><span class="fsec-title">Departments</span><span class="fsec-sum" id="dept-sum">All</span></div>
+      <span class="fsec-arrow" id="dept-arrow">▸</span>
     </div>
-    <div class="fsec-body" id="fdept-body">
-      <div class="pill-row" id="dept-pills"></div>
-    </div>
+    <div class="fsec-body" id="dept-body"><div class="pill-row" id="dept-pills"></div></div>
   </div>
 </div>
 
-<!-- PROGRESS -->
 <div class="prog-wrap" id="prog-wrap">
-  <div class="prog-row">
-    <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
-    <span class="prog-txt" id="prog-txt">0%</span>
-  </div>
+  <div class="prog-row"><div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div><span class="prog-txt" id="prog-txt">0%</span></div>
   <div class="prog-sub" id="prog-sub">Loading…</div>
 </div>
 
 <div id="out"><div class="loading"><div class="spin"></div>Loading branches…</div></div>
 
-<script>
-var WA_NUMBER='447305505976';
-var WH_MIN=12;
-// Distribution split when warehouse pushes to branches
-var SPLIT={0:12,1:12,2:6}; // chapy:12, city:12, roundhay:6
-// Dead stock = in warehouse 90+ days, sold <3 times across all branches in last 90 days
-var DEAD_DAYS=90;
-var SLOW_THRESHOLD=3; // total units sold across all branches in 90 days
+<!-- PANELS -->
+<div class="panel-ov" id="hist-ov"><div class="panel-body"><div class="panel-handle"></div>
+  <div class="panel-hdr"><div class="panel-title">History</div><div style="display:flex;gap:8px;align-items:center"><button id="hist-clear-btn" style="font-size:10px;color:var(--red);background:none;border:none;cursor:pointer;font-family:var(--font)">Clear</button><div class="panel-close" onclick="close_panel('hist-ov')">✕</div></div></div>
+  <div id="hist-content"></div>
+</div></div>
 
-var BRANCHES=[
-  {id:'chapy',    name:'Chapeltown', short:'Chap',color:'#fb923c',
+<div class="panel-ov" id="dprog-ov"><div class="panel-body"><div class="panel-handle"></div>
+  <div class="panel-hdr"><div class="panel-title">Today's progress</div><div class="panel-close" onclick="close_panel('dprog-ov')">✕</div></div>
+  <div style="font-size:10px;color:var(--sub);padding:4px 14px" id="dprog-date"></div>
+  <div id="dprog-content"></div>
+</div></div>
+
+<div class="panel-ov" id="wkly-ov"><div class="panel-body"><div class="panel-handle"></div>
+  <div class="panel-hdr"><div class="panel-title">Weekly leaderboard</div><div class="panel-close" onclick="close_panel('wkly-ov')">✕</div></div>
+  <div id="wkly-content"></div>
+</div></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+var WA='447305505976';
+var WH_MIN=12;
+var SPLIT={0:12,1:12,2:6};
+
+var BR=[
+  {id:'chapy',name:'Chapeltown',short:'Chap',color:'#fb923c',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ2DoIGJsmVoJOmShcLoUJ6wFrwbVSejnPy7uft8UEf1Brj5gRNBmSTO4eRqZQkDsldlsD6GiBs2Bo/pub?gid=0&single=true&output=csv'},
-  {id:'city',     name:'City Center',short:'City',color:'#4ade80',
+  {id:'city',name:'City Center',short:'City',color:'#4ade80',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv'},
-  {id:'roundhay', name:'Roundhay',   short:'Roun',color:'#60a5fa',
+  {id:'roundhay',name:'Roundhay',short:'Roun',color:'#60a5fa',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv'},
-  {id:'warehouse',name:'Warehouse',  short:'WH',  color:'#a78bfa',
+  {id:'warehouse',name:'Warehouse',short:'WH',color:'#a78bfa',
    url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv'},
 ];
 var IURL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv';
-var DEST_SOURCES=[
-  [{srcIdx:3,rule:'wh',label:'Min 12'},{srcIdx:1,rule:'half',label:'Half stock'},{srcIdx:2,rule:'half',label:'Half stock'}],
-  [{srcIdx:3,rule:'wh',label:'Min 12'},{srcIdx:0,rule:'half',label:'Half stock'},{srcIdx:2,rule:'half',label:'Half stock'}],
-  [{srcIdx:3,rule:'wh',label:'Min 12'},{srcIdx:0,rule:'half',label:'Half stock'},{srcIdx:1,rule:'half',label:'Half stock'}],
+var SOURCES=[
+  [{si:3,rule:'wh',lbl:'Min 12'},{si:1,rule:'half',lbl:'Half'},{si:2,rule:'half',lbl:'Half'}],
+  [{si:3,rule:'wh',lbl:'Min 12'},{si:0,rule:'half',lbl:'Half'},{si:2,rule:'half',lbl:'Half'}],
+  [{si:3,rule:'wh',lbl:'Min 12'},{si:0,rule:'half',lbl:'Half'},{si:1,rule:'half',lbl:'Half'}],
 ];
 
+// ── STATE ─────────────────────────────────────────────────────
 var bd=[null,null,null,null],imgs={},loaded=0;
-var currentDest=0,currentView='urgent',currentMode='branch'; // 'branch' or 'warehouse'
-var activeSources=[0,1,2,3],activeDepts=['All'],oosFilter='all';
-var ticks=JSON.parse(localStorage.getItem('cc_staff2_ticks')||'{}');
-var negTicks=JSON.parse(localStorage.getItem('cc_staff2_negticks')||'{}');
+var dest=0,view='collect',mode='branch';
+var activeSrc=[0,1,2,3],activeDept=['All'],oosFilt='all';
+// Ticks stored as plain objects keyed by unique string
+var ticks={}; // collect ticks: key = dest+'_'+si+'_'+bc
+var negTx={}; // neg ticks: key = dest+'_'+bc
+var pkTx={}; // warehouse pick ticks: key = bc+'_'+bi (0/1/2)
+try{ticks=JSON.parse(localStorage.getItem('cc_t')||'{}')}catch(e){}
+try{negTx=JSON.parse(localStorage.getItem('cc_n')||'{}')}catch(e){}
+try{pkTx=JSON.parse(localStorage.getItem('cc_p')||'{}')}catch(e){}
 
-// ── HELPERS ──────────────────────────────────────────────────
+// ── TIMER ─────────────────────────────────────────────────────
+var tmr={on:false,start:0,last:0,count:0,gaps:[],iv:null};
+function tmrStart(){
+  if(tmr.on)return;
+  tmr.on=true;tmr.start=Date.now();tmr.last=Date.now();tmr.count=0;tmr.gaps=[];
+  tmr.iv=setInterval(tmrUpdate,1000);
+  document.getElementById('timer-bar').style.display='block';
+  tmrUpdate();
+}
+function tmrPick(){
+  var now=Date.now();
+  if(!tmr.on)tmrStart();
+  if(tmr.last)tmr.gaps.push(now-tmr.last);
+  tmr.last=now;tmr.count++;
+  tmrUpdate();
+}
+function tmrReset(){
+  tmr.on=false;tmr.start=0;tmr.last=0;tmr.count=0;tmr.gaps=[];
+  clearInterval(tmr.iv);
+  document.getElementById('timer-bar').style.display='none';
+  document.getElementById('timer-row').innerHTML='<span class="timer-txt">⏱ 0s</span>';
+}
+function tmrUpdate(){
+  if(!tmr.start)return;
+  var el=document.getElementById('timer-row');if(!el)return;
+  var total=Date.now()-tmr.start;
+  var avg=tmr.gaps.length?tmr.gaps.reduce(function(a,b){return a+b;})/tmr.gaps.length:0;
+  var last=tmr.gaps.length?tmr.gaps[tmr.gaps.length-1]:0;
+  var ctx=mode==='warehouse'?'picking':view==='collect'?'collecting':view==='neg'?'fixing':'';
+  el.innerHTML='<span class="timer-txt">⏱ '+fmt(total)+' '+ctx+'</span>'+
+    '<span class="timer-meta">'+tmr.count+' done</span>'+
+    (avg>0?'<span class="timer-meta">avg '+fmt(avg)+'/item</span>':'')+
+    (last>0?'<span class="timer-last">last: '+fmt(last)+'</span>':'');
+}
+function fmt(ms){var s=Math.floor(ms/1000),m=Math.floor(s/60);s=s%60;return(m>0?m+'m ':'')+s+'s';}
+
+// ── SYNC ──────────────────────────────────────────────────────
+var syncOk=true,syncPending=null;
+async function syncLoad(k){
+  try{
+    var r=await fetch('/api/ticks?key='+k,{signal:AbortSignal.timeout(3000)});
+    var d=await r.json();
+    if(d.fallback){syncOk=false;return null;}
+    return d.data||null;
+  }catch(e){syncOk=false;return null;}
+}
+function syncSave(k,v){
+  if(!syncOk)return;
+  if(syncPending)clearTimeout(syncPending);
+  syncPending=setTimeout(function(){
+    fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key:k,value:v})}).catch(function(){});
+    syncPending=null;
+    setSyncTxt('✓ Synced to all phones');
+  },500);
+}
+function setSyncTxt(t){
+  var el=document.getElementById('sync-txt');if(!el)return;
+  el.textContent=t;
+  clearTimeout(el._t);el._t=setTimeout(function(){el.textContent='';},3000);
+}
+async function doSync(){
+  setSyncTxt('Syncing…');
+  var [sp,st,sn]=await Promise.all([syncLoad('cc_p'),syncLoad('cc_t'),syncLoad('cc_n')]);
+  if(sp)Object.keys(sp).forEach(function(k){pkTx[k]=pkTx[k]||sp[k];});
+  if(st)Object.keys(st).forEach(function(k){ticks[k]=ticks[k]||st[k];});
+  if(sn)Object.keys(sn).forEach(function(k){negTx[k]=negTx[k]||sn[k];});
+  try{localStorage.setItem('cc_t',JSON.stringify(ticks));}catch(e){}
+  try{localStorage.setItem('cc_n',JSON.stringify(negTx));}catch(e){}
+  try{localStorage.setItem('cc_p',JSON.stringify(pkTx));}catch(e){}
+  setSyncTxt(syncOk?'✓ Synced':'Offline — local only');
+  if(loaded>0)render();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
 function cl(v){return String(v==null?'':v).trim();}
 function pD(s){
   if(!s||s==='Never'||s==='Unknown'||s==='NULL')return null;
   var p=s.split('/');
-  if(p.length===3){var d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d)?null:d;}
+  if(p.length===3){var d=new Date(+p[2],+p[1]-1,+p[0]);return isNaN(d)?null:d;}
   return null;
 }
-function dSince(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
-function calcCollect(sq,rule,dq){
-  if(rule==='wh'){
-    if(sq<=0)return 0;
-    var n=WH_MIN-(dq||0); // how many this branch needs to reach minimum
-    if(n<=0)return 0;
-    return n; // return what's NEEDED — actual allocation handled in calcWhSplit
-  }
-  // Branch-to-branch: only called when dq===0, so send half
-  if(sq<=0)return 0;return Math.floor(sq/2);
-}
-
-// Smart warehouse split: given WH stock and all branch needs,
-// allocate by priority (lowest dest stock = highest priority)
-// Returns {0: qty, 1: qty, 2: qty} for each dest branch index
-function calcWhSplit(bc, whQty){
-  var NEEDS=[
-    {destIdx:0, target:SPLIT[0]}, // Chapy needs 12
-    {destIdx:1, target:SPLIT[1]}, // City needs 12
-    {destIdx:2, target:SPLIT[2]}, // Roundhay needs 6
-  ];
-  // Get current stock at each dest
-  NEEDS.forEach(function(n){
-    var destData=bd[n.destIdx];
-    var prod=destData?destData.find(function(p){return p.bc===bc;}):null;
-    n.current=prod?prod.qty:0;
-    n.needed=Math.max(0, n.target - n.current);
-  });
-  // Sort by priority: lowest current stock first (0 stock = most urgent)
-  NEEDS.sort(function(a,b){return a.current - b.current;});
-  var remaining=whQty;
-  var result={0:0,1:0,2:0};
-  NEEDS.forEach(function(n){
-    if(n.needed<=0||remaining<=0)return;
-    var give=Math.min(n.needed, remaining);
-    result[n.destIdx]=give;
-    remaining-=give;
-  });
-  return result;
-}
-function tk(d,s,bc){return d+'_'+s+'_'+bc;}
-function isTicked(d,s,bc){return !!ticks[tk(d,s,bc)];}
-function setTick(d,s,bc,v){
-  ticks[tk(d,s,bc)]=v;
-  if(s===3){for(var b=0;b<3;b++){if(b!==d)ticks[tk(b,s,bc)]=v;}}
-  localStorage.setItem('cc_staff2_ticks',JSON.stringify(ticks));
-  debouncedSync('cc_staff2_ticks',ticks); // sync to all phones
-}
+function dAgo(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
 function imgEl(bc,sz){
-  var src=imgs[bc];sz=sz||50;
-  if(src)return '<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';
-  return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+  sz=sz||50;
+  if(imgs[bc])return '<img src="'+imgs[bc]+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';
+  return '<svg class="no-img-svg" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
 }
-function dayBadge(days,label,redAt,amberAt){
+function dayTag(days,label,r,a){
   if(days===null)return '';
-  var c=days>=(redAt||30)?'itag-day-red':days>=(amberAt||7)?'itag-day':'itag-info';
+  var c=days>=(r||30)?'itag-day-red':days>=(a||7)?'itag-day':'itag-info';
   return '<span class="itag '+c+'">'+days+'d '+label+'</span>';
 }
+function whSplit(bc,wq){
+  var NEEDS=[{i:0,t:SPLIT[0]},{i:1,t:SPLIT[1]},{i:2,t:SPLIT[2]}];
+  NEEDS.forEach(function(n){
+    var p=bd[n.i]?bd[n.i].find(function(x){return x.bc===bc;}):null;
+    n.cur=p?p.qty:0;n.need=Math.max(0,n.t-n.cur);
+  });
+  NEEDS.sort(function(a,b){return a.cur-b.cur;});
+  var rem=wq,res={0:0,1:0,2:0};
+  NEEDS.forEach(function(n){if(n.need>0&&rem>0){var g=Math.min(n.need,rem);res[n.i]=g;rem-=g;}});
+  return res;
+}
+function setProg(total,done,sub){
+  var pct=total>0?Math.round(done/total*100):0;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-txt').textContent=pct+'%';
+  document.getElementById('prog-sub').textContent=sub||'';
+}
+function close_panel(id){document.getElementById(id).classList.remove('open');}
 
-// ── LOAD ─────────────────────────────────────────────────────
+// ── LOAD ──────────────────────────────────────────────────────
 async function loadImgs(){
   try{
-    var cached=localStorage.getItem('cc_imgs');
-    if(cached){var o=JSON.parse(cached);if(Date.now()-o.ts<86400000){imgs=o.d;return;}}
+    var c=localStorage.getItem('cc_imgs');
+    if(c){var o=JSON.parse(c);if(Date.now()-o.ts<86400000){imgs=o.d;return;}}
     var r=await fetch(IURL);var t=await r.text();
     Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
       var bc=cl(row['Barcode']),src=cl(row['ImageURL']);
@@ -585,276 +576,130 @@ async function loadImgs(){
 }
 async function loadBranch(i){
   try{
-    var r=await fetch(BRANCHES[i].url+'&t='+Date.now());
-    var t=await r.text();
+    var r=await fetch(BR[i].url+'&t='+Date.now());var t=await r.text();
     bd[i]=Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){
-      var ls=cl(row['LastSold']),dc=cl(row['DateCreated']);
+      var ls=cl(row['LastSold']);
       return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
              qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,
-             cst:parseFloat(row['AvgCost'])||0,
-             dp:cl(row['Department']),
-             ls:(ls&&ls!=='NULL')?ls:'Never',
-             dc:(dc&&dc!=='NULL')?dc:'Unknown'};
+             dp:cl(row['Department']),ls:(ls&&ls!=='NULL')?ls:'Never'};
     }).filter(function(p){return p.bc&&p.nm;});
   }catch(e){bd[i]=[];}
   loaded++;
-  var t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  document.getElementById('stime').textContent=loaded<4?'loading '+loaded+'/4…':'live · '+t;
-  if(loaded===4){autoSnapshot();updateWhTotals();}
-  // Update branch sub labels
-  for(var b=0;b<3;b++){
-    if(bd[b]){
-      var negs=bd[b].filter(function(p){return p.qty<0;}).length;
-      var oos=bd[b].filter(function(p){return p.qty===0&&p.ls!=='Never';}).length;
-      var el=document.getElementById('bsub'+b);
-      if(el)el.textContent=negs+' neg · '+oos+' OOS';
-    }
-  }
-  if(bd[3]&&loaded===4){
-    try{
-      var lists=buildPickList();
-      var whEl=document.getElementById('whsub');
-      if(whEl)whEl.textContent=lists.dead.length+' dead · '+lists.normal.length+' restock items ready';
-    }catch(e){}
-  }
+  document.getElementById('stime').textContent=loaded<4?'loading '+loaded+'/4…':'live · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  if(i<3){var n=bd[i]?bd[i].filter(function(p){return p.qty<0;}).length:0,o=bd[i]?bd[i].filter(function(p){return p.qty===0&&p.ls!=='Never';}).length:0;var el=document.getElementById('bsub'+i);if(el)el.textContent=n+' neg · '+o+' OOS';}
+  if(loaded===4)autoSnap();
   if(loaded>=1)render();
 }
 
-// ── WAREHOUSE MANAGER: DEAD STOCK LOGIC ──────────────────────
-function buildPickList(){
-  var whData=bd[3];if(!whData)return{dead:[],normal:[]};
-  var dead=[],normal=[];
-  var bMaps=[{},{},{}];
-  for(var b=0;b<3;b++){if(bd[b])bd[b].forEach(function(p){if(p.bc)bMaps[b][p.bc]=p.qty;});}
-
-  function getStatus(p){
-    var days=dSince(p.ls);
-    if(days===null||days>=90)return{type:'dead',days:days};
-    if(days>=30)return{type:'slow',days:days};
-    return{type:'fast',days:days};
-  }
-  function getRounTarget(st){return st.type==='slow'?6:12;}
-
-  function calcSplit(bc,whQty,status){
-    var tgts=[SPLIT[0],SPLIT[1],getRounTarget(status)];
-    var needs=[
-      {idx:0,need:Math.max(0,tgts[0]-(bMaps[0][bc]||0)),current:bMaps[0][bc]||0},
-      {idx:1,need:Math.max(0,tgts[1]-(bMaps[1][bc]||0)),current:bMaps[1][bc]||0},
-      {idx:2,need:Math.max(0,tgts[2]-(bMaps[2][bc]||0)),current:bMaps[2][bc]||0},
-    ];
-    needs.sort(function(a,b){return a.current-b.current;});
-    var rem=whQty,result=[0,0,0];
-    needs.forEach(function(n){if(n.need>0&&rem>0){var g=Math.min(n.need,rem);result[n.idx]=g;rem-=g;}});
-    return result;
-  }
-
-  whData.forEach(function(p){
-    if(!p.bc||!p.nm||p.qty<=0)return;
-    var status=getStatus(p);
-    var splits=calcSplit(p.bc,p.qty,status);
-    if(splits[0]+splits[1]+splits[2]<=0)return;
-    var tgts=[SPLIT[0],SPLIT[1],getRounTarget(status)];
-    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,status:status,
-              bQty:[bMaps[0][p.bc]||0,bMaps[1][p.bc]||0,bMaps[2][p.bc]||0],
-              splits:splits,targets:tgts};
-    if(status.type==='dead')dead.push(item);else normal.push(item);
-  });
-  function sortItems(arr){arr.sort(function(a,b){return(a.bQty[0]+a.bQty[1]+a.bQty[2])-(b.bQty[0]+b.bQty[1]+b.bQty[2]);});}
-  sortItems(dead);sortItems(normal);
-  return{dead:dead,normal:normal};
-}
-
-var pkTicks=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');
-
-function renderWarehouse(){
-  var el=document.getElementById('out');
-  if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
-  var lists=buildPickList();
-  var dead=lists.dead,normal=lists.normal,allItems=dead.concat(normal);
-  var totalPicks=[0,0,0],donePicks=[0,0,0];
-  allItems.forEach(function(item){
-    var t=pkTicks[item.bc]||[false,false,false];
-    for(var b=0;b<3;b++){if(item.splits[b]>0){totalPicks[b]++;if(t[b])donePicks[b]++;}}
-  });
-  var html='';
-  // Trolley legend
-  html+='<div class="trolley-wrap">'+
-    '<div class="trolley-hdr">'+
-      '<div class="trolley-title">🛒 Picking trolley — 3 colour-coded boxes</div>'+
-      '<div class="trolley-boxes">'+
-        '<div class="tbox tbox-chapy"><div class="tbox-icon">🟠</div><div class="tbox-lbl">Chapeltown</div><div class="tbox-sub">Orange box</div></div>'+
-        '<div class="tbox tbox-city"><div class="tbox-icon">🟢</div><div class="tbox-lbl">City Center</div><div class="tbox-sub">Green box</div></div>'+
-        '<div class="tbox tbox-roun"><div class="tbox-icon">🔵</div><div class="tbox-lbl">Roundhay</div><div class="tbox-sub">Blue box</div></div>'+
-      '</div>'+
-    '</div>'+
-  '</div>';
-  // Summary
-  html+='<div class="pk-summary">'+
-    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--redtxt)">'+dead.length+'</div><div class="pk-smc-lbl">Dead items</div></div>'+
-    '<div class="pk-smc"><div class="pk-smc-val" style="color:#b45309">'+donePicks[0]+'/'+totalPicks[0]+'</div><div class="pk-smc-lbl">Chapy done</div></div>'+
-    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--green)">'+donePicks[1]+'/'+totalPicks[1]+'</div><div class="pk-smc-lbl">City done</div></div>'+
-    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--blue)">'+donePicks[2]+'/'+totalPicks[2]+'</div><div class="pk-smc-lbl">Roun done</div></div>'+
-  '</div>';
-  if(dead.length){
-    html+='<div class="pk-sec-hdr"><div class="pk-sec-title" style="color:var(--redtxt)">☠ Dead stock — clear first</div>'+
-      '<div class="pk-sec-sub">Not sold 90+ days. Split to branches then return remainder to supplier.</div></div>';
-    html+=renderPickSection(dead);
-  }
-  if(normal.length){
-    html+='<div class="pk-sec-hdr" style="padding-top:16px"><div class="pk-sec-title" style="color:var(--purpletxt)">📦 Normal restock</div>'+
-      '<div class="pk-sec-sub">Top up to shelf target. Fast = 12 all branches. Slow = Roundhay gets 6.</div></div>';
-    html+=renderPickSection(normal);
-  }
-  if(!allItems.length){
-    html+='<div class="empty">No warehouse picks needed<br><span style="font-size:11px">All branches are at target</span></div>';
-  }
-  html+='<div class="wa-footer">'+
-    '<div class="wa-row"><span>Send pick list to branches</span><span>'+allItems.length+' products</span></div>'+
-    '<button class="wa-btn" style="background:var(--purple)" id="pk-wa-btn">'+
-      '<svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'+
-      'Send pick list to branch managers'+
-    '</button></div>';
-  el.innerHTML=html;
-  updateProg(allItems.length,allItems.filter(function(x){var t=pkTicks[x.bc]||[];return t[0]&&t[1]&&t[2];}).length,
-    'Pick for all 3 branches in one walk · '+allItems.length+' products total');
-  el.querySelectorAll('[data-pkbc]').forEach(function(cell){
-    cell.addEventListener('click',function(){
-      var bc=this.dataset.pkbc,bi=parseInt(this.dataset.pkbi);
-      if(!pkTicks[bc])pkTicks[bc]=[false,false,false];
-      pkTicks[bc][bi]=!pkTicks[bc][bi];
-      localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTicks));
-      debouncedSync('cc_pk_ticks',pkTicks); // sync to all phones
-      if(pkTicks[bc][bi])recordPick(); // start/advance timer
-      renderWarehouse();
-    });
-  });
-  var waBtn=document.getElementById('pk-wa-btn');
-  if(waBtn)waBtn.addEventListener('click',function(){
-    var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
-    var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    var msg='CC Warehouse Pick List\n'+date+' '+time+'\n\n';
-    ['Chapeltown','City Center','Roundhay'].forEach(function(bn,bi){
-      msg+=bn.toUpperCase()+':\n';
-      allItems.forEach(function(item){if(item.splits[bi]>0)msg+='  '+item.nm+(item.sz?' ('+item.sz+')':'')+' x'+item.splits[bi]+'\n';});
-      msg+='\n';
-    });
-    msg+='Sent from CC Warehouse App';
-    window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
-  });
-}
-
-function renderPickSection(items){
-  var byDept={};
-  items.forEach(function(item){if(!byDept[item.dp])byDept[item.dp]=[];byDept[item.dp].push(item);});
-  var html='';
-  Object.keys(byDept).sort().forEach(function(dept){
-    var di=byDept[dept];
-    var done=di.filter(function(x){var t=pkTicks[x.bc]||[];return t[0]&&t[1]&&t[2];}).length;
-    html+='<div class="pk-dept"><span class="pk-dept-name">'+dept+'</span><span class="pk-dept-sub">'+done+'/'+di.length+' picked</span></div>';
-    di.forEach(function(item){html+=mkPickRow(item);});
-  });
-  return html;
-}
-
-function mkPickRow(item){
-  var t=pkTicks[item.bc]||[false,false,false];
-  var allDone=t[0]&&t[1]&&t[2];
-  var stag=item.status.type==='dead'?'<span class="pk-tag pk-tag-dead">☠ DEAD '+(item.status.days||'?')+'d</span>':
-           item.status.type==='slow'?'<span class="pk-tag pk-tag-slow">🐌 SLOW '+item.status.days+'d</span>':
-           '<span class="pk-tag pk-tag-fast">⚡ FAST '+item.status.days+'d</span>';
-  var BNAMES=['Chapeltown','City Center','Roundhay'];
-  var BCLS=['chapy','city','roun'];
-  var BCOLORS=['#b45309','var(--green)','var(--blue)'];
-  var html='<div class="pk-row'+(allDone?' pk-done-all':'')+'">';
-  html+='<div class="pk-top">'+
-    '<div class="pk-img">'+imgEl(item.bc,46)+'</div>'+
-    '<div class="pk-info">'+
-      '<div class="pk-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
-      '<div class="pk-bc">'+item.bc+'</div>'+
-      '<div class="pk-tags"><span class="pk-tag pk-tag-wh">WH: '+item.wh+'</span>'+stag+(item.prc>0?'<span class="pk-tag pk-tag-price">£'+item.prc.toFixed(2)+'</span>':'')+'</div>'+
-    '</div>'+(allDone?'<div style="font-size:20px;flex-shrink:0">✅</div>':'')+
-  '</div>';
-  html+='<div class="pk-strip">';
+// ── AUTO SNAPSHOT ─────────────────────────────────────────────
+var ALOG_KEY='cc_alog';
+function getAlog(){try{return JSON.parse(localStorage.getItem(ALOG_KEY)||'[]');}catch(e){return[];}}
+function saveAlog(l){try{localStorage.setItem(ALOG_KEY,JSON.stringify(l.slice(0,500)));}catch(e){}}
+function autoSnap(){
+  if(loaded<4)return;
+  var now=new Date(),log=getAlog();
+  var last=log[0];
+  if(last&&now.getTime()-last.ts<25*60*1000)return;
+  var snap={ts:now.getTime(),
+    date:now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'}),
+    time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),branches:[]};
   for(var bi=0;bi<3;bi++){
-    var take=item.splits[bi],has=item.bQty[bi],target=item.targets[bi],ticked=!!t[bi];
-    html+='<div class="pk-cell pk-cell-'+BCLS[bi]+(ticked?' pk-ticked':'')+'" data-pkbc="'+item.bc+'" data-pkbi="'+bi+'">';
-    html+='<div class="pc-tick-dot">'+(ticked?'✓':'')+'</div>';
-    html+='<div class="pc-branch-lbl">'+BNAMES[bi]+'</div>';
-    if(take>0){
-      html+='<div class="pc-has-txt">has '+has+' → tgt '+target+'</div>';
-      html+='<div class="pc-take-num" style="color:'+BCOLORS[bi]+'">'+take+'</div>';
-      html+='<div class="pc-take-sub">pick</div>';
-    }else if(has>=target){
-      html+='<div class="pc-has-txt">has '+has+'</div><div class="pc-stocked">✓</div><div class="pc-take-sub">full</div>';
-    }else{
-      html+='<div class="pc-has-txt">has '+has+'</div><div class="pc-nostock">—</div><div class="pc-take-sub">WH low</div>';
-    }
-    html+='</div>';
+    var data=bd[bi];if(!data){snap.branches.push(null);continue;}
+    var negs=data.filter(function(p){return p.qty<0;}).length;
+    var dm={};data.forEach(function(p){if(p.bc)dm[p.bc]=p.qty;});
+    var coll=0;(bd[3]||[]).forEach(function(p){if(p.bc&&p.qty>0&&(dm[p.bc]||0)<12)coll++;});
+    snap.branches.push({name:BR[bi].name,neg:negs,coll:coll});
   }
-  html+='</div></div>';
-  return html;
+  log.unshift(snap);saveAlog(log);
+  // Update WH totals button
+  updateWhTotals();
+}
+function updateWhTotals(){
+  var el=document.getElementById('wh-totals'),sub=document.getElementById('whsub');
+  if(!el||loaded<4)return;
+  var bColors=['#b45309','var(--green)','var(--blue)'],bBgs=['#fff3e0','var(--greenbg)','var(--bluebg)'];
+  var html='';
+  for(var bi=0;bi<3;bi++){
+    var data=bd[bi];if(!data)continue;
+    var dm={};data.forEach(function(p){if(p.bc)dm[p.bc]=p.qty;});
+    var cnt=0;(bd[3]||[]).forEach(function(p){if(p.bc&&p.qty>0&&(dm[p.bc]||0)<12)cnt++;});
+    html+='<div style="background:'+bBgs[bi]+';border-radius:7px;padding:4px 9px;text-align:center">'+
+      '<div style="font-size:15px;font-weight:700;color:'+bColors[bi]+'">'+cnt+'</div>'+
+      '<div style="font-size:8px;color:var(--sub);text-transform:uppercase">'+BR[bi].name.slice(0,4)+'</div>'+
+    '</div>';
+  }
+  el.innerHTML=html;
+  // Dead/normal counts
+  var lists=buildPickList();
+  if(sub)sub.textContent=lists.dead.length+' dead · '+lists.normal.length+' restock items';
 }
 
+// ── MASTER RENDER ─────────────────────────────────────────────
+function render(){
+  var isWH=mode==='warehouse';
+  var isCollect=!isWH&&view==='collect';
+  document.getElementById('vtabs').style.display=isWH?'none':'flex';
+  document.getElementById('collect-filters').style.display=isCollect?'block':'none';
+  document.getElementById('day-filter').style.display=(!isWH&&view==='oos')?'block':'none';
+  document.getElementById('prog-wrap').style.display=isWH?'none':'block';
+  document.getElementById('timer-bar').style.display=(isWH||view!=='oos')&&tmr.on?'block':'none';
+  if(isWH){renderWH();return;}
+  if(isCollect){buildSrcFilter();buildDeptFilter();}
+  if(view==='collect')renderCollect();
+  else if(view==='neg')renderNeg();
+  else renderOOS();
+}
 
-// ── BRANCH VIEWS ──────────────────────────────────────────────
-function deptVisible(dp){return activeDepts.indexOf('All')>=0||activeDepts.indexOf(dp||'General')>=0;}
+// ── COLLECT ───────────────────────────────────────────────────
+function deptOk(dp){return activeDept.indexOf('All')>=0||activeDept.indexOf(dp||'General')>=0;}
 
 function buildSrcFilter(){
-  var srcs=DEST_SOURCES[currentDest];
-  var html='';
+  var srcs=SOURCES[dest],html='';
   srcs.forEach(function(sc){
-    var b=BRANCHES[sc.srcIdx],on=activeSources.indexOf(sc.srcIdx)>=0;
-    html+='<div class="srcpill'+(on?' on':'')+'" data-sidx="'+sc.srcIdx+'" style="border-color:'+(on?'var(--green)':b.color)+';color:'+(on?'var(--green)':b.color)+';background:'+(on?'var(--greenbg)':'var(--s1)')+'">';
-    html+='<div class="sdot" style="background:'+b.color+'"></div>'+b.name;
-    html+='<div class="scheck" style="margin-left:auto">'+(on?'✓':'')+'</div></div>';
+    var b=BR[sc.si],on=activeSrc.indexOf(sc.si)>=0;
+    html+='<div class="srcpill'+(on?' on':'')+'" data-si="'+sc.si+'" style="border-color:'+(on?'var(--green)':b.color)+';color:'+(on?'var(--green)':b.color)+';background:'+(on?'var(--greenbg)':'var(--s1)')+'">'+
+      '<div class="sdot" style="background:'+b.color+'"></div>'+b.name+'<div class="scheck">'+(on?'✓':'')+'</div></div>';
   });
   document.getElementById('src-pills').innerHTML=html;
-  var names=srcs.filter(function(s){return activeSources.indexOf(s.srcIdx)>=0;}).map(function(s){return BRANCHES[s.srcIdx].name;});
-  document.getElementById('src-sum').textContent=names.length===srcs.length?'All sources':names.join(', ');
+  var names=srcs.filter(function(s){return activeSrc.indexOf(s.si)>=0;}).map(function(s){return BR[s.si].name;});
+  document.getElementById('src-sum').textContent=names.length===srcs.length?'':' '+names.join(', ');
   document.getElementById('src-pills').querySelectorAll('.srcpill').forEach(function(p){
     p.addEventListener('click',function(){
-      var si=parseInt(this.dataset.sidx);
-      var idx=activeSources.indexOf(si);
-      if(idx>=0){if(activeSources.length>1)activeSources.splice(idx,1);}
-      else activeSources.push(si);
+      var si=+this.dataset.si,idx=activeSrc.indexOf(si);
+      if(idx>=0){if(activeSrc.length>1)activeSrc.splice(idx,1);}else activeSrc.push(si);
       buildSrcFilter();renderCollect();
     });
   });
 }
 
 function buildDeptFilter(){
-  var destData=bd[currentDest]||[];
-  var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-  var deptSet={};
-  DEST_SOURCES[currentDest].forEach(function(sc){
-    if(activeSources.indexOf(sc.srcIdx)<0)return;
-    var srcData=bd[sc.srcIdx];if(!srcData)return;
-    srcData.forEach(function(p){
+  var destData=bd[dest]||[],dm={};destData.forEach(function(p){if(p.bc)dm[p.bc]=p;});
+  var ds={};
+  SOURCES[dest].forEach(function(sc){
+    if(activeSrc.indexOf(sc.si)<0||!bd[sc.si])return;
+    bd[sc.si].forEach(function(p){
       if(p.qty<=0)return;
-      var dq=destMap[p.bc]?destMap[p.bc].qty:0;
-      if(calcCollect(p.qty,sc.rule,dq)<=0)return;
-      if(destMap[p.bc]&&destMap[p.bc].qty>3)return;
-      if(p.dp)deptSet[p.dp]=true;
+      var dq=dm[p.bc]?dm[p.bc].qty:0;
+      var isBr=sc.si!==3;
+      if(isBr&&dq>0)return;
+      var aq=sc.si===3?(whSplit(p.bc,p.qty)[dest]||0):(dq>0?0:Math.floor(p.qty/2));
+      if(aq<=0)return;
+      if(p.dp)ds[p.dp]=true;
     });
   });
-  var depts=Object.keys(deptSet).sort();
-  var html='<div class="pill'+(activeDepts.indexOf('All')>=0?' on':'')+'" data-d="All">All depts</div>';
+  var depts=Object.keys(ds).sort();
+  var html='<div class="pill'+(activeDept.indexOf('All')>=0?' on':'')+'" data-d="All">All depts</div>';
   depts.forEach(function(d){
-    var on=activeDepts.indexOf('All')<0&&activeDepts.indexOf(d)>=0;
+    var on=activeDept.indexOf('All')<0&&activeDept.indexOf(d)>=0;
     html+='<div class="pill'+(on?' on':'')+'" data-d="'+d.replace(/"/g,'&quot;')+'">'+d+'</div>';
   });
   document.getElementById('dept-pills').innerHTML=html;
-  document.getElementById('dept-sum').textContent=activeDepts.indexOf('All')>=0?'All':activeDepts.join(', ');
+  document.getElementById('dept-sum').textContent=activeDept.indexOf('All')>=0?'':' '+activeDept.join(', ');
   document.getElementById('dept-pills').querySelectorAll('.pill').forEach(function(p){
     p.addEventListener('click',function(){
       var d=this.dataset.d;
-      if(d==='All'){activeDepts=['All'];}
-      else{
-        activeDepts=activeDepts.filter(function(x){return x!=='All';});
-        var idx=activeDepts.indexOf(d);
-        if(idx>=0)activeDepts.splice(idx,1);else activeDepts.push(d);
-        if(!activeDepts.length)activeDepts=['All'];
-      }
+      if(d==='All'){activeDept=['All'];}
+      else{activeDept=activeDept.filter(function(x){return x!=='All';});var idx=activeDept.indexOf(d);if(idx>=0)activeDept.splice(idx,1);else activeDept.push(d);if(!activeDept.length)activeDept=['All'];}
       buildDeptFilter();renderCollect();
     });
   });
@@ -862,99 +707,59 @@ function buildDeptFilter(){
 
 function renderCollect(){
   var el=document.getElementById('out');
-  var destData=bd[currentDest]||[];
-  var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-  var totalItems=0,doneItems=0;
-  var html='';
+  var destData=bd[dest]||[],dm={};destData.forEach(function(p){if(p.bc)dm[p.bc]=p;});
+  var totalItems=0,doneItems=0,html='';
+  html+='<div class="sec-hdr"><div class="sec-title">📦 Collect for '+BR[dest].name+'</div></div>';
 
-  html+='<div class="sec-heading">'+
-    '<div class="sec-heading-title">📦 Collect for '+BRANCHES[currentDest].name+'</div>'+
-    '<div class="sec-heading-sub">Items available to collect from other branches and warehouse</div>'+
-  '</div>';
-
-  DEST_SOURCES[currentDest].forEach(function(sc){
-    if(activeSources.indexOf(sc.srcIdx)<0)return;
-    var srcData=bd[sc.srcIdx];
-    var srcBranch=BRANCHES[sc.srcIdx];
-    if(!srcData)return;
-
-    var eligible=[];
-    srcData.forEach(function(p){
+  SOURCES[dest].forEach(function(sc){
+    if(activeSrc.indexOf(sc.si)<0||!bd[sc.si])return;
+    var srcB=BR[sc.si],elig=[];
+    bd[sc.si].forEach(function(p){
       if(!p.bc||!p.nm||p.qty<=0)return;
-      var destProd=destMap[p.bc],dq=destProd?destProd.qty:0;
-      var qty=calcCollect(p.qty,sc.rule,dq);
-      // Branch-to-branch: only collect when dest has 0 or negative stock
-      // Warehouse: collect to reach the minimum (12 for chapy/city, 6 for roundhay)
-      var isBranchSrc = sc.srcIdx !== 3;
-      if(isBranchSrc && dq > 0) return; // branch-to-branch: only when dest is at 0
-      if(qty <= 0) return;
-      if(!deptVisible(p.dp||'General'))return;
-      // For warehouse: use smart split to get this branch's actual allocation
-      var actualQty = sc.srcIdx === 3 ? (calcWhSplit(p.bc, p.qty)[currentDest] || 0) : qty;
-      if(actualQty <= 0) return;
-      var destTarget=sc.srcIdx===3?SPLIT[currentDest]:0;
-      eligible.push({bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,
-                     srcQty:p.qty,destQty:dq,qty:actualQty,
-                     destTarget:destTarget,isWH:sc.srcIdx===3,
-                     destLs:destProd?destProd.ls:'Never'});
+      var dq=dm[p.bc]?dm[p.bc].qty:0;
+      var isBr=sc.si!==3;
+      if(isBr&&dq>0)return;
+      var aq=sc.si===3?(whSplit(p.bc,p.qty)[dest]||0):Math.floor(p.qty/2);
+      if(aq<=0)return;
+      if(!deptOk(p.dp||'General'))return;
+      elig.push({bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,
+                 srcQty:p.qty,destQty:dq,qty:aq,isWH:sc.si===3,
+                 destTgt:sc.si===3?SPLIT[dest]:0,destLs:dm[p.bc]?dm[p.bc].ls:'Never'});
     });
-    if(!eligible.length)return;
-
-    var byDept={};
-    eligible.forEach(function(item){if(!byDept[item.dp])byDept[item.dp]=[];byDept[item.dp].push(item);});
-    var srcDone=eligible.filter(function(x){return isTicked(currentDest,sc.srcIdx,x.bc);}).length;
-    totalItems+=eligible.length;doneItems+=srcDone;
-
-    // Source section heading
-    html+='<div class="src-heading">'+
-      '<div class="src-heading-name" style="color:'+srcBranch.color+'">Collect from '+srcBranch.name+'</div>'+
-      '<div class="src-heading-rule" style="color:'+srcBranch.color+'">'+
-        (sc.srcIdx===3 ? 'Top up to target (Chap: 12 · City: 12 · Roun: 6) — collect only what is needed' : sc.label)+
-      '</div>'+
-      '<div class="src-heading-prog">'+srcDone+' of '+eligible.length+' collected</div>'+
-    '</div>';
-
+    if(!elig.length)return;
+    var byDept={};elig.forEach(function(item){if(!byDept[item.dp])byDept[item.dp]=[];byDept[item.dp].push(item);});
+    var sdone=elig.filter(function(x){return ticks[dest+'_'+sc.si+'_'+x.bc];}).length;
+    totalItems+=elig.length;doneItems+=sdone;
+    html+='<div class="src-hdr"><div class="src-name" style="color:'+srcB.color+'">Collect from '+srcB.name+'</div>'+
+      '<div class="src-rule" style="color:'+srcB.color+'">'+(sc.si===3?'Top up to target (Chap:12 City:12 Roun:6)':sc.lbl)+'</div>'+
+      '<div class="src-prog">'+sdone+' of '+elig.length+' collected</div></div>';
     Object.keys(byDept).sort().forEach(function(dept){
-      var items=byDept[dept];
-      var did='dc_'+sc.srcIdx+'_'+dept.replace(/\W/g,'_');
-      html+='<div class="dept-heading">'+
-        '<div class="dept-heading-title">'+dept+'</div>'+
-        '<div class="dept-heading-sub">'+items.length+' items</div>'+
-      '</div>';
+      var items=byDept[dept],did='d'+sc.si+'_'+dept.replace(/\W/g,'_');
+      html+='<div class="dept-hdr"><div class="dept-name">'+dept+'</div><div class="dept-sub">'+items.length+' items</div></div>';
       html+='<div class="card-list" id="'+did+'">';
       items.forEach(function(item){
-        var done=isTicked(currentDest,sc.srcIdx,item.bc);
-        var destDays=dSince(item.destLs);
-        var dayTag=dayBadge(destDays,'OOS',30,7);
-        var bStocks='';
-        for(var bb=0;bb<4;bb++){
-          if(!bd[bb])continue;
-          var bp=bd[bb].find(function(x){return x.bc===item.bc;});
-          if(!bp)continue;
-          var bq=bp.qty;
-          var bc2=bq>0?'var(--greentxt)':bq<0?'var(--redtxt)':'var(--sub)';
-          bStocks+='<span class="itag itag-info" style="color:'+bc2+'">'+BRANCHES[bb].short+': '+bq+'</span>';
-        }
-        html+='<div class="item-card'+(done?' done':'')+'" data-bc="'+item.bc+'" data-si="'+sc.srcIdx+'">'+
-          '<div class="item-img">'+imgEl(item.bc,54)+'</div>'+
+        var done=!!ticks[dest+'_'+sc.si+'_'+item.bc];
+        var ddays=dAgo(item.destLs),dtag=dayTag(ddays,'OOS',30,7);
+        var bstk='';for(var bb=0;bb<4;bb++){if(!bd[bb])continue;var bp=bd[bb].find(function(x){return x.bc===item.bc;});if(!bp)continue;var bq=bp.qty,bc2=bq>0?'var(--greentxt)':bq<0?'var(--redtxt)':'var(--sub)';bstk+='<span class="itag itag-info" style="color:'+bc2+'">'+BR[bb].short+':'+bq+'</span>';}
+        html+='<div class="item-card'+(done?' done':'')+'" data-bc="'+item.bc+'" data-si="'+sc.si+'">'+
+          '<div class="item-img">'+imgEl(item.bc,52)+'</div>'+
           '<div class="item-body">'+
             '<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
             '<div class="item-bc">'+item.bc+'</div>'+
-            '<div class="item-tags">'+(dayTag?dayTag:'')+
-              '<span class="itag '+(sc.srcIdx===3?'itag-wh':'itag-src')+'">'+srcBranch.name+': '+item.srcQty+'</span>'+
-              (item.isWH?'<span class="itag itag-info">'+item.destQty+' on shelf → target '+item.destTarget+'</span>':
-                         '<span class="itag itag-out">'+BRANCHES[currentDest].name+': 0 stock</span>')+
+            '<div class="item-tags">'+(dtag?dtag:'')+
+              '<span class="itag '+(sc.si===3?'itag-wh':'itag-src')+'">'+srcB.name+':'+item.srcQty+'</span>'+
+              (item.isWH?'<span class="itag itag-info">'+item.destQty+'→tgt'+item.destTgt+'</span>':'<span class="itag itag-out">'+BR[dest].short+':0</span>')+
               (item.prc>0?'<span class="itag itag-info">£'+item.prc.toFixed(2)+'</span>':'')+
             '</div>'+
-            '<div class="item-tags" style="margin-top:3px">'+bStocks+'</div>'+
+            '<div class="item-tags" style="margin-top:3px">'+bstk+'</div>'+
           '</div>'+
           '<div class="item-right">'+
-            '<div class="collect-box'+(done?' done-box':'')+'">'+
-              '<div class="collect-num'+(done?' done-num':'')+'">'+item.qty+'</div>'+
-              '<div class="collect-lbl">'+(sc.srcIdx===3?'top up':'collect')+'</div>'+
+            '<div class="cbox'+(done?' done-box':'')+'" style="min-width:42px">'+
+              '<div class="cnum'+(done?' done-num':'')+'">'+item.qty+'</div>'+
+              '<div class="clbl">'+(item.isWH?'top up':'collect')+'</div>'+
             '</div>'+
-            '<div class="tick-btn'+(done?' done':'')+'" data-tick="1" data-bc="'+item.bc+'" data-si="'+sc.srcIdx+'">'+
-              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
+            '<div class="tick'+(done?' on':'')+'" data-bc="'+item.bc+'" data-si="'+sc.si+'">'+
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'+(done?'#fff':'var(--border)')+'" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
             '</div>'+
           '</div>'+
         '</div>';
@@ -963,275 +768,162 @@ function renderCollect(){
     });
   });
 
-  if(totalItems===0)html+='<div class="empty">'+(loaded<4?'<div class="spin" style="margin:20px auto"></div>Loading…':'Nothing to collect right now')+'</div>';
-
+  if(totalItems===0)html+='<div class="empty">'+(loaded<4?'<div class="spin" style="margin:18px auto"></div>Loading…':'Nothing to collect right now')+'</div>';
   html+='<div class="wa-footer">'+
-    '<div class="wa-row"><span>Message manager when done</span><span id="wa-count">'+doneItems+' collected</span></div>'+
-    '<button class="wa-btn" id="wa-btn">'+
-      '<svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'+
-      'Message manager'+
-    '</button>'+
-  '</div>';
+    '<div class="wa-row"><span>Message manager when done</span><span id="wa-cnt">'+doneItems+' collected</span></div>'+
+    '<button class="wa-btn" id="wa-btn"><svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Message manager</button></div>';
 
   el.innerHTML=html;
-  updateProg(totalItems,doneItems,doneItems+' of '+totalItems+' collected for '+BRANCHES[currentDest].name);
+  setProg(totalItems,doneItems,doneItems+' of '+totalItems+' collected for '+BR[dest].name);
 
-  el.querySelectorAll('[data-tick]').forEach(function(btn){
+  // WIRE TICKS — single listener, instant DOM update
+  el.querySelectorAll('.tick').forEach(function(btn){
     btn.addEventListener('click',function(e){
       e.stopPropagation();
-      var bc=this.dataset.bc,si=parseInt(this.dataset.si);
-      var wasUnticked=!isTicked(currentDest,si,bc);
-      setTick(currentDest,si,bc,wasUnticked);
-
-      // ── INSTANT DOM UPDATE — no full re-render ──
-      // Find the card for this item and update it directly
+      var bc=this.dataset.bc,si=+this.dataset.si;
+      var key=dest+'_'+si+'_'+bc;
+      var wasDone=!!ticks[key];
+      ticks[key]=!wasDone;
+      try{localStorage.setItem('cc_t',JSON.stringify(ticks));}catch(e){}
+      syncSave('cc_t',ticks);
+      if(si===3)for(var b=0;b<3;b++){if(b!==dest)ticks[b+'_'+si+'_'+bc]=!wasDone;}
+      // Instant visual update — no re-render
       var card=this.closest('.item-card');
+      var nowDone=!wasDone;
       if(card){
-        if(wasUnticked){
-          card.classList.add('done');
-          var nameEl=card.querySelector('.item-name');
-          if(nameEl)nameEl.style.textDecoration='line-through';
-          this.classList.add('done');
-          var box=card.querySelector('.collect-box');
-          if(box){box.classList.add('done-box');}
-          var num=card.querySelector('.collect-num');
-          if(num){num.classList.add('done-num');}
-        }else{
-          card.classList.remove('done');
-          var nameEl=card.querySelector('.item-name');
-          if(nameEl)nameEl.style.textDecoration='';
-          this.classList.remove('done');
-          var box=card.querySelector('.collect-box');
-          if(box){box.classList.remove('done-box');}
-          var num=card.querySelector('.collect-num');
-          if(num){num.classList.remove('done-num');}
-        }
+        card.classList.toggle('done',nowDone);
+        var nm=card.querySelector('.item-name');if(nm)nm.style.textDecoration=nowDone?'line-through':'';
+        var box=card.querySelector('.cbox');if(box)box.classList.toggle('done-box',nowDone);
+        var num=card.querySelector('.cnum');if(num)num.classList.toggle('done-num',nowDone);
       }
-
-      // Update progress bar counts without full render
-      var totalItems=0,doneItems=0;
-      DEST_SOURCES[currentDest].forEach(function(sc){
-        if(activeSources.indexOf(sc.srcIdx)<0)return;
-        var srcData=bd[sc.srcIdx];if(!srcData)return;
-        var destData=bd[currentDest]||[];
-        var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-        srcData.forEach(function(p){
-          if(!p.bc||!p.nm||p.qty<=0)return;
-          var dq=destMap[p.bc]?destMap[p.bc].qty:0;
-          var isBranchSrc=sc.srcIdx!==3;
-          if(isBranchSrc&&dq>0)return;
-          var actualQty=sc.srcIdx===3?(calcWhSplit(p.bc,p.qty)[currentDest]||0):calcCollect(p.qty,sc.rule,dq);
-          if(actualQty<=0)return;
-          if(!deptVisible(p.dp||'General'))return;
-          totalItems++;
-          if(isTicked(currentDest,sc.srcIdx,p.bc))doneItems++;
-        });
-      });
-      var pct=totalItems>0?Math.round(doneItems/totalItems*100):0;
-      document.getElementById('prog-fill').style.width=pct+'%';
-      document.getElementById('prog-txt').textContent=pct+'%';
-      document.getElementById('prog-sub').textContent=doneItems+' of '+totalItems+' collected for '+BRANCHES[currentDest].name;
-      var wac=document.getElementById('wa-count');
-      if(wac)wac.textContent=doneItems+' collected';
-
-      // Log + timer (non-blocking)
-      if(wasUnticked){
-        recordPick();
-        logAction(currentDest,'collect',1,bc);
-        var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
-        ts2[currentDest+'_'+si+'_'+bc]=Date.now();
-        localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
-      }
+      this.classList.toggle('on',nowDone);
+      this.querySelector('svg').setAttribute('stroke',nowDone?'#fff':'var(--border)');
+      // Update progress without re-render
+      var tot=el.querySelectorAll('.tick').length;
+      var dn=el.querySelectorAll('.tick.on').length;
+      setProg(tot,dn,dn+' of '+tot+' collected for '+BR[dest].name);
+      var wc=document.getElementById('wa-cnt');if(wc)wc.textContent=dn+' collected';
+      if(nowDone)tmrPick();
     });
   });
-  showTimerBar(true);
-  var waBtn=document.getElementById('wa-btn');
-  if(waBtn)waBtn.addEventListener('click',sendBranchWhatsApp);
+
+  el.querySelector('#wa-btn').addEventListener('click',sendCollectWA);
 }
 
-function sendBranchWhatsApp(){
-  var destName=BRANCHES[currentDest].name;
+function sendCollectWA(){
   var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
   var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  var msg='CC Hair & Beauty - Transfer Update\\n'+date+' '+time+'\\nBranch: '+destName+'\\n\\n';
-  var done=0,pending=0;
-  DEST_SOURCES[currentDest].forEach(function(sc){
-    if(activeSources.indexOf(sc.srcIdx)<0)return;
-    var srcData=bd[sc.srcIdx];if(!srcData)return;
-    var destData=bd[currentDest]||[];
-    var destMap={};destData.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-    var doneList=[],pendingList=[];
-    srcData.forEach(function(p){
-      if(!p.bc||p.qty<=0)return;
-      var dq=(destMap[p.bc]?destMap[p.bc].qty:0);
-      var qty=calcCollect(p.qty,sc.rule,dq);
-      // Branch-to-branch: only collect when dest has 0 or negative stock
-      // Warehouse: collect to reach the minimum (12 for chapy/city, 6 for roundhay)
-      var isBranchSrc = sc.srcIdx !== 3;
-      if(isBranchSrc && dq > 0) return; // branch-to-branch: only when dest is at 0
-      if(qty <= 0) return;
-      if(!deptVisible(p.dp||'General'))return;
-      var lbl=p.nm+(p.sz?' ('+p.sz+')':'')+' x'+qty;
-      if(isTicked(currentDest,sc.srcIdx,p.bc)){doneList.push(lbl);done++;}
-      else{pendingList.push(lbl);pending++;}
-    });
-    if(!doneList.length&&!pendingList.length)return;
-    msg+='From '+BRANCHES[sc.srcIdx].name+':\\n';
-    doneList.forEach(function(d){msg+='  Done: '+d+'\\n';});
-    pendingList.forEach(function(d){msg+='  Pending: '+d+'\\n';});
-    msg+='\\n';
+  var msg='CC - Transfer Update\n'+date+' '+time+'\nBranch: '+BR[dest].name+'\n\n';
+  var d=0,p=0;
+  document.getElementById('out').querySelectorAll('.item-card').forEach(function(card){
+    var bc=card.dataset.bc,si=+card.dataset.si;
+    var qty=card.querySelector('.cnum').textContent;
+    var nm=card.querySelector('.item-name').textContent;
+    var isDone=!!ticks[dest+'_'+si+'_'+bc];
+    if(isDone){msg+='Done: '+nm+' x'+qty+'\n';d++;}else{msg+='Pending: '+nm+' x'+qty+'\n';p++;}
   });
-  msg+='Done: '+done+' | Pending: '+pending+'\\nSent from CC Staff App';
-  window.open('https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(msg),'_blank');
+  msg+='\nDone: '+d+' | Pending: '+p+'\nSent from CC Staff App';
+  window.open('https://wa.me/'+WA+'?text='+encodeURIComponent(msg),'_blank');
 }
 
-function renderNegative(){
+// ── NEGATIVES ─────────────────────────────────────────────────
+function renderNeg(){
   var el=document.getElementById('out');
-  var data=bd[currentDest];
+  var data=bd[dest];
   if(!data){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
-  var negItems=data.filter(function(p){return p.bc&&p.nm&&p.qty<0;});
-
-  var html='<div class="sec-heading">'+
-    '<div class="sec-heading-title">🔴 Negative stock at '+BRANCHES[currentDest].name+'</div>'+
-    '<div class="sec-heading-sub">Use handheld scanner to fix in EPOS. Tick when done.</div>'+
-  '</div>';
-
-  if(!negItems.length){
-    html+='<div class="empty">No negative stock at '+BRANCHES[currentDest].name+'</div>';
-    el.innerHTML=html;updateProg(0,0,'No negatives — great job!');return;
-  }
-  negItems.sort(function(a,b){return a.qty-b.qty;});
-  var fixed=negItems.filter(function(p){return negTicks[currentDest+'_'+p.bc];}).length;
-  updateProg(negItems.length,fixed,fixed+' of '+negItems.length+' negatives fixed');
-
-  var byDept={};
-  negItems.forEach(function(p){var d=p.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
-
+  var negs=data.filter(function(p){return p.qty<0;});
+  var html='<div class="sec-hdr"><div class="sec-title">🔴 Negatives at '+BR[dest].name+'</div><div class="sec-sub">Fix in EPOS with handheld scanner. Tick when done.</div></div>';
+  if(!negs.length){html+='<div class="empty">No negative stock — great job!</div>';el.innerHTML=html;setProg(0,0,'No negatives');return;}
+  negs.sort(function(a,b){return a.qty-b.qty;});
+  var fixed=negs.filter(function(p){return negTx[dest+'_'+p.bc];}).length;
+  setProg(negs.length,fixed,fixed+' of '+negs.length+' negatives fixed');
+  var byDept={};negs.forEach(function(p){var d=p.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
   Object.keys(byDept).sort().forEach(function(dept){
     var items=byDept[dept];
-    var dFixed=items.filter(function(p){return negTicks[currentDest+'_'+p.bc];}).length;
-    var did='nd_'+dept.replace(/\W/g,'_');
-    html+='<div class="dept-heading">'+
-      '<div class="dept-heading-title">'+dept+'</div>'+
-      '<div class="dept-heading-sub" style="color:'+(dFixed===items.length?'var(--green)':'var(--sub)')+'">'+dFixed+'/'+items.length+' fixed</div>'+
-    '</div>';
-    html+='<div class="card-list" id="'+did+'">';
-    items.forEach(function(p){
-      var isDone=!!negTicks[currentDest+'_'+p.bc];
-      var days=dSince(p.ls);
-      var dayTag=dayBadge(days,'neg',30,14);
-      html+='<div class="neg-card'+(isDone?' fixed':'')+'">'+
-        '<div class="neg-img">'+imgEl(p.bc,48)+'</div>'+
-        '<div class="neg-body">'+
-          '<div class="neg-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-          '<div class="neg-bc">'+p.bc+'</div>'+
-          '<div class="neg-tags">'+(dayTag?dayTag:'')+(p.prc>0?'<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>':'')+'</div>'+
-        '</div>'+
-        '<div class="neg-right">'+
-          '<div class="neg-qty">'+p.qty+'</div>'+
-          '<div class="neg-lbl">stock</div>'+
-          '<div class="neg-tick'+(isDone?' done':'')+'" data-bc="'+p.bc+'" data-neg="1">'+
-            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'+(isDone?'#fff':'var(--sub)')+'" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
-          '</div>'+
-        '</div>'+
-      '</div>';
-    });
-    html+='</div>';
-  });
-
-  el.innerHTML=html;
-  el.querySelectorAll('[data-neg]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var bc=this.dataset.bc,key=currentDest+'_'+bc;
-      var wasUnticked=!negTicks[key];
-      negTicks[key]=wasUnticked;
-      localStorage.setItem('cc_staff2_negticks',JSON.stringify(negTicks));
-      debouncedSync('cc_neg_ticks',negTicks);
-
-      // ── INSTANT DOM UPDATE ──
-      var card=this.closest('.neg-card');
-      if(card){
-        if(wasUnticked){
-          card.classList.add('fixed');
-          this.classList.add('done');
-          this.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-        }else{
-          card.classList.remove('fixed');
-          this.classList.remove('done');
-          this.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-        }
-      }
-      // Update progress bar
-      var fixed=Object.keys(negTicks).filter(function(k){return k.startsWith(currentDest+'_')&&negTicks[k];}).length;
-      var total=document.querySelectorAll('[data-neg]').length;
-      var pct=total>0?Math.round(fixed/total*100):0;
-      document.getElementById('prog-fill').style.width=pct+'%';
-      document.getElementById('prog-txt').textContent=pct+'%';
-      document.getElementById('prog-sub').textContent=fixed+' of '+total+' negatives fixed';
-
-      if(wasUnticked){
-        recordPick();
-        logAction(currentDest,'negative',1,bc);
-        var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
-        ts2['n_'+currentDest+'_'+bc]=Date.now();
-        localStorage.setItem('cc_staff2_tickts',JSON.stringify(ts2));
-      }
-    });
-  });
-  showTimerBar(true);
-}
-
-function renderOOS(){
-  var el=document.getElementById('out');
-  var data=bd[currentDest];
-  if(!data){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
-  var availMap={};
-  for(var b=0;b<4;b++){
-    if(b===currentDest||!bd[b])continue;
-    bd[b].forEach(function(p){if(p.bc&&p.qty>0){if(!availMap[p.bc])availMap[p.bc]=[];availMap[p.bc].push({branch:BRANCHES[b],qty:p.qty});}});
-  }
-  var oosItems=data.filter(function(p){
-    if(!p.bc||!p.nm||p.qty>0||p.ls==='Never'||!p.ls||p.ls==='Unknown')return false;
-    var days=dSince(p.ls);if(days===null)return false;
-    if(oosFilter==='all')return true;
-    if(oosFilter==='0')return days<=1;
-    return days>=parseInt(oosFilter);
-  });
-  oosItems.forEach(function(p){p._days=dSince(p.ls);});
-  oosItems.sort(function(a,b){return (b._days||0)-(a._days||0);});
-  var withSrc=oosItems.filter(function(p){return availMap[p.bc]&&availMap[p.bc].length>0;}).length;
-  updateProg(oosItems.length,withSrc,oosItems.length+' OOS · '+withSrc+' can collect · '+(oosItems.length-withSrc)+' reorder');
-
-  var html='<div class="sec-heading">'+
-    '<div class="sec-heading-title">⏱ Out of stock at '+BRANCHES[currentDest].name+'</div>'+
-    '<div class="sec-heading-sub">How many days each item has been missing from shelves</div>'+
-  '</div>';
-
-  if(!oosItems.length){html+='<div class="empty">No out of stock items for this filter</div>';el.innerHTML=html;return;}
-  html+='<div class="stats-grid">'+
-    '<div class="stat-card"><div class="stat-val" style="color:var(--red)">'+oosItems.length+'</div><div class="stat-lbl">OOS total</div></div>'+
-    '<div class="stat-card"><div class="stat-val" style="color:var(--green)">'+withSrc+'</div><div class="stat-lbl">Can collect</div></div>'+
-    '<div class="stat-card"><div class="stat-val" style="color:var(--amber)">'+(oosItems.length-withSrc)+'</div><div class="stat-lbl">Reorder</div></div>'+
-  '</div>';
-
-  var byDept={};
-  oosItems.forEach(function(p){var d=p.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
-  Object.keys(byDept).sort().forEach(function(dept){
-    var items=byDept[dept];
-    html+='<div class="dept-heading"><div class="dept-heading-title">'+dept+'</div><div class="dept-heading-sub">'+items.length+' items OOS</div></div>';
+    var df=items.filter(function(p){return negTx[dest+'_'+p.bc];}).length;
+    html+='<div class="dept-hdr"><div class="dept-name">'+dept+'</div><div class="dept-sub" style="color:'+(df===items.length?'var(--green)':'var(--sub)')+'">'+df+'/'+items.length+' fixed</div></div>';
     html+='<div class="card-list">';
     items.forEach(function(p){
-      var avail=availMap[p.bc]||[];var hasSrc=avail.length>0;
-      var days=p._days;
-      var dColor=days>=30?'var(--red)':days>=14?'var(--amber)':'var(--sub)';
-      html+='<div class="oos-row'+(hasSrc?' has-src':'')+'">'+
-        '<div class="oos-img">'+imgEl(p.bc,44)+'</div>'+
-        '<div class="oos-body">'+
-          '<div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-          '<div class="oos-bc">'+p.bc+'</div>'+
-          '<div class="oos-tags"><span class="itag itag-info">Last sold: '+p.ls+'</span>'+(hasSrc?avail.map(function(a){return '<span class="itag itag-src">'+a.branch.name+': '+a.qty+'</span>';}).join(''):'<span class="itag itag-day">Reorder</span>')+(p.prc>0?'<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>':'')+'</div>'+
-        '</div>'+
-        '<div class="oos-right"><div class="oos-days" style="color:'+dColor+'">'+days+'</div><div class="oos-lbl">days OOS</div></div>'+
+      var done=!!negTx[dest+'_'+p.bc];
+      var days=dAgo(p.ls),dtag=dayTag(days,'neg',30,14);
+      html+='<div class="neg-card'+(done?' fixed':'')+'" data-bc="'+p.bc+'">'+
+        '<div class="neg-img">'+imgEl(p.bc,46)+'</div>'+
+        '<div class="neg-body"><div class="neg-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
+        '<div class="neg-bc">'+p.bc+'</div>'+
+        '<div class="neg-tags">'+(dtag?dtag:'')+(p.prc>0?'<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>':'')+'</div></div>'+
+        '<div class="neg-right"><div class="neg-qty">'+p.qty+'</div><div class="neg-lbl">stock</div>'+
+        '<div class="neg-tick'+(done?' on':'')+'" data-bc="'+p.bc+'">'+
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'+(done?'#fff':'var(--border)')+'" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
+        '</div></div></div>';
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+
+  // WIRE NEG TICKS — instant DOM update
+  el.querySelectorAll('.neg-tick').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var bc=this.dataset.bc,key=dest+'_'+bc;
+      var wasDone=!!negTx[key];
+      negTx[key]=!wasDone;
+      try{localStorage.setItem('cc_n',JSON.stringify(negTx));}catch(e){}
+      syncSave('cc_n',negTx);
+      var nowDone=!wasDone;
+      var card=this.closest('.neg-card');
+      if(card)card.classList.toggle('fixed',nowDone);
+      this.classList.toggle('on',nowDone);
+      this.querySelector('svg').setAttribute('stroke',nowDone?'#fff':'var(--border)');
+      // Update progress
+      var tot=el.querySelectorAll('.neg-tick').length;
+      var dn=el.querySelectorAll('.neg-tick.on').length;
+      setProg(tot,dn,dn+' of '+tot+' negatives fixed');
+      if(nowDone)tmrPick();
+    });
+  });
+}
+
+// ── OOS ───────────────────────────────────────────────────────
+function renderOOS(){
+  var el=document.getElementById('out');
+  var data=bd[dest];
+  if(!data){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
+  var avail={};
+  for(var b=0;b<4;b++){if(b===dest||!bd[b])continue;bd[b].forEach(function(p){if(p.bc&&p.qty>0){if(!avail[p.bc])avail[p.bc]=[];avail[p.bc].push({branch:BR[b],qty:p.qty});}});}
+  var items=data.filter(function(p){
+    if(!p.bc||!p.nm||p.qty>0||p.ls==='Never'||!p.ls)return false;
+    var days=dAgo(p.ls);if(days===null)return false;
+    if(oosFilt==='all')return true;
+    if(oosFilt==='0')return days<=1;
+    return days>=parseInt(oosFilt);
+  });
+  items.forEach(function(p){p._d=dAgo(p.ls);});
+  items.sort(function(a,b){return(b._d||0)-(a._d||0);});
+  var ws=items.filter(function(p){return avail[p.bc]&&avail[p.bc].length>0;}).length;
+  setProg(items.length,ws,items.length+' OOS · '+ws+' can collect · '+(items.length-ws)+' reorder');
+  var html='<div class="sec-hdr"><div class="sec-title">⏱ Out of stock at '+BR[dest].name+'</div></div>';
+  if(!items.length){html+='<div class="empty">No OOS items for this filter</div>';el.innerHTML=html;return;}
+  html+='<div class="stats-grid">'+
+    '<div class="stat"><div class="stat-val" style="color:var(--red)">'+items.length+'</div><div class="stat-lbl">OOS</div></div>'+
+    '<div class="stat"><div class="stat-val" style="color:var(--green)">'+ws+'</div><div class="stat-lbl">Can collect</div></div>'+
+    '<div class="stat"><div class="stat-val" style="color:var(--amber)">'+(items.length-ws)+'</div><div class="stat-lbl">Reorder</div></div>'+
+  '</div>';
+  var byDept={};items.forEach(function(p){var d=p.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
+  Object.keys(byDept).sort().forEach(function(dept){
+    var dits=byDept[dept];
+    html+='<div class="dept-hdr"><div class="dept-name">'+dept+'</div><div class="dept-sub">'+dits.length+' OOS</div></div>';
+    html+='<div class="card-list">';
+    dits.forEach(function(p){
+      var av=avail[p.bc]||[],has=av.length>0;
+      var dc=p._d>=30?'var(--red)':p._d>=14?'var(--amber)':'var(--sub)';
+      html+='<div class="oos-row'+(has?' has':'')+'">'+
+        '<div class="oos-img">'+imgEl(p.bc,42)+'</div>'+
+        '<div class="oos-body"><div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
+        '<div class="oos-bc">'+p.bc+'</div>'+
+        '<div class="oos-tags"><span class="itag itag-info">Last: '+p.ls+'</span>'+
+          (has?av.map(function(a){return '<span class="itag itag-src">'+a.branch.name+':'+a.qty+'</span>';}).join(''):'<span class="itag itag-day">Reorder</span>')+
+          (p.prc>0?'<span class="itag itag-info">£'+p.prc.toFixed(2)+'</span>':'')+
+        '</div></div>'+
+        '<div class="oos-right"><div class="oos-days" style="color:'+dc+'">'+p._d+'</div><div class="oos-lbl">days OOS</div></div>'+
       '</div>';
     });
     html+='</div>';
@@ -1239,418 +931,305 @@ function renderOOS(){
   el.innerHTML=html;
 }
 
-function updateProg(total,done,sub){
-  var pct=total>0?Math.round(done/total*100):0;
-  document.getElementById('prog-fill').style.width=pct+'%';
-  document.getElementById('prog-txt').textContent=pct+'%';
-  document.getElementById('prog-sub').textContent=sub||'';
+// ── WAREHOUSE ─────────────────────────────────────────────────
+function buildPickList(){
+  var whData=bd[3];if(!whData)return{dead:[],normal:[]};
+  var dead=[],normal=[],bm=[{},{},{}];
+  for(var b=0;b<3;b++){if(bd[b])bd[b].forEach(function(p){if(p.bc)bm[b][p.bc]=p.qty;});}
+  function gst(p){var d=dAgo(p.ls);if(d===null||d>=90)return{type:'dead',d:d};if(d>=30)return{type:'slow',d:d};return{type:'fast',d:d};}
+  function rounT(st){return st.type==='slow'?6:12;}
+  whData.forEach(function(p){
+    if(!p.bc||!p.nm||p.qty<=0)return;
+    var st=gst(p);
+    var tgts=[SPLIT[0],SPLIT[1],rounT(st)];
+    var needs=[{i:0,n:Math.max(0,tgts[0]-(bm[0][p.bc]||0)),c:bm[0][p.bc]||0},{i:1,n:Math.max(0,tgts[1]-(bm[1][p.bc]||0)),c:bm[1][p.bc]||0},{i:2,n:Math.max(0,tgts[2]-(bm[2][p.bc]||0)),c:bm[2][p.bc]||0}];
+    needs.sort(function(a,b){return a.c-b.c;});
+    var rem=p.qty,sp=[0,0,0];
+    needs.forEach(function(n){if(n.n>0&&rem>0){var g=Math.min(n.n,rem);sp[n.i]=g;rem-=g;}});
+    if(sp[0]+sp[1]+sp[2]<=0)return;
+    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,st:st,
+              bq:[bm[0][p.bc]||0,bm[1][p.bc]||0,bm[2][p.bc]||0],sp:sp,tgts:tgts};
+    if(st.type==='dead')dead.push(item);else normal.push(item);
+  });
+  dead.sort(function(a,b){return(a.bq[0]+a.bq[1]+a.bq[2])-(b.bq[0]+b.bq[1]+b.bq[2]);});
+  normal.sort(function(a,b){return(a.bq[0]+a.bq[1]+a.bq[2])-(b.bq[0]+b.bq[1]+b.bq[2]);});
+  return{dead:dead,normal:normal};
 }
 
-// ── MASTER RENDER ─────────────────────────────────────────────
-function render(){
-  var isWH=currentMode==='warehouse';
-  var isCollect=!isWH&&currentView==='urgent';
-  document.getElementById('vtabs').style.display=isWH?'none':'flex';
-  document.getElementById('collect-filters').style.display=isCollect?'block':'none';
-  document.getElementById('day-filter').style.display=(!isWH&&currentView==='oos')?'block':'none';
-  document.getElementById('prog-wrap').style.display=isWH?'none':'block';
-  if(isWH){
-    showTimerBar(true);
-    renderWarehouse();
-    return;
-  }
-  // Show timer for collect and negatives, hide for OOS view
-  showTimerBar(currentView!=='oos');
-  if(isCollect){buildSrcFilter();buildDeptFilter();}
-  if(currentView==='urgent')renderCollect();
-  else if(currentView==='negative')renderNegative();
-  else renderOOS();
-}
-
-// ── CONTROLS ─────────────────────────────────────────────────
-document.querySelector('.branch-grid').addEventListener('click',function(e){
-  var btn=e.target.closest('.branch-btn');if(!btn)return;
-  document.querySelectorAll('.branch-btn').forEach(function(b){b.classList.remove('on');});
-  document.getElementById('wh-mgr-btn').classList.remove('on');
-  btn.classList.add('on');
-  currentDest=parseInt(btn.dataset.b);
-  currentMode='branch';
-  activeDepts=['All'];activeSources=[0,1,2,3];oosFilter='all';
-  resetPickTimer();
-  updateDayPills();
-  render();
-});
-
-document.getElementById('wh-mgr-btn').addEventListener('click',function(){
-  document.querySelectorAll('.branch-btn').forEach(function(b){b.classList.remove('on');});
-  this.classList.add('on');
-  currentMode='warehouse';
-  render();
-});
-
-document.getElementById('vtabs').addEventListener('click',function(e){
-  var vt=e.target.closest('.vtab');if(!vt)return;
-  document.querySelectorAll('.vtab').forEach(function(t){t.classList.remove('on');});
-  vt.classList.add('on');
-  currentView=vt.dataset.v;
-  render();
-});
-
-document.getElementById('day-filter-pills').addEventListener('click',function(e){
-  var p=e.target.closest('.pill');if(!p)return;
-  oosFilter=p.dataset.d;updateDayPills();renderOOS();
-});
-function updateDayPills(){
-  document.querySelectorAll('#day-filter-pills .pill').forEach(function(p){p.classList.toggle('on',p.dataset.d===oosFilter);});
-}
-
-document.getElementById('fsrc-toggle').addEventListener('click',function(){
-  var b=document.getElementById('fsrc-body'),a=document.getElementById('fsrc-arrow');
-  var open=!b.classList.contains('open');b.classList.toggle('open',open);a.classList.toggle('open',open);
-});
-document.getElementById('fdept-toggle').addEventListener('click',function(){
-  var b=document.getElementById('fdept-body'),a=document.getElementById('fdept-arrow');
-  var open=!b.classList.contains('open');b.classList.toggle('open',open);a.classList.toggle('open',open);
-});
-
-document.getElementById('refresh-btn').addEventListener('click',function(){
-  loaded=0;bd=[null,null,null,null];
-  document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Refreshing…</div>';
-  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
-  loadImgs();
-});
-
-// ── START ─────────────────────────────────────────────────────
-Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
-loadImgs().then(function(){if(loaded>0)render();});
-// Load shared ticks from KV on startup
-loadSharedTicks().then(function(){if(loaded>0)render();});
-
-// ── HISTORY LOG ──────────────────────────────────────────────
-var HIST_KEY='cc_staff_hist';
-function getHist(){try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch(e){return[];}}
-function saveHist(h){try{localStorage.setItem(HIST_KEY,JSON.stringify(h.slice(0,500)));}catch(e){}}
-function logAction(branchIdx,type,count,detail){
-  var h=getHist(),now=new Date();
-  h.unshift({ts:now.getTime(),
-    date:now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}),
-    time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),
-    branch:BRANCHES[branchIdx].name,branchIdx:branchIdx,type:type,count:count,detail:detail||''});
-  saveHist(h);
-  logWeekly(branchIdx,type,count,now);
-}
-function showHistory(){
-  var h=getHist();var el=document.getElementById('hist-content');
-  if(!h.length){el.innerHTML='<div class="empty">No actions logged yet</div>';document.getElementById('hist-ov').classList.add('open');return;}
-  var byDay={};h.forEach(function(e){if(!byDay[e.date])byDay[e.date]=[];byDay[e.date].push(e);});
-  var icons={collect:'📦',negative:'🔴',oos:'⏱',warehouse:'🏭'};
-  var colors={collect:'#fb923c',negative:'#cc0000',oos:'#b45309',warehouse:'#6d28d9'};
-  var html='';
-  Object.keys(byDay).forEach(function(day){
-    html+='<div style="padding:6px 16px;background:var(--bg);font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase">'+day+'</div>';
-    byDay[day].forEach(function(e){
-      html+='<div class="hist-entry">'+
-        '<div class="hist-dot" style="background:'+(colors[e.type]||'#999')+'"></div>'+
-        '<div class="hist-body">'+
-          '<div class="hist-action">'+(icons[e.type]||'•')+' '+e.branch+' — '+e.count+' '+e.type+(e.count!==1?'s':'')+(e.type==='negative'?' fixed':' done')+'</div>'+
-          (e.detail?'<div style="font-size:10px;color:var(--sub);margin-top:2px">'+e.detail+'</div>':'')+
-          '<div class="hist-meta">'+e.time+'</div>'+
-        '</div></div>';
+function renderWH(){
+  var el=document.getElementById('out');
+  if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
+  var L=buildPickList(),all=L.dead.concat(L.normal);
+  var tp=[0,0,0],dp=[0,0,0];
+  all.forEach(function(item){var t=pkTx[item.bc]||[false,false,false];for(var b=0;b<3;b++){if(item.sp[b]>0){tp[b]++;if(t[b])dp[b]++;}}});
+  var html='<div class="trolley-wrap"><div class="trolley-hdr"><div class="trolley-title">🛒 Picking trolley — 3 colour-coded boxes</div>'+
+    '<div class="trolley-boxes">'+
+    '<div class="tbox tbox-c"><div class="tbox-icon">🟠</div><div class="tbox-lbl">Chapeltown</div><div class="tbox-sub">Orange box</div></div>'+
+    '<div class="tbox tbox-x"><div class="tbox-icon">🟢</div><div class="tbox-lbl">City Center</div><div class="tbox-sub">Green box</div></div>'+
+    '<div class="tbox tbox-r"><div class="tbox-icon">🔵</div><div class="tbox-lbl">Roundhay</div><div class="tbox-sub">Blue box</div></div>'+
+    '</div></div></div>';
+  html+='<div class="pk-summary">'+
+    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--redtxt)">'+L.dead.length+'</div><div class="pk-smc-lbl">Dead</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" style="color:#b45309">'+dp[0]+'/'+tp[0]+'</div><div class="pk-smc-lbl">Chapy</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--green)">'+dp[1]+'/'+tp[1]+'</div><div class="pk-smc-lbl">City</div></div>'+
+    '<div class="pk-smc"><div class="pk-smc-val" style="color:var(--blue)">'+dp[2]+'/'+tp[2]+'</div><div class="pk-smc-lbl">Roun</div></div>'+
+  '</div>';
+  if(L.dead.length){html+='<div class="pk-sec-hdr"><div class="pk-sec-title" style="color:var(--redtxt)">☠ Dead stock — clear first</div><div class="pk-sec-sub">Not sold 90+ days. Split to branches then return remainder to supplier.</div></div>';html+=pkSection(L.dead);}
+  if(L.normal.length){html+='<div class="pk-sec-hdr"><div class="pk-sec-title" style="color:var(--purpletxt)">📦 Normal restock</div><div class="pk-sec-sub">Top up to shelf target. Fast sellers = 12 all. Slow = Roundhay gets 6.</div></div>';html+=pkSection(L.normal);}
+  if(!all.length)html+='<div class="empty">No warehouse picks needed — all branches at target</div>';
+  html+='<div class="wa-footer"><div class="wa-row"><span>Send pick list</span><span>'+all.length+' products</span></div>'+
+    '<button class="wa-btn" id="pk-wa-btn" style="background:var(--purple)"><svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Send pick list to branch managers</button></div>';
+  el.innerHTML=html;
+  updatePkProgress();
+  // WIRE WH PICKS — instant update
+  el.querySelectorAll('.pk-cell').forEach(function(cell){
+    cell.addEventListener('click',function(){
+      var bc=this.dataset.bc,bi=+this.dataset.bi;
+      var key=bc+'_'+bi;
+      var wasDone=!!(pkTx[bc]&&pkTx[bc][bi]);
+      if(!pkTx[bc])pkTx[bc]=[false,false,false];
+      pkTx[bc][bi]=!wasDone;
+      try{localStorage.setItem('cc_p',JSON.stringify(pkTx));}catch(e){}
+      syncSave('cc_p',pkTx);
+      var nowDone=!wasDone;
+      this.classList.toggle('on',nowDone);
+      var dot=this.querySelector('.pc-tdot');if(dot)dot.textContent=nowDone?'✓':'';
+      // Check if all 3 done for this product
+      var row=this.closest('.pk-row');
+      if(row){
+        var allDone=pkTx[bc][0]&&pkTx[bc][1]&&pkTx[bc][2];
+        row.classList.toggle('all-done',allDone);
+        var checkEl=row.querySelector('.pk-all-check');if(checkEl)checkEl.textContent=allDone?'✅':'';
+      }
+      updatePkProgress();
+      if(nowDone)tmrPick();
     });
   });
+  el.querySelector('#pk-wa-btn').addEventListener('click',sendPkWA.bind(null,all));
+}
+
+function updatePkProgress(){
+  var cells=document.querySelectorAll('.pk-cell');if(!cells.length)return;
+  var tot=cells.length,dn=document.querySelectorAll('.pk-cell.on').length;
+  setProg(tot,dn,dn+' of '+tot+' picks done');
+}
+
+function pkSection(items){
+  var byDept={};items.forEach(function(item){if(!byDept[item.dp])byDept[item.dp]=[];byDept[item.dp].push(item);});
+  var html='';
+  Object.keys(byDept).sort().forEach(function(dept){
+    var di=byDept[dept];
+    var done=di.filter(function(x){var t=pkTx[x.bc]||[false,false,false];return t[0]&&t[1]&&t[2];}).length;
+    html+='<div class="pk-dept"><span class="pk-dept-name">'+dept+'</span><span class="pk-dept-sub">'+done+'/'+di.length+' picked</span></div>';
+    di.forEach(function(item){html+=mkPkRow(item);});
+  });
+  return html;
+}
+
+function mkPkRow(item){
+  var t=pkTx[item.bc]||[false,false,false];
+  var allDone=t[0]&&t[1]&&t[2];
+  var stag=item.st.type==='dead'?'<span class="pk-tag pk-tag-dead">☠ DEAD '+(item.st.d||'?')+'d</span>':
+           item.st.type==='slow'?'<span class="pk-tag pk-tag-slow">🐌 SLOW '+item.st.d+'d</span>':
+           '<span class="pk-tag pk-tag-fast">⚡ FAST '+item.st.d+'d</span>';
+  var BN=['Chapeltown','City','Roundhay'],BC=['c','x','r'],BCOL=['#b45309','var(--green)','var(--blue)'];
+  var html='<div class="pk-row'+(allDone?' all-done':'')+'">'+
+    '<div class="pk-top"><div class="pk-img">'+imgEl(item.bc,44)+'</div>'+
+    '<div class="pk-info"><div class="pk-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
+    '<div class="pk-bc">'+item.bc+'</div>'+
+    '<div class="pk-tags"><span class="pk-tag pk-tag-wh">WH:'+item.wh+'</span>'+stag+(item.prc>0?'<span class="pk-tag pk-tag-price">£'+item.prc.toFixed(2)+'</span>':'')+'</div></div>'+
+    '<span class="pk-all-check" style="font-size:18px;flex-shrink:0">'+(allDone?'✅':'')+'</span></div>';
+  html+='<div class="pk-strip">';
+  for(var bi=0;bi<3;bi++){
+    var take=item.sp[bi],has=item.bq[bi],tgt=item.tgts[bi],ticked=!!t[bi];
+    html+='<div class="pk-cell pk-cell-'+BC[bi]+(ticked?' on':'')+'" data-bc="'+item.bc+'" data-bi="'+bi+'">'+
+      '<div class="pc-tdot">'+(ticked?'✓':'')+'</div>'+
+      '<div class="pc-bl">'+BN[bi]+'</div>';
+    if(take>0){html+='<div class="pc-has">has '+has+'→tgt'+tgt+'</div><div class="pc-num" style="color:'+BCOL[bi]+'">'+take+'</div><div class="pc-sub">pick</div>';}
+    else if(has>=tgt){html+='<div class="pc-has">has '+has+'</div><div class="pc-full">✓</div><div class="pc-sub">full</div>';}
+    else{html+='<div class="pc-has">has '+has+'</div><div class="pc-low">—</div><div class="pc-sub">WH low</div>';}
+    html+='</div>';
+  }
+  html+='</div></div>';
+  return html;
+}
+
+function sendPkWA(all){
+  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var msg='CC Warehouse Pick List\n'+date+' '+time+'\n\n';
+  ['Chapeltown','City Center','Roundhay'].forEach(function(bn,bi){
+    msg+=bn.toUpperCase()+':\n';
+    all.forEach(function(item){if(item.sp[bi]>0)msg+='  '+item.nm+(item.sz?' ('+item.sz+')':'')+' x'+item.sp[bi]+'\n';});
+    msg+='\n';
+  });
+  msg+='Sent from CC Warehouse App';
+  window.open('https://wa.me/'+WA+'?text='+encodeURIComponent(msg),'_blank');
+}
+
+// ── HISTORY & WEEKLY ──────────────────────────────────────────
+var HIST_KEY='cc_hist',WEEK_KEY='cc_week';
+function getHist(){try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch(e){return[];}}
+function getWeek(){try{return JSON.parse(localStorage.getItem(WEEK_KEY)||'{}');}catch(e){return{};}}
+function logAction(bi,type,count){
+  var h=getHist(),now=new Date();
+  h.unshift({ts:now.getTime(),date:now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}),time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),branch:BR[bi].name,type:type,count:count});
+  try{localStorage.setItem(HIST_KEY,JSON.stringify(h.slice(0,500)));}catch(e){}
+  var w=getWeek(),ds=now.toISOString().split('T')[0],bk='b'+bi;
+  if(!w[ds])w[ds]={};if(!w[ds][bk])w[ds][bk]={collect:0,neg:0,pts:0};
+  w[ds][bk][type]=(w[ds][bk][type]||0)+count;
+  var pm={collect:4,neg:5};w[ds][bk].pts=(w[ds][bk].pts||0)+(count*(pm[type]||1));
+  try{localStorage.setItem(WEEK_KEY,JSON.stringify(w));}catch(e){}
+}
+
+function showHistory(){
+  var h=getHist(),el=document.getElementById('hist-content');
+  var alog=getAlog();
+  var html='';
+  if(!h.length&&!alog.length){el.innerHTML='<div class="empty">No history yet</div>';document.getElementById('hist-ov').classList.add('open');return;}
+  var colors={collect:'#fb923c',neg:'#cc0000'},icons={collect:'📦',neg:'🔴'};
+  var byDay={};h.forEach(function(e){if(!byDay[e.date])byDay[e.date]=[];byDay[e.date].push(e);});
+  Object.keys(byDay).forEach(function(day){
+    html+='<div style="padding:5px 14px;background:var(--bg);font-size:9px;font-weight:700;color:var(--sub);text-transform:uppercase">'+day+'</div>';
+    byDay[day].forEach(function(e){
+      html+='<div class="hist-entry"><div class="hist-dot" style="background:'+(colors[e.type]||'#999')+'"></div>'+
+        '<div class="hist-body"><div class="hist-act">'+(icons[e.type]||'•')+' '+e.branch+' — '+e.count+' '+(e.type==='neg'?'negatives fixed':'items collected')+'</div>'+
+        '<div class="hist-meta">'+e.time+'</div></div></div>';
+    });
+  });
+  if(alog.length){
+    html+='<div style="padding:5px 14px;background:var(--amberbg);border-bottom:1px solid var(--border);font-size:9px;color:var(--ambertxt);font-weight:600">📊 AUTO LOG — every 30 min from EPOS</div>';
+    alog.slice(0,30).forEach(function(snap){
+      html+='<div class="auto-snap"><div class="auto-snap-hdr"><span class="auto-snap-date">'+snap.date+'</span><span class="auto-snap-time">'+snap.time+'</span></div>';
+      (snap.branches||[]).forEach(function(b){
+        if(!b)return;
+        var nc=b.neg||b.negCount||0,cc=b.coll||b.collectCount||0;
+        html+='<div class="auto-branch-row">'+
+          '<span class="auto-branch-name">'+b.name+'</span>'+
+          '<span style="color:'+(nc>10?'var(--redtxt)':nc>5?'var(--ambertxt)':'var(--sub)')+'">🔴 '+nc+' neg</span>'+
+          '<span style="color:'+(cc>10?'var(--greentxt)':'var(--sub)');'">📦 '+cc+' collectable</span>'+
+        '</div>';
+      });
+      html+='</div>';
+    });
+  }
   el.innerHTML=html;document.getElementById('hist-ov').classList.add('open');
 }
 
-// ── WEEKLY TRACKING ───────────────────────────────────────────
-var WEEK_KEY='cc_staff_week';
-function getWeekData(){try{return JSON.parse(localStorage.getItem(WEEK_KEY)||'{}');}catch(e){return{};}}
-function logWeekly(bi,type,count,now){
-  var d=getWeekData(),ds=now.toISOString().split('T')[0],bk='b'+bi;
-  if(!d[ds])d[ds]={};if(!d[ds][bk])d[ds][bk]={collect:0,negative:0,oos:0,pts:0};
-  d[ds][bk][type]=(d[ds][bk][type]||0)+count;
-  var pm={collect:4,negative:5,oos:3};
-  d[ds][bk].pts=(d[ds][bk].pts||0)+(count*(pm[type]||1));
-  try{localStorage.setItem(WEEK_KEY,JSON.stringify(d));}catch(e){}
-}
-
-// ── DAILY PROGRESS ────────────────────────────────────────────
 function showDailyProgress(){
-  var el=document.getElementById('dprog-content');
-  var now=new Date();
+  var now=new Date(),w=getWeek(),ds=now.toISOString().split('T')[0],today=w[ds]||{};
   document.getElementById('dprog-date').textContent=now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-  var ds=now.toISOString().split('T')[0];
-  var wd=getWeekData(),today=wd[ds]||{};
-  var TGTS={collect:10,negative:10,oos:5};
-  var html='';
+  var tgts={collect:10,neg:10},html='';
   [0,1,2].forEach(function(bi){
-    var b=BRANCHES[bi],bk='b'+bi,bd2=today[bk]||{collect:0,negative:0,oos:0};
-    // Count today's ticks directly
-    var collectCount=0,negCount=0;
-    var ts2=JSON.parse(localStorage.getItem('cc_staff2_tickts')||'{}');
-    var todayStr=now.toDateString();
-    Object.keys(ticks).forEach(function(k){if(k.startsWith(bi+'_')&&ticks[k]){var t=ts2[k];if(t&&new Date(t).toDateString()===todayStr)collectCount++;}});
-    Object.keys(negTicks).forEach(function(k){if(k.startsWith(bi+'_')&&negTicks[k]){var t=ts2['n_'+k];if(t&&new Date(t).toDateString()===todayStr)negCount++;}});
-    var collect=Math.max(bd2.collect,collectCount);
-    var negative=Math.max(bd2.negative,negCount);
-    var oos=bd2.oos||0;
-    var pts=collect*4+negative*5+oos*3;
-    var maxPts=TGTS.collect*4+TGTS.negative*5+TGTS.oos*3;
+    var b=BR[bi],bk='b'+bi,bd2=today[bk]||{collect:0,neg:0};
+    var c=bd2.collect||0,n=bd2.neg||0;
+    var pts=c*4+n*5,maxPts=tgts.collect*4+tgts.neg*5;
     var pct=Math.min(Math.round(pts/maxPts*100),100);
-    html+='<div class="dprog-branch">'+
-      '<div class="dprog-bname" style="color:'+b.color+'">'+b.name+
-        '<span style="float:right;font-size:13px;color:var(--sub)">'+pct+'%</span>'+
-      '</div>'+
-      mkProgRow('Collects',collect,TGTS.collect,'#fb923c')+
-      mkProgRow('Negatives fixed',negative,TGTS.negative,'#cc0000')+
-      mkProgRow('OOS cleared',oos,TGTS.oos,'#15803d')+
-    '</div>';
+    html+='<div class="dprog-branch"><div class="dprog-bname" style="color:'+b.color+'">'+b.name+'<span style="float:right;font-size:12px;color:var(--sub)">'+pct+'%</span></div>'+
+      mkProgRow('Collects',c,tgts.collect,'#fb923c')+mkProgRow('Neg fixed',n,tgts.neg,'#cc0000')+'</div>';
   });
-  el.innerHTML=html;document.getElementById('dprog-ov').classList.add('open');
+  document.getElementById('dprog-content').innerHTML=html;
+  document.getElementById('dprog-ov').classList.add('open');
 }
-function mkProgRow(lbl,val,target,color){
-  var pct=Math.min(Math.round(val/target*100),100);
-  return '<div class="dprog-row">'+
-    '<span class="dprog-lbl">'+lbl+'</span>'+
+function mkProgRow(lbl,val,tgt,color){
+  var pct=Math.min(Math.round(val/tgt*100),100);
+  return '<div class="dprog-row"><span class="dprog-lbl">'+lbl+'</span>'+
     '<div class="dprog-bar"><div class="dprog-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
-    '<span class="dprog-val" style="color:'+(pct>=100?'var(--green)':color)+'">'+val+'/'+target+'</span>'+
-  '</div>';
+    '<span class="dprog-val" style="color:'+(pct>=100?'var(--green)':color)+'">'+val+'/'+tgt+'</span></div>';
 }
 
-// ── WEEKLY LEADERBOARD ────────────────────────────────────────
 function showWeekly(){
-  var el=document.getElementById('wkly-content');
-  var now=new Date(),wd=getWeekData();
-  var dow=now.getDay(),mon=new Date(now);
-  mon.setDate(now.getDate()-(dow===0?6:dow-1));
-  var days=[];
-  for(var i=0;i<7;i++){
-    var d=new Date(mon);d.setDate(mon.getDate()+i);
-    days.push({date:d.toISOString().split('T')[0],
-      label:d.toLocaleDateString('en-GB',{weekday:'short'}),
-      isToday:d.toDateString()===now.toDateString(),isFuture:d>now});
-  }
-  var wkPts=[0,0,0];
-  days.forEach(function(day){var dd=wd[day.date]||{};[0,1,2].forEach(function(bi){wkPts[bi]+=(dd['b'+bi]?dd['b'+bi].pts:0);});});
+  var now=new Date(),w=getWeek();
+  var dow=now.getDay(),mon=new Date(now);mon.setDate(now.getDate()-(dow===0?6:dow-1));
+  var days=[];for(var i=0;i<7;i++){var d=new Date(mon);d.setDate(mon.getDate()+i);days.push({date:d.toISOString().split('T')[0],lbl:d.toLocaleDateString('en-GB',{weekday:'short'}),today:d.toDateString()===now.toDateString(),future:d>now});}
+  var wkPts=[0,0,0];days.forEach(function(day){var dd=w[day.date]||{};[0,1,2].forEach(function(bi){wkPts[bi]+=(dd['b'+bi]?dd['b'+bi].pts:0);});});
   var ranked=[{bi:0,pts:wkPts[0]},{bi:1,pts:wkPts[1]},{bi:2,pts:wkPts[2]}];
   ranked.sort(function(a,b){return b.pts-a.pts;});
-  var medals=['🥇','🥈','🥉'],heights=[110,85,65];
-  var podOrder=[1,0,2];
+  var medals=['🥇','🥈','🥉'],heights=[100,78,60],podOrder=[1,0,2];
   var html='<div class="podium">';
-  podOrder.forEach(function(rank){
-    var item=ranked[rank],b=BRANCHES[item.bi];
-    html+='<div class="pod">'+
-      '<div class="pod-medal">'+medals[rank]+'</div>'+
+  podOrder.forEach(function(rank){var item=ranked[rank],b=BR[item.bi];
+    html+='<div class="pod"><div class="pod-medal">'+medals[rank]+'</div>'+
       '<div class="pod-bar" style="height:'+heights[rank]+'px;background:'+b.color+'22;border:1.5px solid '+b.color+'44">'+
-        '<div class="pod-pts" style="color:'+b.color+'">'+item.pts+'</div>'+
-      '</div>'+
-      '<div class="pod-name" style="color:'+b.color+'">'+b.name+'</div>'+
-      '<div class="pod-sub">pts this week</div>'+
-    '</div>';
+        '<div class="pod-pts" style="color:'+b.color+'">'+item.pts+'</div></div>'+
+      '<div class="pod-name" style="color:'+b.color+'">'+b.name+'</div><div class="pod-sub">pts</div></div>';
   });
-  html+='</div>';
-  html+='<div class="week-grid">';
-  html+='<div style="display:flex;align-items:center;margin-bottom:4px"><div style="width:44px"></div>';
-  [0,1,2].forEach(function(bi){html+='<div class="week-branch-label" style="color:'+BRANCHES[bi].color+'">'+BRANCHES[bi].name.slice(0,4)+'</div>';});
+  html+='</div><div class="week-grid">';
+  html+='<div style="display:flex;align-items:center;margin-bottom:4px"><div style="width:38px"></div>';
+  [0,1,2].forEach(function(bi){html+='<div class="week-blbl" style="color:'+BR[bi].color+'">'+BR[bi].name.slice(0,4)+'</div>';});
   html+='</div>';
   days.forEach(function(day){
-    var dd=wd[day.date]||{};
-    html+='<div class="week-row">'+
-      '<div class="week-day" style="color:'+(day.isToday?'var(--red)':'var(--sub)')+'">'+day.label+'</div>'+
-      '<div class="week-cells">';
+    var dd=w[day.date]||{};
+    html+='<div class="week-row"><div class="week-day" style="color:'+(day.today?'var(--red)':'var(--sub)')+'">'+day.lbl+'</div><div class="week-cells">';
     [0,1,2].forEach(function(bi){
-      var bdata=dd['b'+bi],pts=bdata?bdata.pts:0;
-      var done=pts>=20;
-      var cls=day.isFuture?'empty':done?'done':'miss';
-      var lbl=day.isFuture?'':done?'✓':'✗';
-      if(day.isToday&&!bdata)lbl='...';
+      var bdata=dd['b'+bi],pts=bdata?bdata.pts:0,done=pts>=20;
+      var cls=day.future?'empty':done?'done':'miss';
+      var lbl=day.future?'':done?'✓':'✗';if(day.today&&!bdata)lbl='…';
       html+='<div class="week-cell '+cls+'">'+lbl+'</div>';
     });
     html+='</div></div>';
   });
   html+='</div>';
-  ranked.forEach(function(item,rank){
-    var b=BRANCHES[item.bi],maxPts=Math.max(wkPts[0],1);
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:0.5px solid var(--border)">'+
-      '<span style="font-size:16px">'+medals[rank]+'</span>'+
-      '<span style="font-size:13px;font-weight:700;color:'+b.color+'">'+b.name+'</span>'+
-      '<div style="flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden">'+
-        '<div style="width:'+Math.min(Math.round(item.pts/maxPts*100),100)+'%;height:100%;background:'+b.color+';border-radius:3px"></div>'+
-      '</div>'+
-      '<span style="font-size:12px;font-weight:700;font-family:monospace;color:'+b.color+'">'+item.pts+' pts</span>'+
-    '</div>';
+  ranked.forEach(function(item,rank){var b=BR[item.bi],mp=Math.max(wkPts[0],1);
+    html+='<div style="display:flex;align-items:center;gap:7px;padding:7px 14px;border-top:0.5px solid var(--border)">'+
+      '<span style="font-size:14px">'+medals[rank]+'</span>'+
+      '<span style="font-size:12px;font-weight:700;color:'+b.color+'">'+b.name+'</span>'+
+      '<div style="flex:1;height:5px;background:var(--bg);border-radius:3px;overflow:hidden">'+
+        '<div style="width:'+Math.min(Math.round(item.pts/mp*100),100)+'%;height:100%;background:'+b.color+';border-radius:3px"></div></div>'+
+      '<span style="font-size:11px;font-weight:700;font-family:monospace;color:'+b.color+'">'+item.pts+' pts</span></div>';
   });
-  el.innerHTML=html;document.getElementById('wkly-ov').classList.add('open');
+  document.getElementById('wkly-content').innerHTML=html;document.getElementById('wkly-ov').classList.add('open');
 }
 
-// ── WIRE TICK LOGGING ─────────────────────────────────────────
-// tick logging integrated into main renderCollect listener
-
-// neg logging integrated into main renderNegative listener
-
-
-// ── AUTO ACCOUNTABILITY LOG ───────────────────────────────────
-// Runs every time fresh data loads (every 30 mins from EPOS)
-// Logs negatives count + collectables count per branch automatically
-// Manager sees: what the system found vs what staff actually fixed
-var AUTO_LOG_KEY='cc_auto_log';
-
-function getAutoLog(){try{return JSON.parse(localStorage.getItem(AUTO_LOG_KEY)||'[]');}catch(e){return[];}}
-function saveAutoLog(l){
-  try{localStorage.setItem(AUTO_LOG_KEY,JSON.stringify(l.slice(0,1000)));}catch(e){}
-  debouncedSync('cc_auto_log',l.slice(0,100)); // sync auto log (last 100 entries)
-}
-
-function autoSnapshot(){
-  // Only run when all 4 branches are loaded
-  if(loaded<4)return;
-  var now=new Date();
-  var timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  var dateStr=now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short'});
-  var log=getAutoLog();
-  var snap={
-    ts:now.getTime(),date:dateStr,time:timeStr,
-    branches:[]
-  };
-
-  // Per branch: count negatives and collectables from warehouse
-  for(var bi=0;bi<3;bi++){
-    var data=bd[bi];if(!data){snap.branches.push(null);continue;}
-    var negItems=data.filter(function(p){return p.qty<0;});
-    var negCount=negItems.length;
-    var negWorst=negItems.length>0?negItems.reduce(function(a,b){return a.qty<b.qty?a:b;}):null;
-
-    // Count how many items this branch CAN collect from warehouse right now
-    var whData=bd[3]||[];
-    var destMap={};data.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-    var collectCount=0,collectVal=0;
-    whData.forEach(function(p){
-      if(!p.bc||p.qty<=0)return;
-      var dq=destMap[p.bc]?destMap[p.bc].qty:0;
-      if(dq>=12)return; // already stocked
-      var need=12-dq;
-      if(need>0&&p.qty>0){collectCount++;collectVal+=Math.min(need,p.qty)*(p.prc||0);}
-    });
-
-    snap.branches.push({
-      name:BRANCHES[bi].name,
-      negCount:negCount,
-      negWorst:negWorst?negWorst.qty:0,
-      collectCount:collectCount,
-      collectVal:Math.round(collectVal)
-    });
-  }
-
-  // Only add if something changed or >30 min since last snap
-  var last=log[0];
-  var changed=!last||now.getTime()-last.ts>25*60*1000; // 25 min
-  if(changed){
-    log.unshift(snap);
-    saveAutoLog(log);
-    updateWhTotals();
-  }
-}
-
-function updateWhTotals(){
-  // Update the warehouse manager button with live totals
-  var el=document.getElementById('wh-totals');
-  var subEl=document.getElementById('whsub');
-  if(!el||loaded<4)return;
-  var lists=buildPickList?buildPickList():{dead:[],normal:[]};
-  var dead=(lists.dead||[]).length;
-  var normal=(lists.normal||[]).length;
-  var total=dead+normal;
-
-  // Per-branch collectables
-  var html='';
-  for(var bi=0;bi<3;bi++){
-    var data=bd[bi];if(!data)continue;
-    var destMap={};data.forEach(function(p){if(p.bc)destMap[p.bc]=p;});
-    var cnt=0;
-    (bd[3]||[]).forEach(function(p){
-      if(!p.bc||p.qty<=0)return;
-      var dq=destMap[p.bc]?destMap[p.bc].qty:0;
-      if(dq<12&&p.qty>0)cnt++;
-    });
-    var bColors=['#b45309','var(--green)','var(--blue)'];
-    var bBgs=['#fff3e0','var(--greenbg)','var(--bluebg)'];
-    html+='<div style="background:'+bBgs[bi]+';border-radius:8px;padding:5px 10px;text-align:center">'+
-      '<div style="font-size:16px;font-weight:700;color:'+bColors[bi]+'">'+cnt+'</div>'+
-      '<div style="font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px">'+BRANCHES[bi].name.slice(0,4)+'</div>'+
-    '</div>';
-  }
-  el.innerHTML=html;
-  if(subEl)subEl.textContent=dead+' dead · '+normal+' restock items ready';
-}
-
-function showAutoLog(){
-  // Shows the auto-accountability log in the history panel
-  var log=getAutoLog();
-  var el=document.getElementById('hist-content');
-  if(!log.length){el.innerHTML='<div class="empty">No automatic snapshots yet.<br>Data will be logged on next refresh.</div>';return;}
-
-  var html='<div style="padding:8px 14px;background:var(--amberbg);border-bottom:1px solid var(--border);font-size:10px;color:var(--ambertxt);line-height:1.6">'+
-    '📊 <strong>Auto-logged every 30 mins from EPOS.</strong> Negatives and collectables tracked automatically — no staff action needed. Manager can compare what was available vs what was fixed.'+
-  '</div>';
-
-  log.forEach(function(snap){
-    html+='<div style="padding:10px 14px;border-bottom:1px solid var(--border)">'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'+
-        '<span style="font-size:11px;font-weight:700;color:var(--ink)">'+snap.date+'</span>'+
-        '<span style="font-size:10px;color:var(--sub);font-family:monospace">'+snap.time+'</span>'+
-      '</div>';
-    (snap.branches||[]).forEach(function(b){
-      if(!b)return;
-      var negColor=b.negCount>10?'var(--redtxt)':b.negCount>5?'var(--ambertxt)':'var(--sub)';
-      var colColor=b.collectCount>10?'var(--green)':'var(--sub)';
-      html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">'+
-        '<span style="font-size:11px;font-weight:600;width:72px;flex-shrink:0">'+b.name+'</span>'+
-        '<span style="font-size:10px;font-family:monospace;color:'+negColor+'">🔴 '+b.negCount+' neg</span>'+
-        '<span style="font-size:10px;font-family:monospace;color:'+colColor+'">📦 '+b.collectCount+' to collect</span>'+
-        (b.collectVal>0?'<span style="font-size:9px;color:var(--sub);margin-left:auto">£'+b.collectVal+' val</span>':'')+
-      '</div>';
-    });
-    html+='</div>';
-  });
-
-  el.innerHTML=html;
-  document.getElementById('hist-ov').classList.add('open');
-}
-
-// ── PANEL CONTROLS ────────────────────────────────────────────
-document.getElementById('btn-history').addEventListener('click',function(){
-  showHistory();
-  // Also show auto log below manual history
-  var autoLog=getAutoLog();
-  if(autoLog.length){
-    var el=document.getElementById('hist-content');
-    var divider='<div style="padding:8px 14px;background:var(--bg);font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)">📊 Auto accountability log</div>';
-    var autoHtml='';
-    autoLog.slice(0,20).forEach(function(snap){
-      autoHtml+='<div style="padding:8px 14px;border-bottom:0.5px solid var(--border)">'+
-        '<div style="display:flex;justify-content:space-between;margin-bottom:5px">'+
-          '<span style="font-size:10px;font-weight:700">'+snap.date+'</span>'+
-          '<span style="font-size:9px;color:var(--sub);font-family:monospace">'+snap.time+'</span>'+
-        '</div>';
-      (snap.branches||[]).forEach(function(b){
-        if(!b)return;
-        var nc=b.negCount,cc=b.collectCount;
-        var ncol=nc>10?'var(--redtxt)':nc>5?'var(--ambertxt)':'var(--sub)';
-        var ccol=cc>10?'var(--greentxt)':'var(--sub)';
-        autoHtml+='<div style="display:flex;gap:8px;padding:3px 0;font-size:10px">'+
-          '<span style="width:68px;font-weight:600;flex-shrink:0">'+b.name+'</span>'+
-          '<span style="color:'+ncol+'">🔴 '+nc+' neg</span>'+
-          '<span style="color:'+ccol+'">📦 '+cc+' collectable</span>'+
-        '</div>';
-      });
-      autoHtml+='</div>';
-    });
-    el.innerHTML=el.innerHTML+divider+autoHtml;
-  }
+// ── CONTROLS ──────────────────────────────────────────────────
+document.querySelector('.branch-grid').addEventListener('click',function(e){
+  var btn=e.target.closest('.bb');if(!btn)return;
+  document.querySelectorAll('.bb').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('wh-btn').classList.remove('on');
+  btn.classList.add('on');
+  dest=+btn.dataset.b;mode='branch';
+  activeDept=['All'];activeSrc=[0,1,2,3];oosFilt='all';
+  tmrReset();updateDayPills();render();
 });
+
+document.getElementById('wh-btn').addEventListener('click',function(){
+  document.querySelectorAll('.bb').forEach(function(b){b.classList.remove('on');});
+  this.classList.add('on');mode='warehouse';render();
+});
+
+document.getElementById('vtabs').addEventListener('click',function(e){
+  var vt=e.target.closest('.vtab');if(!vt)return;
+  document.querySelectorAll('.vtab').forEach(function(t){t.classList.remove('on');});
+  vt.classList.add('on');view=vt.dataset.v;render();
+});
+
+document.getElementById('day-pills').addEventListener('click',function(e){
+  var p=e.target.closest('.pill');if(!p)return;
+  oosFilt=p.dataset.d;updateDayPills();renderOOS();
+});
+function updateDayPills(){document.querySelectorAll('#day-pills .pill').forEach(function(p){p.classList.toggle('on',p.dataset.d===oosFilt);});}
+
+document.getElementById('src-toggle').addEventListener('click',function(){
+  var b=document.getElementById('src-body'),a=document.getElementById('src-arrow');
+  var op=!b.classList.contains('open');b.classList.toggle('open',op);a.classList.toggle('open',op);
+});
+document.getElementById('dept-toggle').addEventListener('click',function(){
+  var b=document.getElementById('dept-body'),a=document.getElementById('dept-arrow');
+  var op=!b.classList.contains('open');b.classList.toggle('open',op);a.classList.toggle('open',op);
+});
+
+document.getElementById('refresh-btn').addEventListener('click',function(){
+  loaded=0;bd=[null,null,null,null];
+  document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Refreshing…</div>';
+  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();
+});
+
+document.getElementById('sync-now-btn').addEventListener('click',doSync);
+document.getElementById('timer-reset-btn').addEventListener('click',tmrReset);
+document.getElementById('btn-history').addEventListener('click',showHistory);
 document.getElementById('btn-dprog').addEventListener('click',showDailyProgress);
 document.getElementById('btn-weekly').addEventListener('click',showWeekly);
-document.getElementById('hist-clear').addEventListener('click',function(){
-  if(!confirm('Clear all history?'))return;
+document.getElementById('hist-clear-btn').addEventListener('click',function(){
+  if(!confirm('Clear history?'))return;
   localStorage.removeItem(HIST_KEY);
   document.getElementById('hist-content').innerHTML='<div class="empty">Cleared</div>';
 });
@@ -1658,224 +1237,10 @@ document.getElementById('hist-clear').addEventListener('click',function(){
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 });
 
-
-// ── SHARED TICK SYNC (Vercel KV) ─────────────────────────────
-// Syncs ticks across all phones via Vercel KV API
-// Falls back to localStorage if KV not configured
-var SYNC_URL='/api/ticks';
-var syncEnabled=true;
-var pendingSync=null;
-
-async function syncLoad(key){
-  try{
-    var r=await fetch(SYNC_URL+'?key='+key,{signal:AbortSignal.timeout(3000)});
-    var d=await r.json();
-    if(d.fallback){syncEnabled=false;return null;}
-    return d.data||null;
-  }catch(e){syncEnabled=false;return null;}
-}
-
-async function syncSave(key,value){
-  if(!syncEnabled)return;
-  try{
-    await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({key:key,value:value}),signal:AbortSignal.timeout(3000)});
-  }catch(e){}
-}
-
-// Load shared ticks on startup
-async function loadSharedTicks(){
-  // Load all shared tick types in parallel
-  var [sharedPk, sharedStaff, sharedNeg, sharedWeek, sharedAuto] = await Promise.all([
-    syncLoad('cc_pk_ticks'),
-    syncLoad('cc_staff2_ticks'),
-    syncLoad('cc_neg_ticks'),
-    syncLoad('cc_staff_week'),
-    syncLoad('cc_auto_log'),
-  ]);
-
-  if(sharedPk){
-    Object.keys(sharedPk).forEach(function(bc){
-      if(!pkTicks[bc])pkTicks[bc]=[false,false,false];
-      for(var i=0;i<3;i++){if(sharedPk[bc][i])pkTicks[bc][i]=true;}
-    });
-    localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTicks));
-  }
-  if(sharedStaff){
-    Object.assign(ticks,sharedStaff);
-    localStorage.setItem('cc_staff2_ticks',JSON.stringify(ticks));
-  }
-  if(sharedNeg){
-    Object.assign(negTicks,sharedNeg);
-    localStorage.setItem('cc_neg_ticks',JSON.stringify(negTicks));
-  }
-  if(sharedWeek){
-    // Merge week data — take highest points per day/branch
-    var localWeek=getWeekData();
-    Object.keys(sharedWeek).forEach(function(day){
-      if(!localWeek[day])localWeek[day]={};
-      Object.keys(sharedWeek[day]).forEach(function(bk){
-        if(!localWeek[day][bk]||sharedWeek[day][bk].pts>localWeek[day][bk].pts){
-          localWeek[day][bk]=sharedWeek[day][bk];
-        }
-      });
-    });
-    try{localStorage.setItem('cc_staff_week',JSON.stringify(localWeek));}catch(e){}
-  }
-  if(sharedAuto){
-    // Merge auto logs — combine and deduplicate by timestamp
-    var localAuto=getAutoLog();
-    var allTs=new Set(localAuto.map(function(e){return e.ts;}));
-    sharedAuto.forEach(function(e){if(!allTs.has(e.ts))localAuto.push(e);});
-    localAuto.sort(function(a,b){return b.ts-a.ts;});
-    saveAutoLog(localAuto.slice(0,1000));
-  }
-  showSyncStatus(syncEnabled?'✓ Synced':'Offline — local only');
-}
-
-// Debounced save — waits 500ms after last tick before syncing
-function debouncedSync(key,value){
-  if(pendingSync)clearTimeout(pendingSync);
-  pendingSync=setTimeout(function(){
-    syncSave(key,value);
-    pendingSync=null;
-    showSyncStatus('✓ Synced to all phones');
-  },500);
-}
-
-function showSyncStatus(msg){
-  var el=document.getElementById('sync-status');
-  if(!el)return;
-  el.textContent=msg;
-  el.style.opacity='1';
-  clearTimeout(el._t);
-  el._t=setTimeout(function(){el.style.opacity='0';},2500);
-}
-
-// ── PICKING TIMER ─────────────────────────────────────────────
-var pickTimer={
-  running:false,
-  startTime:null,
-  lastPickTime:null,
-  pickCount:0,
-  times:[], // ms between each pick
-  interval:null
-};
-
-function startPickTimer(){
-  if(pickTimer.running)return;
-  pickTimer.running=true;
-  pickTimer.startTime=Date.now();
-  pickTimer.lastPickTime=Date.now();
-  pickTimer.pickCount=0;
-  pickTimer.times=[];
-  pickTimer.interval=setInterval(updateTimerDisplay,1000);
-  updateTimerDisplay();
-  showTimerBar(true);
-}
-
-function recordPick(){
-  var now=Date.now();
-  if(!pickTimer.running)startPickTimer();
-  if(pickTimer.lastPickTime){
-    var elapsed=now-pickTimer.lastPickTime;
-    pickTimer.times.push(elapsed);
-  }
-  pickTimer.lastPickTime=now;
-  pickTimer.pickCount++;
-  updateTimerDisplay();
-}
-
-function stopPickTimer(){
-  if(!pickTimer.running)return;
-  pickTimer.running=false;
-  clearInterval(pickTimer.interval);
-  updateTimerDisplay();
-}
-
-function resetPickTimer(){
-  stopPickTimer();
-  pickTimer.startTime=null;
-  pickTimer.lastPickTime=null;
-  pickTimer.pickCount=0;
-  pickTimer.times=[];
-  showTimerBar(false);
-  updateTimerDisplay();
-}
-
-function fmtTime(ms){
-  var s=Math.floor(ms/1000);
-  var m=Math.floor(s/60);s=s%60;
-  return (m>0?m+'m ':'')+s+'s';
-}
-
-function updateTimerDisplay(){
-  var el=document.getElementById('pick-timer-display');
-  if(!el||!pickTimer.startTime)return;
-  var totalMs=Date.now()-pickTimer.startTime;
-  var avgMs=pickTimer.times.length>0?
-    pickTimer.times.reduce(function(a,b){return a+b;})/pickTimer.times.length:0;
-  var lastMs=pickTimer.times.length>0?pickTimer.times[pickTimer.times.length-1]:0;
-
-  var context=currentMode==='warehouse'?'warehouse picking':
-               currentView==='urgent'?'collecting stock':
-               currentView==='negative'?'fixing negatives':'';
-  el.innerHTML=
-    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
-    '<span style="font-size:12px;font-weight:700;color:var(--purpletxt)">⏱ '+fmtTime(totalMs)+' '+context+'</span>'+
-    '<span style="font-size:11px;color:var(--sub)">'+pickTimer.pickCount+' done</span>'+
-    (avgMs>0?'<span style="font-size:11px;color:var(--sub)">avg '+fmtTime(avgMs)+'/item</span>':'')+
-    (lastMs>0?'<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--purplebg);color:var(--purpletxt)">last: '+fmtTime(lastMs)+'</span>':'')+
-    (!pickTimer.running&&pickTimer.pickCount>0?'<span style="font-size:10px;font-weight:700;color:var(--green);padding:2px 6px;border-radius:4px;background:var(--greenbg)">✓ Session complete!</span>':'')+
-    '</div>';
-}
-
-function showTimerBar(show){
-  var el=document.getElementById('pick-timer-bar');
-  if(el)el.style.display=show?'block':'none';
-}
-
+// ── START ─────────────────────────────────────────────────────
+Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
+loadImgs();
+doSync();
 </script>
-
-<!-- HISTORY PANEL -->
-<div class="hist-ov" id="hist-ov">
-  <div class="hist-pan">
-    <div class="hist-handle"></div>
-    <div class="hist-hdr">
-      <div class="hist-title">Action history</div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <button class="hist-clear" id="hist-clear">Clear all</button>
-        <button onclick="document.getElementById('hist-ov').classList.remove('open')" 
-          style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font)">✕</button>
-      </div>
-    </div>
-    <div id="hist-content"><div class="empty">No history yet</div></div>
-  </div>
-</div>
-
-<!-- DAILY PROGRESS PANEL -->
-<div class="dprog-ov" id="dprog-ov">
-  <div class="dprog-pan">
-    <div class="hist-handle"></div>
-    <div class="dprog-hdr" style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div class="dprog-title">Today's progress<button onclick="document.getElementById('dprog-ov').classList.remove('open')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer;flex-shrink:0;margin-top:2px">✕</button></div>
-      <div class="dprog-sub" id="dprog-date"></div>
-    </div>
-    <div id="dprog-content"></div>
-  </div>
-</div>
-
-<!-- WEEKLY LEADERBOARD PANEL -->
-<div class="wkly-ov" id="wkly-ov">
-  <div class="wkly-pan">
-    <div class="hist-handle"></div>
-    <div class="wkly-hdr" style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div class="wkly-title">Weekly leaderboard<button onclick="document.getElementById('wkly-ov').classList.remove('open')" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer;flex-shrink:0;margin-top:2px">✕</button></div>
-      <div class="wkly-sub">Who's doing their jobs this week</div>
-    </div>
-    <div id="wkly-content"></div>
-  </div>
-</div>
-
 </body>
 </html>
