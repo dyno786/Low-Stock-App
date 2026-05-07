@@ -1,9 +1,5 @@
 // api/ticks.js — Shared tick state using Upstash Redis
-// GET /api/ticks?key=cc_pk_ticks → returns {data: {...}}
-// POST /api/ticks with {key, value} → saves and returns {ok: true}
-//
-// SETUP: Install Upstash Redis from Vercel Marketplace
-// This adds UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN automatically
+// Supports all variable names Vercel might inject from Upstash integration
 
 export const config = { runtime: 'edge' };
 
@@ -21,15 +17,15 @@ export default async function handler(req) {
     return new Response(null, { status: 200, headers: cors });
   }
 
-  const URL   = process.env.UPSTASH_REDIS_REST_URL;
-  const TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+  // Use whichever variable name Vercel injected
+  const REDIS_URL   = process.env.KV_REST_API_URL   || process.env.KV_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const REDIS_TOKEN = process.env.KV_REST_API_TOKEN  || process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  if (!URL || !TOKEN) {
-    // Not configured — tell client to use localStorage fallback
-    return new Response(JSON.stringify({ fallback: true }), { status: 200, headers: cors });
+  if (!REDIS_URL || !REDIS_TOKEN) {
+    return new Response(JSON.stringify({ fallback: true, hint: 'missing env vars' }), { status: 200, headers: cors });
   }
 
-  const auth = { Authorization: `Bearer ${TOKEN}` };
+  const auth = { Authorization: `Bearer ${REDIS_TOKEN}` };
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -38,7 +34,7 @@ export default async function handler(req) {
       return new Response(JSON.stringify({ error: 'Invalid key' }), { status: 400, headers: cors });
     }
     try {
-      const res = await fetch(`${URL}/get/${key}`, { headers: auth });
+      const res = await fetch(`${REDIS_URL}/get/${key}`, { headers: auth });
       const data = await res.json();
       const value = data.result ? JSON.parse(data.result) : null;
       return new Response(JSON.stringify({ data: value }), { status: 200, headers: cors });
@@ -54,14 +50,13 @@ export default async function handler(req) {
       if (!key || !ALLOWED_KEYS.includes(key)) {
         return new Response(JSON.stringify({ error: 'Invalid key' }), { status: 400, headers: cors });
       }
-      // Store with 30-day expiry (TTL in seconds)
-      const res = await fetch(`${URL}/set/${key}`, {
+      const res = await fetch(`${REDIS_URL}/set/${key}`, {
         method: 'POST',
         headers: { ...auth, 'Content-Type': 'application/json' },
         body: JSON.stringify(JSON.stringify(value))
       });
-      // Set expiry separately
-      await fetch(`${URL}/expire/${key}/2592000`, { method: 'POST', headers: auth });
+      // 30 day expiry
+      await fetch(`${REDIS_URL}/expire/${key}/2592000`, { method: 'POST', headers: auth });
       const data = await res.json();
       return new Response(JSON.stringify({ ok: data.result === 'OK' }), { status: 200, headers: cors });
     } catch(e) {
