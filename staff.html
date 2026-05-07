@@ -610,10 +610,12 @@ async function loadBranch(i){
       if(el)el.textContent=negs+' neg · '+oos+' OOS';
     }
   }
-  if(bd[3]){
-    var whDead=buildWhDeadStock().length;
-    var whEl=document.getElementById('whsub');
-    if(whEl)whEl.textContent=whDead+' dead stock items · Split actions ready';
+  if(bd[3]&&loaded===4){
+    try{
+      var lists=buildPickList();
+      var whEl=document.getElementById('whsub');
+      if(whEl)whEl.textContent=lists.dead.length+' dead · '+lists.normal.length+' restock items ready';
+    }catch(e){}
   }
   if(loaded>=1)render();
 }
