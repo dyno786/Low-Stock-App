@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CC Warehouse Order</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#0d0d0d;--s1:#141414;--s2:#1c1c1c;--border:#262626;
+  --red:#e53e3e;--redbg:#2d1010;
+  --green:#38a169;--greenbg:#0d2818;
+  --amber:#d69e2e;--amberbg:#2d2210;
+  --blue:#4299e1;--bluebg:#0d1f33;
+  --purple:#805ad5;--purplebg:#1a1030;
+  --ink:#f0f0f0;--sub:#666;--muted:#444;
+  --font:'Outfit',sans-serif;--mono:'DM Mono',monospace;
+  --r:10px
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px}
+
+/* HEADER */
+.hdr{background:var(--s1);border-bottom:1px solid var(--border);padding:14px 16px}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.logo-wrap{display:flex;align-items:center;gap:9px}
+.logo{width:32px;height:32px;background:var(--red);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff}
+.hdr-title{font-size:16px;font-weight:700;color:var(--ink)}
+.hdr-sub{font-size:10px;color:var(--sub);font-family:var(--mono);margin-top:1px}
+.refresh-btn{background:var(--s2);color:var(--sub);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:10px;font-weight:600;cursor:pointer;font-family:var(--font)}
+
+/* CONTROLS */
+.controls{background:var(--s1);border-bottom:1px solid var(--border);padding:10px 14px}
+.ctrl-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.ctrl-row:last-child{margin-bottom:0}
+.ctrl-lbl{font-size:10px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;width:56px;flex-shrink:0}
+.ctrl-select{flex:1;background:var(--s2);color:var(--ink);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;font-weight:500;font-family:var(--font);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.ctrl-select:focus{outline:none;border-color:var(--red)}
+
+/* PERIOD PILLS */
+.period-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.ppill{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--s2);color:var(--sub);user-select:none;transition:all .1s;font-family:var(--font)}
+.ppill.on{background:var(--red);color:#fff;border-color:var(--red)}
+
+/* WEEK PILLS */
+.week-pills{display:flex;gap:5px;flex-wrap:wrap}
+.wpill{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--s2);color:var(--sub);user-select:none;transition:all .1s;font-family:var(--font)}
+.wpill.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* SUMMARY STRIP */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);background:var(--s1);border-bottom:1px solid var(--border)}
+.smc{padding:8px 4px;text-align:center;border-right:1px solid var(--border)}
+.smc:last-child{border-right:none}
+.smc-val{font-size:16px;font-weight:700;font-family:var(--mono);line-height:1}
+.smc-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+
+/* DEPT GROUP HEADER */
+.dept-hdr{padding:8px 14px 5px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.dept-name{font-size:12px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px}
+.dept-count{font-size:10px;color:var(--muted);font-family:var(--mono)}
+
+/* ORDER ROW */
+.order-row{background:var(--s1);border-bottom:1px solid var(--border);padding:11px 13px}
+.order-row.urgent{border-left:3px solid var(--red)}
+.order-row.low{border-left:3px solid var(--amber)}
+.order-row.ok{border-left:3px solid var(--border)}
+.or-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:9px}
+.or-rank{width:22px;height:22px;border-radius:5px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--sub);flex-shrink:0;font-family:var(--mono)}
+.or-rank.top10{background:var(--red);color:#fff}
+.or-rank.top25{background:var(--amber);color:#000}
+.or-img{width:44px;height:44px;border-radius:8px;background:var(--s2);border:1px solid var(--border);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.or-img img{width:44px;height:44px;object-fit:cover}
+.or-info{flex:1;min-width:0}
+.or-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);margin-bottom:2px}
+.or-bc{font-size:9px;color:var(--sub);font-family:var(--mono);margin-bottom:4px}
+.or-tags{display:flex;gap:3px;flex-wrap:wrap}
+.otag{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600;font-family:var(--mono)}
+.otag-pr{background:var(--greenbg);color:var(--green)}
+.otag-avg{background:var(--bluebg);color:var(--blue)}
+.otag-dept{background:var(--s2);color:var(--sub)}
+.otag-urgent{background:var(--redbg);color:var(--red)}
+.otag-low{background:var(--amberbg);color:var(--amber)}
+
+/* BRANCH STOCK ROW */
+.branch-row{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px}
+.bstock{background:var(--s2);border-radius:7px;padding:6px 5px;text-align:center;border:1px solid var(--border)}
+.bstock.zero{border-color:var(--red);background:var(--redbg)}
+.bstock.low{border-color:var(--amber);background:var(--amberbg)}
+.bstock.ok{border-color:var(--border)}
+.bs-qty{font-size:16px;font-weight:700;font-family:var(--mono);line-height:1}
+.bs-qty.zero{color:var(--red)}
+.bs-qty.low{color:var(--amber)}
+.bs-qty.ok{color:var(--green)}
+.bs-name{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+
+/* ORDER SUGGESTION */
+.or-suggest{background:var(--s2);border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between}
+.or-suggest-left{flex:1}
+.or-suggest-why{font-size:10px;color:var(--sub);margin-bottom:3px;line-height:1.5}
+.or-suggest-qty{font-size:13px;font-weight:700;color:var(--ink)}
+.or-suggest-qty span{font-size:10px;color:var(--sub);font-weight:400}
+.or-input{width:60px;background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:13px;font-weight:700;color:var(--ink);text-align:center;font-family:var(--mono)}
+.or-input:focus{outline:none;border-color:var(--blue)}
+
+/* LOADING */
+.loading{padding:50px 14px;text-align:center;color:var(--sub);font-size:12px}
+.spin{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:40px 14px;text-align:center;color:var(--sub);font-size:12px;line-height:2}
+
+/* EXPORT BAR */
+.export-bar{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--s1);border-top:1px solid var(--border);padding:8px 13px 16px;z-index:100;display:flex;gap:8px}
+.exp-btn{flex:1;border:none;border-radius:8px;padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:6px}
+.exp-wa{background:#25d366;color:#fff}
+.exp-info{font-size:10px;color:var(--sub);text-align:center;margin-bottom:5px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="logo-wrap">
+      <div class="logo">CC</div>
+      <div>
+        <div class="hdr-title">Warehouse Order</div>
+        <div class="hdr-sub" id="stime">loading…</div>
+      </div>
+    </div>
+    <button class="refresh-btn" id="refresh-btn">↺ Refresh</button>
+  </div>
+
+  <div class="controls">
+    <!-- SUPPLIER / BRAND FILTER -->
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">Supplier</span>
+      <select class="ctrl-select" id="supplier-select">
+        <option value="ALL">All suppliers / brands</option>
+      </select>
+    </div>
+
+    <!-- DEPT FILTER -->
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">Dept</span>
+      <select class="ctrl-select" id="dept-select">
+        <option value="ALL">All departments</option>
+      </select>
+    </div>
+
+    <!-- SALES PERIOD -->
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">Sales data</span>
+      <div class="period-pills" id="period-pills">
+        <div class="ppill" data-p="30">Last 30d</div>
+        <div class="ppill on" data-p="60">Last 60d</div>
+        <div class="ppill" data-p="90">Last 90d</div>
+      </div>
+    </div>
+
+    <!-- ORDER COVERAGE -->
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">Order for</span>
+      <div class="week-pills" id="week-pills">
+        <div class="wpill" data-w="2">2 wks</div>
+        <div class="wpill on" data-w="3">3 wks</div>
+        <div class="wpill" data-w="4">4 wks</div>
+        <div class="wpill" data-w="5">5 wks</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="summary" id="summary">
+  <div class="smc"><div class="smc-val" id="s-total">—</div><div class="smc-lbl">Products</div></div>
+  <div class="smc"><div class="smc-val" style="color:var(--red)" id="s-urgent">—</div><div class="smc-lbl">Urgent</div></div>
+  <div class="smc"><div class="smc-val" style="color:var(--amber)" id="s-low">—</div><div class="smc-lbl">Low stock</div></div>
+  <div class="smc"><div class="smc-val" style="color:var(--green)" id="s-val">—</div><div class="smc-lbl">Order value</div></div>
+</div>
+
+<div id="out"><div class="loading"><div class="spin"></div>Loading branch data…</div></div>
+
+<div class="export-bar">
+  <div style="flex:1">
+    <div class="exp-info" id="exp-info">0 items selected</div>
+    <button class="exp-btn exp-wa" id="wa-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Send order to supplier via WhatsApp
+    </button>
+  </div>
+</div>
+
+<script>
+var WA = '447305505976';
+var BR = [
+  {id:'chapy',    name:'Chapeltown', short:'Chap', color:'#fb923c', url:'/api/stock-data?branch=chapy'},
+  {id:'city',     name:'City Center',short:'City', color:'#4ade80', url:'/api/stock-data?branch=city'},
+  {id:'roundhay', name:'Roundhay',   short:'Roun', color:'#60a5fa', url:'/api/stock-data?branch=roundhay'},
+  {id:'warehouse',name:'Warehouse',  short:'WH',   color:'#a78bfa', url:'/api/stock-data?branch=warehouse'},
+];
+var IURL = '/api/stock-data?branch=images';
+
+// Supplier/brand targets — top to fill to warehouse
+var WH_TARGET = 24; // Default restock target per product in warehouse
+
+var bd = [null,null,null,null], bm = [{},{},{},{}], imgs = {}, loaded = 0;
+var salesPeriod = 60;   // days of sales history to analyse
+var orderWeeks  = 3;    // weeks of stock to order
+var selectedSupplier = 'ALL';
+var selectedDept = 'ALL';
+var orderQtys = {}; // bc → override qty
+
+// ── HELPERS ─────────────────────────────────────────────────
+function cl(v){return String(v==null?'':v).trim();}
+function pD(s){if(!s||s==='Never'||s==='NULL')return null;var p=s.split('/');if(p.length===3){var d=new Date(+p[2],+p[1]-1,+p[0]);return isNaN(d)?null:d;}return null;}
+function dAgo(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
+
+// Extract brand from product name
+function getBrand(nm){
+  if(!nm)return 'UNKNOWN';
+  var upper=nm.toUpperCase();
+  // Multi-word brands first
+  var multiWord=['DARK & LOVELY','SHEA MOISTURE','AFRICA\'S BEST','AFRICAS BEST',
+    'SOFT & BEAUTIFUL','BLUE MAGIC','LETS JAM','WAVE NOUVEAU','CREME OF NATURE',
+    'JAMAICAN MANGO','HEAD & SHOULDERS','HAWAIIAN SILKY','DR MIRACLE',
+    'DESIGN ESSENTIALS','SOFT SHEEN','SOFT N FREE','ECO STYLER'];
+  for(var i=0;i<multiWord.length;i++){
+    if(upper.indexOf(multiWord[i])===0)return multiWord[i];
+  }
+  // First word = brand
+  return nm.split(' ')[0].toUpperCase();
+}
+
+function imgEl(bc,sz){
+  sz=sz||44;
+  if(imgs[bc])return '<img src="'+imgs[bc]+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';
+  return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+}
+
+// ── LOAD ────────────────────────────────────────────────────
+async function loadImgs(){
+  try{
+    var c=localStorage.getItem('cc_imgs');
+    if(c){var o=JSON.parse(c);if(Date.now()-o.ts<86400000){imgs=o.d;return;}}
+    var r=await fetch(IURL);var t=await r.text();
+    Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
+      var bc=cl(row['Barcode']),src=cl(row['ImageURL']);
+      if(bc&&src&&src.startsWith('http'))imgs[bc]=src;
+    });
+    try{localStorage.setItem('cc_imgs',JSON.stringify({ts:Date.now(),d:imgs}));}catch(e){}
+  }catch(e){}
+}
+
+async function loadBranch(i){
+  try{
+    var r=await fetch(BR[i].url);var t=await r.text();
+    bd[i]=Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){
+      var ls=cl(row['LastSold']),ac=cl(row['AvgCost']);
+      return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
+             qty:parseInt(row['StockQty'])||0,pr:parseFloat(row['Price'])||0,
+             ac:parseFloat(ac)||0,
+             dp:cl(row['Department']),ls:(ls&&ls!=='NULL')?ls:'Never',
+             brand:getBrand(cl(row['ProductName']))};
+    }).filter(function(p){return p.bc&&p.nm;});
+    bm[i]={};bd[i].forEach(function(p){bm[i][p.bc]=p;});
+  }catch(e){bd[i]=[];}
+  loaded++;
+  document.getElementById('stime').textContent=loaded<4?'loading '+loaded+'/4…':'live · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  if(loaded>=4){buildFilters();renderOrders();}
+}
+
+// ── CORE CALCULATION ─────────────────────────────────────────
+// For each product:
+// 1. Get sales velocity = how many times it sold across all branches in salesPeriod
+// 2. A product "sold" in period if LastSold is within salesPeriod days
+// 3. Estimate weekly velocity from avg sell rate
+// 4. Suggest order = orderWeeks × weekly velocity - WH current stock
+function calcOrders(){
+  // Build combined product map across all branches
+  var productMap = {};
+  for(var b=0;b<4;b++){
+    (bd[b]||[]).forEach(function(p){
+      if(!p.bc||!p.nm)return;
+      if(!productMap[p.bc]){
+        productMap[p.bc]={
+          bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp,
+          pr:p.pr,ac:p.ac,brand:p.brand,
+          branchQty:[0,0,0],whQty:0,
+          branchLS:[null,null,null],
+          soldInPeriod:[false,false,false],
+          minDaysAgo:9999
+        };
+      }
+      var pm=productMap[p.bc];
+      if(b<3){
+        pm.branchQty[b]=p.qty;
+        pm.branchLS[b]=p.ls;
+        var d=dAgo(p.ls);
+        if(d!==null){
+          pm.soldInPeriod[b]=d<=salesPeriod;
+          if(d<pm.minDaysAgo)pm.minDaysAgo=d;
+        }
+      }else{
+        pm.whQty=p.qty;
+      }
+    });
+  }
+
+  // Score and rank products
+  var products=[];
+  Object.values(productMap).forEach(function(pm){
+    // Only include products that have sold at least once in salesPeriod
+    var soldBranches=pm.soldInPeriod.filter(Boolean).length;
+    if(soldBranches===0)return;
+
+    // Sales velocity: branches that sold it / salesPeriod * 7 = weekly rate per branch
+    // Total weekly demand = soldBranches * (salesPeriod/salesPeriod) approximation
+    // Better: use number of branches actively selling * assumed 1-2 units/week
+    // Since we don't have transaction count, use:
+    // - If sold recently (<30d): active seller = 1 unit/week per selling branch
+    // - If sold 30-60d: slow seller = 0.5 units/week
+    // - If sold 60-90d: very slow = 0.25 units/week
+    var weeklyRate;
+    if(pm.minDaysAgo<=30) weeklyRate=soldBranches*1.0;
+    else if(pm.minDaysAgo<=60) weeklyRate=soldBranches*0.5;
+    else weeklyRate=soldBranches*0.25;
+
+    // Total needed for orderWeeks coverage across all branches
+    var totalNeeded=Math.ceil(weeklyRate*orderWeeks);
+    // Add WH buffer (1 week buffer on top)
+    totalNeeded+=Math.ceil(weeklyRate);
+    // Subtract WH current stock
+    var suggestedOrder=Math.max(0,totalNeeded-pm.whQty);
+
+    if(suggestedOrder===0)return; // Already stocked enough
+
+    // Total branch stock
+    var totalBranchStock=pm.branchQty[0]+pm.branchQty[1]+pm.branchQty[2];
+
+    // Urgency: urgent = at least 2 branches have 0 stock
+    var zeroBranches=pm.branchQty.filter(function(q){return q<=0;}).length;
+    var urgency=zeroBranches>=2?'urgent':zeroBranches>=1||pm.whQty===0?'low':'ok';
+
+    // Score: higher = should order more urgently
+    var score=soldBranches*100 + (zeroBranches*50) + (pm.minDaysAgo<=7?30:pm.minDaysAgo<=30?10:0) + (pm.whQty===0?20:0);
+
+    products.push({
+      bc:pm.bc,nm:pm.nm,sz:pm.sz,dp:pm.dp,pr:pm.pr,ac:pm.ac,brand:pm.brand,
+      branchQty:pm.branchQty,whQty:pm.whQty,
+      branchLS:pm.branchLS,soldBranches:soldBranches,
+      weeklyRate:weeklyRate,suggestedOrder:suggestedOrder,
+      totalNeeded:totalNeeded,urgency:urgency,
+      zeroBranches:zeroBranches,minDaysAgo:pm.minDaysAgo,
+      score:score
+    });
+  });
+
+  // Sort by score desc, take top 100
+  products.sort(function(a,b){return b.score-a.score;});
+  return products.slice(0,100);
+}
+
+// ── FILTERS ─────────────────────────────────────────────────
+function buildFilters(){
+  var products=calcOrders();
+  // Brands
+  var brands={};
+  products.forEach(function(p){if(p.brand)brands[p.brand]=(brands[p.brand]||0)+1;});
+  var brandSel=document.getElementById('supplier-select');
+  var oldBrand=brandSel.value;
+  brandSel.innerHTML='<option value="ALL">All suppliers / brands ('+products.length+')</option>';
+  Object.keys(brands).sort().forEach(function(b){
+    var opt=document.createElement('option');
+    opt.value=b;opt.textContent=b+' ('+brands[b]+')';
+    brandSel.appendChild(opt);
+  });
+  if(oldBrand)brandSel.value=oldBrand;
+
+  // Depts
+  var depts={};
+  products.forEach(function(p){if(p.dp)depts[p.dp]=(depts[p.dp]||0)+1;});
+  var deptSel=document.getElementById('dept-select');
+  var oldDept=deptSel.value;
+  deptSel.innerHTML='<option value="ALL">All departments</option>';
+  Object.keys(depts).sort().forEach(function(d){
+    var opt=document.createElement('option');
+    opt.value=d;opt.textContent=d+' ('+depts[d]+')';
+    deptSel.appendChild(opt);
+  });
+  if(oldDept)deptSel.value=oldDept;
+}
+
+// ── RENDER ──────────────────────────────────────────────────
+function renderOrders(){
+  var el=document.getElementById('out');
+  var allProducts=calcOrders();
+
+  // Apply filters
+  var products=allProducts.filter(function(p){
+    if(selectedSupplier!=='ALL'&&p.brand!==selectedSupplier)return false;
+    if(selectedDept!=='ALL'&&p.dp!==selectedDept)return false;
+    return true;
+  });
+
+  if(!products.length){
+    el.innerHTML='<div class="empty">No products to order<br><small>Try changing the supplier or dept filter</small></div>';
+    return;
+  }
+
+  // Summary
+  var urgent=products.filter(function(p){return p.urgency==='urgent';}).length;
+  var low=products.filter(function(p){return p.urgency==='low';}).length;
+  var totalVal=products.reduce(function(s,p){
+    var qty=orderQtys[p.bc]!==undefined?orderQtys[p.bc]:p.suggestedOrder;
+    return s+(qty*(p.ac||p.pr*0.5));
+  },0);
+  document.getElementById('s-total').textContent=products.length;
+  document.getElementById('s-urgent').textContent=urgent;
+  document.getElementById('s-low').textContent=low;
+  document.getElementById('s-val').textContent='£'+Math.round(totalVal).toLocaleString();
+
+  // Group by dept
+  var byDept={};
+  products.forEach(function(p,i){
+    var d=p.dp||'General';
+    if(!byDept[d])byDept[d]=[];
+    byDept[d].push({p:p,rank:i+1});
+  });
+
+  var html='';
+  Object.keys(byDept).sort().forEach(function(dept){
+    var items=byDept[dept];
+    html+='<div class="dept-hdr"><span class="dept-name">'+dept+'</span><span class="dept-count">'+items.length+' items</span></div>';
+    items.forEach(function(x){html+=mkOrderRow(x.p,x.rank);});
+  });
+
+  el.innerHTML=html;
+
+  // Wire qty inputs
+  el.querySelectorAll('.or-input').forEach(function(inp){
+    inp.addEventListener('change',function(){
+      var bc=this.dataset.bc;
+      var val=parseInt(this.value);
+      if(!isNaN(val)&&val>=0)orderQtys[bc]=val;
+      updateExportBar();
+    });
+  });
+
+  updateExportBar();
+}
+
+function mkOrderRow(p,rank){
+  var orderQty=orderQtys[p.bc]!==undefined?orderQtys[p.bc]:p.suggestedOrder;
+  var urgClass=p.urgency==='urgent'?'urgent':p.urgency==='low'?'low':'ok';
+  var rankClass=rank<=10?'top10':rank<=25?'top25':'';
+
+  // Branch stock cells
+  var branchHTML='<div class="branch-row">';
+  ['Chapeltown','City Center','Roundhay'].forEach(function(bname,bi){
+    var qty=p.branchQty[bi];
+    var cls=qty<=0?'zero':qty<6?'low':'ok';
+    var qCls=qty<=0?'zero':qty<6?'low':'ok';
+    var ls=p.branchLS[bi];
+    var daysStr=ls&&ls!=='Never'?dAgo(ls)+'d ago':'—';
+    branchHTML+='<div class="bstock '+cls+'">'+
+      '<div class="bs-qty '+qCls+'">'+qty+'</div>'+
+      '<div class="bs-name">'+bname.split(' ')[0]+'</div>'+
+      '<div style="font-size:7px;color:var(--sub);margin-top:1px;font-family:var(--mono)">'+daysStr+'</div>'+
+    '</div>';
+  });
+  branchHTML+='</div>';
+
+  // Why suggest
+  var whyParts=[];
+  if(p.zeroBranches>=2)whyParts.push(p.zeroBranches+' branches at zero');
+  if(p.whQty===0)whyParts.push('WH out of stock');
+  whyParts.push(p.soldBranches+' branch'+(p.soldBranches>1?'es':'')+(p.minDaysAgo<=30?' (active seller)':p.minDaysAgo<=60?' (moderate)':' (slow)'));
+  whyParts.push(orderWeeks+'wk coverage at '+p.weeklyRate.toFixed(1)+'u/wk');
+  var whyStr=whyParts.join(' · ');
+
+  return '<div class="order-row '+urgClass+'">'+
+    '<div class="or-top">'+
+      '<div class="or-rank '+rankClass+'">#'+rank+'</div>'+
+      '<div class="or-img">'+imgEl(p.bc,44)+'</div>'+
+      '<div class="or-info">'+
+        '<div class="or-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
+        '<div class="or-bc">'+p.bc+'</div>'+
+        '<div class="or-tags">'+
+          (p.pr>0?'<span class="otag otag-pr">£'+p.pr.toFixed(2)+'</span>':'')+
+          '<span class="otag otag-avg">'+p.weeklyRate.toFixed(1)+'u/wk</span>'+
+          '<span class="otag otag-dept">'+p.dp+'</span>'+
+          (p.urgency==='urgent'?'<span class="otag otag-urgent">URGENT</span>':'')+
+          (p.urgency==='low'?'<span class="otag otag-low">LOW STOCK</span>':'')+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    branchHTML+
+    '<div class="or-suggest">'+
+      '<div class="or-suggest-left">'+
+        '<div class="or-suggest-why">'+whyStr+'</div>'+
+        '<div class="or-suggest-qty">WH has: '+p.whQty+' · Need: '+p.totalNeeded+' <span>('+orderWeeks+'wk + buffer)</span></div>'+
+      '</div>'+
+      '<input class="or-input" type="number" min="0" value="'+orderQty+'" data-bc="'+p.bc+'">'+
+    '</div>'+
+  '</div>';
+}
+
+function updateExportBar(){
+  var inputs=document.querySelectorAll('.or-input');
+  var total=0;
+  inputs.forEach(function(inp){var v=parseInt(inp.value);if(!isNaN(v)&&v>0)total++;});
+  document.getElementById('exp-info').textContent=total+' products in order';
+}
+
+// ── WHATSAPP ORDER ───────────────────────────────────────────
+document.getElementById('wa-btn').addEventListener('click',function(){
+  var products=calcOrders().filter(function(p){
+    if(selectedSupplier!=='ALL'&&p.brand!==selectedSupplier)return false;
+    if(selectedDept!=='ALL'&&p.dp!==selectedDept)return false;
+    return true;
+  });
+
+  var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var supplierLabel=selectedSupplier==='ALL'?'All suppliers':selectedSupplier;
+  var msg='CC Hair & Beauty — Warehouse Order\n'+date+' '+time+'\nSupplier: '+supplierLabel+'\nCoverage: '+orderWeeks+' weeks (1 week lead time)\n\n';
+
+  var orderLines=[];
+  products.forEach(function(p){
+    var qty=orderQtys[p.bc]!==undefined?orderQtys[p.bc]:p.suggestedOrder;
+    if(qty>0){
+      orderLines.push({p:p,qty:qty});
+    }
+  });
+
+  if(!orderLines.length){alert('No items to order');return;}
+
+  // Group by dept
+  var byDept={};
+  orderLines.forEach(function(x){
+    if(!byDept[x.p.dp])byDept[x.p.dp]=[];byDept[x.p.dp].push(x);
+  });
+
+  Object.keys(byDept).sort().forEach(function(dept){
+    msg+=dept+':\n';
+    byDept[dept].forEach(function(x){
+      msg+='  '+x.p.bc+' | '+x.p.nm+(x.p.sz?' '+x.p.sz:'')+' x'+x.qty+'\n';
+    });
+    msg+='\n';
+  });
+
+  var totalItems=orderLines.reduce(function(s,x){return s+x.qty;},0);
+  var totalVal=orderLines.reduce(function(s,x){return s+(x.qty*(x.p.ac||x.p.pr*0.5));},0);
+  msg+='Total lines: '+orderLines.length+'\nTotal units: '+totalItems+'\nEst. cost: £'+Math.round(totalVal).toLocaleString()+'\n\nSent from CC Warehouse Order App';
+
+  window.open('https://wa.me/'+WA+'?text='+encodeURIComponent(msg),'_blank');
+});
+
+// ── CONTROLS ────────────────────────────────────────────────
+document.getElementById('period-pills').addEventListener('click',function(e){
+  var p=e.target.closest('.ppill');if(!p)return;
+  document.querySelectorAll('.ppill').forEach(function(x){x.classList.remove('on');});
+  p.classList.add('on');salesPeriod=+p.dataset.p;buildFilters();renderOrders();
+});
+
+document.getElementById('week-pills').addEventListener('click',function(e){
+  var p=e.target.closest('.wpill');if(!p)return;
+  document.querySelectorAll('.wpill').forEach(function(x){x.classList.remove('on');});
+  p.classList.add('on');orderWeeks=+p.dataset.w;renderOrders();
+});
+
+document.getElementById('supplier-select').addEventListener('change',function(){
+  selectedSupplier=this.value;renderOrders();
+});
+
+document.getElementById('dept-select').addEventListener('change',function(){
+  selectedDept=this.value;renderOrders();
+});
+
+document.getElementById('refresh-btn').addEventListener('click',function(){
+  loaded=0;bd=[null,null,null,null];bm=[{},{},{},{}];
+  document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Refreshing…</div>';
+  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();
+});
+
+// ── START ────────────────────────────────────────────────────
+Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
+loadImgs();
+</script>
+</body>
+</html>
