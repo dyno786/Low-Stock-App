@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CC System Check</title>
+<style>
+:root{--red:#cc0000;--green:#15803d;--amber:#b45309;--bg:#f0f0f0;--s1:#fff;--border:#e0e0e0;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:20px}
+.hdr{background:var(--red);padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.logo{width:32px;height:32px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--red)}
+.title{color:#fff;font-size:16px;font-weight:700;margin-left:9px}
+.sub{color:rgba(255,255,255,.6);font-size:10px;font-family:monospace}
+.refresh-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)}
+
+/* STATUS HEADER */
+.status-hdr{padding:14px 14px 10px}
+.status-title{font-size:22px;font-weight:700}
+.status-sub{font-size:12px;color:#666;margin-top:3px}
+.last-check{font-size:10px;color:#999;margin-top:4px;font-family:monospace}
+
+/* OVERALL STATUS */
+.overall{margin:8px 12px;border-radius:12px;padding:14px;border:2px solid}
+.overall.ok{background:#f0fdf4;border-color:#86efac}
+.overall.warn{background:#fffbeb;border-color:#fcd34d}
+.overall.error{background:#fff0f0;border-color:#fca5a5}
+.overall-title{font-size:18px;font-weight:700}
+.overall-sub{font-size:12px;margin-top:3px}
+
+/* BRANCH CARD */
+.branch-card{background:var(--s1);border-radius:12px;margin:6px 12px;border:1px solid var(--border);overflow:hidden}
+.branch-hdr{padding:11px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.branch-name{font-size:15px;font-weight:700}
+.branch-status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+.status-ok{background:#dcfce7;color:var(--green)}
+.status-warn{background:#fef3c7;color:var(--amber)}
+.status-error{background:#fee2e2;color:var(--red)}
+
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border)}
+.metric{padding:9px 6px;text-align:center;border-right:1px solid var(--border)}
+.metric:last-child{border-right:none}
+.metric-val{font-size:17px;font-weight:700;font-family:monospace;line-height:1}
+.metric-lbl{font-size:8px;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+
+.detail-row{padding:7px 13px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:11px}
+.detail-row:last-child{border-bottom:none}
+.detail-lbl{color:#888}
+.detail-val{font-weight:600;font-family:monospace}
+.detail-ok{color:var(--green)}
+.detail-warn{color:var(--amber)}
+.detail-error{color:var(--red)}
+
+.issue-row{background:#fffbeb;padding:7px 13px;border-bottom:0.5px solid #fcd34d;font-size:11px;color:var(--amber);font-weight:600}
+.issue-row.crit{background:#fff0f0;color:var(--red);border-color:#fca5a5}
+
+/* PIPELINE DIAGRAM */
+.pipeline{background:var(--s1);border-radius:12px;margin:6px 12px;border:1px solid var(--border);padding:14px}
+.pipeline-title{font-size:14px;font-weight:700;margin-bottom:10px}
+.pipe-step{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)}
+.pipe-step:last-child{border-bottom:none}
+.pipe-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.pipe-dot.ok{background:#dcfce7;color:var(--green)}
+.pipe-dot.warn{background:#fef3c7;color:var(--amber)}
+.pipe-dot.unknown{background:#f0f0f0;color:#888}
+.pipe-body{flex:1}
+.pipe-name{font-size:12px;font-weight:600}
+.pipe-sub{font-size:10px;color:#888;margin-top:1px}
+.pipe-arrow{font-size:16px;color:#ccc;flex-shrink:0}
+
+/* LOADING */
+.loading{padding:50px 14px;text-align:center;color:#888;font-size:13px}
+.spin{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="display:flex;align-items:center">
+    <div class="logo">CC</div>
+    <div>
+      <div class="title" style="margin-left:9px">System Check</div>
+      <div class="sub" id="check-time" style="margin-left:9px">Checking…</div>
+    </div>
+  </div>
+  <button class="refresh-btn" onclick="runCheck()">↺ Recheck</button>
+</div>
+
+<div id="out"><div class="loading"><div class="spin"></div>Running system check…<br><small>Checking all 4 branches</small></div></div>
+
+<script>
+var BRANCHES = [
+  {id:'chapy',     name:'Chapeltown',  color:'#fb923c', url:'/api/stock-data?branch=chapy'},
+  {id:'city',      name:'City Center', color:'#22c55e', url:'/api/stock-data?branch=city'},
+  {id:'roundhay',  name:'Roundhay',    color:'#3b82f6', url:'/api/stock-data?branch=roundhay'},
+  {id:'warehouse', name:'Warehouse',   color:'#a78bfa', url:'/api/stock-data?branch=warehouse'},
+];
+
+var REQUIRED_COLS = ['Barcode','ProductName','StockQty','LastSold','Department'];
+var MIN_PRODUCTS  = {chapy:5000, city:5000, roundhay:1000, warehouse:500};
+var MIN_POSITIVE  = {chapy:1000, city:1000, roundhay:500,  warehouse:100};
+
+function parseCSV(text){
+  var lines = text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  if(!lines.length) return null;
+  var headers = lines[0].split(',');
+  var qi = headers.indexOf('StockQty');
+  var li = headers.indexOf('LastSold');
+  var bi = headers.indexOf('Barcode');
+  var ni = headers.indexOf('ProductName');
+  var di = headers.indexOf('DateCreated');
+  var deps = new Set();
+  var pos=0,neg=0,zero=0,latestDate=null;
+
+  for(var i=1;i<lines.length;i++){
+    var parts = lines[i].split(',');
+    if(parts.length < 3) continue;
+    var qty = qi>=0 ? parseInt(parts[qi]) : NaN;
+    if(!isNaN(qty)){
+      if(qty>0)pos++;
+      else if(qty<0)neg++;
+      else zero++;
+    }
+    // Track most recent LastSold
+    if(li>=0&&parts[li]&&parts[li]!=='NULL'&&parts[li].length>0){
+      var d=parseDate(parts[li]);
+      if(d&&(!latestDate||d>latestDate))latestDate=d;
+    }
+    // Track departments
+    var depIdx=headers.indexOf('Department');
+    if(depIdx>=0&&parts[depIdx])deps.add(parts[depIdx].trim());
+  }
+
+  // Check most recent DateCreated (when product was first in EPOS)
+  var latestCreated=null;
+  if(di>=0){
+    for(var j=1;j<Math.min(lines.length,100);j++){
+      var pts=lines[j].split(',');
+      if(pts[di]){var dc=parseDate(pts[di]);if(dc&&(!latestCreated||dc>latestCreated))latestCreated=dc;}
+    }
+  }
+
+  return {
+    headers:headers,
+    total:lines.length-1,
+    pos:pos,neg:neg,zero:zero,
+    latestSold:latestDate,
+    latestCreated:latestCreated,
+    departments:deps.size,
+    missingCols:REQUIRED_COLS.filter(function(c){return headers.indexOf(c)<0;})
+  };
+}
+
+function parseDate(s){
+  if(!s||s==='Never'||s==='NULL')return null;
+  var p=s.split('/');
+  if(p.length===3){var d=new Date(+p[2],+p[1]-1,+p[0]);return isNaN(d)?null:d;}
+  return null;
+}
+
+function daysAgo(d){
+  if(!d)return null;
+  return Math.floor((Date.now()-d.getTime())/86400000);
+}
+
+function fmtDate(d){
+  if(!d)return 'Unknown';
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+}
+
+async function checkBranch(b){
+  var start = Date.now();
+  try{
+    var r = await fetch(b.url, {signal:AbortSignal.timeout(10000)});
+    var elapsed = Date.now()-start;
+    if(!r.ok) return {id:b.id,name:b.name,color:b.color,status:'error',error:'HTTP '+r.status,elapsed:elapsed};
+    var text = await r.text();
+    var parsed = parseCSV(text);
+    if(!parsed) return {id:b.id,name:b.name,color:b.color,status:'error',error:'Empty response',elapsed:elapsed};
+    
+    var issues=[];
+    if(parsed.missingCols.length) issues.push('Missing columns: '+parsed.missingCols.join(', '));
+    if(parsed.total < MIN_PRODUCTS[b.id]) issues.push('Low product count: '+parsed.total+' (expected 1000+)');
+    if(parsed.pos < MIN_POSITIVE[b.id]) issues.push('Very low positive stock: '+parsed.pos);
+    
+    // Check if data is stale (lastSold within last year)
+    var soldDays = daysAgo(parsed.latestSold);
+    var createdDays = daysAgo(parsed.latestCreated);
+    
+    // If most recent created date is > 2 days old, data may be stale
+    if(createdDays !== null && createdDays > 2) issues.push('EPOS export may be stale — most recent record: '+createdDays+'d ago');
+    
+    return {
+      id:b.id,name:b.name,color:b.color,
+      status:issues.length?'warn':'ok',
+      elapsed:elapsed,
+      parsed:parsed,
+      issues:issues,
+      soldDays:soldDays,
+      createdDays:createdDays
+    };
+  }catch(e){
+    return {id:b.id,name:b.name,color:b.color,status:'error',error:e.message,elapsed:Date.now()-start};
+  }
+}
+
+async function runCheck(){
+  document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Checking all 4 branches…</div>';
+  document.getElementById('check-time').textContent='Checking…';
+
+  var results = await Promise.all(BRANCHES.map(checkBranch));
+  var now = new Date();
+  document.getElementById('check-time').textContent=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  var allOk = results.every(function(r){return r.status==='ok';});
+  var anyError = results.some(function(r){return r.status==='error';});
+  var overallStatus = anyError?'error':allOk?'ok':'warn';
+
+  var totalProducts = results.reduce(function(s,r){return s+(r.parsed?r.parsed.total:0);},0);
+  var totalPositive = results.reduce(function(s,r){return s+(r.parsed?r.parsed.pos:0);},0);
+  var totalNeg = results.reduce(function(s,r){return s+(r.parsed?r.parsed.neg:0);},0);
+
+  var html = '';
+
+  // OVERALL STATUS
+  var msgs = {ok:'✅ All systems connected — data flowing correctly',warn:'⚠️ Systems connected with warnings',error:'❌ One or more branches have data issues'};
+  var colors = {ok:'ok',warn:'warn',error:'error'};
+  html += '<div class="status-hdr"><div class="status-title">Pipeline Status</div>'+
+    '<div class="status-sub">Live check of all 4 EPOS exports → Google Sheets → App</div>'+
+    '<div class="last-check">Checked: '+now.toLocaleString('en-GB')+'</div></div>';
+
+  html += '<div class="overall '+colors[overallStatus]+'">'+
+    '<div class="overall-title">'+msgs[overallStatus]+'</div>'+
+    '<div class="overall-sub">'+totalProducts.toLocaleString()+' total products · '+totalPositive.toLocaleString()+' in stock · '+totalNeg+' negative across all branches</div>'+
+  '</div>';
+
+  // BRANCH CARDS
+  results.forEach(function(r){
+    var sClass = r.status==='ok'?'status-ok':r.status==='warn'?'status-warn':'status-error';
+    var sText = r.status==='ok'?'✓ Connected':r.status==='warn'?'⚠ Warning':'✗ Error';
+    html += '<div class="branch-card">';
+    html += '<div class="branch-hdr">'+
+      '<div><div class="branch-name" style="color:'+r.color+'">'+r.name+'</div><div style="font-size:9px;color:#888;margin-top:2px">Response: '+(r.elapsed||0)+'ms</div></div>'+
+      '<div class="branch-status '+sClass+'">'+sText+'</div>'+
+    '</div>';
+
+    if(r.status==='error'){
+      html += '<div class="issue-row crit">❌ '+r.error+'</div>';
+    } else if(r.parsed){
+      var p = r.parsed;
+
+      // Issues
+      r.issues.forEach(function(issue){
+        var isCrit=issue.indexOf('Missing')>=0||issue.indexOf('empty')>=0;
+        html += '<div class="issue-row'+(isCrit?' crit':'')+'">⚠ '+issue+'</div>';
+      });
+
+      // Metrics
+      html += '<div class="metrics">'+
+        '<div class="metric"><div class="metric-val" style="color:var(--green)">'+p.pos.toLocaleString()+'</div><div class="metric-lbl">In stock</div></div>'+
+        '<div class="metric"><div class="metric-val" style="color:'+( p.neg>20?'var(--red)':p.neg>0?'var(--amber)':'var(--green)')+'">'+p.neg+'</div><div class="metric-lbl">Negative</div></div>'+
+        '<div class="metric"><div class="metric-val" style="color:#888">'+p.total.toLocaleString()+'</div><div class="metric-lbl">Total</div></div>'+
+      '</div>';
+
+      // Details
+      html += '<div class="detail-row"><span class="detail-lbl">Last sale recorded</span><span class="detail-val '+(r.soldDays!==null&&r.soldDays<30?'detail-ok':'detail-warn')+'">'+fmtDate(p.latestSold)+'</span></div>';
+      
+      var freshnessClass = r.createdDays!==null?(r.createdDays<=1?'detail-ok':r.createdDays<=3?'detail-warn':'detail-error'):'';
+      var freshnessText = r.createdDays!==null?(r.createdDays===0?'Today':r.createdDays===1?'Yesterday':r.createdDays+'d ago'):'Unknown';
+      html += '<div class="detail-row"><span class="detail-lbl">Most recent EPOS export</span><span class="detail-val '+freshnessClass+'">'+freshnessText+'</span></div>';
+      html += '<div class="detail-row"><span class="detail-lbl">Departments</span><span class="detail-val">'+p.departments+'</span></div>';
+      html += '<div class="detail-row"><span class="detail-lbl">Columns</span><span class="detail-val '+(p.missingCols.length?'detail-error':'detail-ok')+'">'+p.headers.length+' '+(p.missingCols.length?'❌ missing: '+p.missingCols.join(', '):'✓ all present')+'</span></div>';
+    }
+    html += '</div>';
+  });
+
+  // PIPELINE DIAGRAM
+  html += '<div class="pipeline">'+
+    '<div class="pipeline-title">Data pipeline</div>';
+
+  var pipeSteps = [
+    {icon:'💻',name:'Branch EPOS (SQL Server)',sub:'bat file exports SQL → CSV every 30 mins',cls:allOk?'ok':'unknown'},
+    {icon:'📁',name:'CC-StockExport folder',sub:'Desktop CSV file updated by bat file',cls:'unknown'},
+    {icon:'☁️',name:'Google Drive sync',sub:'Auto-syncs CSV to Google Drive',cls:'unknown'},
+    {icon:'📊',name:'Google Apps Script',sub:'Reads CSV → writes to Google Sheet',cls:'unknown'},
+    {icon:'🌐',name:'Google Sheets CSV',sub:'Published as public CSV URL',cls:allOk?'ok':'warn'},
+    {icon:'⚡',name:'Vercel Edge API',sub:'Proxies + caches Google Sheets (5 min cache)',cls:'ok'},
+    {icon:'📱',name:'Staff phones',sub:'Fetch from Vercel — fast response',cls:'ok'},
+  ];
+
+  pipeSteps.forEach(function(step,i){
+    html += '<div class="pipe-step">'+
+      '<div class="pipe-dot '+step.cls+'">'+step.icon+'</div>'+
+      '<div class="pipe-body">'+
+        '<div class="pipe-name">'+step.name+'</div>'+
+        '<div class="pipe-sub">'+step.sub+'</div>'+
+      '</div>'+
+      (i<pipeSteps.length-1?'<div class="pipe-arrow">↓</div>':'')+
+    '</div>';
+  });
+  html += '</div>';
+
+  // WHAT TO DO IF DATA MISMATCH
+  html += '<div style="background:var(--s1);border-radius:12px;margin:6px 12px;border:1px solid var(--border);padding:14px">'+
+    '<div style="font-size:14px;font-weight:700;margin-bottom:9px">🔍 If EPOS data ≠ App data</div>'+
+    '<div style="font-size:12px;color:#555;line-height:2">'+
+    '1. Check <strong>Task Scheduler</strong> on each branch PC — bat file should run every 30 mins<br>'+
+    '2. Check <strong>CC-StockExport folder</strong> — CSV modified date should be recent<br>'+
+    '3. Check <strong>Google Drive</strong> — file should show last synced recently<br>'+
+    '4. Check <strong>Google Apps Script</strong> — open sheet, click Extensions → Apps Script → see logs<br>'+
+    '5. If all above OK, tap ↺ Recheck on this page — stale Vercel cache refreshes in 5 mins'+
+    '</div>'+
+  '</div>';
+
+  document.getElementById('out').innerHTML = html;
+}
+
+runCheck();
+</script>
+</body>
+</html>
