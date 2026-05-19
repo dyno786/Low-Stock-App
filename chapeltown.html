@@ -125,6 +125,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .img-badge{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600}
 .img-badge-miss{background:var(--redbg);color:var(--redtxt)}
 .img-badge-ok{background:var(--greenbg);color:var(--greentxt)}
+.img-dept-row{background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:10px 12px;cursor:pointer;transition:border-color .1s,background .1s}
+.img-dept-row:hover{border-color:var(--red);background:#fffafa}
+.img-dept-row.selected{border-color:var(--red);background:var(--redbg)}
 .img-toggle{display:flex;gap:5px;padding:8px 10px;background:var(--s1);border-bottom:1px solid var(--border)}
 .wa-footer{background:var(--s1);border-top:1px solid var(--border);padding:9px 13px 18px;margin-top:14px}
 .wa-row{display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:6px}
@@ -197,7 +200,7 @@ var DEST_ID=0;
 var TARGET=12;
 var DEST_URL='/api/stock-data?branch=chapy';
 var IURL='/api/stock-data?branch=images';
-var IMG_DEPTS=['AFRO BEAUTY PRODUCTS','ACCESSORIES']; // Update when dept codes confirmed
+var IMG_DEPTS=[]; // Empty = show all depts in picker — staff choose which one to check // Update when dept codes confirmed
 var SOURCES=[{si:3,name:"Warehouse",short:"WH",color:"#a78bfa",url:"/api/stock-data?branch=warehouse",rule:"wh"},{si:1,name:"City Center",short:"City",color:"#4ade80",url:"/api/stock-data?branch=city",rule:"branch"},{si:2,name:"Roundhay",short:"Roun",color:"#60a5fa",url:"/api/stock-data?branch=roundhay",rule:"branch"}];
 var WA='447305505976';
 
@@ -274,7 +277,7 @@ function updateStats(){
   if(!destData)return;
   var neg=destData.filter(function(p){return p.qty<0;}).length;
   var oos=destData.filter(function(p){return p.qty===0&&p.ls&&p.ls!=='Never';}).length;
-  var miss=destData.filter(function(p){return p.qty>0&&IMG_DEPTS.indexOf(p.dp)>=0&&!imgs[p.bc];}).length;
+  var miss=destData.filter(function(p){return p.qty>0&&!imgs[p.bc];}).length; // All in-stock missing images
   document.getElementById('stat-neg').textContent=neg;
   document.getElementById('stat-oos').textContent=oos;
   document.getElementById('stat-img').textContent=miss;
@@ -549,49 +552,101 @@ function renderOOS(){
 }
 
 // ── IMAGES TAB ─────────────────────────────────────────────
+var imgDept=''; // selected dept, '' = none chosen yet
+
 function renderImgs(){
   var el=document.getElementById('out');
   if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
-  var items=(destData||[]).filter(function(p){return p.qty>0&&IMG_DEPTS.indexOf(p.dp)>=0;});
-  var missing=items.filter(function(p){return !imgs[p.bc];});
-  var show=imgFilter==='missing'?missing:items;
-  var html='<div class="img-toggle">'+
-    '<div class="pill img-pill'+(imgFilter==='missing'?' on':'')+'" data-f="missing">🔴 Missing ('+missing.length+')</div>'+
-    '<div class="pill img-pill'+(imgFilter==='all'?' on':'')+'" data-f="all">All in-stock ('+items.length+')</div>'+
-  '</div>';
-  if(!show.length){
-    html+='<div class="empty">'+(imgFilter==='missing'?'✅ All in-stock items in these departments have images!':'No in-stock items found in dept 81/82')+'</div>';
-    el.innerHTML=html;return;
-  }
-  var byDept={};show.forEach(function(p){if(!byDept[p.dp])byDept[p.dp]=[];byDept[p.dp].push(p);});
-  Object.keys(byDept).sort().forEach(function(dept){
-    var dits=byDept[dept];
-    var dm=dits.filter(function(p){return !imgs[p.bc];}).length;
-    html+='<div class="dept-hdr"><div class="dept-name">'+dept+'</div>'+
-      '<div class="dept-sub" style="color:'+(dm>0?'var(--red)':'var(--green)')+'">'+dm+' missing / '+dits.length+' total</div></div>';
-    html+='<div class="card-list">';
-    dits.forEach(function(p){
-      var hasImg=!!imgs[p.bc];
-      html+='<div class="img-row">'+
-        '<div class="img-thumb'+(hasImg?' ok':'')+'">'+
-          (hasImg?imgEl(p.bc,52):'📷')+
-        '</div>'+
-        '<div class="img-body">'+
-          '<div class="img-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-          '<div class="img-bc">'+p.bc+'</div>'+
-          '<div class="img-tags">'+
-            '<span class="img-badge '+(hasImg?'img-badge-ok':'img-badge-miss')+'">'+(hasImg?'✓ Has image':'✗ MISSING — take photo')+'</span>'+
-            '<span class="itag itag-info">qty: '+p.qty+'</span>'+
-            (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
-          '</div>'+
-        '</div>'+
-      '</div>';
-    });
-    html+='</div>';
+
+  // Build dept list from in-stock items only
+  var allDepts={};
+  (destData||[]).forEach(function(p){
+    if(p.qty>0&&p.dp){
+      if(!allDepts[p.dp])allDepts[p.dp]=0;
+      allDepts[p.dp]++;
+    }
   });
+  var deptNames=Object.keys(allDepts).sort();
+
+  // Dept picker
+  var html='<div style="padding:10px 12px;background:var(--s1);border-bottom:1px solid var(--border)">'+
+    '<div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Choose department to check</div>'+
+    '<div style="display:flex;flex-direction:column;gap:4px">';
+
+  deptNames.forEach(function(dept){
+    var total=allDepts[dept];
+    var missing=(destData||[]).filter(function(p){return p.qty>0&&p.dp===dept&&!imgs[p.bc];}).length;
+    var pct=total>0?Math.round((total-missing)/total*100):100;
+    var statusColor=missing>0?'var(--red)':'var(--green)';
+    var isSelected=imgDept===dept;
+    html+='<div class="img-dept-row'+(isSelected?' selected':'')+'" data-dept="'+dept.replace(/"/g,'&quot;')+'">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'+
+        '<span style="font-size:12px;font-weight:'+(isSelected?'700':'600')+';color:'+(isSelected?'var(--ink)':'var(--sub)')+'">'+dept+'</span>'+
+        '<span style="font-size:10px;font-weight:700;color:'+statusColor+'">'+(missing>0?missing+' missing':'✓ All done')+'</span>'+
+      '</div>'+
+      '<div style="height:4px;background:var(--bg);border-radius:2px;overflow:hidden">'+
+        '<div style="height:100%;width:'+pct+'%;background:'+(missing>0?'var(--amber)':'var(--green)')+';border-radius:2px;transition:width .3s"></div>'+
+      '</div>'+
+      '<div style="font-size:9px;color:var(--sub);margin-top:3px">'+total+' in-stock items · '+pct+'% have images</div>'+
+    '</div>';
+  });
+
+  html+='</div></div>';
+
+  // If dept selected show its items
+  if(imgDept){
+    var items=(destData||[]).filter(function(p){return p.qty>0&&p.dp===imgDept;});
+    var missing=items.filter(function(p){return !imgs[p.bc];});
+    var show=imgFilter==='missing'?missing:items;
+
+    html+='<div style="background:var(--s1);border-bottom:1px solid var(--border);padding:9px 12px;display:flex;align-items:center;justify-content:space-between">'+
+      '<div style="font-size:13px;font-weight:700">'+imgDept+'</div>'+
+      '<button onclick="imgDept=\'\';renderImgs()" style="font-size:10px;color:var(--sub);background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-family:var(--font)">↩ Change</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:5px;padding:8px 10px;background:var(--s1);border-bottom:1px solid var(--border)">'+
+      '<div class="pill img-pill'+(imgFilter==='missing'?' on':'')+'" data-f="missing">🔴 Missing ('+missing.length+')</div>'+
+      '<div class="pill img-pill'+(imgFilter==='all'?' on':'')+'" data-f="all">All ('+items.length+')</div>'+
+    '</div>';
+
+    if(!show.length){
+      html+='<div class="empty">'+(imgFilter==='missing'?'✅ All items in this department have images!':'No in-stock items')+'</div>';
+    }else{
+      html+='<div class="card-list" style="margin:7px 11px;border-radius:var(--r)">';
+      show.forEach(function(p){
+        var hasImg=!!imgs[p.bc];
+        html+='<div class="img-row">'+
+          '<div class="img-thumb'+(hasImg?' ok':'')+'">'+
+            (hasImg?imgEl(p.bc,52):'📷')+
+          '</div>'+
+          '<div class="img-body">'+
+            '<div class="img-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
+            '<div class="img-bc">'+p.bc+'</div>'+
+            '<div class="img-tags">'+
+              '<span class="img-badge '+(hasImg?'img-badge-ok':'img-badge-miss')+'">'+(hasImg?'✓ Has image':'✗ MISSING — take photo')+'</span>'+
+              '<span class="itag itag-info">qty: '+p.qty+'</span>'+
+              (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      });
+      html+='</div>';
+    }
+  }
+
   el.innerHTML=html;
+
+  // Wire dept row clicks
+  el.querySelectorAll('.img-dept-row').forEach(function(row){
+    row.addEventListener('click',function(){
+      imgDept=this.dataset.dept;
+      imgFilter='missing'; // default to missing when switching dept
+      renderImgs();
+    });
+  });
+
+  // Wire filter pills
   el.querySelectorAll('.img-pill').forEach(function(p){
-    p.addEventListener('click',function(){imgFilter=this.dataset.f;renderImgs();});
+    p.addEventListener('click',function(e){e.stopPropagation();imgFilter=this.dataset.f;renderImgs();});
   });
 }
 
