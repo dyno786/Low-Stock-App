@@ -611,25 +611,54 @@ function renderImgs(){
     if(!show.length){
       html+='<div class="empty">'+(imgFilter==='missing'?'✅ All items in this department have images!':'No in-stock items')+'</div>';
     }else{
-      html+='<div class="card-list" style="margin:7px 11px;border-radius:var(--r)">';
+      // Sort by barcode so same ranges (same barcode prefix) are grouped together
+      show.sort(function(a,b){return a.bc.localeCompare(b.bc);});
+
+      // Group by first 7 digits of barcode = same brand/range
+      var byPrefix={};var prefixOrder=[];
       show.forEach(function(p){
-        var hasImg=!!imgs[p.bc];
-        html+='<div class="img-row">'+
-          '<div class="img-thumb'+(hasImg?' ok':'')+'">'+
-            (hasImg?imgEl(p.bc,52):'📷')+
-          '</div>'+
-          '<div class="img-body">'+
-            '<div class="img-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-            '<div class="img-bc">'+p.bc+'</div>'+
-            '<div class="img-tags">'+
-              '<span class="img-badge '+(hasImg?'img-badge-ok':'img-badge-miss')+'">'+(hasImg?'✓ Has image':'✗ MISSING — take photo')+'</span>'+
-              '<span class="itag itag-info">qty: '+p.qty+'</span>'+
-              (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
-            '</div>'+
-          '</div>'+
-        '</div>';
+        var prefix=p.bc.length>=7?p.bc.substring(0,7):'OTHER';
+        if(!byPrefix[prefix]){byPrefix[prefix]=[];prefixOrder.push(prefix);}
+        byPrefix[prefix].push(p);
       });
-      html+='</div>';
+
+      prefixOrder.forEach(function(prefix){
+        var group=byPrefix[prefix];
+        var groupMissing=group.filter(function(p){return !imgs[p.bc];}).length;
+        var groupName=prefix+(group.length>1?'xxxxxxx ('+group.length+' products)':'');
+
+        // Only show group header if more than 1 item shares the prefix
+        if(group.length>1){
+          html+='<div style="padding:6px 13px 4px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+            '<span style="font-size:11px;font-weight:700;color:var(--sub);font-family:monospace">'+prefix+'…</span>'+
+            '<span style="font-size:10px;font-weight:600;color:'+(groupMissing>0?'var(--red)':'var(--green)')+'">'+
+              (groupMissing>0?groupMissing+' missing':'✓ all have images')+
+            '</span>'+
+          '</div>';
+        }
+
+        html+='<div class="card-list" style="margin:0 11px 7px;border-radius:var(--r)">';
+        group.forEach(function(p){
+          var hasImg=!!imgs[p.bc];
+          html+='<div class="img-row">'+
+            '<div class="img-thumb'+(hasImg?' ok':'')+'">'+
+              (hasImg?imgEl(p.bc,52):'📷')+
+            '</div>'+
+            '<div class="img-body">'+
+              '<div class="img-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
+              '<div class="img-bc" style="font-size:10px;color:var(--sub);font-family:monospace;margin-bottom:4px">'+
+                '<span style="color:var(--ink);font-weight:600">'+p.bc.substring(0,7)+'</span>'+p.bc.substring(7)+
+              '</div>'+
+              '<div class="img-tags">'+
+                '<span class="img-badge '+(hasImg?'img-badge-ok':'img-badge-miss')+'">'+(hasImg?'✓ Has image':'✗ MISSING')+'</span>'+
+                '<span class="itag itag-info">qty: '+p.qty+'</span>'+
+                (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
+              '</div>'+
+            '</div>'+
+          '</div>';
+        });
+        html+='</div>';
+      });
     }
   }
 
