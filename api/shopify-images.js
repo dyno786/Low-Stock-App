@@ -1,27 +1,22 @@
 // api/shopify-images.js
-// Fetches all products from Shopify and returns barcode → image status
+// Returns barcode → image URL map from Shopify
+// Uses Node.js runtime (not edge) to avoid size limits
 
-export const config = { runtime: 'edge' };
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
-export default async function handler(req) {
-  const cors = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Content-Type': 'application/json',
-  };
-
-  if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers: cors });
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   const STORE = process.env.SHOPIFY_STORE;
   const TOKEN = process.env.SHOPIFY_TOKEN;
 
-  // Debug: check env vars exist (don't log values)
   if (!STORE || !TOKEN) {
-    return new Response(JSON.stringify({
+    return res.status(500).json({
       error: 'Missing env vars',
       has_store: !!STORE,
       has_token: !!TOKEN
-    }), { status: 500, headers: cors });
+    });
   }
 
   try {
@@ -30,72 +25,61 @@ export default async function handler(req) {
     let pageCount = 0;
     let totalProducts = 0;
 
-    while (pageUrl && pageCount < 100) {
-      const res = await fetch(pageUrl, {
+    while (pageUrl && pageCount < 200) {
+      const response = await fetch(pageUrl, {
         headers: {
           'X-Shopify-Access-Token': TOKEN,
           'Content-Type': 'application/json',
         }
       });
 
-      // Return detailed error if Shopify rejects
-      if (!res.ok) {
-        const errText = await res.text();
-        return new Response(JSON.stringify({
-          error: `Shopify returned ${res.status}`,
-          status: res.status,
-          detail: errText.substring(0, 200),
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(500).json({
+          error: `Shopify API error ${response.status}`,
+          detail: errText.substring(0, 300),
           store: STORE,
           page: pageCount
-        }), { status: 500, headers: cors });
+        });
       }
 
-      const data = await res.json();
+      const data = await response.json();
       const products = data.products || [];
       totalProducts += products.length;
 
-      products.forEach(function(product) {
+      products.forEach(product => {
+        // Get first image URL
         const imageUrl = product.images && product.images.length > 0
           ? product.images[0].src : null;
 
-        (product.variants || []).forEach(function(variant) {
-          const barcode = (variant.barcode || '').trim();
-          const sku = (variant.sku || '').trim();
-          const bc = barcode || sku;
+        (product.variants || []).forEach(variant => {
+          const bc = (variant.barcode || variant.sku || '').trim();
           if (!bc) return;
           results[bc] = {
-            has_image: !!imageUrl,
-            image_url: imageUrl,
-            on_shopify: true
+            h: imageUrl ? 1 : 0,  // has image (compact)
+            u: imageUrl            // url
           };
         });
       });
 
-      // Next page from Link header
-      const linkHeader = res.headers.get('Link') || '';
-      const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
-      pageUrl = nextMatch ? nextMatch[1] : null;
+      // Get next page from Link header
+      const link = response.headers.get('Link') || '';
+      const next = link.match(/<([^>]+)>;\s*rel="next"/);
+      pageUrl = next ? next[1] : null;
       pageCount++;
     }
 
-    return new Response(JSON.stringify({
+    res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
+    return res.status(200).json({
       ok: true,
       count: Object.keys(results).length,
-      total_products: totalProducts,
-      pages_fetched: pageCount,
+      pages: pageCount,
       products: results
-    }), {
-      status: 200,
-      headers: {
-        ...cors,
-        'Cache-Control': 's-maxage=1800, stale-while-revalidate=3600',
-      }
     });
 
   } catch(e) {
-    return new Response(JSON.stringify({
-      error: e.message,
-      stack: e.stack ? e.stack.substring(0, 300) : null
-    }), { status: 500, headers: cors });
+    return res.status(500).json({
+      error: e.message
+    });
   }
 }
