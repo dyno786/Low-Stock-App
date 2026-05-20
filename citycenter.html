@@ -128,6 +128,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .img-dept-row{background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:10px 12px;cursor:pointer;transition:border-color .1s,background .1s}
 .img-dept-row:hover{border-color:var(--red);background:#fffafa}
 .img-dept-row.selected{border-color:var(--red);background:var(--redbg)}
+.item-card.zero-dest{border-left:3px solid var(--red)}
+.item-card.zero-dest .cnum{color:var(--red)}
+.item-card.zero-dest .cbox{border:1px solid #fca5a5}
 .img-toggle{display:flex;gap:5px;padding:8px 10px;background:var(--s1);border-bottom:1px solid var(--border)}
 .wa-footer{background:var(--s1);border-top:1px solid var(--border);padding:9px 13px 18px;margin-top:14px}
 .wa-row{display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:6px}
@@ -200,12 +203,15 @@ var DEST_ID=1;
 var TARGET=12;
 var DEST_URL='/api/stock-data?branch=city';
 var IURL='/api/stock-data?branch=images';
-var IMG_DEPTS=[]; // Empty = show all depts in picker — staff choose which one to check // Update when dept codes confirmed
+var IMG_PRIORITY_DEPTS=['SYNTHETIC HAIR', 'HUMAN HAIR']; // Auto-loaded on open
+var IMG_SECONDARY_DEPTS=['HUMAN HAIR724', 'INSTANT WEAVE SYNTHETIC', 'PONYTAILS SYNTHETIC', 'WIGS HUMAN HAIR40', 'WIGS SYNTHETIC']; // Shown in picker
+var IMG_DEPTS=[]; // kept for compat // Update when dept codes confirmed
 var SOURCES=[{si:3,name:"Warehouse",short:"WH",color:"#a78bfa",url:"/api/stock-data?branch=warehouse",rule:"wh"},{si:0,name:"Chapeltown",short:"Chap",color:"#fb923c",url:"/api/stock-data?branch=chapy",rule:"branch"},{si:2,name:"Roundhay",short:"Roun",color:"#60a5fa",url:"/api/stock-data?branch=roundhay",rule:"branch"}];
 var WA='447305505976';
 
 var destData=null,srcData={},imgs={},destLoaded=false,srcLoaded={};
-var view='s0',oosFilt='all',imgFilter='missing';
+var view='s0',oosFilt='all',imgFilter='missing',imgDeptTab='priority';
+var collectDept='ALL'; // department filter for collect tabs
 var ticks={},negTx={};
 try{ticks=JSON.parse(localStorage.getItem('cc_t'+DEST_ID)||'{}');}catch(e){}
 try{negTx=JSON.parse(localStorage.getItem('cc_n'+DEST_ID)||'{}');}catch(e){}
@@ -277,7 +283,9 @@ function updateStats(){
   if(!destData)return;
   var neg=destData.filter(function(p){return p.qty<0;}).length;
   var oos=destData.filter(function(p){return p.qty===0&&p.ls&&p.ls!=='Never';}).length;
-  var miss=destData.filter(function(p){return p.qty>0&&!imgs[p.bc];}).length; // All in-stock missing images
+  // Missing images in priority departments only for header stat
+  var priorityDepts=['SYNTHETIC HAIR', 'HUMAN HAIR'];
+  var miss=destData.filter(function(p){return p.qty>0&&priorityDepts.indexOf(p.dp)>=0&&!imgs[p.bc];}).length;
   document.getElementById('stat-neg').textContent=neg;
   document.getElementById('stat-oos').textContent=oos;
   document.getElementById('stat-img').textContent=miss;
@@ -362,18 +370,42 @@ function renderCollect(srcIdx){
   var done=elig.filter(function(x){return ticks[srcIdx+'_'+x.bc];}).length;
   setProg(elig.length,done,done+' of '+elig.length+' collected from '+sc.name);
 
+  // Build dept list for filter
+  var deptCounts={};
+  elig.forEach(function(item){deptCounts[item.dp]=(deptCounts[item.dp]||0)+1;});
+  var deptList=Object.keys(deptCounts).sort();
+  var filteredElig=collectDept==='ALL'?elig:elig.filter(function(x){return x.dp===collectDept;});
+  var filtDone=filteredElig.filter(function(x){return ticks[srcIdx+'_'+x.bc];}).length;
+
   var html='<div class="src-hdr">'+
     '<div class="src-name" style="color:'+sc.color+'">Collect from '+sc.name+'</div>'+
     '<div class="src-rule" style="color:'+sc.color+'">'+(sc.rule==='wh'?'Top up to '+TARGET+' on shelf (smart split — lowest stock branch gets priority)':'Only items where YOU have 0 in stock — collect half from them')+'</div>'+
-    '<div class="src-prog">'+done+' of '+elig.length+' done</div></div>';
+    '<div class="src-prog">'+filtDone+' of '+filteredElig.length+' done'+(collectDept!=='ALL'?' · '+collectDept:'')+'</div>'+
+  '</div>'+
+  // Dept filter pills
+  '<div style="background:var(--s1);border-bottom:1px solid var(--border);padding:7px 10px;overflow-x:auto;scrollbar-width:none;display:'+(deptList.length>1?'block':'none')+'">'+
+  '<div style="display:flex;gap:5px;min-width:max-content">'+
+  '<div class="pill collect-dept-pill'+(collectDept==='ALL'?' on':'')+'" data-dp="ALL">All ('+elig.length+')</div>'+
+  deptList.map(function(d){
+    var cnt=deptCounts[d];
+    var dn=elig.filter(function(x){return x.dp===d&&ticks[srcIdx+'_'+x.bc];}).length;
+    return '<div class="pill collect-dept-pill'+(collectDept===d?' on':'')+'" data-dp="'+d.replace(/"/g,'&quot;')+'">'+d+' ('+cnt+')</div>';
+  }).join('')+
+  '</div></div>';
 
+  if(!filteredElig.length&&elig.length){
+    html+='<div class="empty">Nothing in <strong>'+collectDept+'</strong> to collect from '+sc.name+'<br><small>Try "All" to see other departments</small></div>';
+    el.innerHTML=html;
+    el.querySelectorAll('.collect-dept-pill').forEach(function(p){p.addEventListener('click',function(){collectDept=this.dataset.dp;renderCollect(srcIdx);});});
+    return;
+  }
   if(!elig.length){
     html+='<div class="empty">Nothing to collect from '+sc.name+' right now</div>';
     el.innerHTML=html;return;
   }
 
   var byDept={};
-  elig.forEach(function(item){if(!byDept[item.dp])byDept[item.dp]=[];byDept[item.dp].push(item);});
+  filteredElig.forEach(function(item){if(!byDept[item.dp])byDept[item.dp]=[];byDept[item.dp].push(item);});
 
   Object.keys(byDept).sort().forEach(function(dept){
     var items=byDept[dept];
@@ -382,7 +414,8 @@ function renderCollect(srcIdx){
     items.forEach(function(item){
       var isDone=!!ticks[srcIdx+'_'+item.bc];
       var ddays=dAgo(item.destLs),dtag=dayTag(ddays,30,7);
-      html+='<div class="item-card'+(isDone?' done':'')+'" data-bc="'+item.bc+'" data-si="'+srcIdx+'">'+
+      var zeroClass=(!isDone&&item.destQty<=0)?'zero-dest':'';
+      html+='<div class="item-card'+(isDone?' done':'')+' '+zeroClass+'" data-bc="'+item.bc+'" data-si="'+srcIdx+'">'+
         '<div class="item-img">'+imgEl(item.bc,52)+'</div>'+
         '<div class="item-body">'+
           '<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
@@ -410,6 +443,11 @@ function renderCollect(srcIdx){
   html+='<div class="wa-footer"><div class="wa-row"><span>Message manager when done</span><span id="wa-cnt">'+done+' done</span></div>'+
     '<button class="wa-btn" id="wa-btn">'+waSVG()+'Message manager</button></div>';
   el.innerHTML=html;
+
+  // Wire dept filter pills
+  el.querySelectorAll('.collect-dept-pill').forEach(function(p){
+    p.addEventListener('click',function(){collectDept=this.dataset.dp;renderCollect(srcIdx);});
+  });
 
   // Wire ticks — instant DOM update only, no re-render
   el.querySelectorAll('.tick').forEach(function(btn){
@@ -552,45 +590,58 @@ function renderOOS(){
 }
 
 // ── IMAGES TAB ─────────────────────────────────────────────
-var imgDept=''; // selected dept, '' = none chosen yet
+var imgDept=''; // selected dept
+var imgDeptTab='priority'; // 'priority' or 'other', '' = none chosen yet
 
 function renderImgs(){
   var el=document.getElementById('out');
   if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
 
-  // Build dept list from in-stock items only
+  // Build stats per dept
   var allDepts={};
   (destData||[]).forEach(function(p){
-    if(p.qty>0&&p.dp){
-      if(!allDepts[p.dp])allDepts[p.dp]=0;
-      allDepts[p.dp]++;
-    }
+    if(p.qty>0&&p.dp){if(!allDepts[p.dp])allDepts[p.dp]=0;allDepts[p.dp]++;}
   });
-  var deptNames=Object.keys(allDepts).sort();
 
-  // Dept picker
-  var html='<div style="padding:10px 12px;background:var(--s1);border-bottom:1px solid var(--border)">'+
-    '<div style="font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Choose department to check</div>'+
-    '<div style="display:flex;flex-direction:column;gap:4px">';
-
-  deptNames.forEach(function(dept){
-    var total=allDepts[dept];
+  function deptCard(dept,isSelected){
+    var total=allDepts[dept]||0;if(!total)return '';
     var missing=(destData||[]).filter(function(p){return p.qty>0&&p.dp===dept&&!imgs[p.bc];}).length;
     var pct=total>0?Math.round((total-missing)/total*100):100;
     var statusColor=missing>0?'var(--red)':'var(--green)';
-    var isSelected=imgDept===dept;
-    html+='<div class="img-dept-row'+(isSelected?' selected':'')+'" data-dept="'+dept.replace(/"/g,'&quot;')+'">'+
+    return '<div class="img-dept-row'+(isSelected?' selected':'')+'" data-dept="'+dept.replace(/"/g,'&quot;')+'">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'+
-        '<span style="font-size:12px;font-weight:'+(isSelected?'700':'600')+';color:'+(isSelected?'var(--ink)':'var(--sub)')+'">'+dept+'</span>'+
-        '<span style="font-size:10px;font-weight:700;color:'+statusColor+'">'+(missing>0?missing+' missing':'✓ All done')+'</span>'+
+        '<span style="font-size:12px;font-weight:700;color:'+(isSelected?'var(--red)':'var(--ink)')+'">'+dept+'</span>'+
+        '<span style="font-size:11px;font-weight:700;color:'+statusColor+'">'+(missing>0?missing+' missing':'✓ All done')+'</span>'+
       '</div>'+
-      '<div style="height:4px;background:var(--bg);border-radius:2px;overflow:hidden">'+
-        '<div style="height:100%;width:'+pct+'%;background:'+(missing>0?'var(--amber)':'var(--green)')+';border-radius:2px;transition:width .3s"></div>'+
+      '<div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:3px">'+
+        '<div style="height:100%;width:'+pct+'%;background:'+(missing>0?'var(--amber)':'var(--green)')+';border-radius:3px"></div>'+
       '</div>'+
-      '<div style="font-size:9px;color:var(--sub);margin-top:3px">'+total+' in-stock items · '+pct+'% have images</div>'+
+      '<div style="font-size:9px;color:var(--sub)">'+total+' in-stock · '+pct+'% have images</div>'+
     '</div>';
+  }
+
+  // Split depts into priority and other
+  var priorityDeptList=IMG_PRIORITY_DEPTS.filter(function(d){return allDepts[d];});
+  var secondaryDeptList=IMG_SECONDARY_DEPTS.filter(function(d){return allDepts[d]&&IMG_PRIORITY_DEPTS.indexOf(d)<0;});
+  var otherDeptList=Object.keys(allDepts).sort().filter(function(d){
+    return IMG_PRIORITY_DEPTS.indexOf(d)<0&&IMG_SECONDARY_DEPTS.indexOf(d)<0;
   });
 
+  // Tab switcher: Priority | Other
+  var allOtherDepts=secondaryDeptList.concat(otherDeptList);
+  var html='<div style="display:flex;background:var(--s1);border-bottom:2px solid var(--bg)">'+
+    '<div class="vtab'+(imgDeptTab==='priority'?' on':'')+'" id="img-tab-priority" style="flex:1;text-align:center">📋 Priority</div>'+
+    '<div class="vtab'+(imgDeptTab==='other'?' on':'')+'" id="img-tab-other" style="flex:1;text-align:center">📂 Other depts</div>'+
+  '</div>'+
+  '<div style="padding:10px 12px;background:var(--s1);border-bottom:1px solid var(--border)">'+
+  '<div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">'+
+    (imgDeptTab==='priority'?'Priority departments — tap to check':'All other departments')+
+  '</div>'+
+  '<div style="display:flex;flex-direction:column;gap:5px">';
+
+  var showDepts=imgDeptTab==='priority'?priorityDeptList:allOtherDepts;
+  showDepts.forEach(function(dept){html+=deptCard(dept,imgDept===dept);});
+  if(!showDepts.length)html+='<div style="font-size:12px;color:var(--sub);padding:10px 0">No departments found</div>';
   html+='</div></div>';
 
   // If dept selected show its items
@@ -606,6 +657,15 @@ function renderImgs(){
     '<div style="display:flex;gap:5px;padding:8px 10px;background:var(--s1);border-bottom:1px solid var(--border)">'+
       '<div class="pill img-pill'+(imgFilter==='missing'?' on':'')+'" data-f="missing">🔴 Missing ('+missing.length+')</div>'+
       '<div class="pill img-pill'+(imgFilter==='all'?' on':'')+'" data-f="all">All ('+items.length+')</div>'+
+    '</div>';
+
+    // WA send button
+    var waDeptItems=imgFilter==='missing'?missing:items;
+    html+='<div style="background:var(--s1);border-top:1px solid var(--border);padding:9px 13px 4px;margin-top:2px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:6px">'+
+        '<span>Send image task to team</span><span>'+missing.length+' missing images</span>'+
+      '</div>'+
+      '<button id="img-wa-btn" style="width:100%;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:8px">'+waSVG()+'Send missing image list</button>'+
     '</div>';
 
     if(!show.length){
@@ -664,11 +724,17 @@ function renderImgs(){
 
   el.innerHTML=html;
 
+  // Wire tab switcher
+  var tabP=document.getElementById('img-tab-priority');
+  var tabO=document.getElementById('img-tab-other');
+  if(tabP)tabP.addEventListener('click',function(){imgDeptTab='priority';imgDept='';renderImgs();});
+  if(tabO)tabO.addEventListener('click',function(){imgDeptTab='other';imgDept='';renderImgs();});
+
   // Wire dept row clicks
   el.querySelectorAll('.img-dept-row').forEach(function(row){
     row.addEventListener('click',function(){
       imgDept=this.dataset.dept;
-      imgFilter='missing'; // default to missing when switching dept
+      imgFilter='missing';
       renderImgs();
     });
   });
@@ -676,6 +742,26 @@ function renderImgs(){
   // Wire filter pills
   el.querySelectorAll('.img-pill').forEach(function(p){
     p.addEventListener('click',function(e){e.stopPropagation();imgFilter=this.dataset.f;renderImgs();});
+  });
+
+  // Wire WA button
+  var imgWaBtn=document.getElementById('img-wa-btn');
+  if(imgWaBtn)imgWaBtn.addEventListener('click',function(){
+    var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    var items2=(destData||[]).filter(function(p){return p.qty>0&&p.dp===imgDept&&!imgs[p.bc];});
+    if(!items2.length){alert('No missing images in this department!');return;}
+    var msg='CC '+TITLE+' — Missing Shopify Images\n'+date+' '+time+'\nDepartment: '+imgDept+'\n\n';
+    // Group by barcode prefix
+    items2.sort(function(a,b){return a.bc.localeCompare(b.bc);});
+    var lastPrefix='';
+    items2.forEach(function(p){
+      var prefix=p.bc.length>=7?p.bc.substring(0,7):'???';
+      if(prefix!==lastPrefix){msg+='\n['+prefix+'...]\n';lastPrefix=prefix;}
+      msg+='  '+p.bc+' — '+p.nm+(p.sz?' '+p.sz:'')+' (qty:'+p.qty+')\n';
+    });
+    msg+='\nTotal missing: '+items2.length+'\nPlease photograph and upload to Shopify.\nSent from CC Staff App';
+    window.open('https://wa.me/447305505976?text='+encodeURIComponent(msg),'_blank');
   });
 }
 
@@ -686,7 +772,7 @@ document.getElementById('vtabs').addEventListener('click',function(e){
   vt.classList.add('on');
   view=vt.dataset.v;
   // Lazy load — only fetch when tab is first opened
-  if(view.charAt(0)==='s'){var idx=parseInt(view.substring(1));if(!srcLoaded[idx])loadSrc(idx);}
+  if(view.charAt(0)==='s'){var idx=parseInt(view.substring(1));if(!srcLoaded[idx])loadSrc(idx);collectDept='ALL';}
   else if(view==='oos'){SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   renderView();
 });
