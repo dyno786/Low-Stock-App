@@ -183,12 +183,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 
 <div class="day-filter" id="day-filter">
   <div class="day-inner" id="day-pills">
-    <div class="pill on" data-d="all">All</div>
-    <div class="pill" data-d="0">Today</div>
-    <div class="pill" data-d="7">7+ days</div>
-    <div class="pill" data-d="14">14+ days</div>
-    <div class="pill" data-d="30">30+ days</div>
-    <div class="pill" data-d="60">60+ days</div>
+    <div class="pill on" data-d="all">All OOS</div>
+    <div class="pill" data-d="7">7–13 days</div>
+    <div class="pill" data-d="14">14–29 days</div>
+    <div class="pill" data-d="30">30–59 days</div>
+    <div class="pill" data-d="60">60–89 days</div>
+    <div class="pill" data-d="90">90+ days</div>
   </div>
 </div>
 
@@ -216,6 +216,45 @@ var destData=null,srcData={},imgs={},shopifyData={},destLoaded=false,srcLoaded={
 // imgs[barcode] = image URL (only for products WITH images)
 // If barcode in shopifyData but NOT in imgs = on Shopify but no image
 // If barcode NOT in shopifyData = not on Shopify at all
+
+// OOS TRACKER — records first date we saw each product at qty=0
+// Stored in localStorage as {barcode: timestamp}
+// This gives us accurate "days out of stock" rather than using LastSold
+var OOS_KEY='cc_oos_dates_'+DEST_ID;
+var oosDates={};
+try{oosDates=JSON.parse(localStorage.getItem(OOS_KEY)||'{}');}catch(e){}
+
+function updateOOSDates(data){
+  // Called after branch data loads
+  // For each product at qty=0, record the first time we saw it at 0
+  var changed=false;
+  var today=Date.now();
+  (data||[]).forEach(function(p){
+    if(!p.bc)return;
+    if(p.qty<=0){
+      // Product is OOS — record first seen date if not already recorded
+      if(!oosDates[p.bc]){
+        oosDates[p.bc]=today;
+        changed=true;
+      }
+    }else{
+      // Product back in stock — clear the OOS date
+      if(oosDates[p.bc]){
+        delete oosDates[p.bc];
+        changed=true;
+      }
+    }
+  });
+  if(changed){
+    try{localStorage.setItem(OOS_KEY,JSON.stringify(oosDates));}catch(e){}
+  }
+}
+
+function daysOOS(bc){
+  // How many days has this product been at qty=0 according to our tracker
+  if(!oosDates[bc])return null;
+  return Math.floor((Date.now()-oosDates[bc])/86400000);
+}
 var view='s0',oosFilt='all',imgFilter='missing',imgDeptTab='priority';
 var collectDept='ALL'; // department filter for collect tabs
 var ticks={},negTx={};
@@ -288,7 +327,7 @@ function setProg(total,done,sub){var pct=total>0?Math.round(done/total*100):0;do
 function updateStats(){
   if(!destData)return;
   var neg=destData.filter(function(p){return p.qty<0;}).length;
-  var oos=destData.filter(function(p){return p.qty===0&&p.ls&&p.ls!=='Never';}).length;
+  var oos=destData.filter(function(p){return p.qty<=0&&p.ls&&p.ls!=='Never';}).length;
   // Missing images in priority departments — 3 states now
   var priorityDepts=['SYNTHETIC HAIR', 'HUMAN HAIR'];
   var miss=destData.filter(function(p){
@@ -313,6 +352,7 @@ async function loadDest(){
   try{var r=await fetch(DEST_URL);destData=parseCSV(await r.text());}
   catch(e){destData=[];}
   destLoaded=true;
+  updateOOSDates(destData); // track when items first went to 0
   document.getElementById('stime').textContent='live · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   updateStats();renderView();
 }
@@ -579,14 +619,39 @@ function renderOOS(){
     });
   });
   var items=(destData||[]).filter(function(p){
-    if(!p.bc||!p.nm||p.qty>0||p.ls==='Never'||!p.ls)return false;
-    var d=dAgo(p.ls);if(d===null)return false;
-    if(oosFilt==='all')return true;
-    if(oosFilt==='0')return d<=1;
-    return d>=parseInt(oosFilt);
+    // Only show items that are genuinely OOS (qty<=0) AND have sold before (LastSold exists)
+    if(!p.bc||!p.nm||p.qty>0)return false;
+    if(!p.ls||p.ls==='Never')return false;
+    return true;
   });
-  items.forEach(function(p){p._d=dAgo(p.ls);});
-  items.sort(function(a,b){return(b._d||0)-(a._d||0);});
+
+  // Add OOS duration to each item
+  // Priority: use our tracker (most accurate) → fall back to LastSold date
+  items.forEach(function(p){
+    var tracked=daysOOS(p.bc); // days since we first saw it at 0
+    var lastSold=dAgo(p.ls);   // days since last sale
+    p._trackedDays=tracked;    // could be null if app hasn't seen it yet
+    p._lastSoldDays=lastSold;
+    // For display: use tracked if available, otherwise note we don't know exact date
+    p._d=tracked!==null?tracked:null;
+    p._displayDays=tracked!==null?tracked:lastSold; // fallback for sorting
+  });
+
+  // Apply range filter
+  items=items.filter(function(p){
+    var d=p._d!==null?p._d:p._lastSoldDays;
+    if(d===null)return oosFilt==='all';
+    if(oosFilt==='all')return true;
+    var n=parseInt(oosFilt);
+    if(n===7) return d>=7&&d<14;
+    if(n===14)return d>=14&&d<30;
+    if(n===30)return d>=30&&d<60;
+    if(n===60)return d>=60&&d<90;
+    if(n===90)return d>=90;
+    return true;
+  });
+
+  items.sort(function(a,b){return(b._displayDays||0)-(a._displayDays||0);});
   var ws=items.filter(function(p){return avail[p.bc]&&avail[p.bc].length>0;}).length;
   if(!items.length){el.innerHTML='<div class="empty">No OOS items for this filter</div>';return;}
   var html='<div class="stats-grid">'+
@@ -601,15 +666,30 @@ function renderOOS(){
     dits.forEach(function(p){
       var av=avail[p.bc]||[],has=av.length>0;
       var dc=p._d>=30?'var(--red)':p._d>=14?'var(--amber)':'var(--sub)';
+      // Display logic:
+      // If we have tracked data = show "X days OOS" (accurate)
+      // If no tracked data yet = show "last sold X days ago" (approximate)
+      var hasTracked=p._trackedDays!==null;
+      var displayNum=hasTracked?p._trackedDays:p._lastSoldDays;
+      var displayLbl=hasTracked?'days OOS':'d since';
+      var displaySub=hasTracked?'':'last sale';
       html+='<div class="oos-row'+(has?' has':'')+'">'+
         '<div class="oos-img">'+imgEl(p.bc,42)+'</div>'+
         '<div class="oos-body"><div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
         '<div class="oos-bc">'+p.bc+'</div>'+
-        '<div class="oos-tags"><span class="itag itag-info">Last: '+p.ls+'</span>'+
+        '<div class="oos-tags">'+
+          (hasTracked
+            ?'<span class="itag itag-day'+(p._trackedDays>=30?'-red':'')+'">OOS since: '+new Date(oosDates[p.bc]).toLocaleDateString("en-GB",{day:"numeric",month:"short"})+'</span>'
+            :'<span class="itag itag-info">Last sold: '+p.ls+'</span>'
+          )+
           (has?av.map(function(a){return '<span class="itag itag-src">'+a.name+':'+a.qty+'</span>';}).join(''):'<span class="itag itag-day">Reorder</span>')+
           (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
         '</div></div>'+
-        '<div class="oos-right"><div class="oos-days" style="color:'+dc+'">'+p._d+'</div><div class="oos-lbl">days OOS</div></div></div>';
+        '<div class="oos-right">'+
+          '<div class="oos-days" style="color:'+dc+'">'+(displayNum!==null?displayNum:'?')+'</div>'+
+          '<div class="oos-lbl">'+displayLbl+'</div>'+
+          (displaySub?'<div style="font-size:7px;color:var(--sub)">'+displaySub+'</div>':'')+
+        '</div></div>';
     });
     html+='</div>';
   });
