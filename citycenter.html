@@ -613,10 +613,17 @@ function renderNeg(){
 function renderOOS(){
   var el=document.getElementById('out');
   if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
+  // Load all source data if not loaded yet (needed to show stock availability)
+  SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});
+
+  // Build availability map from ALL sources (warehouse + other branches)
   var avail={};
   Object.keys(srcData).forEach(function(si){
     (srcData[si]||[]).forEach(function(p){
-      if(p.bc&&p.qty>0){if(!avail[p.bc])avail[p.bc]=[];avail[p.bc].push({name:SOURCES[+si].name,qty:p.qty});}
+      if(p.bc&&p.qty>0){
+        if(!avail[p.bc])avail[p.bc]=[];
+        avail[p.bc].push({name:SOURCES[+si].name,short:SOURCES[+si].short,color:SOURCES[+si].color,qty:p.qty});
+      }
     });
   });
   // Calculate days since last sold for each OOS item
