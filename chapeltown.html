@@ -341,7 +341,7 @@ async function loadImgs(){
       imgs={};
       Object.keys(data.products).forEach(function(bc){
         var p=data.products[bc];
-        if(p.has_image&&p.image_url)imgs[bc]=p.image_url;
+        if(p.h&&p.u)imgs[bc]=p.u;  // has image + has URL
       });
       try{localStorage.setItem('cc_shopify_imgs',JSON.stringify({
         ts:Date.now(),d:imgs,s:shopifyData

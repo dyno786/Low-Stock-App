@@ -125,6 +125,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .img-badge{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600}
 .img-badge-miss{background:var(--redbg);color:var(--redtxt)}
 .img-badge-ok{background:var(--greenbg);color:var(--greentxt)}
+.img-badge-warn{background:var(--amberbg);color:var(--ambertxt)}
+.img-thumb.warn{border-color:var(--amber);background:var(--amberbg)}
 .img-dept-row{background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:10px 12px;cursor:pointer;transition:border-color .1s,background .1s}
 .img-dept-row:hover{border-color:var(--red);background:#fffafa}
 .img-dept-row.selected{border-color:var(--red);background:var(--redbg)}
@@ -202,14 +204,18 @@ var TITLE='Roundhay';
 var DEST_ID=2;
 var TARGET=6;
 var DEST_URL='/api/stock-data?branch=roundhay';
-var IURL='/api/stock-data?branch=images';
+var IURL='/api/shopify-images'; // Direct Shopify API
 var IMG_PRIORITY_DEPTS=['SYNTHETIC HAIR', 'HUMAN HAIR']; // Auto-loaded on open
 var IMG_SECONDARY_DEPTS=['HUMAN HAIR724', 'INSTANT WEAVE SYNTHETIC', 'PONYTAILS SYNTHETIC', 'WIGS HUMAN HAIR40', 'WIGS SYNTHETIC']; // Shown in picker
 var IMG_DEPTS=[]; // kept for compat // Update when dept codes confirmed
 var SOURCES=[{si:3,name:"Warehouse",short:"WH",color:"#a78bfa",url:"/api/stock-data?branch=warehouse",rule:"wh"},{si:0,name:"Chapeltown",short:"Chap",color:"#fb923c",url:"/api/stock-data?branch=chapy",rule:"branch"},{si:1,name:"City Center",short:"City",color:"#4ade80",url:"/api/stock-data?branch=city",rule:"branch"}];
 var WA='447305505976';
 
-var destData=null,srcData={},imgs={},destLoaded=false,srcLoaded={};
+var destData=null,srcData={},imgs={},shopifyData={},destLoaded=false,srcLoaded={};
+// shopifyData[barcode] = {has_image, image_url, on_shopify}
+// imgs[barcode] = image URL (only for products WITH images)
+// If barcode in shopifyData but NOT in imgs = on Shopify but no image
+// If barcode NOT in shopifyData = not on Shopify at all
 var view='s0',oosFilt='all',imgFilter='missing',imgDeptTab='priority';
 var collectDept='ALL'; // department filter for collect tabs
 var ticks={},negTx={};
@@ -283,9 +289,11 @@ function updateStats(){
   if(!destData)return;
   var neg=destData.filter(function(p){return p.qty<0;}).length;
   var oos=destData.filter(function(p){return p.qty===0&&p.ls&&p.ls!=='Never';}).length;
-  // Missing images in priority departments only for header stat
+  // Missing images in priority departments — 3 states now
   var priorityDepts=['SYNTHETIC HAIR', 'HUMAN HAIR'];
-  var miss=destData.filter(function(p){return p.qty>0&&priorityDepts.indexOf(p.dp)>=0&&!imgs[p.bc];}).length;
+  var miss=destData.filter(function(p){
+    return p.qty>0&&priorityDepts.indexOf(p.dp)>=0&&!imgs[p.bc];
+  }).length;
   document.getElementById('stat-neg').textContent=neg;
   document.getElementById('stat-oos').textContent=oos;
   document.getElementById('stat-img').textContent=miss;
@@ -316,16 +324,31 @@ async function loadSrc(idx){
 }
 async function loadImgs(){
   try{
-    var c=localStorage.getItem('cc_imgs');
-    if(c){var o=JSON.parse(c);if(Date.now()-o.ts<86400000){imgs=o.d;updateStats();return;}}
-    var r=await fetch(IURL);var t=await r.text();
-    Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
-      var bc=cl(row['Barcode']),src=cl(row['ImageURL']);
-      if(bc&&src&&src.startsWith('http'))imgs[bc]=src;
-    });
-    try{localStorage.setItem('cc_imgs',JSON.stringify({ts:Date.now(),d:imgs}));}catch(e){}
+    // Check cache first — 30 min TTL
+    var cached=localStorage.getItem('cc_shopify_imgs');
+    if(cached){
+      var o=JSON.parse(cached);
+      if(Date.now()-o.ts<30*60*1000){
+        imgs=o.d;shopifyData=o.s||{};updateStats();return;
+      }
+    }
+    // Fetch direct from Shopify via our secure API endpoint
+    var r=await fetch('/api/shopify-images');
+    var data=await r.json();
+    if(data.ok&&data.products){
+      // data.products[barcode] = {has_image, image_url, on_shopify}
+      shopifyData=data.products; // full shopify data per barcode
+      imgs={};
+      Object.keys(data.products).forEach(function(bc){
+        var p=data.products[bc];
+        if(p.h&&p.u)imgs[bc]=p.u;  // has image + has URL
+      });
+      try{localStorage.setItem('cc_shopify_imgs',JSON.stringify({
+        ts:Date.now(),d:imgs,s:shopifyData
+      }));}catch(e){}
+    }
     updateStats();
-  }catch(e){}
+  }catch(e){console.log('Shopify images error:',e);}
 }
 
 // ── RENDER ─────────────────────────────────────────────────
@@ -647,8 +670,11 @@ function renderImgs(){
   // If dept selected show its items
   if(imgDept){
     var items=(destData||[]).filter(function(p){return p.qty>0&&p.dp===imgDept;});
-    var missing=items.filter(function(p){return !imgs[p.bc];});
-    var show=imgFilter==='missing'?missing:items;
+    // 3-way split
+    var noPhoto=items.filter(function(p){return !imgs[p.bc]&&shopifyData[p.bc];});  // on Shopify, no image
+    var notOnShopify=items.filter(function(p){return !shopifyData[p.bc];});          // not on Shopify
+    var missing=items.filter(function(p){return !imgs[p.bc];});                      // all missing (no photo + not listed)
+    var show=imgFilter==='missing'?missing:imgFilter==='nophoto'?noPhoto:imgFilter==='unlisted'?notOnShopify:items;
 
     html+='<div style="background:var(--s1);border-bottom:1px solid var(--border);padding:9px 12px;display:flex;align-items:center;justify-content:space-between">'+
       '<div style="font-size:13px;font-weight:700">'+imgDept+'</div>'+
