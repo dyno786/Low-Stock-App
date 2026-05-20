@@ -204,7 +204,7 @@ var TITLE='City Center';
 var DEST_ID=1;
 var TARGET=12;
 var DEST_URL='/api/stock-data?branch=city';
-var IURL='/api/shopify-images'; // Direct Shopify API
+var IURL='/api/stock-data?branch=shopify-images'; // ShopifyImages tab — updated daily by Apps Script
 var IMG_PRIORITY_DEPTS=['SYNTHETIC HAIR', 'HUMAN HAIR']; // Auto-loaded on open
 var IMG_SECONDARY_DEPTS=['HUMAN HAIR724', 'INSTANT WEAVE SYNTHETIC', 'PONYTAILS SYNTHETIC', 'WIGS HUMAN HAIR40', 'WIGS SYNTHETIC']; // Shown in picker
 var IMG_DEPTS=[]; // kept for compat // Update when dept codes confirmed
@@ -324,31 +324,35 @@ async function loadSrc(idx){
 }
 async function loadImgs(){
   try{
-    // Check cache first — 30 min TTL
+    // Cache for 1 hour
     var cached=localStorage.getItem('cc_shopify_imgs');
     if(cached){
       var o=JSON.parse(cached);
-      if(Date.now()-o.ts<30*60*1000){
+      if(Date.now()-o.ts<60*60*1000){
         imgs=o.d;shopifyData=o.s||{};updateStats();return;
       }
     }
-    // Fetch direct from Shopify via our secure API endpoint
-    var r=await fetch('/api/shopify-images');
-    var data=await r.json();
-    if(data.ok&&data.products){
-      // data.products[barcode] = {has_image, image_url, on_shopify}
-      shopifyData=data.products; // full shopify data per barcode
-      imgs={};
-      Object.keys(data.products).forEach(function(bc){
-        var p=data.products[bc];
-        if(p.h&&p.u)imgs[bc]=p.u;  // has image + has URL
-      });
-      try{localStorage.setItem('cc_shopify_imgs',JSON.stringify({
-        ts:Date.now(),d:imgs,s:shopifyData
-      }));}catch(e){}
-    }
+    // Fetch from Google Sheet (updated daily by Apps Script from Shopify)
+    var r=await fetch(IURL);
+    var t=await r.text();
+    Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
+      var bc=(row['Barcode']||'').trim();
+      if(!bc)return;
+      var url=(row['ImageURL']||'').trim();
+      var status=(row['Status']||'').trim(); // HAS_IMAGE or NO_IMAGE
+      // shopifyData tracks whether it's on Shopify at all
+      shopifyData[bc]={
+        on_shopify:true, // it's in the sheet = it's on Shopify
+        has_image:status==='HAS_IMAGE',
+        image_url:url||null
+      };
+      if(url&&url.startsWith('http'))imgs[bc]=url;
+    });
+    try{localStorage.setItem('cc_shopify_imgs',JSON.stringify({
+      ts:Date.now(),d:imgs,s:shopifyData
+    }));}catch(e){}
     updateStats();
-  }catch(e){console.log('Shopify images error:',e);}
+  }catch(e){console.log('Image load error:',e);}
 }
 
 // ── RENDER ─────────────────────────────────────────────────
