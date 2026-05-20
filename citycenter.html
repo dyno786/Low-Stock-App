@@ -619,42 +619,35 @@ function renderOOS(){
       if(p.bc&&p.qty>0){if(!avail[p.bc])avail[p.bc]=[];avail[p.bc].push({name:SOURCES[+si].name,qty:p.qty});}
     });
   });
+  // Calculate days since last sold for each OOS item
+  // days = today - LastSold date (most accurate OOS estimate we have)
+  var today=Date.now();
   var items=(destData||[]).filter(function(p){
-    // Only show items that are genuinely OOS (qty<=0) AND have sold before (LastSold exists)
-    if(!p.bc||!p.nm||p.qty>0)return false;
-    if(!p.ls||p.ls==='Never')return false;
+    if(!p.bc||!p.nm||p.qty>0)return false; // must be OOS
+    if(!p.ls||p.ls==='Never')return false;  // must have sold before
+    var d=dAgo(p.ls);
+    if(d===null||d<0)return false;
+    p._days=d; // days since last sold = proxy for days OOS
     return true;
-  });
-
-  // Add OOS duration to each item
-  // Priority: use our tracker (most accurate) → fall back to LastSold date
-  items.forEach(function(p){
-    var tracked=daysOOS(p.bc); // days since we first saw it at 0
-    var lastSold=dAgo(p.ls);   // days since last sale
-    p._trackedDays=tracked;    // could be null if app hasn't seen it yet
-    p._lastSoldDays=lastSold;
-    // For display: use tracked if available, otherwise note we don't know exact date
-    p._d=tracked!==null?tracked:lastSold; // use lastSold as fallback for display
-    p._displayDays=tracked!==null?tracked:lastSold;
   });
 
   // Apply range filter
-  // Use tracked OOS days if available, otherwise use LastSold days as proxy
-  items=items.filter(function(p){
-    var d=p._trackedDays!==null?p._trackedDays:p._lastSoldDays;
-    if(d===null)return oosFilt==='all';
-    if(oosFilt==='all')return true;
+  if(oosFilt!=='all'){
     var n=parseInt(oosFilt);
-    if(n===0) return d<=6;      // 0-6 days
-    if(n===7) return d>=7&&d<=13;
-    if(n===14)return d>=14&&d<=29;
-    if(n===30)return d>=30&&d<=59;
-    if(n===60)return d>=60&&d<=89;
-    if(n===90)return d>=90;
-    return true;
-  });
+    items=items.filter(function(p){
+      var d=p._days;
+      if(n===0) return d<=6;
+      if(n===7) return d>=7&&d<=13;
+      if(n===14)return d>=14&&d<=29;
+      if(n===30)return d>=30&&d<=59;
+      if(n===60)return d>=60&&d<=89;
+      if(n===90)return d>=90;
+      return true;
+    });
+  }
 
-  items.sort(function(a,b){return(b._displayDays||0)-(a._displayDays||0);});
+  // Sort: most recently OOS first (fewest days = most urgent to restock)
+  items.sort(function(a,b){return a._days-b._days;});
   var ws=items.filter(function(p){return avail[p.bc]&&avail[p.bc].length>0;}).length;
   if(!items.length){el.innerHTML='<div class="empty">No OOS items for this filter</div>';return;}
   var html='<div class="stats-grid">'+
@@ -668,30 +661,26 @@ function renderOOS(){
     html+='<div class="card-list">';
     dits.forEach(function(p){
       var av=avail[p.bc]||[],has=av.length>0;
-      var dc=p._d>=30?'var(--red)':p._d>=14?'var(--amber)':'var(--sub)';
+      var dc=p._days>=90?'var(--red)':p._days>=30?'var(--amber)':'var(--sub)';
       // Display logic:
       // If we have tracked data = show "X days OOS" (accurate)
       // If no tracked data yet = show "last sold X days ago" (approximate)
-      var hasTracked=p._trackedDays!==null;
-      var displayNum=hasTracked?p._trackedDays:p._lastSoldDays;
-      var displayLbl=hasTracked?'days OOS':'d since';
-      var displaySub=hasTracked?'':'last sale';
+      var displayNum=p._days;
+      var displayLbl='days ago';
+      var displaySub='last sold';
       html+='<div class="oos-row'+(has?' has':'')+'">'+
         '<div class="oos-img">'+imgEl(p.bc,42)+'</div>'+
         '<div class="oos-body"><div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
         '<div class="oos-bc">'+p.bc+'</div>'+
         '<div class="oos-tags">'+
-          (hasTracked
-            ?'<span class="itag itag-day'+(p._trackedDays>=30?'-red':'')+'">OOS since: '+new Date(oosDates[p.bc]).toLocaleDateString("en-GB",{day:"numeric",month:"short"})+'</span>'
-            :'<span class="itag itag-info">Last sold: '+p.ls+'</span>'
-          )+
+          '<span class="itag '+(p._days>=90?'itag-day-red':p._days>=30?'itag-day':'itag-info')+'">Last sold: '+p.ls+'</span>'+
           (has?av.map(function(a){return '<span class="itag itag-src">'+a.name+':'+a.qty+'</span>';}).join(''):'<span class="itag itag-day">Reorder</span>')+
           (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
         '</div></div>'+
         '<div class="oos-right">'+
           '<div class="oos-days" style="color:'+dc+'">'+(displayNum!==null?displayNum:'?')+'</div>'+
           '<div class="oos-lbl">'+displayLbl+'</div>'+
-          (displaySub?'<div style="font-size:7px;color:var(--sub)">'+displaySub+'</div>':'')+
+          '<div style="font-size:7px;color:var(--sub)">last sold</div>'+
         '</div></div>';
     });
     html+='</div>';
