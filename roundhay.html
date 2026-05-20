@@ -665,18 +665,64 @@ function renderImgs(){
       '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:6px">'+
         '<span>Send image task to team</span><span>'+missing.length+' missing images</span>'+
       '</div>'+
-      '<button id="img-wa-btn" style="width:100%;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:8px">'+waSVG()+'Send missing image list</button>'+
+      '<button id="img-wa-btn" style="width:100%;background:#25d366;color:#fff;border:none;border-radius:var(--r);padding:11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:8px">'+waSVG()+'Send Section '+((window.imgSection||0)+1)+' to staff</button>'+
     '</div>';
 
     if(!show.length){
       html+='<div class="empty">'+(imgFilter==='missing'?'✅ All items in this department have images!':'No in-stock items')+'</div>';
     }else{
-      // Sort by barcode so same ranges (same barcode prefix) are grouped together
+      // Sort by barcode — same prefix = same brand/range grouped together
       show.sort(function(a,b){return a.bc.localeCompare(b.bc);});
 
-      // Group by first 7 digits of barcode = same brand/range
+      // Split into sections of 20 items each
+      // Staff can be assigned "do Section 1", "do Section 2" etc — no duplicate work
+      var SECTION_SIZE=20;
+      var totalSections=Math.ceil(show.length/SECTION_SIZE);
+
+      // Section selector bar
+      if(typeof imgSection==='undefined')window.imgSection=0;
+      html+='<div style="background:var(--s1);border-bottom:1px solid var(--border);padding:8px 10px">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">'+
+          'Assign sections to staff — each section has '+SECTION_SIZE+' items'+
+        '</div>'+
+        '<div style="display:flex;gap:5px;flex-wrap:wrap">';
+      for(var si=0;si<totalSections;si++){
+        var secItems=show.slice(si*SECTION_SIZE,(si+1)*SECTION_SIZE);
+        var secMiss=secItems.filter(function(p){return !imgs[p.bc];}).length;
+        var secDone=secItems.length-secMiss;
+        var isActiveSec=window.imgSection===si;
+        html+='<div class="img-section-btn'+(isActiveSec?' on':'')+'" data-sec="'+si+'" '+
+          'style="border:2px solid '+(isActiveSec?'var(--red)':secMiss===0?'var(--green)':'var(--border)')+';'+
+          'background:'+(isActiveSec?'var(--redbg)':secMiss===0?'var(--greenbg)':'var(--s1)')+';'+
+          'border-radius:9px;padding:7px 9px;cursor:pointer;min-width:68px;text-align:center">'+
+          '<div style="font-size:12px;font-weight:700;color:'+(isActiveSec?'var(--red)':secMiss===0?'var(--green)':'var(--ink)')+'">Section '+(si+1)+'</div>'+
+          '<div style="font-size:9px;color:var(--sub);margin-top:2px">'+secItems.length+' items</div>'+
+          '<div style="font-size:9px;font-weight:600;color:'+(secMiss>0?'var(--amber)':'var(--green)')+';margin-top:1px">'+
+            (secMiss>0?secMiss+' missing':'✓ done')+
+          '</div>'+
+        '</div>';
+      }
+      html+='</div></div>';
+
+      // Show the selected section
+      var sectionItems=show.slice(window.imgSection*SECTION_SIZE,(window.imgSection+1)*SECTION_SIZE);
+      var secStart=window.imgSection*SECTION_SIZE+1;
+      var secEnd=Math.min((window.imgSection+1)*SECTION_SIZE,show.length);
+      var secMissCount=sectionItems.filter(function(p){return !imgs[p.bc];}).length;
+
+      html+='<div style="background:var(--redbg);border-bottom:1px solid var(--border);padding:9px 13px;display:flex;align-items:center;justify-content:space-between">'+
+        '<div>'+
+          '<div style="font-size:13px;font-weight:700;color:var(--red)">Section '+(window.imgSection+1)+'</div>'+
+          '<div style="font-size:10px;color:var(--sub);margin-top:1px">Items '+secStart+'–'+secEnd+' of '+show.length+' · '+secMissCount+' missing images</div>'+
+        '</div>'+
+        (window.imgSection+1<totalSections?
+          '<button id="next-section-btn" style="font-size:11px;font-weight:700;padding:6px 12px;border-radius:8px;border:none;background:var(--red);color:#fff;cursor:pointer;font-family:var(--font)">Next section →</button>':
+          '<span style="font-size:10px;font-weight:700;color:var(--green)">Last section ✓</span>')+
+      '</div>';
+
+      // Group section items by barcode prefix
       var byPrefix={};var prefixOrder=[];
-      show.forEach(function(p){
+      sectionItems.forEach(function(p){
         var prefix=p.bc.length>=7?p.bc.substring(0,7):'OTHER';
         if(!byPrefix[prefix]){byPrefix[prefix]=[];prefixOrder.push(prefix);}
         byPrefix[prefix].push(p);
@@ -685,13 +731,11 @@ function renderImgs(){
       prefixOrder.forEach(function(prefix){
         var group=byPrefix[prefix];
         var groupMissing=group.filter(function(p){return !imgs[p.bc];}).length;
-        var groupName=prefix+(group.length>1?'xxxxxxx ('+group.length+' products)':'');
 
-        // Only show group header if more than 1 item shares the prefix
         if(group.length>1){
-          html+='<div style="padding:6px 13px 4px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
-            '<span style="font-size:11px;font-weight:700;color:var(--sub);font-family:monospace">'+prefix+'…</span>'+
-            '<span style="font-size:10px;font-weight:600;color:'+(groupMissing>0?'var(--red)':'var(--green)')+'">'+
+          html+='<div style="padding:5px 13px 4px;background:var(--bg);border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+            '<span style="font-size:11px;font-weight:700;color:var(--sub);font-family:monospace">'+prefix+'… <span style="font-weight:400;color:var(--sub)">('+group.length+' products in range)</span></span>'+
+            '<span style="font-size:10px;font-weight:700;color:'+(groupMissing>0?'var(--red)':'var(--green)')+'">'+
               (groupMissing>0?groupMissing+' missing':'✓ all have images')+
             '</span>'+
           '</div>';
@@ -710,7 +754,7 @@ function renderImgs(){
                 '<span style="color:var(--ink);font-weight:600">'+p.bc.substring(0,7)+'</span>'+p.bc.substring(7)+
               '</div>'+
               '<div class="img-tags">'+
-                '<span class="img-badge '+(hasImg?'img-badge-ok':'img-badge-miss')+'">'+(hasImg?'✓ Has image':'✗ MISSING')+'</span>'+
+                '<span class="img-badge '+(hasImg?'img-badge-ok':'img-badge-miss')+'">'+(hasImg?'✓ Has image':'✗ MISSING — take photo')+'</span>'+
                 '<span class="itag itag-info">qty: '+p.qty+'</span>'+
                 (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
               '</div>'+
@@ -724,17 +768,32 @@ function renderImgs(){
 
   el.innerHTML=html;
 
+  // Wire section buttons
+  el.querySelectorAll('.img-section-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      window.imgSection=+this.dataset.sec;
+      renderImgs();
+    });
+  });
+  var nextSecBtn=document.getElementById('next-section-btn');
+  if(nextSecBtn)nextSecBtn.addEventListener('click',function(){
+    window.imgSection=(window.imgSection||0)+1;
+    renderImgs();
+    el.scrollIntoView({behavior:'smooth'});
+  });
+
   // Wire tab switcher
   var tabP=document.getElementById('img-tab-priority');
   var tabO=document.getElementById('img-tab-other');
   if(tabP)tabP.addEventListener('click',function(){imgDeptTab='priority';imgDept='';renderImgs();});
   if(tabO)tabO.addEventListener('click',function(){imgDeptTab='other';imgDept='';renderImgs();});
 
-  // Wire dept row clicks
+  // Wire dept row clicks — reset section on dept change
   el.querySelectorAll('.img-dept-row').forEach(function(row){
     row.addEventListener('click',function(){
       imgDept=this.dataset.dept;
       imgFilter='missing';
+      window.imgSection=0;
       renderImgs();
     });
   });
@@ -749,18 +808,23 @@ function renderImgs(){
   if(imgWaBtn)imgWaBtn.addEventListener('click',function(){
     var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
     var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    var items2=(destData||[]).filter(function(p){return p.qty>0&&p.dp===imgDept&&!imgs[p.bc];});
-    if(!items2.length){alert('No missing images in this department!');return;}
-    var msg='CC '+TITLE+' — Missing Shopify Images\n'+date+' '+time+'\nDepartment: '+imgDept+'\n\n';
-    // Group by barcode prefix
-    items2.sort(function(a,b){return a.bc.localeCompare(b.bc);});
+    // Send ONLY the current section's missing items
+    var allMissing=(destData||[]).filter(function(p){return p.qty>0&&p.dp===imgDept&&!imgs[p.bc];});
+    allMissing.sort(function(a,b){return a.bc.localeCompare(b.bc);});
+    var secSize=20;
+    var curSec=window.imgSection||0;
+    var items2=allMissing.slice(curSec*secSize,(curSec+1)*secSize);
+    if(!items2.length){alert('No missing images in this section!');return;}
+    var secNum=curSec+1;
+    var totalSecs=Math.ceil(allMissing.length/secSize);
+    var msg='CC '+TITLE+' — Missing Images\n'+date+' '+time+'\nDepartment: '+imgDept+'\nYour section: Section '+secNum+' of '+totalSecs+'\n\n';
     var lastPrefix='';
     items2.forEach(function(p){
       var prefix=p.bc.length>=7?p.bc.substring(0,7):'???';
-      if(prefix!==lastPrefix){msg+='\n['+prefix+'...]\n';lastPrefix=prefix;}
+      if(prefix!==lastPrefix){msg+='\n['+prefix+'… range]\n';lastPrefix=prefix;}
       msg+='  '+p.bc+' — '+p.nm+(p.sz?' '+p.sz:'')+' (qty:'+p.qty+')\n';
     });
-    msg+='\nTotal missing: '+items2.length+'\nPlease photograph and upload to Shopify.\nSent from CC Staff App';
+    msg+='\nSection '+secNum+' total: '+items2.length+' items to photograph\nAll missing in dept: '+allMissing.length+'\nPlease photograph and upload to Shopify.\nSent from CC Staff App';
     window.open('https://wa.me/447305505976?text='+encodeURIComponent(msg),'_blank');
   });
 }
