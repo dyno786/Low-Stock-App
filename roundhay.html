@@ -184,6 +184,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 <div class="day-filter" id="day-filter">
   <div class="day-inner" id="day-pills">
     <div class="pill on" data-d="all">All OOS</div>
+    <div class="pill" data-d="0">0–6 days</div>
     <div class="pill" data-d="7">7–13 days</div>
     <div class="pill" data-d="14">14–29 days</div>
     <div class="pill" data-d="30">30–59 days</div>
@@ -633,20 +634,22 @@ function renderOOS(){
     p._trackedDays=tracked;    // could be null if app hasn't seen it yet
     p._lastSoldDays=lastSold;
     // For display: use tracked if available, otherwise note we don't know exact date
-    p._d=tracked!==null?tracked:null;
-    p._displayDays=tracked!==null?tracked:lastSold; // fallback for sorting
+    p._d=tracked!==null?tracked:lastSold; // use lastSold as fallback for display
+    p._displayDays=tracked!==null?tracked:lastSold;
   });
 
   // Apply range filter
+  // Use tracked OOS days if available, otherwise use LastSold days as proxy
   items=items.filter(function(p){
-    var d=p._d!==null?p._d:p._lastSoldDays;
+    var d=p._trackedDays!==null?p._trackedDays:p._lastSoldDays;
     if(d===null)return oosFilt==='all';
     if(oosFilt==='all')return true;
     var n=parseInt(oosFilt);
-    if(n===7) return d>=7&&d<14;
-    if(n===14)return d>=14&&d<30;
-    if(n===30)return d>=30&&d<60;
-    if(n===60)return d>=60&&d<90;
+    if(n===0) return d<=6;      // 0-6 days
+    if(n===7) return d>=7&&d<=13;
+    if(n===14)return d>=14&&d<=29;
+    if(n===30)return d>=30&&d<=59;
+    if(n===60)return d>=60&&d<=89;
     if(n===90)return d>=90;
     return true;
   });
