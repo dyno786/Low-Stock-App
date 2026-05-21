@@ -1117,13 +1117,17 @@ async function scCheckBranch(b){
     var lines=text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
     if(!lines.length)return{id:b.id,name:b.name,color:b.color,status:'error',error:'Empty response',elapsed:elapsed};
     var h=lines[0].split(',');
-    var qi=h.indexOf('StockQty'),li=h.indexOf('LastSold');
-    var total=lines.length-1,pos=0,neg=0,latestDate=null;
+    var qi=h.indexOf('StockQty'),li=h.indexOf('LastSold'),di=h.indexOf('DateCreated');
+    var total=lines.length-1,pos=0,neg=0,latestDate=null,latestExport=null;
     for(var i=1;i<lines.length;i++){
       var p=lines[i].split(',');
       if(qi>=0&&p[qi]){var q=parseInt(p[qi]);if(!isNaN(q)){if(q>0)pos++;else if(q<0)neg++;}}
       if(li>=0&&p[li]&&p[li]!=='NULL'&&p[li]!=='Never'){
         var d=scParseDate(p[li]);if(d&&(!latestDate||d>latestDate))latestDate=d;
+      }
+      // DateCreated = when product was added to EPOS — most recent = when export last ran
+      if(di>=0&&p[di]&&p[di].length>4){
+        var dc=scParseDate(p[di]);if(dc&&(!latestExport||dc>latestExport))latestExport=dc;
       }
     }
     var days=scDaysAgo(latestDate);
@@ -1135,7 +1139,17 @@ async function scCheckBranch(b){
       if(days!==null&&days>=SC_STALE_ERR){issues.push('Data '+days+'d old — EPOS export broken?');status='error';}
       else if(days!==null&&days>=SC_STALE_WARN){issues.push('Data '+days+'d old — check bat file');if(status==='ok')status='warn';}
     }
-    return{id:b.id,name:b.name,color:b.color,status:status,elapsed:elapsed,total:total,pos:pos,neg:neg,latestDate:latestDate,days:days,issues:issues,isWarehouse:isWarehouse};
+    var exportDays=scDaysAgo(latestExport);
+    // If most recent DateCreated is > 3 days ago, export may be stale (for all branches)
+    if(exportDays!==null&&exportDays>3&&issues.length===0){
+      issues.push('EPOS export may be stale — most recent record: '+exportDays+'d ago');
+      if(status==='ok')status='warn';
+    }
+    return{id:b.id,name:b.name,color:b.color,status:status,elapsed:elapsed,
+           total:total,pos:pos,neg:neg,
+           latestDate:latestDate,days:days,
+           latestExport:latestExport,exportDays:exportDays,
+           issues:issues,isWarehouse:isWarehouse};
   }catch(e){return{id:b.id,name:b.name,color:b.color,status:'error',error:e.message,elapsed:Date.now()-t0};}
 }
 
@@ -1169,11 +1183,19 @@ async function runSysCheck(){
       html+='<div class="sc-row"><span class="sc-lbl">Products in stock</span><span class="sc-val ok">'+r.pos.toLocaleString()+'</span></div>';
       html+='<div class="sc-row"><span class="sc-lbl">Negatives</span><span class="sc-val '+(r.neg>0?'err':'ok')+'">'+r.neg+'</span></div>';
       html+='<div class="sc-row"><span class="sc-lbl">Total products</span><span class="sc-val">'+r.total.toLocaleString()+'</span></div>';
+      // Last updated = most recent DateCreated = when EPOS export last ran
+      if(r.latestExport){
+        var expClass=r.exportDays>=5?'err':r.exportDays>=3?'warn':'ok';
+        html+='<div class="sc-row" style="background:'+(r.exportDays<=1?'var(--greenbg)':r.exportDays<=3?'var(--amberbg)':'var(--redbg)')+'">'+
+          '<span class="sc-lbl" style="font-weight:700">Last EPOS export</span>'+
+          '<span class="sc-val '+expClass+'">'+scFmtDate(r.latestExport)+(r.exportDays!==null?' ('+r.exportDays+'d ago)':'')+'</span>'+
+        '</div>';
+      }
       if(r.isWarehouse){
-        html+='<div class="sc-row"><span class="sc-lbl">No till at warehouse</span><span class="sc-val ok">LastSold not used ✓</span></div>';
-      }else{
+        html+='<div class="sc-row"><span class="sc-lbl">LastSold check</span><span class="sc-val ok">Skipped — no till ✓</span></div>';
+      }else if(r.latestDate){
         var dClass=r.days>=SC_STALE_ERR?'err':r.days>=SC_STALE_WARN?'warn':'ok';
-        html+='<div class="sc-row"><span class="sc-lbl">Last sale recorded</span><span class="sc-val '+dClass+'">'+scFmtDate(r.latestDate)+(r.days!==null?' ('+r.days+'d ago)':'')+'</span></div>';
+        html+='<div class="sc-row"><span class="sc-lbl">Most recent sale</span><span class="sc-val '+dClass+'">'+scFmtDate(r.latestDate)+(r.days!==null?' ('+r.days+'d ago)':'')+'</span></div>';
       }
       html+='<div class="sc-row"><span class="sc-lbl">Response time</span><span class="sc-val">'+(Math.round(r.elapsed/100)/10)+'s</span></div>';
     }
