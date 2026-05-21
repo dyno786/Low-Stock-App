@@ -594,52 +594,133 @@ doSync();
 
 // ── SYSTEM CHECK ─────────────────────────────────────────
 var SC_BRANCHES=[
-  {id:'chapy',    name:'Chapeltown', color:'#fb923c',url:'/api/stock-data?branch=chapy'},
-  {id:'city',     name:'City Center',color:'#22c55e',url:'/api/stock-data?branch=city'},
-  {id:'roundhay', name:'Roundhay',   color:'#3b82f6',url:'/api/stock-data?branch=roundhay'},
-  {id:'warehouse',name:'Warehouse',  color:'#a78bfa',url:'/api/stock-data?branch=warehouse'},
+  {id:'chapy',    name:'Chapeltown', color:'#fb923c',url:'/api/stock-data?branch=chapy',     logUrl:'/api/stock-data?branch=chapy-log'},
+  {id:'city',     name:'City Center',color:'#22c55e',url:'/api/stock-data?branch=city',      logUrl:'/api/stock-data?branch=city-log'},
+  {id:'roundhay', name:'Roundhay',   color:'#3b82f6',url:'/api/stock-data?branch=roundhay',  logUrl:'/api/stock-data?branch=roundhay-log'},
+  {id:'warehouse',name:'Warehouse',  color:'#a78bfa',url:'/api/stock-data?branch=warehouse', logUrl:'/api/stock-data?branch=warehouse-log'},
 ];
 var SC_STALE_WARN=2,SC_STALE_ERR=5;
 
 function scParseDate(s){try{var p=s.split('/');return new Date(+p[2],+p[1]-1,+p[0]);}catch(e){return null;}}
+function scParseLogDate(s){
+  // Apps Script writes: "dd/MM/yyyy HH:mm:ss"
+  if(!s)return null;
+  try{
+    var parts=s.trim().split(' ');
+    var d=parts[0].split('/');
+    var t=(parts[1]||'00:00:00').split(':');
+    return new Date(+d[2],+d[1]-1,+d[0],+t[0]||0,+t[1]||0,+t[2]||0);
+  }catch(e){return null;}
+}
 function scDaysAgo(d){return d?Math.floor((Date.now()-d.getTime())/86400000):null;}
+function scMinsAgo(d){return d?Math.floor((Date.now()-d.getTime())/60000):null;}
 function scFmtDate(d){return d?d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'Unknown';}
+function scFmtTimeAgo(d){
+  if(!d)return'Unknown';
+  var m=scMinsAgo(d);
+  if(m<1)return'Just now';
+  if(m<60)return m+' min'+(m===1?'':'s')+' ago';
+  var h=Math.floor(m/60);
+  if(h<24)return h+' hr'+(h===1?'':'s')+' ago';
+  var dys=Math.floor(h/24);
+  return dys+' day'+(dys===1?'':'s')+' ago';
+}
+function scFmtDateTime(d){
+  if(!d)return'Unknown';
+  var today=new Date();today.setHours(0,0,0,0);
+  var dd=new Date(d);dd.setHours(0,0,0,0);
+  var diff=Math.round((today.getTime()-dd.getTime())/86400000);
+  var time=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  if(diff===0)return'Today '+time;
+  if(diff===1)return'Yesterday '+time;
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+time;
+}
+function scParseCsvLine(line){
+  // Simple CSV parser supporting quoted fields
+  var out=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var c=line[i];
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else{inQ=!inQ;}}
+    else if(c===','&&!inQ){out.push(cur);cur='';}
+    else cur+=c;
+  }
+  out.push(cur);
+  return out;
+}
+
+async function scCheckLog(b){
+  // Fetches the ImportLog CSV and returns {csvModified, runTime, rows, status, duration} from the most recent row
+  if(!b.logUrl)return null;
+  try{
+    var res=await fetch(b.logUrl+'&_sc='+Date.now(),{signal:AbortSignal.timeout(10000)});
+    if(!res.ok)return{logError:'HTTP '+res.status};
+    var text=await res.text();
+    var lines=text.split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean);
+    if(lines.length<2)return{logError:'No log entries'};
+    var h=scParseCsvLine(lines[0]);
+    var ri=h.indexOf('RunTime'),ci=h.indexOf('CSVModified'),rwi=h.indexOf('RowsWritten'),si=h.indexOf('Status'),di=h.indexOf('Duration');
+    // Find the most recent row by RunTime (Apps Script writes newest at row 2, but be defensive)
+    var bestRow=null,bestTime=null;
+    for(var i=1;i<lines.length;i++){
+      var p=scParseCsvLine(lines[i]);
+      if(ri<0||!p[ri])continue;
+      var rt=scParseLogDate(p[ri]);
+      if(rt&&(!bestTime||rt>bestTime)){bestTime=rt;bestRow=p;}
+    }
+    if(!bestRow)return{logError:'No parseable log rows'};
+    var csvMod=ci>=0?scParseLogDate(bestRow[ci]):null;
+    var rows=rwi>=0?parseInt(bestRow[rwi])||0:0;
+    var status=si>=0?(bestRow[si]||'').trim():'';
+    var dur=di>=0?(bestRow[di]||'').trim():'';
+    return{csvModified:csvMod,runTime:bestTime,rowsWritten:rows,importStatus:status,duration:dur};
+  }catch(e){return{logError:e.message};}
+}
 
 async function scCheckBranch(b){
   var t0=Date.now();
   try{
-    var res=await fetch(b.url+'&_sc='+Date.now(),{signal:AbortSignal.timeout(15000)});
+    // Fetch stock + log in parallel for speed
+    var stockP=fetch(b.url+'&_sc='+Date.now(),{signal:AbortSignal.timeout(15000)});
+    var logP=scCheckLog(b);
+    var res=await stockP;
     var elapsed=Date.now()-t0;
     if(!res.ok)return{id:b.id,name:b.name,color:b.color,status:'error',error:'HTTP '+res.status,elapsed:elapsed};
     var text=await res.text();
-    var lines=text.split(String.fromCharCode(10)).map(function(l){return l.trim();}).filter(Boolean);
+    var lines=text.split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean);
     if(!lines.length)return{id:b.id,name:b.name,color:b.color,status:'error',error:'Empty response',elapsed:elapsed};
     var h=lines[0].split(',');
-    var qi=h.indexOf('StockQty'),li=h.indexOf('LastSold'),di=h.indexOf('DateCreated');
-    var total=lines.length-1,pos=0,neg=0,latestDate=null,latestExport=null;
+    var qi=h.indexOf('StockQty'),li=h.indexOf('LastSold');
+    var total=lines.length-1,pos=0,neg=0,latestDate=null;
     for(var i=1;i<lines.length;i++){
       var p=lines[i].split(',');
       if(qi>=0&&p[qi]){var q=parseInt(p[qi]);if(!isNaN(q)){if(q>0)pos++;else if(q<0)neg++;}}
       if(li>=0&&p[li]&&p[li]!=='NULL'&&p[li]!=='Never'){
         var d=scParseDate(p[li]);if(d&&(!latestDate||d>latestDate))latestDate=d;
       }
-      if(di>=0&&p[di]&&p[di].length>4){
-        var dc=scParseDate(p[di]);if(dc&&(!latestExport||dc>latestExport))latestExport=dc;
-      }
     }
     var days=scDaysAgo(latestDate);
-    var exportDays=scDaysAgo(latestExport);
     var issues=[],status='ok';
     var isWarehouse=b.id==='warehouse';
     if(pos===0){issues.push('No positive stock — possible export issue');status='error';}
+    // Warehouse has no till so LastSold dates are old — skip staleness check
     if(!isWarehouse){
       if(days!==null&&days>=SC_STALE_ERR){issues.push('Data '+days+'d old — EPOS export broken?');status='error';}
       else if(days!==null&&days>=SC_STALE_WARN){issues.push('Data '+days+'d old — check bat file');if(status==='ok')status='warn';}
     }
+    // Wait for log fetch
+    var log=await logP;
+    if(log&&log.csvModified){
+      var csvMinsAgo=scMinsAgo(log.csvModified);
+      // Bat file runs every 30 mins → if CSV not refreshed in 90 mins something is wrong
+      if(csvMinsAgo>180){issues.push('CSV not exported for '+Math.floor(csvMinsAgo/60)+' hrs — bat file may have stopped');status='error';}
+      else if(csvMinsAgo>90){issues.push('CSV last exported '+csvMinsAgo+' min ago — bat file may be late');if(status==='ok')status='warn';}
+    }
+    if(log&&log.importStatus&&log.importStatus.indexOf('ERROR')===0){
+      issues.push('Last import failed: '+log.importStatus);status='error';
+    }
     return{id:b.id,name:b.name,color:b.color,status:status,elapsed:elapsed,
            total:total,pos:pos,neg:neg,latestDate:latestDate,days:days,
-           latestExport:latestExport,exportDays:exportDays,
-           issues:issues,isWarehouse:isWarehouse};
+           log:log,issues:issues,isWarehouse:isWarehouse};
   }catch(e){return{id:b.id,name:b.name,color:b.color,status:'error',error:e.message,elapsed:Date.now()-t0};}
 }
 
@@ -670,12 +751,30 @@ async function runSysCheck(){
       (r.issues||[]).forEach(function(issue){
         html+='<div class="sc-issue '+(issue.indexOf('broken')>=0?'error':'warn')+'">'+issue+'</div>';
       });
-      if(r.latestExport){
-        var expClass=r.exportDays>=5?'err':r.exportDays>=3?'warn':'ok';
-        html+='<div class="sc-row" style="background:'+(r.exportDays<=1?'var(--greenbg)':r.exportDays<=3?'var(--amberbg)':'var(--redbg)')+'">'+
-          '<span class="sc-lbl" style="font-weight:700">Last EPOS export</span>'+
-          '<span class="sc-val '+expClass+'">'+scFmtDate(r.latestExport)+(r.exportDays!==null?' ('+r.exportDays+'d ago)':'')+'</span>'+
+      // ── CSV export timestamp (real Google Drive modification time from ImportLog) ─
+      if(r.log&&r.log.csvModified){
+        var csvMins=scMinsAgo(r.log.csvModified);
+        var csvCls=csvMins>180?'err':csvMins>90?'warn':'ok';
+        var csvBg=csvMins<=60?'var(--greenbg)':csvMins<=180?'var(--amberbg)':'var(--redbg)';
+        html+='<div class="sc-row" style="background:'+csvBg+'">'+
+          '<span class="sc-lbl" style="font-weight:700">CSV exported</span>'+
+          '<span class="sc-val '+csvCls+'">'+scFmtDateTime(r.log.csvModified)+' ('+scFmtTimeAgo(r.log.csvModified)+')</span>'+
         '</div>';
+        if(r.log.rowsWritten){
+          html+='<div class="sc-row"><span class="sc-lbl">Rows imported</span><span class="sc-val ok">'+r.log.rowsWritten.toLocaleString()+'</span></div>';
+        }
+        if(r.log.duration){
+          html+='<div class="sc-row"><span class="sc-lbl">Import duration</span><span class="sc-val">'+r.log.duration+'</span></div>';
+        }
+        if(r.log.runTime){
+          html+='<div class="sc-row"><span class="sc-lbl">Last script run</span><span class="sc-val">'+scFmtDateTime(r.log.runTime)+'</span></div>';
+        }
+        if(r.log.importStatus&&r.log.importStatus!=='OK'&&r.log.importStatus!==''){
+          var stCls=r.log.importStatus.indexOf('ERROR')===0?'err':'warn';
+          html+='<div class="sc-row"><span class="sc-lbl">Import status</span><span class="sc-val '+stCls+'">'+r.log.importStatus+'</span></div>';
+        }
+      }else if(r.log&&r.log.logError){
+        html+='<div class="sc-row"><span class="sc-lbl">CSV exported</span><span class="sc-val warn">Log unavailable: '+r.log.logError+'</span></div>';
       }
       if(r.isWarehouse){
         html+='<div class="sc-row"><span class="sc-lbl">LastSold check</span><span class="sc-val ok">Skipped — no till ✓</span></div>';
@@ -691,7 +790,11 @@ async function runSysCheck(){
     html+='</div>';
   });
   html+='<div style="padding:10px 13px;font-size:10px;color:var(--sub);line-height:1.8">'+
-    '<strong style="color:var(--ink)">If data looks stale:</strong><br>'+
+    '<strong style="color:var(--ink)">Reading this panel:</strong><br>'+
+    '• <b>CSV exported</b> = real Google Drive timestamp from ImportLog tab<br>'+
+    '• Bat file runs every 30 min → CSV should be &lt; 60 min old<br>'+
+    '• 60–180 min = amber, &gt; 180 min = red (bat file likely stopped)<br>'+
+    '<br><strong style="color:var(--ink)">If data looks stale:</strong><br>'+
     '1. Check CC-StockExport folder on branch PC — CSV modified today?<br>'+
     '2. Check Task Scheduler — bat file running every 30 mins?<br>'+
     '3. Check Google Drive — CSV synced?<br>'+
