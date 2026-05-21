@@ -208,7 +208,8 @@ var DEST_URL='/api/stock-data?branch=roundhay';
 var IURL='/api/stock-data?branch=shopify-images'; // ShopifyImages tab — updated daily by Apps Script
 var IMG_PRIORITY_DEPTS=['SYNTHETIC HAIR', 'HUMAN HAIR']; // Auto-loaded on open
 var IMG_SECONDARY_DEPTS=['HUMAN HAIR724', 'INSTANT WEAVE SYNTHETIC', 'PONYTAILS SYNTHETIC', 'WIGS HUMAN HAIR40', 'WIGS SYNTHETIC']; // Shown in picker
-var IMG_DEPTS=[]; // kept for compat // Update when dept codes confirmed
+var IMG_DEPTS=[]; // kept for compat
+var PRIORITY_OOS_DEPTS=['AFRO BEAUTY PRODUCTS','SYNTHETIC HAIR']; // Update when dept codes confirmed
 var SOURCES=[{si:3,name:"Warehouse",short:"WH",color:"#a78bfa",url:"/api/stock-data?branch=warehouse",rule:"wh"},{si:0,name:"Chapeltown",short:"Chap",color:"#fb923c",url:"/api/stock-data?branch=chapy",rule:"branch"},{si:1,name:"City Center",short:"City",color:"#4ade80",url:"/api/stock-data?branch=city",rule:"branch"}];
 var WA='447305505976';
 
@@ -257,6 +258,7 @@ function daysOOS(bc){
   return Math.floor((Date.now()-oosDates[bc])/86400000);
 }
 var view='s0',oosFilt='all',imgFilter='missing',imgDeptTab='priority';
+var oosActiveDepts=[],oosStockFilter='all';
 var collectDept='ALL'; // department filter for collect tabs
 var ticks={},negTx={};
 try{ticks=JSON.parse(localStorage.getItem('cc_t'+DEST_ID)||'{}');}catch(e){}
@@ -613,10 +615,11 @@ function renderNeg(){
 function renderOOS(){
   var el=document.getElementById('out');
   if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
-  // Load all source data if not loaded yet (needed to show stock availability)
+
+  // Ensure all source data loaded for availability check
   SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});
 
-  // Build availability map from ALL sources (warehouse + other branches)
+  // Build availability map from all sources (WH + other branches)
   var avail={};
   Object.keys(srcData).forEach(function(si){
     (srcData[si]||[]).forEach(function(p){
@@ -626,22 +629,37 @@ function renderOOS(){
       }
     });
   });
-  // Calculate days since last sold for each OOS item
-  // days = today - LastSold date (most accurate OOS estimate we have)
-  var today=Date.now();
-  var items=(destData||[]).filter(function(p){
-    if(!p.bc||!p.nm||p.qty>0)return false; // must be OOS
-    if(!p.ls||p.ls==='Never')return false;  // must have sold before
-    var d=dAgo(p.ls);
-    if(d===null||d<0)return false;
-    p._days=d; // days since last sold = proxy for days OOS
+
+  // All OOS items — qty<=0 and has sold before
+  var allItems=(destData||[]).filter(function(p){
+    if(!p.bc||!p.nm||p.qty>0)return false;
+    if(!p.ls||p.ls==='Never')return false;
+    var d=dAgo(p.ls);if(d===null||d<0)return false;
+    p._days=d;
     return true;
   });
 
-  // Apply range filter
+  // Get all departments in OOS items
+  var allDepts={};
+  allItems.forEach(function(p){if(p.dp)allDepts[p.dp]=(allDepts[p.dp]||0)+1;});
+  var deptNames=Object.keys(allDepts).sort();
+
+  // Init priority depts if first time opening this tab
+  if(oosActiveDepts.length===0){
+    oosActiveDepts=PRIORITY_OOS_DEPTS.filter(function(d){return !!allDepts[d];});
+    if(!oosActiveDepts.length&&deptNames.length)oosActiveDepts=[deptNames[0]];
+  }
+
+  // Apply dept filter
+  var deptFiltered=oosActiveDepts.length>0
+    ?allItems.filter(function(p){return oosActiveDepts.indexOf(p.dp)>=0;})
+    :allItems;
+
+  // Apply days filter
+  var dayFiltered=deptFiltered;
   if(oosFilt!=='all'){
     var n=parseInt(oosFilt);
-    items=items.filter(function(p){
+    dayFiltered=deptFiltered.filter(function(p){
       var d=p._days;
       if(n===0) return d<=6;
       if(n===7) return d>=7&&d<=13;
@@ -653,46 +671,120 @@ function renderOOS(){
     });
   }
 
-  // Sort: most recently OOS first (fewest days = most urgent to restock)
+  // Apply stock filter — who has it
+  var items=dayFiltered.filter(function(p){
+    var av=avail[p.bc]||[];
+    if(oosStockFilter==='all')return true;
+    if(oosStockFilter==='nobody')return av.length===0;
+    return av.some(function(a){return a.short===oosStockFilter;});
+  });
+
   items.sort(function(a,b){return a._days-b._days;});
-  var ws=items.filter(function(p){return avail[p.bc]&&avail[p.bc].length>0;}).length;
-  if(!items.length){el.innerHTML='<div class="empty">No OOS items for this filter</div>';return;}
-  var html='<div class="stats-grid">'+
+
+  var canCollect=dayFiltered.filter(function(p){return(avail[p.bc]||[]).length>0;}).length;
+  var nobody=dayFiltered.filter(function(p){return(avail[p.bc]||[]).length===0;}).length;
+
+  var html='';
+
+  // ── DEPT FILTER PILLS ──────────────────────────────────
+  var priorityInData=PRIORITY_OOS_DEPTS.filter(function(d){return !!allDepts[d];});
+  var otherDepts=deptNames.filter(function(d){return PRIORITY_OOS_DEPTS.indexOf(d)<0;});
+
+  html+='<div style="background:var(--s1);border-bottom:1px solid var(--border);padding:8px 10px">';
+  html+='<div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Departments <span style="font-weight:400">(tap to toggle)</span></div>';
+  html+='<div style="display:flex;gap:5px;flex-wrap:wrap">';
+  priorityInData.concat(otherDepts).forEach(function(dept){
+    var on=oosActiveDepts.indexOf(dept)>=0;
+    var isPri=PRIORITY_OOS_DEPTS.indexOf(dept)>=0;
+    var cnt=allDepts[dept]||0;
+    var style=on?(isPri?'background:var(--red);border-color:var(--red);color:#fff':'background:var(--red);border-color:var(--red);color:#fff')
+                :(isPri?'border-color:var(--red);color:var(--red)':'');
+    html+='<div class="pill oos-dept-pill" data-dept="'+dept.replace(/"/g,'&quot;')+'" style="'+style+'">'+
+      (isPri?'★ ':'')+dept+' ('+cnt+')</div>';
+  });
+  html+='</div></div>';
+
+  // ── STOCK LOCATION FILTER ──────────────────────────────
+  var whCount=dayFiltered.filter(function(p){return(avail[p.bc]||[]).some(function(a){return a.short==='WH';});}).length;
+  var stockOpts=[{key:'all',lbl:'All ('+dayFiltered.length+')'}];
+  stockOpts.push({key:'WH',lbl:'🏭 Warehouse ('+whCount+')'});
+  SOURCES.slice(1).forEach(function(sc){
+    var cnt=dayFiltered.filter(function(p){return(avail[p.bc]||[]).some(function(a){return a.short===sc.short;});}).length;
+    stockOpts.push({key:sc.short,lbl:sc.name+' ('+cnt+')'});
+  });
+  stockOpts.push({key:'nobody',lbl:'🚫 Nobody has it ('+nobody+')'});
+
+  html+='<div style="background:var(--s1);border-bottom:2px solid var(--bg);padding:7px 10px;overflow-x:auto;scrollbar-width:none">';
+  html+='<div style="display:flex;gap:5px;min-width:max-content">';
+  stockOpts.forEach(function(opt){
+    var on=oosStockFilter===opt.key;
+    html+='<div class="pill oos-stock-pill'+(on?' on':'')+'" data-stock="'+opt.key+'">'+opt.lbl+'</div>';
+  });
+  html+='</div></div>';
+
+  // ── SUMMARY STATS ──────────────────────────────────────
+  html+='<div class="stats-grid">'+
     '<div class="stat"><div class="stat-val" style="color:var(--red)">'+items.length+'</div><div class="stat-lbl">OOS</div></div>'+
-    '<div class="stat"><div class="stat-val" style="color:var(--green)">'+ws+'</div><div class="stat-lbl">Can collect</div></div>'+
-    '<div class="stat"><div class="stat-val" style="color:var(--amber)">'+(items.length-ws)+'</div><div class="stat-lbl">Reorder</div></div></div>';
-  var byDept={};items.forEach(function(p){var d=p.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
+    '<div class="stat"><div class="stat-val" style="color:var(--green)">'+canCollect+'</div><div class="stat-lbl">Can collect</div></div>'+
+    '<div class="stat"><div class="stat-val" style="color:var(--amber)">'+nobody+'</div><div class="stat-lbl">Reorder</div></div>'+
+  '</div>';
+
+  if(!items.length){html+='<div class="empty">No OOS items for this filter</div>';el.innerHTML=html;wireOOSPills(el);return;}
+
+  // ── ITEMS BY DEPT ──────────────────────────────────────
+  var byDept={};
+  items.forEach(function(p){var d=p.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
+
   Object.keys(byDept).sort().forEach(function(dept){
     var dits=byDept[dept];
     html+='<div class="dept-hdr"><div class="dept-name">'+dept+'</div><div class="dept-sub">'+dits.length+' OOS</div></div>';
     html+='<div class="card-list">';
     dits.forEach(function(p){
-      var av=avail[p.bc]||[],has=av.length>0;
+      var av=avail[p.bc]||[];var has=av.length>0;
       var dc=p._days>=90?'var(--red)':p._days>=30?'var(--amber)':'var(--sub)';
-      // Display logic:
-      // If we have tracked data = show "X days OOS" (accurate)
-      // If no tracked data yet = show "last sold X days ago" (approximate)
-      var displayNum=p._days;
-      var displayLbl='days ago';
-      var displaySub='last sold';
+      var stockTags=has?av.map(function(a){
+        var tc=a.qty>=6?'var(--greentxt)':a.qty>=1?'var(--ambertxt)':'var(--redtxt)';
+        var tb=a.qty>=6?'var(--greenbg)':a.qty>=1?'var(--amberbg)':'var(--redbg)';
+        return '<span class="itag" style="background:'+tb+';color:'+tc+'">'+a.short+':'+a.qty+'</span>';
+      }).join(''):'<span class="itag itag-day">Reorder needed</span>';
+
       html+='<div class="oos-row'+(has?' has':'')+'">'+
         '<div class="oos-img">'+imgEl(p.bc,42)+'</div>'+
-        '<div class="oos-body"><div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-        '<div class="oos-bc">'+p.bc+'</div>'+
-        '<div class="oos-tags">'+
-          '<span class="itag '+(p._days>=90?'itag-day-red':p._days>=30?'itag-day':'itag-info')+'">Last sold: '+p.ls+'</span>'+
-          (has?av.map(function(a){return '<span class="itag itag-src">'+a.name+':'+a.qty+'</span>';}).join(''):'<span class="itag itag-day">Reorder</span>')+
-          (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
-        '</div></div>'+
+        '<div class="oos-body">'+
+          '<div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
+          '<div class="oos-bc">'+p.bc+'</div>'+
+          '<div class="oos-tags" style="margin-bottom:3px">'+
+            '<span class="itag '+(p._days>=90?'itag-day-red':p._days>=30?'itag-day':'itag-info')+'">Last sold: '+p.ls+'</span>'+
+            (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
+          '</div>'+
+          '<div class="oos-tags">'+stockTags+'</div>'+
+        '</div>'+
         '<div class="oos-right">'+
-          '<div class="oos-days" style="color:'+dc+'">'+(displayNum!==null?displayNum:'?')+'</div>'+
-          '<div class="oos-lbl">'+displayLbl+'</div>'+
+          '<div class="oos-days" style="color:'+dc+'">'+p._days+'</div>'+
+          '<div class="oos-lbl">days ago</div>'+
           '<div style="font-size:7px;color:var(--sub)">last sold</div>'+
         '</div></div>';
     });
     html+='</div>';
   });
+
   el.innerHTML=html;
+  wireOOSPills(el);
+}
+
+function wireOOSPills(el){
+  el.querySelectorAll('.oos-dept-pill').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var dept=this.dataset.dept;
+      var idx=oosActiveDepts.indexOf(dept);
+      if(idx>=0){if(oosActiveDepts.length>1)oosActiveDepts.splice(idx,1);}
+      else oosActiveDepts.push(dept);
+      renderOOS();
+    });
+  });
+  el.querySelectorAll('.oos-stock-pill').forEach(function(btn){
+    btn.addEventListener('click',function(){oosStockFilter=this.dataset.stock;renderOOS();});
+  });
 }
 
 // ── IMAGES TAB ─────────────────────────────────────────────
@@ -946,7 +1038,7 @@ document.getElementById('vtabs').addEventListener('click',function(e){
   view=vt.dataset.v;
   // Lazy load — only fetch when tab is first opened
   if(view.charAt(0)==='s'){var idx=parseInt(view.substring(1));if(!srcLoaded[idx])loadSrc(idx);collectDept='ALL';}
-  else if(view==='oos'){SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
+  else if(view==='oos'){oosActiveDepts=[];oosStockFilter='all';SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   renderView();
 });
 document.getElementById('day-pills').addEventListener('click',function(e){
