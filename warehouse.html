@@ -195,9 +195,9 @@ var BR=[
   {id:'roundhay', name:'Roundhay',   short:'Roun',color:'#60a5fa',url:'/api/stock-data?branch=roundhay'},
   {id:'warehouse',name:'Warehouse',  short:'WH',  color:'#a78bfa',url:'/api/stock-data?branch=warehouse'},
 ];
-var IURL='/api/stock-data?branch=images';
+var IURL='/api/stock-data?branch=shopify-images'; // ShopifyImages tab — updated daily by Apps Script
 
-var bd=[null,null,null,null],bm=[{},{},{},{}],imgs={},loaded=0;
+var bd=[null,null,null,null],bm=[{},{},{},{}],imgs={},shopifyData={},loaded=0;
 var pkTx={};
 try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
 
@@ -292,14 +292,21 @@ function whSplit(bc,whQty){
 // ── LOAD ───────────────────────────────────────────────────
 async function loadImgs(){
   try{
-    var cached=localStorage.getItem('cc_imgs');
-    if(cached){var o=JSON.parse(cached);if(Date.now()-o.ts<86400000){imgs=o.d;return;}}
+    // 1 hour cache
+    var cached=localStorage.getItem('cc_shopify_imgs');
+    if(cached){
+      var o=JSON.parse(cached);
+      if(Date.now()-o.ts<60*60*1000){imgs=o.d;shopifyData=o.s||{};return;}
+    }
     var r=await fetch(IURL);var t=await r.text();
     Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
-      var bc=cl(row['Barcode']),src=cl(row['ImageURL']);
-      if(bc&&src&&src.startsWith('http'))imgs[bc]=src;
+      var bc=(row['Barcode']||'').trim();if(!bc)return;
+      var url=(row['ImageURL']||'').trim();
+      var status=(row['Status']||'').trim();
+      shopifyData[bc]={on_shopify:true,has_image:status==='HAS_IMAGE',image_url:url||null};
+      if(url&&url.startsWith('http'))imgs[bc]=url;
     });
-    try{localStorage.setItem('cc_imgs',JSON.stringify({ts:Date.now(),d:imgs}));}catch(e){}
+    try{localStorage.setItem('cc_shopify_imgs',JSON.stringify({ts:Date.now(),d:imgs,s:shopifyData}));}catch(e){}
   }catch(e){}
 }
 async function loadBranch(i){
