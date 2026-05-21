@@ -1110,7 +1110,7 @@ function scFmtDate(d){return d?d.toLocaleDateString('en-GB',{day:'numeric',month
 async function scCheckBranch(b){
   var t0=Date.now();
   try{
-    var res=await fetch(b.url+'&_sc='+Date.now(),{signal:AbortSignal.timeout(10000)});
+    var res=await fetch(b.url+'&_sc='+Date.now(),{signal:AbortSignal.timeout(15000)});
     var elapsed=Date.now()-t0;
     if(!res.ok)return{id:b.id,name:b.name,color:b.color,status:'error',error:'HTTP '+res.status,elapsed:elapsed};
     var text=await res.text();
@@ -1128,10 +1128,14 @@ async function scCheckBranch(b){
     }
     var days=scDaysAgo(latestDate);
     var issues=[],status='ok';
-    if(pos===0){issues.push('No positive stock');status='error';}
-    if(days!==null&&days>=SC_STALE_ERR){issues.push('Data '+days+'d old — export broken?');status='error';}
-    else if(days!==null&&days>=SC_STALE_WARN){issues.push('Data '+days+'d old — check bat file');if(status==='ok')status='warn';}
-    return{id:b.id,name:b.name,color:b.color,status:status,elapsed:elapsed,total:total,pos:pos,neg:neg,latestDate:latestDate,days:days,issues:issues};
+    var isWarehouse=b.id==='warehouse';
+    if(pos===0){issues.push('No positive stock — possible export issue');status='error';}
+    // Warehouse has no till so LastSold dates are old — skip staleness check
+    if(!isWarehouse){
+      if(days!==null&&days>=SC_STALE_ERR){issues.push('Data '+days+'d old — EPOS export broken?');status='error';}
+      else if(days!==null&&days>=SC_STALE_WARN){issues.push('Data '+days+'d old — check bat file');if(status==='ok')status='warn';}
+    }
+    return{id:b.id,name:b.name,color:b.color,status:status,elapsed:elapsed,total:total,pos:pos,neg:neg,latestDate:latestDate,days:days,issues:issues,isWarehouse:isWarehouse};
   }catch(e){return{id:b.id,name:b.name,color:b.color,status:'error',error:e.message,elapsed:Date.now()-t0};}
 }
 
@@ -1165,8 +1169,12 @@ async function runSysCheck(){
       html+='<div class="sc-row"><span class="sc-lbl">Products in stock</span><span class="sc-val ok">'+r.pos.toLocaleString()+'</span></div>';
       html+='<div class="sc-row"><span class="sc-lbl">Negatives</span><span class="sc-val '+(r.neg>0?'err':'ok')+'">'+r.neg+'</span></div>';
       html+='<div class="sc-row"><span class="sc-lbl">Total products</span><span class="sc-val">'+r.total.toLocaleString()+'</span></div>';
-      var dClass=r.days>=SC_STALE_ERR?'err':r.days>=SC_STALE_WARN?'warn':'ok';
-      html+='<div class="sc-row"><span class="sc-lbl">Last sale recorded</span><span class="sc-val '+dClass+'">'+scFmtDate(r.latestDate)+(r.days!==null?' ('+r.days+'d ago)':'')+'</span></div>';
+      if(r.isWarehouse){
+        html+='<div class="sc-row"><span class="sc-lbl">No till at warehouse</span><span class="sc-val ok">LastSold not used ✓</span></div>';
+      }else{
+        var dClass=r.days>=SC_STALE_ERR?'err':r.days>=SC_STALE_WARN?'warn':'ok';
+        html+='<div class="sc-row"><span class="sc-lbl">Last sale recorded</span><span class="sc-val '+dClass+'">'+scFmtDate(r.latestDate)+(r.days!==null?' ('+r.days+'d ago)':'')+'</span></div>';
+      }
       html+='<div class="sc-row"><span class="sc-lbl">Response time</span><span class="sc-val">'+(Math.round(r.elapsed/100)/10)+'s</span></div>';
     }
     html+='</div>';
