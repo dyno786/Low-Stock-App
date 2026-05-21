@@ -135,6 +135,38 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .spin{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty{padding:36px 14px;text-align:center;color:var(--sub);font-size:12px;line-height:2}
+
+/* SYSCHECK PANEL */
+.sc-panel{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:none;max-width:480px;margin:0 auto}
+.sc-panel.open{display:block}
+.sc-body{position:absolute;bottom:0;left:0;right:0;background:var(--s1);border-radius:16px 16px 0 0;max-height:90vh;overflow-y:auto;padding-bottom:30px}
+.sc-handle{width:34px;height:3px;background:var(--border);border-radius:2px;margin:11px auto 0}
+.sc-hdr{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.sc-title{font-size:15px;font-weight:700}
+.sc-close{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sc-overall{margin:8px 12px;border-radius:10px;padding:11px 13px;border:2px solid}
+.sc-overall.ok{background:var(--greenbg);border-color:#86efac}
+.sc-overall.warn{background:var(--amberbg);border-color:#fcd34d}
+.sc-overall.error{background:var(--redbg);border-color:#fca5a5}
+.sc-overall-title{font-size:13px;font-weight:700}
+.sc-overall-sub{font-size:10px;margin-top:2px;line-height:1.4;color:var(--sub)}
+.sc-branch{background:var(--s1);border-radius:10px;margin:6px 12px;border:1px solid var(--border);overflow:hidden}
+.sc-branch-hdr{padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.sc-branch-name{font-size:12px;font-weight:700}
+.sc-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px}
+.sc-badge.ok{background:var(--greenbg);color:var(--green)}
+.sc-badge.warn{background:var(--amberbg);color:var(--amber)}
+.sc-badge.error{background:var(--redbg);color:var(--red)}
+.sc-row{padding:6px 12px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;font-size:10px}
+.sc-row:last-child{border-bottom:none}
+.sc-lbl{color:var(--sub)}
+.sc-val{font-weight:600;font-family:monospace}
+.sc-val.ok{color:var(--green)}
+.sc-val.warn{color:var(--amber)}
+.sc-val.err{color:var(--red)}
+.sc-issue{padding:6px 12px;font-size:10px;font-weight:600;border-bottom:0.5px solid var(--border)}
+.sc-issue.warn{background:var(--amberbg);color:var(--ambertxt)}
+.sc-issue.error{background:var(--redbg);color:var(--redtxt)}
 </style>
 </head>
 <body>
@@ -148,7 +180,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
         <div class="hdr-sub" id="stime" style="margin-left:9px">loading…</div>
       </div>
     </div>
-    <button class="refresh-btn" id="refresh-btn">↺ Refresh</button>
+    <button onclick="document.getElementById('sc-panel').classList.add('open');runSysCheck();" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:6px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);margin-right:6px">📡</button><button class="refresh-btn" id="refresh-btn">↺ Refresh</button>
   </div>
   <div class="trolley">
     <div class="trolley-title">🛒 Picking trolley — 3 colour-coded boxes</div>
@@ -559,6 +591,132 @@ document.getElementById('sync-btn').addEventListener('click',doSync);
 Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
 loadImgs();
 doSync();
+
+// ── SYSTEM CHECK ─────────────────────────────────────────
+var SC_BRANCHES=[
+  {id:'chapy',    name:'Chapeltown', color:'#fb923c',url:'/api/stock-data?branch=chapy'},
+  {id:'city',     name:'City Center',color:'#22c55e',url:'/api/stock-data?branch=city'},
+  {id:'roundhay', name:'Roundhay',   color:'#3b82f6',url:'/api/stock-data?branch=roundhay'},
+  {id:'warehouse',name:'Warehouse',  color:'#a78bfa',url:'/api/stock-data?branch=warehouse'},
+];
+var SC_STALE_WARN=2,SC_STALE_ERR=5;
+
+function scParseDate(s){try{var p=s.split('/');return new Date(+p[2],+p[1]-1,+p[0]);}catch(e){return null;}}
+function scDaysAgo(d){return d?Math.floor((Date.now()-d.getTime())/86400000):null;}
+function scFmtDate(d){return d?d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'Unknown';}
+
+async function scCheckBranch(b){
+  var t0=Date.now();
+  try{
+    var res=await fetch(b.url+'&_sc='+Date.now(),{signal:AbortSignal.timeout(15000)});
+    var elapsed=Date.now()-t0;
+    if(!res.ok)return{id:b.id,name:b.name,color:b.color,status:'error',error:'HTTP '+res.status,elapsed:elapsed};
+    var text=await res.text();
+    var lines=text.split(String.fromCharCode(10)).map(function(l){return l.trim();}).filter(Boolean);
+    if(!lines.length)return{id:b.id,name:b.name,color:b.color,status:'error',error:'Empty response',elapsed:elapsed};
+    var h=lines[0].split(',');
+    var qi=h.indexOf('StockQty'),li=h.indexOf('LastSold'),di=h.indexOf('DateCreated');
+    var total=lines.length-1,pos=0,neg=0,latestDate=null,latestExport=null;
+    for(var i=1;i<lines.length;i++){
+      var p=lines[i].split(',');
+      if(qi>=0&&p[qi]){var q=parseInt(p[qi]);if(!isNaN(q)){if(q>0)pos++;else if(q<0)neg++;}}
+      if(li>=0&&p[li]&&p[li]!=='NULL'&&p[li]!=='Never'){
+        var d=scParseDate(p[li]);if(d&&(!latestDate||d>latestDate))latestDate=d;
+      }
+      if(di>=0&&p[di]&&p[di].length>4){
+        var dc=scParseDate(p[di]);if(dc&&(!latestExport||dc>latestExport))latestExport=dc;
+      }
+    }
+    var days=scDaysAgo(latestDate);
+    var exportDays=scDaysAgo(latestExport);
+    var issues=[],status='ok';
+    var isWarehouse=b.id==='warehouse';
+    if(pos===0){issues.push('No positive stock — possible export issue');status='error';}
+    if(!isWarehouse){
+      if(days!==null&&days>=SC_STALE_ERR){issues.push('Data '+days+'d old — EPOS export broken?');status='error';}
+      else if(days!==null&&days>=SC_STALE_WARN){issues.push('Data '+days+'d old — check bat file');if(status==='ok')status='warn';}
+    }
+    return{id:b.id,name:b.name,color:b.color,status:status,elapsed:elapsed,
+           total:total,pos:pos,neg:neg,latestDate:latestDate,days:days,
+           latestExport:latestExport,exportDays:exportDays,
+           issues:issues,isWarehouse:isWarehouse};
+  }catch(e){return{id:b.id,name:b.name,color:b.color,status:'error',error:e.message,elapsed:Date.now()-t0};}
+}
+
+async function runSysCheck(){
+  document.getElementById('sc-content').innerHTML='<div style="padding:30px;text-align:center;color:var(--sub);font-size:12px"><div class="spin" style="border-top-color:var(--purple);margin:0 auto 10px"></div>Checking all 4 branches…</div>';
+  var results=await Promise.all(SC_BRANCHES.map(scCheckBranch));
+  var anyErr=results.some(function(r){return r.status==='error';});
+  var anyWarn=results.some(function(r){return r.status==='warn';});
+  var overall=anyErr?'error':anyWarn?'warn':'ok';
+  var overallMsg={ok:'✅ All systems live — data is fresh',warn:'⚠️ Systems running with warnings',error:'❌ Data issue detected — action needed'}[overall];
+  var now=new Date();
+  var html='<div class="sc-overall '+overall+'">'+
+    '<div class="sc-overall-title">'+overallMsg+'</div>'+
+    '<div class="sc-overall-sub">Checked: '+now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+results.filter(function(r){return r.status==='ok';}).length+'/4 branches healthy</div>'+
+  '</div>';
+  results.forEach(function(r){
+    html+='<div class="sc-branch">'+
+      '<div class="sc-branch-hdr">'+
+        '<div style="display:flex;align-items:center;gap:7px">'+
+          '<div style="width:9px;height:9px;border-radius:50%;background:'+r.color+'"></div>'+
+          '<div class="sc-branch-name">'+r.name+'</div>'+
+        '</div>'+
+        '<div class="sc-badge '+r.status+'">'+(r.status==='ok'?'✓ Live':r.status==='warn'?'⚠ Warning':'✗ Error')+'</div>'+
+      '</div>';
+    if(r.error){
+      html+='<div class="sc-issue error">❌ '+r.error+'</div>';
+    }else{
+      (r.issues||[]).forEach(function(issue){
+        html+='<div class="sc-issue '+(issue.indexOf('broken')>=0?'error':'warn')+'">'+issue+'</div>';
+      });
+      if(r.latestExport){
+        var expClass=r.exportDays>=5?'err':r.exportDays>=3?'warn':'ok';
+        html+='<div class="sc-row" style="background:'+(r.exportDays<=1?'var(--greenbg)':r.exportDays<=3?'var(--amberbg)':'var(--redbg)')+'">'+
+          '<span class="sc-lbl" style="font-weight:700">Last EPOS export</span>'+
+          '<span class="sc-val '+expClass+'">'+scFmtDate(r.latestExport)+(r.exportDays!==null?' ('+r.exportDays+'d ago)':'')+'</span>'+
+        '</div>';
+      }
+      if(r.isWarehouse){
+        html+='<div class="sc-row"><span class="sc-lbl">LastSold check</span><span class="sc-val ok">Skipped — no till ✓</span></div>';
+      }else if(r.latestDate){
+        var dClass=r.days>=SC_STALE_ERR?'err':r.days>=SC_STALE_WARN?'warn':'ok';
+        html+='<div class="sc-row"><span class="sc-lbl">Most recent sale</span><span class="sc-val '+dClass+'">'+scFmtDate(r.latestDate)+(r.days!==null?' ('+r.days+'d ago)':'')+'</span></div>';
+      }
+      html+='<div class="sc-row"><span class="sc-lbl">Products in stock</span><span class="sc-val ok">'+r.pos.toLocaleString()+'</span></div>';
+      html+='<div class="sc-row"><span class="sc-lbl">Negatives</span><span class="sc-val '+(r.neg>0?'err':'ok')+'">'+r.neg+'</span></div>';
+      html+='<div class="sc-row"><span class="sc-lbl">Total products</span><span class="sc-val">'+r.total.toLocaleString()+'</span></div>';
+      html+='<div class="sc-row"><span class="sc-lbl">Response time</span><span class="sc-val">'+(Math.round(r.elapsed/100)/10)+'s</span></div>';
+    }
+    html+='</div>';
+  });
+  html+='<div style="padding:10px 13px;font-size:10px;color:var(--sub);line-height:1.8">'+
+    '<strong style="color:var(--ink)">If data looks stale:</strong><br>'+
+    '1. Check CC-StockExport folder on branch PC — CSV modified today?<br>'+
+    '2. Check Task Scheduler — bat file running every 30 mins?<br>'+
+    '3. Check Google Drive — CSV synced?<br>'+
+    '4. Open Google Sheet → Apps Script → check trigger & ImportLog tab'+
+  '</div>';
+  document.getElementById('sc-content').innerHTML=html;
+}
+
+document.getElementById('sc-panel').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+document.getElementById('sc-recheck').addEventListener('click',runSysCheck);
 </script>
+
+<!-- SYSTEM CHECK PANEL -->
+<div class="sc-panel" id="sc-panel">
+  <div class="sc-body">
+    <div class="sc-handle"></div>
+    <div class="sc-hdr">
+      <div class="sc-title">📡 System Check</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="sc-recheck" style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--sub);cursor:pointer;font-family:var(--font)">↺ Recheck</button>
+        <div class="sc-close" onclick="document.getElementById('sc-panel').classList.remove('open')">✕</div>
+      </div>
+    </div>
+    <div id="sc-content"><div style="padding:30px;text-align:center;color:var(--sub);font-size:12px"><div class="spin" style="border-top-color:var(--purple);margin:0 auto 10px"></div>Checking all systems…</div></div>
+  </div>
+</div>
 </body>
 </html>
