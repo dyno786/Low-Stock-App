@@ -603,13 +603,31 @@ var SC_STALE_WARN=2,SC_STALE_ERR=5;
 
 function scParseDate(s){try{var p=s.split('/');return new Date(+p[2],+p[1]-1,+p[0]);}catch(e){return null;}}
 function scParseLogDate(s){
-  // Apps Script writes: "dd/MM/yyyy HH:mm:ss"
+  // Handles TWO Apps Script formats:
+  //   Branch scripts (UK):   "21/05/2026 17:34:27"  or  "21/05/2026, 17:34:27"
+  //   Warehouse script (US): "5/21/2026, 5:13:01 PM" (M/D/YYYY 12hr with AM/PM)
   if(!s)return null;
   try{
-    var parts=s.trim().split(' ');
-    var d=parts[0].split('/');
-    var t=(parts[1]||'00:00:00').split(':');
-    return new Date(+d[2],+d[1]-1,+d[0],+t[0]||0,+t[1]||0,+t[2]||0);
+    var clean=s.trim().replace(/,/g,'');     // drop any commas between date and time
+    var parts=clean.split(/\s+/);            // [date, time, optional AM/PM]
+    var dp=parts[0].split('/');
+    if(dp.length!==3)return null;
+    var tp=(parts[1]||'00:00:00').split(':');
+    var hh=parseInt(tp[0])||0;
+    var mm=parseInt(tp[1])||0;
+    var ss=parseInt(tp[2])||0;
+    var ampm=(parts[2]||'').toUpperCase();
+    if(ampm==='PM'&&hh<12)hh+=12;
+    if(ampm==='AM'&&hh===12)hh=0;
+    var d1=parseInt(dp[0]),d2=parseInt(dp[1]),yr=parseInt(dp[2]);
+    // If first segment > 12 it has to be a day (UK dd/MM); if second > 12 it has to be a day (US M/D).
+    // When both are <=12 we use the AM/PM presence as a tiebreaker: AM/PM = US format.
+    var day,mon;
+    if(d1>12){day=d1;mon=d2;}                // unambiguous UK
+    else if(d2>12){mon=d1;day=d2;}            // unambiguous US
+    else if(ampm){mon=d1;day=d2;}             // AM/PM marker → US format
+    else{day=d1;mon=d2;}                      // default to UK
+    return new Date(yr,mon-1,day,hh,mm,ss);
   }catch(e){return null;}
 }
 function scDaysAgo(d){return d?Math.floor((Date.now()-d.getTime())/86400000):null;}
@@ -658,7 +676,9 @@ async function scCheckLog(b){
     var lines=text.split(/\r?\n/).map(function(l){return l.trim();}).filter(Boolean);
     if(lines.length<2)return{logError:'No log entries'};
     var h=scParseCsvLine(lines[0]);
-    var ri=h.indexOf('RunTime'),ci=h.indexOf('CSVModified'),rwi=h.indexOf('RowsWritten'),si=h.indexOf('Status'),di=h.indexOf('Duration');
+    var ri=h.indexOf('RunTime'),ci=h.indexOf('CSVModified'),si=h.indexOf('Status'),di=h.indexOf('Duration');
+    // Branch scripts use 'RowsWritten', warehouse script uses 'RowCount' — accept either
+    var rwi=h.indexOf('RowsWritten');if(rwi<0)rwi=h.indexOf('RowCount');
     // Find the most recent row by RunTime (Apps Script writes newest at row 2, but be defensive)
     var bestRow=null,bestTime=null;
     for(var i=1;i<lines.length;i++){
