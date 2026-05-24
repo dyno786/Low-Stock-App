@@ -215,16 +215,20 @@
     border-radius: 12px;
     padding: 14px 16px;
     margin-bottom: 8px;
+  }
+  .supplier.best {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, var(--card) 60%);
+    padding: 18px 18px;
+  }
+  .supplier-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
   }
-  .supplier.best {
-    border-color: var(--gold);
-    background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, var(--card) 60%);
-  }
   .supplier-left { flex: 1; min-width: 0; }
+  .supplier-right { text-align: right; white-space: nowrap; }
   .supplier-name {
     font-size: 14px;
     font-weight: 600;
@@ -232,21 +236,34 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .supplier.best .supplier-name { font-size: 16px; }
   .supplier-code {
     font-size: 11px;
     color: var(--mute);
     font-family: 'SF Mono', Menlo, monospace;
-    margin-top: 2px;
+    margin-top: 3px;
   }
   .supplier-price {
     font-size: 18px;
     font-weight: 700;
     font-family: 'Georgia', serif;
     color: var(--text);
-    text-align: right;
-    white-space: nowrap;
   }
-  .supplier.best .supplier-price { color: var(--gold); }
+  .supplier.best .supplier-price {
+    color: var(--gold);
+    font-size: 24px;
+  }
+  .supplier-perpiece {
+    font-size: 11px;
+    color: var(--mute);
+    margin-top: 2px;
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+  .supplier.best .supplier-perpiece {
+    color: var(--gold);
+    opacity: 0.85;
+    font-size: 12px;
+  }
   .price-delta {
     font-size: 10px;
     color: var(--red);
@@ -264,6 +281,37 @@
     letter-spacing: 1px;
     margin-left: 6px;
     vertical-align: middle;
+  }
+
+  /* Others toggle */
+  .others-toggle {
+    background: transparent;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 6px 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    color: var(--mute);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    user-select: none;
+  }
+  .others-toggle:active { background: rgba(255,255,255,0.02); }
+  .others-toggle .toggle-chev {
+    font-size: 14px;
+    color: var(--gold);
+  }
+  .others-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  .others-list.open {
+    max-height: 2000px;
   }
 
   /* Stock grid */
@@ -475,7 +523,7 @@ async function init() {
 // --- CSV parsing ------------------------------------------------------------
 const DEFAULT_HEADERS = [
   'barcode', 'product_name', 'size', 'own_code',
-  'supplier_name', 'supplier_stock_code', 'cost_price', 'cost_type',
+  'supplier_name', 'supplier_stock_code', 'cost_price', 'pack_size', 'cost_type',
   'stock_roundhay', 'stock_city', 'stock_chapeltown', 'stock_warehouse', 'stock_total'
 ];
 
@@ -511,6 +559,9 @@ function parseAndIndex(csvText) {
 
     // normalise
     row.cost_price = parseFloat(row.cost_price) || 0;
+    row.pack_size  = parseInt(row.pack_size) || 1;
+    if (row.pack_size < 1) row.pack_size = 1;
+    row.per_piece_price = row.cost_price / row.pack_size;
     row.stock_roundhay   = parseInt(row.stock_roundhay)   || 0;
     row.stock_chapeltown = parseInt(row.stock_chapeltown) || 0;
     row.stock_city       = parseInt(row.stock_city)       || 0;
@@ -586,30 +637,27 @@ function lookup(code) {
 
 // --- Render -----------------------------------------------------------------
 function renderResult(rows) {
-  // All rows for the same product share barcode/name/stock — sort by cost
-  const sorted = [...rows].sort((a, b) => a.cost_price - b.cost_price);
+  // Sort by TRUE per-piece price, not raw cost (handles cases vs pieces correctly)
+  const sorted = [...rows].sort((a, b) => a.per_piece_price - b.per_piece_price);
   const first = sorted[0];
   const best = sorted[0];
 
   const stockEl = renderStock(first);
-  const suppliersEl = sorted.map((r, i) => {
-    const isBest = i === 0;
-    const delta = isBest ? '' : ` +£${(r.cost_price - best.cost_price).toFixed(2)}`;
-    return `
-      <div class="supplier ${isBest ? 'best' : ''}">
-        <div class="supplier-left">
-          <div class="supplier-name">
-            ${escape(r.supplier_name)}
-            ${isBest ? '<span class="best-badge">BEST</span>' : ''}
-          </div>
-          <div class="supplier-code">${escape(r.supplier_stock_code)}</div>
-        </div>
-        <div>
-          <div class="supplier-price">£${r.cost_price.toFixed(2)}</div>
-          ${delta ? `<div class="price-delta">${delta}</div>` : ''}
-        </div>
-      </div>`;
-  }).join('');
+
+  // Cheapest supplier — always expanded
+  const bestEl = renderSupplierCard(best, true, true);
+
+  // Other suppliers — collapsed under a toggle
+  const others = sorted.slice(1);
+  const othersEl = others.length ? `
+    <div class="others-toggle" onclick="toggleOthers(this)">
+      <span class="toggle-label">See ${others.length} other supplier${others.length === 1 ? '' : 's'}</span>
+      <span class="toggle-chev">▾</span>
+    </div>
+    <div class="others-list">
+      ${others.map(r => renderSupplierCard(r, false, false, best)).join('')}
+    </div>
+  ` : '';
 
   document.getElementById('result').innerHTML = `
     <div class="product-card">
@@ -619,14 +667,52 @@ function renderResult(rows) {
       </div>
     </div>
 
-    <div class="section-label">Cheapest first · ${sorted.length} supplier${sorted.length === 1 ? '' : 's'}</div>
-    ${suppliersEl}
+    <div class="section-label">Cheapest supplier</div>
+    ${bestEl}
+    ${othersEl}
 
     <div class="section-label">Stock across branches</div>
     ${stockEl}
   `;
   document.getElementById('result').classList.add('show');
   document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderSupplierCard(r, isBest, expanded, bestRef) {
+  const isCase     = r.pack_size > 1;
+  const perPieceStr = `£${r.per_piece_price.toFixed(2)}/pc`;
+  const packStr    = isCase ? `case of ${r.pack_size}` : 'single piece';
+
+  const delta = bestRef
+    ? ` +£${(r.per_piece_price - bestRef.per_piece_price).toFixed(2)}/pc`
+    : '';
+
+  return `
+    <div class="supplier ${isBest ? 'best' : ''}">
+      <div class="supplier-row">
+        <div class="supplier-left">
+          <div class="supplier-name">
+            ${escape(r.supplier_name)}
+            ${isBest ? '<span class="best-badge">BEST</span>' : ''}
+          </div>
+          <div class="supplier-code">${escape(r.supplier_stock_code)} · ${packStr}</div>
+        </div>
+        <div class="supplier-right">
+          <div class="supplier-price">£${r.cost_price.toFixed(2)}</div>
+          <div class="supplier-perpiece">${perPieceStr}</div>
+          ${delta ? `<div class="price-delta">${delta}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleOthers(el) {
+  const list = el.nextElementSibling;
+  const open = list.classList.toggle('open');
+  el.querySelector('.toggle-chev').textContent = open ? '▴' : '▾';
+  el.querySelector('.toggle-label').textContent = open
+    ? 'Hide other suppliers'
+    : `See ${list.children.length} other supplier${list.children.length === 1 ? '' : 's'}`;
 }
 
 function renderStock(row) {
@@ -664,12 +750,12 @@ function loadRecent() {
 }
 
 function addRecent(rows) {
-  const sorted = [...rows].sort((a, b) => a.cost_price - b.cost_price);
+  const sorted = [...rows].sort((a, b) => a.per_piece_price - b.per_piece_price);
   const best = sorted[0];
   const entry = {
     barcode: best.barcode,
     name: best.product_name,
-    bestPrice: best.cost_price,
+    bestPrice: best.per_piece_price,
     bestSupplier: best.supplier_name,
     when: Date.now()
   };
@@ -686,7 +772,7 @@ function renderRecent() {
     ${recent.map(r => `
       <div class="recent-item" onclick="lookup('${r.barcode}')">
         <span class="name">${escape(r.name)}</span>
-        <span class="price">£${r.bestPrice.toFixed(2)}</span>
+        <span class="price">£${r.bestPrice.toFixed(2)}/pc</span>
       </div>
     `).join('')}
   `;
