@@ -282,6 +282,28 @@
     margin-left: 6px;
     vertical-align: middle;
   }
+  .unknown-badge {
+    display: inline-block;
+    background: #3a2f1a;
+    color: var(--orange);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-left: 6px;
+    vertical-align: middle;
+    border: 1px solid rgba(251,146,60,0.3);
+  }
+  .supplier.unknown { opacity: 0.78; }
+  .supplier-price.unknown {
+    color: var(--mute);
+    font-size: 20px;
+  }
+  .supplier-perpiece.unknown {
+    color: var(--orange);
+    font-style: italic;
+  }
 
   /* Others toggle */
   .others-toggle {
@@ -467,7 +489,7 @@
 // --- CONFIG ----------------------------------------------------------------
 // Google Sheet published as CSV. Sheet must have "Anyone with the link" access.
 // Format: https://docs.google.com/spreadsheets/d/<SHEET_ID>/export?format=csv
-const DRIVE_CSV_URL = 'https://docs.google.com/spreadsheets/d/1ikHJbdZZ01qMDgdL3bt_crEdxwL4l3YAkirSBM3dX6A/export?format=csv';
+const DRIVE_CSV_URL = 'https://docs.google.com/spreadsheets/d/11jQcgzLUZgG3hTSKSyakfV-DeY_wnGB0XvXtm8IHKcA/export?format=csv';
 
 const CACHE_KEY  = 'cc-tradeshow-data-v1';
 const CACHE_META = 'cc-tradeshow-meta-v1';
@@ -561,7 +583,8 @@ function parseAndIndex(csvText) {
     row.cost_price = parseFloat(row.cost_price) || 0;
     row.pack_size  = parseInt(row.pack_size) || 1;
     if (row.pack_size < 1) row.pack_size = 1;
-    row.per_piece_price = row.cost_price / row.pack_size;
+    row.per_piece_price = row.cost_price > 0 ? row.cost_price / row.pack_size : 0;
+    row.cost_type = (row.cost_type || '').toLowerCase();
     row.stock_roundhay   = parseInt(row.stock_roundhay)   || 0;
     row.stock_chapeltown = parseInt(row.stock_chapeltown) || 0;
     row.stock_city       = parseInt(row.stock_city)       || 0;
@@ -637,37 +660,56 @@ function lookup(code) {
 
 // --- Render -----------------------------------------------------------------
 function renderResult(rows) {
-  // Sort by TRUE per-piece price, not raw cost (handles cases vs pieces correctly)
-  const sorted = [...rows].sort((a, b) => a.per_piece_price - b.per_piece_price);
+  // Sort: known costs first (by per-piece price), then unknown-cost suppliers at the end
+  const sorted = [...rows].sort((a, b) => {
+    const aUnknown = a.cost_type === 'unknown' || a.cost_price === 0;
+    const bUnknown = b.cost_type === 'unknown' || b.cost_price === 0;
+    if (aUnknown && !bUnknown) return 1;
+    if (!aUnknown && bUnknown) return -1;
+    if (aUnknown && bUnknown) return 0;
+    return a.per_piece_price - b.per_piece_price;
+  });
   const first = sorted[0];
-  const best = sorted[0];
+  const best = sorted.find(r => r.cost_type !== 'unknown' && r.cost_price > 0);
 
   const stockEl = renderStock(first);
 
-  // Cheapest supplier — always expanded
-  const bestEl = renderSupplierCard(best, true, true);
+  // If we have a real cheapest, show it expanded as gold card.
+  // Otherwise show the first row (no known cost) without "best" treatment.
+  const bestEl = best
+    ? renderSupplierCard(best, true, true)
+    : renderSupplierCard(first, false, true);
 
-  // Other suppliers — collapsed under a toggle
-  const others = sorted.slice(1);
-  const othersEl = others.length ? `
+  // Other suppliers
+  const others = sorted.filter(r => r !== best && r !== first);
+  // If best === first (normal case), others = sorted.slice(1).
+  // If no best at all, others = sorted.slice(1).
+  const othersList = best
+    ? sorted.filter(r => r !== best)
+    : sorted.slice(1);
+
+  const othersEl = othersList.length ? `
     <div class="others-toggle" onclick="toggleOthers(this)">
-      <span class="toggle-label">See ${others.length} other supplier${others.length === 1 ? '' : 's'}</span>
+      <span class="toggle-label">See ${othersList.length} other supplier${othersList.length === 1 ? '' : 's'}</span>
       <span class="toggle-chev">▾</span>
     </div>
     <div class="others-list">
-      ${others.map(r => renderSupplierCard(r, false, false, best)).join('')}
+      ${othersList.map(r => renderSupplierCard(r, false, false, best)).join('')}
     </div>
   ` : '';
+
+  const headerLabel = best ? 'Cheapest supplier' : 'Suppliers (no known cost)';
 
   document.getElementById('result').innerHTML = `
     <div class="product-card">
       <div class="product-name">${escape(first.product_name)}</div>
       <div class="product-meta">
         ${escape(first.barcode)}${first.size ? ' · ' + escape(first.size) : ''}
+        · ${sorted.length} supplier${sorted.length === 1 ? '' : 's'}
       </div>
     </div>
 
-    <div class="section-label">Cheapest supplier</div>
+    <div class="section-label">${headerLabel}</div>
     ${bestEl}
     ${othersEl}
 
@@ -679,28 +721,41 @@ function renderResult(rows) {
 }
 
 function renderSupplierCard(r, isBest, expanded, bestRef) {
-  const isCase     = r.pack_size > 1;
-  const perPieceStr = `£${r.per_piece_price.toFixed(2)}/pc`;
-  const packStr    = isCase ? `case of ${r.pack_size}` : 'single piece';
+  const isUnknown = r.cost_type === 'unknown' || r.cost_price === 0;
+  const isCase    = r.pack_size > 1;
+  const packStr   = isCase ? `case of ${r.pack_size}` : 'single piece';
 
-  const delta = bestRef
-    ? ` +£${(r.per_piece_price - bestRef.per_piece_price).toFixed(2)}/pc`
-    : '';
+  let priceBlock;
+  if (isUnknown) {
+    priceBlock = `
+      <div class="supplier-price unknown">—</div>
+      <div class="supplier-perpiece unknown">Ask at show</div>
+    `;
+  } else {
+    const perPieceStr = `£${r.per_piece_price.toFixed(2)}/pc`;
+    const delta = bestRef && r !== bestRef
+      ? ` +£${(r.per_piece_price - bestRef.per_piece_price).toFixed(2)}/pc`
+      : '';
+    priceBlock = `
+      <div class="supplier-price">£${r.cost_price.toFixed(2)}</div>
+      <div class="supplier-perpiece">${perPieceStr}</div>
+      ${delta ? `<div class="price-delta">${delta}</div>` : ''}
+    `;
+  }
 
   return `
-    <div class="supplier ${isBest ? 'best' : ''}">
+    <div class="supplier ${isBest ? 'best' : ''} ${isUnknown ? 'unknown' : ''}">
       <div class="supplier-row">
         <div class="supplier-left">
           <div class="supplier-name">
             ${escape(r.supplier_name)}
             ${isBest ? '<span class="best-badge">BEST</span>' : ''}
+            ${isUnknown ? '<span class="unknown-badge">NO PRICE</span>' : ''}
           </div>
-          <div class="supplier-code">${escape(r.supplier_stock_code)} · ${packStr}</div>
+          <div class="supplier-code">${escape(r.supplier_stock_code || '—')} · ${packStr}</div>
         </div>
         <div class="supplier-right">
-          <div class="supplier-price">£${r.cost_price.toFixed(2)}</div>
-          <div class="supplier-perpiece">${perPieceStr}</div>
-          ${delta ? `<div class="price-delta">${delta}</div>` : ''}
+          ${priceBlock}
         </div>
       </div>
     </div>`;
@@ -750,13 +805,17 @@ function loadRecent() {
 }
 
 function addRecent(rows) {
-  const sorted = [...rows].sort((a, b) => a.per_piece_price - b.per_piece_price);
+  const withCost = rows.filter(r => r.cost_price > 0 && r.cost_type !== 'unknown');
+  const sorted = withCost.length
+    ? [...withCost].sort((a, b) => a.per_piece_price - b.per_piece_price)
+    : rows;
   const best = sorted[0];
   const entry = {
     barcode: best.barcode,
     name: best.product_name,
-    bestPrice: best.per_piece_price,
+    bestPrice: best.per_piece_price || 0,
     bestSupplier: best.supplier_name,
+    hasPrice: best.cost_price > 0,
     when: Date.now()
   };
   recent = [entry, ...recent.filter(r => r.barcode !== entry.barcode)].slice(0, 8);
@@ -772,7 +831,7 @@ function renderRecent() {
     ${recent.map(r => `
       <div class="recent-item" onclick="lookup('${r.barcode}')">
         <span class="name">${escape(r.name)}</span>
-        <span class="price">£${r.bestPrice.toFixed(2)}/pc</span>
+        <span class="price">${r.hasPrice !== false ? '£' + (r.bestPrice||0).toFixed(2) + '/pc' : '—'}</span>
       </div>
     `).join('')}
   `;
