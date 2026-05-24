@@ -473,18 +473,39 @@ async function init() {
 }
 
 // --- CSV parsing ------------------------------------------------------------
+const DEFAULT_HEADERS = [
+  'barcode', 'product_name', 'size', 'own_code',
+  'supplier_name', 'supplier_stock_code', 'cost_price', 'cost_type',
+  'stock_roundhay', 'stock_city', 'stock_chapeltown', 'stock_warehouse', 'stock_total'
+];
+
 function parseAndIndex(csvText) {
   const lines = csvText.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return;
+  if (lines.length < 1) return;
 
-  const headers = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase());
+  // Detect whether row 1 is headers or data.
+  // If the first cell of row 1 is purely digits (looks like a barcode),
+  // assume no headers — use the default schema.
+  const firstCells = parseCsvLine(lines[0]);
+  const firstCell = (firstCells[0] || '').trim();
+  const hasHeaders = !/^\d{6,}$/.test(firstCell);  // 6+ digits = barcode = data
+
+  let headers, startRow;
+  if (hasHeaders) {
+    headers  = firstCells.map(h => h.trim().toLowerCase());
+    startRow = 1;
+  } else {
+    headers  = DEFAULT_HEADERS;
+    startRow = 0;
+  }
+
   data = [];
   byBarcode = new Map();
   byStockCode = new Map();
 
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = startRow; i < lines.length; i++) {
     const cols = parseCsvLine(lines[i]);
-    if (cols.length < headers.length) continue;
+    if (cols.length < 3) continue;  // skip malformed rows
     const row = {};
     headers.forEach((h, idx) => row[h] = (cols[idx] || '').trim());
 
@@ -508,6 +529,7 @@ function parseAndIndex(csvText) {
       byStockCode.get(key).push(row);
     }
   }
+  console.log(`Parsed ${data.length} rows · ${byBarcode.size} unique barcodes · headers ${hasHeaders ? 'present' : 'inferred'}`);
 }
 
 function parseCsvLine(line) {
@@ -537,7 +559,7 @@ function lookupManual() {
 
 function lookup(code) {
   if (!data.length) {
-    toast('No data loaded yet');
+    toast('No data loaded yet · check status top right');
     return;
   }
   const clean = code.trim();
@@ -552,7 +574,9 @@ function lookup(code) {
   }
 
   if (!rows || !rows.length) {
-    toast(`Not found: ${clean}`);
+    toast(`Not found: ${clean} · ${data.length.toLocaleString()} rows loaded`);
+    console.log('Lookup failed for:', clean, 'cleanDigits:', cleanDigits);
+    console.log('First 3 barcodes in index:', [...byBarcode.keys()].slice(0,3));
     return;
   }
 
