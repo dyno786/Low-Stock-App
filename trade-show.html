@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<title>Trade Show — CC Hair & Beauty</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%230a0a0a%22/><text x=%2250%22 y=%2265%22 text-anchor=%22middle%22 font-size=%2255%22 fill=%22%23d4af37%22 font-family=%22serif%22>cc</text></svg>">
+<script src="https://unpkg.com/@zxing/browser@latest/umd/zxing-browser.min.js"></script>
+<style>
+  :root {
+    --bg:        #0a0a0a;
+    --card:     #141414;
+    --line:     #262626;
+    --text:     #f5f5f0;
+    --mute:     #8a8a82;
+    --gold:     #d4af37;
+    --green:    #4ade80;
+    --red:      #f87171;
+    --orange:   #fb923c;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+  header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .logo {
+    font-family: 'Georgia', serif;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--gold); }
+  .subtitle {
+    font-size: 11px;
+    color: var(--mute);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+  .status {
+    font-size: 10px;
+    color: var(--mute);
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .status .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .status.stale .dot { background: var(--orange); }
+  .status.error .dot { background: var(--red); }
+
+  main { padding: 20px 16px 100px; max-width: 720px; margin: 0 auto; }
+
+  .scan-cta {
+    width: 100%;
+    padding: 22px;
+    background: linear-gradient(135deg, var(--gold) 0%, #b8941f 100%);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 14px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(212,175,55,0.25);
+  }
+  .scan-cta:active { transform: scale(0.98); }
+
+  .manual-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .manual-row input {
+    flex: 1;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 16px;
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+  .manual-row input:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+  .manual-row button {
+    padding: 0 18px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .hint {
+    color: var(--mute);
+    font-size: 12px;
+    margin-top: 10px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* Scanner overlay */
+  .scanner-overlay {
+    position: fixed; inset: 0;
+    background: #000;
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+  }
+  .scanner-overlay.open { display: flex; }
+  .scanner-overlay video {
+    flex: 1;
+    width: 100%;
+    object-fit: cover;
+  }
+  .scanner-frame {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 320px;
+    aspect-ratio: 16/9;
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+  }
+  .scanner-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    border: none;
+    width: 44px; height: 44px;
+    border-radius: 22px;
+    font-size: 22px;
+    cursor: pointer;
+  }
+  .scanner-hint {
+    position: absolute;
+    bottom: 32px; left: 0; right: 0;
+    text-align: center;
+    color: #fff;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* Result card */
+  .result {
+    margin-top: 24px;
+    display: none;
+  }
+  .result.show { display: block; }
+
+  .product-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .product-name {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0 0 4px;
+  }
+  .product-meta {
+    font-size: 12px;
+    color: var(--mute);
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--mute);
+    margin: 22px 0 10px;
+  }
+
+  /* Suppliers */
+  .supplier {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .supplier.best {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, var(--card) 60%);
+  }
+  .supplier-left { flex: 1; min-width: 0; }
+  .supplier-name {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .supplier-code {
+    font-size: 11px;
+    color: var(--mute);
+    font-family: 'SF Mono', Menlo, monospace;
+    margin-top: 2px;
+  }
+  .supplier-price {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'Georgia', serif;
+    color: var(--text);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .supplier.best .supplier-price { color: var(--gold); }
+  .price-delta {
+    font-size: 10px;
+    color: var(--red);
+    margin-top: 2px;
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+  .best-badge {
+    display: inline-block;
+    background: var(--gold);
+    color: #0a0a0a;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* Stock grid */
+  .stock-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .stock-cell {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stock-cell.total {
+    grid-column: span 2;
+    background: linear-gradient(135deg, rgba(212,175,55,0.10) 0%, var(--card) 60%);
+    border-color: rgba(212,175,55,0.4);
+  }
+  .stock-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--mute);
+    margin-bottom: 6px;
+  }
+  .stock-value {
+    font-size: 24px;
+    font-weight: 700;
+    font-family: 'Georgia', serif;
+  }
+  .stock-cell.total .stock-value { color: var(--gold); font-size: 30px; }
+  .stock-value.zero { color: var(--red); }
+  .stock-value.low  { color: var(--orange); }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--mute);
+  }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty h3 { margin: 0 0 6px; font-weight: 400; font-size: 16px; color: var(--text); }
+  .empty p { margin: 0; font-size: 13px; line-height: 1.6; }
+
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--mute);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .spinner {
+    display: inline-block;
+    width: 24px; height: 24px;
+    border: 2px solid var(--line);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .recent {
+    margin-top: 30px;
+  }
+  .recent-item {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .recent-item:active { background: #1c1c1c; }
+  .recent-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
+  .recent-item .price { color: var(--gold); font-weight: 600; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--red);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 13px;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">cc <span>·</span> trade show</div>
+    <div class="subtitle">Supplier Price Lookup</div>
+  </div>
+  <div class="status" id="status">
+    <span class="dot"></span><span id="statusText">Loading…</span>
+  </div>
+</header>
+
+<main>
+  <button class="scan-cta" onclick="openScanner()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+      <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+      <line x1="7" y1="12" x2="7" y2="12"/><line x1="12" y1="12" x2="12" y2="12"/>
+      <line x1="17" y1="12" x2="17" y2="12"/>
+    </svg>
+    Scan Barcode
+  </button>
+
+  <div class="manual-row">
+    <input id="manualInput" type="text" inputmode="numeric" placeholder="Or type barcode / stock code…" autocomplete="off">
+    <button onclick="lookupManual()">Find</button>
+  </div>
+
+  <p class="hint">Bluetooth scanner? Just scan — it types into the box above and submits.</p>
+
+  <div id="result" class="result"></div>
+
+  <div id="recent" class="recent"></div>
+</main>
+
+<div id="scanner" class="scanner-overlay">
+  <video id="scannerVideo" autoplay playsinline muted></video>
+  <div class="scanner-frame"></div>
+  <button class="scanner-close" onclick="closeScanner()">×</button>
+  <div class="scanner-hint">Point at barcode</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ============================================================================
+   CC Hair & Beauty — Trade Show App
+   Reads supplier-pricing.csv from Google Drive (public share link)
+   Caches in localStorage for offline use
+   ============================================================================ */
+
+// --- CONFIG ----------------------------------------------------------------
+// Google Sheet published as CSV. Sheet must have "Anyone with the link" access.
+// Format: https://docs.google.com/spreadsheets/d/<SHEET_ID>/export?format=csv
+const DRIVE_CSV_URL = 'https://docs.google.com/spreadsheets/d/1ikHJbdZZ01qMDgdL3bt_crEdxwL4l3YAkirSBM3dX6A/export?format=csv';
+
+const CACHE_KEY  = 'cc-tradeshow-data-v1';
+const CACHE_META = 'cc-tradeshow-meta-v1';
+const RECENT_KEY = 'cc-tradeshow-recent-v1';
+// ----------------------------------------------------------------------------
+
+let data = [];               // parsed CSV rows
+let byBarcode = new Map();   // barcode → rows
+let byStockCode = new Map(); // supplier_stock_code → rows
+let recent = [];
+let scanReader = null;
+
+// Load on start
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  loadRecent();
+  renderRecent();
+
+  // Try cache first
+  const cached = localStorage.getItem(CACHE_KEY);
+  const meta   = JSON.parse(localStorage.getItem(CACHE_META) || '{}');
+  if (cached) {
+    parseAndIndex(cached);
+    setStatus(meta.fetched ? `Cached · ${timeAgo(meta.fetched)}` : 'Cached', meta.fetched);
+  } else {
+    setStatus('No data — upload CSV', null, 'error');
+  }
+
+  // Then refresh from Drive if URL configured
+  if (DRIVE_CSV_URL) {
+    try {
+      const r = await fetch(DRIVE_CSV_URL, { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const text = await r.text();
+      parseAndIndex(text);
+      localStorage.setItem(CACHE_KEY, text);
+      const now = Date.now();
+      localStorage.setItem(CACHE_META, JSON.stringify({ fetched: now }));
+      setStatus(`Live · ${timeAgo(now)}`, now);
+    } catch (e) {
+      console.error(e);
+      if (!cached) setStatus('Offline — upload CSV', null, 'error');
+    }
+  }
+
+  // Bluetooth scanner support — Enter key in manual input
+  document.getElementById('manualInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); lookupManual(); }
+  });
+}
+
+// --- CSV parsing ------------------------------------------------------------
+function parseAndIndex(csvText) {
+  const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return;
+
+  const headers = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase());
+  data = [];
+  byBarcode = new Map();
+  byStockCode = new Map();
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCsvLine(lines[i]);
+    if (cols.length < headers.length) continue;
+    const row = {};
+    headers.forEach((h, idx) => row[h] = (cols[idx] || '').trim());
+
+    // normalise
+    row.cost_price = parseFloat(row.cost_price) || 0;
+    row.stock_roundhay   = parseInt(row.stock_roundhay)   || 0;
+    row.stock_chapeltown = parseInt(row.stock_chapeltown) || 0;
+    row.stock_city       = parseInt(row.stock_city)       || 0;
+    row.stock_warehouse  = parseInt(row.stock_warehouse)  || 0;
+    row.stock_total      = parseInt(row.stock_total)      || 0;
+
+    data.push(row);
+
+    if (row.barcode) {
+      if (!byBarcode.has(row.barcode)) byBarcode.set(row.barcode, []);
+      byBarcode.get(row.barcode).push(row);
+    }
+    if (row.supplier_stock_code) {
+      const key = row.supplier_stock_code.toUpperCase();
+      if (!byStockCode.has(key)) byStockCode.set(key, []);
+      byStockCode.get(key).push(row);
+    }
+  }
+}
+
+function parseCsvLine(line) {
+  // Simple CSV split — handles quoted fields with commas
+  const out = [];
+  let cur = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQuotes && line[i+1] === '"') { cur += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) {
+      out.push(cur); cur = '';
+    } else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+// --- Lookup -----------------------------------------------------------------
+function lookupManual() {
+  const code = document.getElementById('manualInput').value.trim();
+  if (!code) return;
+  lookup(code);
+  document.getElementById('manualInput').value = '';
+}
+
+function lookup(code) {
+  if (!data.length) {
+    toast('No data loaded yet');
+    return;
+  }
+  const clean = code.trim();
+  const cleanDigits = clean.replace(/\D/g, '');
+
+  // Try barcode first (exact or digits-only match)
+  let rows = byBarcode.get(clean) || byBarcode.get(cleanDigits);
+
+  // Fall back to supplier stock code
+  if (!rows || !rows.length) {
+    rows = byStockCode.get(clean.toUpperCase());
+  }
+
+  if (!rows || !rows.length) {
+    toast(`Not found: ${clean}`);
+    return;
+  }
+
+  renderResult(rows);
+  addRecent(rows);
+}
+
+// --- Render -----------------------------------------------------------------
+function renderResult(rows) {
+  // All rows for the same product share barcode/name/stock — sort by cost
+  const sorted = [...rows].sort((a, b) => a.cost_price - b.cost_price);
+  const first = sorted[0];
+  const best = sorted[0];
+
+  const stockEl = renderStock(first);
+  const suppliersEl = sorted.map((r, i) => {
+    const isBest = i === 0;
+    const delta = isBest ? '' : ` +£${(r.cost_price - best.cost_price).toFixed(2)}`;
+    return `
+      <div class="supplier ${isBest ? 'best' : ''}">
+        <div class="supplier-left">
+          <div class="supplier-name">
+            ${escape(r.supplier_name)}
+            ${isBest ? '<span class="best-badge">BEST</span>' : ''}
+          </div>
+          <div class="supplier-code">${escape(r.supplier_stock_code)}</div>
+        </div>
+        <div>
+          <div class="supplier-price">£${r.cost_price.toFixed(2)}</div>
+          ${delta ? `<div class="price-delta">${delta}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('result').innerHTML = `
+    <div class="product-card">
+      <div class="product-name">${escape(first.product_name)}</div>
+      <div class="product-meta">
+        ${escape(first.barcode)}${first.size ? ' · ' + escape(first.size) : ''}
+      </div>
+    </div>
+
+    <div class="section-label">Cheapest first · ${sorted.length} supplier${sorted.length === 1 ? '' : 's'}</div>
+    ${suppliersEl}
+
+    <div class="section-label">Stock across branches</div>
+    ${stockEl}
+  `;
+  document.getElementById('result').classList.add('show');
+  document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderStock(row) {
+  const cls = v => v === 0 ? 'zero' : (v <= 2 ? 'low' : '');
+  return `
+    <div class="stock-grid">
+      <div class="stock-cell">
+        <div class="stock-label">Roundhay</div>
+        <div class="stock-value ${cls(row.stock_roundhay)}">${row.stock_roundhay}</div>
+      </div>
+      <div class="stock-cell">
+        <div class="stock-label">Chapeltown</div>
+        <div class="stock-value ${cls(row.stock_chapeltown)}">${row.stock_chapeltown}</div>
+      </div>
+      <div class="stock-cell">
+        <div class="stock-label">City Center</div>
+        <div class="stock-value ${cls(row.stock_city)}">${row.stock_city}</div>
+      </div>
+      <div class="stock-cell">
+        <div class="stock-label">Warehouse</div>
+        <div class="stock-value ${cls(row.stock_warehouse)}">${row.stock_warehouse}</div>
+      </div>
+      <div class="stock-cell total">
+        <div class="stock-label">Total stock · all branches</div>
+        <div class="stock-value">${row.stock_total}</div>
+      </div>
+    </div>
+  `;
+}
+
+// --- Recent lookups ---------------------------------------------------------
+function loadRecent() {
+  try { recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
+  catch { recent = []; }
+}
+
+function addRecent(rows) {
+  const sorted = [...rows].sort((a, b) => a.cost_price - b.cost_price);
+  const best = sorted[0];
+  const entry = {
+    barcode: best.barcode,
+    name: best.product_name,
+    bestPrice: best.cost_price,
+    bestSupplier: best.supplier_name,
+    when: Date.now()
+  };
+  recent = [entry, ...recent.filter(r => r.barcode !== entry.barcode)].slice(0, 8);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+  renderRecent();
+}
+
+function renderRecent() {
+  const el = document.getElementById('recent');
+  if (!recent.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="section-label">Recent scans</div>
+    ${recent.map(r => `
+      <div class="recent-item" onclick="lookup('${r.barcode}')">
+        <span class="name">${escape(r.name)}</span>
+        <span class="price">£${r.bestPrice.toFixed(2)}</span>
+      </div>
+    `).join('')}
+  `;
+}
+
+// --- Scanner ----------------------------------------------------------------
+async function openScanner() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    toast('Camera not supported — use manual entry');
+    return;
+  }
+  if (!window.ZXingBrowser) {
+    toast('Scanner library failed to load');
+    return;
+  }
+  document.getElementById('scanner').classList.add('open');
+  try {
+    scanReader = new ZXingBrowser.BrowserMultiFormatReader();
+    const video = document.getElementById('scannerVideo');
+    scanReader.decodeFromVideoDevice(undefined, video, (result, err) => {
+      if (result) {
+        const code = result.getText();
+        closeScanner();
+        navigator.vibrate && navigator.vibrate(50);
+        lookup(code);
+      }
+    });
+  } catch (e) {
+    console.error(e);
+    toast('Camera permission denied');
+    closeScanner();
+  }
+}
+
+function closeScanner() {
+  document.getElementById('scanner').classList.remove('open');
+  if (scanReader) {
+    try { scanReader.reset(); } catch {}
+    scanReader = null;
+  }
+}
+
+// --- Utilities --------------------------------------------------------------
+function setStatus(text, ts, state) {
+  const el = document.getElementById('status');
+  el.className = 'status' + (state ? ' ' + state : '');
+  document.getElementById('statusText').textContent = text;
+  if (ts) {
+    const ageHours = (Date.now() - ts) / 3600000;
+    if (ageHours > 36) el.classList.add('stale');
+  }
+}
+
+function timeAgo(ts) {
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 60) return 'just now';
+  if (sec < 3600) return Math.floor(sec/60) + 'm ago';
+  if (sec < 86400) return Math.floor(sec/3600) + 'h ago';
+  return Math.floor(sec/86400) + 'd ago';
+}
+
+function escape(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// Allow drag-drop of CSV onto the page for first-time setup
+window.addEventListener('dragover', e => { e.preventDefault(); });
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    parseAndIndex(reader.result);
+    localStorage.setItem(CACHE_KEY, reader.result);
+    const now = Date.now();
+    localStorage.setItem(CACHE_META, JSON.stringify({ fetched: now }));
+    setStatus(`Uploaded · ${timeAgo(now)}`, now);
+    toast('CSV loaded');
+  };
+  reader.readAsText(f);
+});
+</script>
+</body>
+</html>
