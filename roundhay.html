@@ -79,6 +79,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 #bc-modal svg{max-width:92vw;height:auto;display:block}
 #bc-modal .bcm-num{font-size:13px;font-family:monospace;color:#333;margin-top:10px;letter-spacing:1px}
 #bc-modal .bcm-hint{font-size:10px;color:#999;margin-top:18px;text-transform:uppercase;letter-spacing:.5px}
+#bc-modal .bcm-stack{display:flex;flex-direction:column;gap:14px;align-items:center;width:100%}
+#bc-modal .bcm-block{display:flex;flex-direction:column;align-items:center;gap:4px}
+#bc-modal .bcm-fmt-lbl{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+#bc-modal .bcm-svg-wrap svg{max-height:120px}
+
 
 .item-tags{display:flex;gap:3px;flex-wrap:wrap}
 .itag{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600}
@@ -381,25 +386,49 @@ function calcWH(bc,whQty){var dq=getQty(bc);var need=Math.max(0,TARGET-dq);if(ne
 function showBarcodeModal(bc, opts){
   opts = opts || {};
   var m = document.getElementById('bc-modal');
-  var svg = document.getElementById('bcm-svg');
+  var svg1 = document.getElementById('bcm-svg-1');
+  var svg2 = document.getElementById('bcm-svg-2');
+  var lbl1 = document.getElementById('bcm-fmt-1');
   var nameEl = document.getElementById('bcm-name');
   var metaEl = document.getElementById('bcm-meta');
   var numEl = document.getElementById('bcm-num');
-  if(!m||!svg||!window.JsBarcode){return;}
-  // Pick format: EAN-13 for valid 13-digit numerics, else Code 128
-  var fmt = 'CODE128';
+  if(!m||!svg1||!svg2||!window.JsBarcode){return;}
+  var common = {width:2.6, height:100, fontSize:15, margin:6, background:'#fff', lineColor:'#000'};
+
+  // ── Top: best retail format for this barcode ────────────────
+  var topLabel = 'CODE 128';
+  var topOk = false;
   if(/^\d{13}$/.test(bc)){
-    // EAN-13 needs a valid checksum; JsBarcode will throw otherwise — try it
     try{
-      JsBarcode(svg, bc, {format:'EAN13', width:3, height:120, fontSize:18, margin:8, background:'#fff', lineColor:'#000'});
-      fmt = 'EAN13';
-    }catch(e){
-      // Fall back to Code 128
-      JsBarcode(svg, bc, {format:'CODE128', width:2.4, height:120, fontSize:16, margin:8, background:'#fff', lineColor:'#000'});
-    }
-  } else {
-    JsBarcode(svg, bc, {format:'CODE128', width:2.4, height:120, fontSize:16, margin:8, background:'#fff', lineColor:'#000'});
+      JsBarcode(svg1, bc, Object.assign({}, common, {format:'EAN13', width:3, height:110, fontSize:17}));
+      topLabel = 'EAN-13'; topOk = true;
+    }catch(e){}
+  } else if(/^\d{12}$/.test(bc)){
+    try{
+      JsBarcode(svg1, bc, Object.assign({}, common, {format:'UPC', width:3, height:110, fontSize:17}));
+      topLabel = 'UPC-A'; topOk = true;
+    }catch(e){}
+  } else if(/^\d{8}$/.test(bc)){
+    try{
+      JsBarcode(svg1, bc, Object.assign({}, common, {format:'EAN8', width:3, height:110, fontSize:17}));
+      topLabel = 'EAN-8'; topOk = true;
+    }catch(e){}
   }
+  if(!topOk){
+    // No matching retail format — render Code 39 as the top alternative
+    try{
+      JsBarcode(svg1, bc, Object.assign({}, common, {format:'CODE39'}));
+      topLabel = 'CODE 39';
+    }catch(e){
+      JsBarcode(svg1, bc, Object.assign({}, common, {format:'CODE128'}));
+      topLabel = 'CODE 128';
+    }
+  }
+  lbl1.textContent = topLabel;
+
+  // ── Bottom: Code 128 (always works) ─────────────────────────
+  JsBarcode(svg2, bc, Object.assign({}, common, {format:'CODE128'}));
+
   nameEl.textContent = opts.name || '';
   metaEl.textContent = opts.meta || '';
   numEl.textContent = bc;
@@ -1452,9 +1481,18 @@ document.getElementById('sc-recheck').addEventListener('click',runSysCheck);
   <button class="bcm-close" onclick="closeBarcodeModal(event,true)">×</button>
   <div class="bcm-name" id="bcm-name"></div>
   <div class="bcm-meta" id="bcm-meta"></div>
-  <div class="bcm-svg-wrap"><svg id="bcm-svg"></svg></div>
+  <div class="bcm-stack">
+    <div class="bcm-block">
+      <div class="bcm-fmt-lbl" id="bcm-fmt-1">Format A</div>
+      <div class="bcm-svg-wrap"><svg id="bcm-svg-1"></svg></div>
+    </div>
+    <div class="bcm-block">
+      <div class="bcm-fmt-lbl">CODE 128 (fallback)</div>
+      <div class="bcm-svg-wrap"><svg id="bcm-svg-2"></svg></div>
+    </div>
+  </div>
   <div class="bcm-num" id="bcm-num"></div>
-  <div class="bcm-hint">Scan with handheld &middot; tap to close</div>
+  <div class="bcm-hint">Try scanning both &middot; tap to close</div>
 </div>
 </body>
 </html>
