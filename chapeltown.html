@@ -88,6 +88,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .over-qty{font-size:22px;font-weight:700;color:var(--ink);font-family:monospace;line-height:1}
 .over-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px}
 .over-tick{width:28px;height:28px;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;margin-top:4px;transition:all .2s}
+.over-subtabs{display:flex;gap:6px;padding:0 8px 8px 8px}
+.over-subtab{flex:1;background:var(--card);border:2px solid var(--border);border-radius:9px;padding:8px 6px;cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:2px;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.over-subtab.on{font-weight:700}
+.over-subtab.empty{opacity:.5}
+.over-subtab .over-sub-name{font-size:11px;line-height:1.2}
+.over-subtab .over-sub-cnt{font-size:13px;font-family:monospace;font-weight:600}
 .over-tick.on{background:var(--green);border-color:var(--green)}
 
 .item-bc:active,.neg-bc:active,.oos-bc:active,.img-bc:active{opacity:.55}
@@ -623,6 +629,7 @@ function renderView(){
 var BRANCH_TARGETS={'City Center':7,'Roundhay':6};
 var OVER_TICK_KEY='cc_over'+DEST_ID;
 var overTx={};try{overTx=JSON.parse(localStorage.getItem(OVER_TICK_KEY)||'{}');}catch(e){}
+var overSubTab=null;
 
 function computeOverstockRows(){
   // Build map of barcode -> qty for each source so lookups are O(1)
@@ -693,35 +700,78 @@ function renderOverstock(){
     setProg(0,0,'No overstock');
     return;
   }
-  var done=rows.filter(function(r){return overTx['o_'+r.bc];}).length;
-  setProg(rows.length,done,done+' of '+rows.length+' redistributed');
+
+  // Build per-destination row lists. SOURCES[1] and SOURCES[2] are the
+  // two other branches. An item appears under each destination it ships to.
+  var destBranches=[
+    {short:SOURCES[1].short, name:SOURCES[1].name, color:SOURCES[1].color, rows:[]},
+    {short:SOURCES[2].short, name:SOURCES[2].name, color:SOURCES[2].color, rows:[]}
+  ];
+  rows.forEach(function(r){
+    r.allocs.forEach(function(a){
+      if(a.send<=0)return;
+      for(var i=0;i<destBranches.length;i++){
+        if(destBranches[i].name===a.name){
+          destBranches[i].rows.push({row:r, alloc:a});
+          return;
+        }
+      }
+    });
+  });
+
+  // If sub-tab pointer is stale or unset, pick the first non-empty branch
+  if(!overSubTab||!destBranches.some(function(b){return b.short===overSubTab;})){
+    overSubTab=(destBranches[0].rows.length>0?destBranches[0].short:destBranches[1].short);
+  }
+
+  // Header + sub-tab pills
+  var html='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock to redistribute</div>'+
+    '<div class="src-rule" style="color:var(--sub)">Items where you have 10+ AND warehouse=0 AND another branch needs it. Pick a destination box to pack.</div></div></div>';
+  html+='<div class="over-subtabs">';
+  destBranches.forEach(function(b){
+    var cnt=b.rows.length;
+    var bdone=b.rows.filter(function(x){return overTx['o_'+x.row.bc+'_'+b.short];}).length;
+    var isOn=(overSubTab===b.short);
+    html+='<div class="over-subtab'+(isOn?' on':'')+(cnt===0?' empty':'')+'" data-sub="'+b.short+'" style="'+(isOn?'border-color:'+b.color+';color:'+b.color:'')+'">'+
+      '<span class="over-sub-name">📤 To '+b.name+'</span>'+
+      '<span class="over-sub-cnt">'+bdone+'/'+cnt+'</span></div>';
+  });
+  html+='</div>';
+
+  // Active branch's rows
+  var active=destBranches.filter(function(b){return b.short===overSubTab;})[0];
+  if(!active||active.rows.length===0){
+    html+='<div class="empty" style="margin-top:12px">Nothing to send to this branch right now ✓</div>';
+    el.innerHTML=html;
+    setProg(0,0,'No items for this destination');
+    wireOverSubTabs();
+    return;
+  }
 
   // Group by department
   var byDept={};
-  rows.forEach(function(r){if(!byDept[r.dp])byDept[r.dp]=[];byDept[r.dp].push(r);});
+  active.rows.forEach(function(x){
+    var d=x.row.dp||'General';
+    if(!byDept[d])byDept[d]=[];
+    byDept[d].push(x);
+  });
 
-  var html='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock to redistribute</div>'+
-    '<div class="src-rule" style="color:var(--sub)">Items where you have 10+ AND warehouse=0 AND another branch needs it. Auto-split shown below.</div></div></div>';
+  var totalCount=active.rows.length;
+  var doneCount=active.rows.filter(function(x){return overTx['o_'+x.row.bc+'_'+active.short];}).length;
+  setProg(totalCount,doneCount,doneCount+' of '+totalCount+' packed for '+active.name);
 
   Object.keys(byDept).forEach(function(dept){
     var items=byDept[dept];
-    var df=items.filter(function(r){return overTx['o_'+r.bc];}).length;
+    var df=items.filter(function(x){return overTx['o_'+x.row.bc+'_'+active.short];}).length;
     html+='<div class="dept-hdr"><div class="dept-name">'+dept+'</div>'+
       '<div class="dept-sub" style="color:'+(df===items.length?'var(--green)':'var(--sub)')+'">'+df+'/'+items.length+' done</div></div>';
     html+='<div class="card-list">';
-    items.forEach(function(r){
-      var isDone=!!overTx['o_'+r.bc];
-      // Build alloc lines
-      var allocHtml='';
-      r.allocs.forEach(function(a){
-        if(a.send<=0)return;
-        var qtyTag=a.qty<=0?'<span style="color:var(--red);font-weight:600">qty '+a.qty+'</span>':'<span style="color:var(--sub)">qty '+a.qty+'</span>';
-        allocHtml+='<div class="over-alloc"><span class="over-arrow" style="color:'+a.color+'">→ '+a.name+'</span>'+
-          '<span class="over-send">send '+a.send+'</span>'+
-          '<span class="over-bqty">('+qtyTag+')</span></div>';
-      });
-      if(r.kept>0)allocHtml+='<div class="over-alloc over-keep">Keep '+r.kept+' here as buffer</div>';
-      html+='<div class="over-card'+(isDone?' fixed':'')+'" data-bc="'+r.bc+'">'+
+    items.forEach(function(x){
+      var r=x.row, a=x.alloc;
+      var tickKey='o_'+r.bc+'_'+active.short;
+      var isDone=!!overTx[tickKey];
+      var qtyTag=a.qty<=0?'<span style="color:var(--red);font-weight:600">qty '+a.qty+'</span>':'<span style="color:var(--sub)">qty '+a.qty+'</span>';
+      html+='<div class="over-card'+(isDone?' fixed':'')+'" data-bc="'+r.bc+'" data-dest="'+active.short+'">'+
         '<div class="over-img">'+imgEl(r.bc,46)+'</div>'+
         '<div class="over-body">'+
           '<div class="over-name">'+r.nm+(r.sz?' · '+r.sz:'')+'</div>'+
@@ -731,24 +781,30 @@ function renderOverstock(){
             '<span class="itag itag-info">Extra: '+r.extra+'</span>'+
             (r.pr>0?'<span class="itag itag-info">£'+r.pr.toFixed(2)+'</span>':'')+
           '</div>'+
-          '<div class="over-allocs">'+allocHtml+'</div>'+
+          '<div class="over-allocs">'+
+            '<div class="over-alloc"><span class="over-arrow" style="color:'+a.color+'">→ '+a.name+'</span>'+
+              '<span class="over-send">send '+a.send+'</span>'+
+              '<span class="over-bqty">('+qtyTag+')</span></div>'+
+          '</div>'+
         '</div>'+
         '<div class="over-right">'+
-          '<div class="over-qty">'+r.totalSent+'</div>'+
-          '<div class="over-lbl">send total</div>'+
-          '<div class="over-tick'+(isDone?' on':'')+'" data-bc="'+r.bc+'">'+
+          '<div class="over-qty">'+a.send+'</div>'+
+          '<div class="over-lbl">send</div>'+
+          '<div class="over-tick'+(isDone?' on':'')+'" data-bc="'+r.bc+'" data-dest="'+active.short+'">'+
             '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="'+(isDone?'#fff':'var(--border)')+'" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
           '</div>'+
         '</div></div>';
     });
     html+='</div>';
   });
+
   el.innerHTML=html;
+  wireOverSubTabs();
 
   el.querySelectorAll('.over-tick').forEach(function(btn){
     btn.addEventListener('click',function(e){
       e.stopPropagation();
-      var bc=this.dataset.bc, key='o_'+bc, wasDone=!!overTx[key];
+      var bc=this.dataset.bc, dest=this.dataset.dest, key='o_'+bc+'_'+dest, wasDone=!!overTx[key];
       overTx[key]=!wasDone;
       try{localStorage.setItem(OVER_TICK_KEY,JSON.stringify(overTx));}catch(e){}
       syncSave(OVER_TICK_KEY,overTx);
@@ -758,11 +814,24 @@ function renderOverstock(){
       this.querySelector('svg').setAttribute('stroke',nowDone?'#fff':'var(--border)');
       var tot=el.querySelectorAll('.over-tick').length;
       var dn=el.querySelectorAll('.over-tick.on').length;
-      setProg(tot,dn,dn+' of '+tot+' redistributed');
+      // Update the active sub-tab count badge too
+      var activePill=el.querySelector('.over-subtab.on .over-sub-cnt');
+      if(activePill)activePill.textContent=dn+'/'+tot;
+      setProg(tot,dn,dn+' of '+tot+' packed');
       if(nowDone&&typeof tmrPick==='function')tmrPick();
     });
   });
 }
+
+function wireOverSubTabs(){
+  document.querySelectorAll('.over-subtab').forEach(function(t){
+    t.addEventListener('click',function(){
+      overSubTab=this.dataset.sub;
+      renderOverstock();
+    });
+  });
+}
+
 
 // ── COLLECT ────────────────────────────────────────────────
 function renderCollect(srcIdx){
