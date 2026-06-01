@@ -640,6 +640,9 @@ function computeOverstockRows(){
   var rows=[];
   destData.forEach(function(p){
     if(!p.bc||!p.nm)return;
+    // Department filter: only AFRO BEAUTY PRODUCTS and AFRO PRODUCTS 2
+    var dept=(p.dp||'').toUpperCase();
+    if(dept!=='AFRO BEAUTY PRODUCTS'&&dept!=='AFRO PRODUCTS 2')return;
     if(p.qty<10)return;                     // overstock rule
     var extra=p.qty-7;                       // always >=3
     var wh=whMap[p.bc];
