@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>CC Roundhay</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
 :root{
   --red:#cc0000;--redbg:#fff0f0;--redtxt:#991b1b;
@@ -67,6 +68,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .item-body{flex:1;min-width:0}
 .item-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
 .item-bc{font-size:9px;color:var(--sub);font-family:monospace;margin-bottom:4px}
+.item-bc,.neg-bc,.oos-bc,.img-bc{cursor:pointer;user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,.08)}
+.item-bc:active,.neg-bc:active,.oos-bc:active,.img-bc:active{opacity:.55}
+#bc-modal{position:fixed;inset:0;background:#fff;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center}
+#bc-modal.open{display:flex}
+#bc-modal .bcm-close{position:absolute;top:14px;right:14px;background:#f0f0f0;border:none;border-radius:50%;width:38px;height:38px;font-size:22px;cursor:pointer;color:#444;display:flex;align-items:center;justify-content:center;line-height:1}
+#bc-modal .bcm-name{font-size:14px;font-weight:600;color:#111;margin-bottom:6px;max-width:92vw;line-height:1.25}
+#bc-modal .bcm-meta{font-size:11px;color:#666;margin-bottom:18px}
+#bc-modal .bcm-svg-wrap{background:#fff;padding:14px 10px;border-radius:6px;max-width:96vw;display:flex;align-items:center;justify-content:center}
+#bc-modal svg{max-width:92vw;height:auto;display:block}
+#bc-modal .bcm-num{font-size:13px;font-family:monospace;color:#333;margin-top:10px;letter-spacing:1px}
+#bc-modal .bcm-hint{font-size:10px;color:#999;margin-top:18px;text-transform:uppercase;letter-spacing:.5px}
+
 .item-tags{display:flex;gap:3px;flex-wrap:wrap}
 .itag{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600}
 .itag-wh{background:var(--purplebg);color:var(--purpletxt)}
@@ -362,6 +375,71 @@ function imgEl(bc,sz){sz=sz||52;if(imgs[bc])return '<img src="'+imgs[bc]+'" load
 function dayTag(days,r,a){if(days===null)return '';var c=days>=(r||30)?'itag-day-red':days>=(a||7)?'itag-day':'itag-info';return '<span class="itag '+c+'">'+days+'d OOS</span>';}
 function getQty(bc){var p=destData?destData.find(function(x){return x.bc===bc;}):null;return p?p.qty:0;}
 function calcWH(bc,whQty){var dq=getQty(bc);var need=Math.max(0,TARGET-dq);if(need<=0||dq>=TARGET)return 0;return Math.min(need,whQty);}
+// ── SCANNABLE BARCODE POPUP ──────────────────────────────────
+// Tap any barcode (item-bc/neg-bc/oos-bc/img-bc) → fullscreen modal
+// shows a real scannable EAN-13/Code-128 SVG for the handheld scanner.
+function showBarcodeModal(bc, opts){
+  opts = opts || {};
+  var m = document.getElementById('bc-modal');
+  var svg = document.getElementById('bcm-svg');
+  var nameEl = document.getElementById('bcm-name');
+  var metaEl = document.getElementById('bcm-meta');
+  var numEl = document.getElementById('bcm-num');
+  if(!m||!svg||!window.JsBarcode){return;}
+  // Pick format: EAN-13 for valid 13-digit numerics, else Code 128
+  var fmt = 'CODE128';
+  if(/^\d{13}$/.test(bc)){
+    // EAN-13 needs a valid checksum; JsBarcode will throw otherwise — try it
+    try{
+      JsBarcode(svg, bc, {format:'EAN13', width:3, height:120, fontSize:18, margin:8, background:'#fff', lineColor:'#000'});
+      fmt = 'EAN13';
+    }catch(e){
+      // Fall back to Code 128
+      JsBarcode(svg, bc, {format:'CODE128', width:2.4, height:120, fontSize:16, margin:8, background:'#fff', lineColor:'#000'});
+    }
+  } else {
+    JsBarcode(svg, bc, {format:'CODE128', width:2.4, height:120, fontSize:16, margin:8, background:'#fff', lineColor:'#000'});
+  }
+  nameEl.textContent = opts.name || '';
+  metaEl.textContent = opts.meta || '';
+  numEl.textContent = bc;
+  m.classList.add('open');
+}
+function closeBarcodeModal(ev, force){
+  // Allow clicks inside the SVG/text without closing — only close on overlay click or × button
+  if(ev && !force){
+    var tgt = ev.target;
+    if(tgt && tgt.id !== 'bc-modal') return;
+  }
+  var m = document.getElementById('bc-modal');
+  if(m) m.classList.remove('open');
+}
+// Delegated click handler — catches taps on barcode elements anywhere in the page
+document.addEventListener('click', function(ev){
+  var t = ev.target;
+  if(!t || !t.classList) return;
+  if(!(t.classList.contains('item-bc') || t.classList.contains('neg-bc')
+       || t.classList.contains('oos-bc') || t.classList.contains('img-bc'))) return;
+  ev.stopPropagation();
+  var bc = (t.textContent || '').trim();
+  if(!bc) return;
+  // Try to find product name + qty from nearby DOM for the popup header
+  var card = t.closest('.item-card,.neg-card,.oos-card,.img-card');
+  var name = '';
+  var meta = '';
+  if(card){
+    var nmEl = card.querySelector('.item-name,.neg-name,.oos-name,.img-name');
+    if(nmEl) name = nmEl.textContent.trim();
+    var qtyEl = card.querySelector('.cnum,.neg-qty,.oos-qty');
+    if(qtyEl) meta = 'Stock: ' + qtyEl.textContent.trim();
+  }
+  showBarcodeModal(bc, {name: name, meta: meta});
+});
+// ESC closes the modal
+document.addEventListener('keydown', function(ev){
+  if(ev.key === 'Escape') closeBarcodeModal(null, true);
+});
+
 function setProg(total,done,sub){var pct=total>0?Math.round(done/total*100):0;document.getElementById('prog-fill').style.width=pct+'%';document.getElementById('prog-txt').textContent=pct+'%';document.getElementById('prog-sub').textContent=sub||'';}
 function updateStats(){
   if(!destData)return;
@@ -1369,6 +1447,14 @@ document.getElementById('sc-recheck').addEventListener('click',runSysCheck);
     </div>
     <div id="sc-content"><div style="padding:30px;text-align:center;color:var(--sub);font-size:12px"><div class="spin" style="border-top-color:var(--red);margin:0 auto 10px"></div>Checking all systems…</div></div>
   </div>
+</div>
+<div id="bc-modal" onclick="closeBarcodeModal(event)">
+  <button class="bcm-close" onclick="closeBarcodeModal(event,true)">×</button>
+  <div class="bcm-name" id="bcm-name"></div>
+  <div class="bcm-meta" id="bcm-meta"></div>
+  <div class="bcm-svg-wrap"><svg id="bcm-svg"></svg></div>
+  <div class="bcm-num" id="bcm-num"></div>
+  <div class="bcm-hint">Scan with handheld &middot; tap to close</div>
 </div>
 </body>
 </html>
