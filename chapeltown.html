@@ -88,7 +88,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .over-qty{font-size:22px;font-weight:700;color:var(--ink);font-family:monospace;line-height:1}
 .over-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px}
 .over-tick{width:28px;height:28px;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;margin-top:4px;transition:all .2s}
+.low-subtabs{display:flex;gap:6px;padding:0 8px 8px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.low-subtab{flex:1;min-width:0;background:var(--card);border:2px solid var(--border);border-radius:9px;padding:8px 6px;cursor:pointer;text-align:center;transition:all .15s;-webkit-tap-highlight-color:transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.low-subtab.on{font-weight:700}
+.low-subtab .low-sub-name{font-size:11px;line-height:1.2}
 .over-subtabs{display:flex;gap:6px;padding:0 8px 8px 8px}
+.over-settings{display:flex;gap:6px;padding:0 8px 8px 8px}
+.over-setting{flex:1;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.over-setting-lbl{font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.3px;text-align:center;line-height:1.1}
+.over-setting-ctl{display:flex;align-items:center;gap:4px;width:100%;justify-content:space-between}
+.over-set-btn{flex-shrink:0;width:24px;height:24px;border:1px solid var(--border);background:var(--card2);border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;line-height:1;color:var(--ink);font-family:var(--font);padding:0;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.over-set-btn:active{background:var(--border)}
+.over-set-val{font-size:15px;font-weight:700;font-family:monospace;color:var(--ink);min-width:30px;text-align:center}
 .over-subtab{flex:1;background:var(--card);border:2px solid var(--border);border-radius:9px;padding:8px 6px;cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:2px;transition:all .15s;-webkit-tap-highlight-color:transparent}
 .over-subtab.on{font-weight:700}
 .over-subtab.empty{opacity:.5}
@@ -244,9 +255,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 </div>
 
 <div class="vtabs" id="vtabs">
-  <div class="vtab on" data-v="s0">📦 From Warehouse</div>
-  <div class="vtab" data-v="s1">📦 From City Center</div>
-  <div class="vtab" data-v="s2">📦 From Roundhay</div>
+  <div class="vtab on" data-v="low">📦 Missing &amp; Low Stock</div>
   <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
@@ -339,7 +348,7 @@ function daysOOS(bc){
   if(!oosDates[bc])return null;
   return Math.floor((Date.now()-oosDates[bc])/86400000);
 }
-var view='s0',oosFilt='all',imgFilter='missing',imgDeptTab='priority';
+var view='low',oosFilt='all',imgFilter='missing',imgDeptTab='priority';
 var oosActiveDepts=[],oosStockFilter='all';
 var collectDept='ALL'; // department filter for collect tabs
 var ticks={},negTx={};
@@ -616,10 +625,12 @@ async function loadImgs(){
 // ── RENDER ─────────────────────────────────────────────────
 function renderView(){
   var isCollect=view.charAt(0)==='s';
+  var isLow=view==='low';
   document.getElementById('day-filter').style.display=view==='oos'?'block':'none';
   document.getElementById('prog-wrap').style.display=(view!=='oos'&&view!=='imgs')?'block':'none';
-  document.getElementById('timer-bar').style.display=(isCollect&&tmr.on)?'block':'none';
+  document.getElementById('timer-bar').style.display=((isCollect||isLow)&&tmr.on)?'block':'none';
   if(isCollect){var idx=parseInt(view.substring(1));renderCollect(idx);}
+  else if(isLow)renderLow();
   else if(view==='neg')renderNeg();
   else if(view==='oos')renderOOS();
   else if(view==='over')renderOverstock();
@@ -631,8 +642,22 @@ var OVER_TICK_KEY='cc_over'+DEST_ID;
 var overTx={};try{overTx=JSON.parse(localStorage.getItem(OVER_TICK_KEY)||'{}');}catch(e){}
 var overSubTab=null;
 
+// ── OVERSTOCK SETTINGS (shared across all 3 branches via cc_over_* keys) ──
+var OVER_SETTINGS_DEFAULTS={min:12,buffer:7,destThresh:2};
+function loadOverSettings(){
+  var s={};
+  ['min','buffer','destThresh'].forEach(function(k){
+    var v=null;try{v=parseInt(localStorage.getItem('cc_over_'+k));}catch(e){}
+    s[k]=(isNaN(v)||v===null)?OVER_SETTINGS_DEFAULTS[k]:v;
+  });
+  return s;
+}
+function saveOverSetting(k,v){
+  try{localStorage.setItem('cc_over_'+k,String(v));}catch(e){}
+}
+
 function computeOverstockRows(){
-  // Build map of barcode -> qty for each source so lookups are O(1)
+  var settings=loadOverSettings();
   function mapFor(idx){
     var m={};
     var arr=srcData[idx]||[];
@@ -644,28 +669,34 @@ function computeOverstockRows(){
   var b1Name=SOURCES[1].name, b2Name=SOURCES[2].name;
   var b1Tgt=BRANCH_TARGETS[b1Name]||7, b2Tgt=BRANCH_TARGETS[b2Name]||7;
 
+  // Sanity: if buffer >= min, no item can ever ship (extra would be <= 0). Bail gracefully.
+  if(settings.min<=settings.buffer)return [];
+
   var rows=[];
   destData.forEach(function(p){
     if(!p.bc||!p.nm)return;
     // Department filter: only AFRO BEAUTY PRODUCTS and AFRO PRODUCTS 2
     var dept=(p.dp||'').toUpperCase();
     if(dept!=='AFRO BEAUTY PRODUCTS'&&dept!=='AFRO PRODUCTS 2')return;
-    if(p.qty<10)return;                     // overstock rule
-    var extra=p.qty-7;                       // always >=3
+    if(p.qty<settings.min)return;                   // overstock rule
+    var extra=p.qty-settings.buffer;
+    if(extra<=0)return;
     var wh=whMap[p.bc];
-    if(wh&&wh.qty>0)return;                  // warehouse can supply — skip
+    if(wh&&wh.qty>0)return;                          // warehouse can supply — skip
     var b1=b1Map[p.bc]||{qty:0};
     var b2=b2Map[p.bc]||{qty:0};
-    var need1=Math.max(0,b1Tgt-b1.qty);
-    var need2=Math.max(0,b2Tgt-b2.qty);
-    if(need1<=0&&need2<=0)return;            // nobody needs it
-    // Sort by urgency: branch with lower qty first (more negative = more urgent)
+    // Branch is eligible to receive only if its qty is at or below destThresh
+    var b1Eligible=(b1.qty<=settings.destThresh);
+    var b2Eligible=(b2.qty<=settings.destThresh);
+    if(!b1Eligible&&!b2Eligible)return;
+    var need1=b1Eligible?Math.max(0,b1Tgt-b1.qty):0;
+    var need2=b2Eligible?Math.max(0,b2Tgt-b2.qty):0;
+    if(need1<=0&&need2<=0)return;
     var slots=[
       {name:b1Name,short:SOURCES[1].short,color:SOURCES[1].color,qty:b1.qty,need:need1},
       {name:b2Name,short:SOURCES[2].short,color:SOURCES[2].color,qty:b2.qty,need:need2}
     ];
     slots.sort(function(a,b){return a.qty-b.qty;});
-    // Greedy allocate
     var remaining=extra;
     var alloc=[];
     slots.forEach(function(s){
@@ -681,7 +712,6 @@ function computeOverstockRows(){
       hereQty:p.qty, extra:extra, allocs:alloc, totalSent:totalSent, kept:extra-totalSent
     });
   });
-  // Sort: by department then name
   rows.sort(function(a,b){
     if(a.dp!==b.dp)return a.dp<b.dp?-1:1;
     return a.nm<b.nm?-1:1;
@@ -726,7 +756,23 @@ function renderOverstock(){
 
   // Header + sub-tab pills
   var html='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock to redistribute</div>'+
-    '<div class="src-rule" style="color:var(--sub)">Items where you have 10+ AND warehouse=0 AND another branch needs it. Pick a destination box to pack.</div></div></div>';
+    '<div class="src-rule" style="color:var(--sub)">Pick a destination box to pack. Adjust thresholds below.</div></div></div>';
+  // Settings panel (3 number boxes with - / + buttons)
+  var __s=loadOverSettings();
+  html+='<div class="over-settings">'+
+    '<div class="over-setting"><div class="over-setting-lbl">Min stock here</div>'+
+      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="min" data-d="-1">−</button>'+
+      '<span class="over-set-val" id="over-set-min">'+__s.min+'</span>'+
+      '<button class="over-set-btn" data-set="min" data-d="1">+</button></div></div>'+
+    '<div class="over-setting"><div class="over-setting-lbl">Keep buffer</div>'+
+      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="buffer" data-d="-1">−</button>'+
+      '<span class="over-set-val" id="over-set-buffer">'+__s.buffer+'</span>'+
+      '<button class="over-set-btn" data-set="buffer" data-d="1">+</button></div></div>'+
+    '<div class="over-setting"><div class="over-setting-lbl">Dest ≤</div>'+
+      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="destThresh" data-d="-1">−</button>'+
+      '<span class="over-set-val" id="over-set-destThresh">'+__s.destThresh+'</span>'+
+      '<button class="over-set-btn" data-set="destThresh" data-d="1">+</button></div></div>'+
+  '</div>';
   html+='<div class="over-subtabs">';
   destBranches.forEach(function(b){
     var cnt=b.rows.length;
@@ -830,8 +876,67 @@ function wireOverSubTabs(){
       renderOverstock();
     });
   });
+  // Wire settings buttons
+  document.querySelectorAll('.over-set-btn').forEach(function(b){
+    b.addEventListener('click',function(){
+      var k=this.dataset.set, d=parseInt(this.dataset.d);
+      var cur=loadOverSettings();
+      var newVal=Math.max(0,cur[k]+d);
+      // Cap top sensibly
+      if(k==='min'&&newVal>999)newVal=999;
+      if(k==='buffer'&&newVal>999)newVal=999;
+      if(k==='destThresh'&&newVal>99)newVal=99;
+      saveOverSetting(k,newVal);
+      renderOverstock();
+    });
+  });
 }
 
+
+// ── LOW STOCK (parent of From X sub-tabs) ──────────────────
+var lowSubIdx=0;
+
+function renderLow(){
+  var el=document.getElementById('out');
+  // Render sub-tab pills, then below them the active source's collect view
+  var subPills='<div class="low-subtabs">';
+  SOURCES.forEach(function(sc,i){
+    var isOn=(lowSubIdx===i);
+    subPills+='<div class="low-subtab'+(isOn?' on':'')+'" data-sub="'+i+'" style="'+(isOn?'border-color:'+sc.color+';color:'+sc.color:'')+'">'+
+      '<span class="low-sub-name">📦 From '+sc.name+'</span></div>';
+  });
+  subPills+='</div>';
+  // Wrap in a placeholder so we don't disturb renderCollect's targeting of #out
+  el.innerHTML=subPills+'<div id="low-content"></div>';
+
+  // Wire pills
+  el.querySelectorAll('.low-subtab').forEach(function(t){
+    t.addEventListener('click',function(){
+      lowSubIdx=parseInt(this.dataset.sub);
+      try{localStorage.setItem('cc_lowsub',String(lowSubIdx));}catch(e){}
+      if(!srcLoaded[lowSubIdx])loadSrc(lowSubIdx);
+      renderLow();
+    });
+  });
+
+  // Render the active source's content into #low-content (renderCollect writes to #out;
+  // we redirect by temporarily swapping IDs)
+  var orig=document.getElementById('out');
+  var lc=document.getElementById('low-content');
+  if(!lc)return;
+  orig.id='_out_real';
+  lc.id='out';
+  try{
+    renderCollect(lowSubIdx);
+  }finally{
+    // Restore IDs but preserve the inner content
+    lc.id='low-content';
+    orig.id='out';
+  }
+}
+
+// Restore lowSubIdx from localStorage on load
+try{var __ls=parseInt(localStorage.getItem('cc_lowsub')); if(!isNaN(__ls)&&__ls>=0&&__ls<=2)lowSubIdx=__ls;}catch(e){}
 
 // ── COLLECT ────────────────────────────────────────────────
 function renderCollect(srcIdx){
@@ -1465,6 +1570,7 @@ document.getElementById('vtabs').addEventListener('click',function(e){
   view=vt.dataset.v;
   // Lazy load — only fetch when tab is first opened
   if(view.charAt(0)==='s'){var idx=parseInt(view.substring(1));if(!srcLoaded[idx])loadSrc(idx);collectDept='ALL';}
+  else if(view==='low'){collectDept='ALL';if(!srcLoaded[lowSubIdx])loadSrc(lowSubIdx);}
   else if(view==='oos'){oosActiveDepts=[];oosStockFilter='all';SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   else if(view==='over'){SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   renderView();
