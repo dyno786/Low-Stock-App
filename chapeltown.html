@@ -728,9 +728,31 @@ function renderOverstock(){
     el.innerHTML='<div class="loading"><div class="spin"></div>Loading branches…</div>';return;
   }
   var rows=computeOverstockRows();
+  // ALWAYS render the settings panel + header, even when no overstock — so
+  // the user can still adjust thresholds when nothing is showing.
+  var __s=loadOverSettings();
+  var shellHeader='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock to redistribute</div>'+
+    '<div class="src-rule" style="color:var(--sub)">Pick a destination box to pack. Adjust thresholds below.</div></div></div>'+
+    '<div class="over-settings">'+
+    '<div class="over-setting"><div class="over-setting-lbl">Min stock here</div>'+
+      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="min" data-d="-1">−</button>'+
+      '<span class="over-set-val" id="over-set-min">'+__s.min+'</span>'+
+      '<button class="over-set-btn" data-set="min" data-d="1">+</button></div></div>'+
+    '<div class="over-setting"><div class="over-setting-lbl">Keep buffer</div>'+
+      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="buffer" data-d="-1">−</button>'+
+      '<span class="over-set-val" id="over-set-buffer">'+__s.buffer+'</span>'+
+      '<button class="over-set-btn" data-set="buffer" data-d="1">+</button></div></div>'+
+    '<div class="over-setting"><div class="over-setting-lbl">Dest ≤</div>'+
+      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="destThresh" data-d="-1">−</button>'+
+      '<span class="over-set-val" id="over-set-destThresh">'+__s.destThresh+'</span>'+
+      '<button class="over-set-btn" data-set="destThresh" data-d="1">+</button></div></div>'+
+    '</div>'+
+    '<div class="over-reset-row"><button class="over-reset-btn">↺ Reset to defaults (12 / 7 / 2)</button></div>';
+
   if(!rows||!rows.length){
-    el.innerHTML='<div class="empty">No overstock that other branches need — nice and balanced ✓</div>';
+    el.innerHTML=shellHeader+'<div class="empty" style="margin-top:8px">No overstock matches current settings — adjust thresholds above or check back later ✓</div>';
     setProg(0,0,'No overstock');
+    wireOverSubTabs();
     return;
   }
 
@@ -758,25 +780,7 @@ function renderOverstock(){
   }
 
   // Header + sub-tab pills
-  var html='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock to redistribute</div>'+
-    '<div class="src-rule" style="color:var(--sub)">Pick a destination box to pack. Adjust thresholds below.</div></div></div>';
-  // Settings panel (3 number boxes with - / + buttons)
-  var __s=loadOverSettings();
-  html+='<div class="over-settings">'+
-    '<div class="over-setting"><div class="over-setting-lbl">Min stock here</div>'+
-      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="min" data-d="-1">−</button>'+
-      '<span class="over-set-val" id="over-set-min">'+__s.min+'</span>'+
-      '<button class="over-set-btn" data-set="min" data-d="1">+</button></div></div>'+
-    '<div class="over-setting"><div class="over-setting-lbl">Keep buffer</div>'+
-      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="buffer" data-d="-1">−</button>'+
-      '<span class="over-set-val" id="over-set-buffer">'+__s.buffer+'</span>'+
-      '<button class="over-set-btn" data-set="buffer" data-d="1">+</button></div></div>'+
-    '<div class="over-setting"><div class="over-setting-lbl">Dest ≤</div>'+
-      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="destThresh" data-d="-1">−</button>'+
-      '<span class="over-set-val" id="over-set-destThresh">'+__s.destThresh+'</span>'+
-      '<button class="over-set-btn" data-set="destThresh" data-d="1">+</button></div></div>'+
-  '</div>';
-  html+='<div class="over-reset-row"><button class="over-reset-btn">↺ Reset to defaults (12 / 7 / 2)</button></div>';
+  var html=shellHeader;
   html+='<div class="over-subtabs">';
   destBranches.forEach(function(b){
     var cnt=b.rows.length;
