@@ -100,6 +100,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .over-set-btn{flex-shrink:0;width:24px;height:24px;border:1px solid var(--border);background:var(--card2);border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;line-height:1;color:var(--ink);font-family:var(--font);padding:0;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
 .over-set-btn:active{background:var(--border)}
 .over-set-val{font-size:15px;font-weight:700;font-family:monospace;color:var(--ink);min-width:30px;text-align:center}
+.over-reset-row{padding:0 8px 8px 8px;display:flex;justify-content:center}
+.over-reset-btn{background:transparent;border:1px solid var(--border);color:var(--sub);font-size:11px;padding:5px 12px;border-radius:7px;cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+.over-reset-btn:active{background:var(--card2)}
 .over-subtab{flex:1;background:var(--card);border:2px solid var(--border);border-radius:9px;padding:8px 6px;cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:2px;transition:all .15s;-webkit-tap-highlight-color:transparent}
 .over-subtab.on{font-weight:700}
 .over-subtab.empty{opacity:.5}
@@ -752,6 +755,7 @@ function renderOverstock(){
       '<span class="over-set-val" id="over-set-destThresh">'+__s.destThresh+'</span>'+
       '<button class="over-set-btn" data-set="destThresh" data-d="1">+</button></div></div>'+
   '</div>';
+  html+='<div class="over-reset-row"><button class="over-reset-btn">↺ Reset to defaults (12 / 7 / 2)</button></div>';
   html+='<div class="over-subtabs">';
   destBranches.forEach(function(b){
     var cnt=b.rows.length;
@@ -869,6 +873,16 @@ function wireOverSubTabs(){
       renderOverstock();
     });
   });
+  // Wire reset button
+  var resetBtn=document.querySelector('.over-reset-btn');
+  if(resetBtn){
+    resetBtn.addEventListener('click',function(){
+      Object.keys(OVER_SETTINGS_DEFAULTS).forEach(function(k){
+        saveOverSetting(k,OVER_SETTINGS_DEFAULTS[k]);
+      });
+      renderOverstock();
+    });
+  }
 }
 
 
