@@ -111,19 +111,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .over-tick.on{background:var(--green);border-color:var(--green)}
 
 .item-bc:active,.neg-bc:active,.oos-bc:active,.img-bc:active{opacity:.55}
-#bc-modal{position:fixed;inset:0;background:#fff;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center}
+#bc-modal{position:fixed;inset:0;background:#fff;z-index:9999;display:none;flex-direction:column;padding:0;text-align:center;overflow:hidden}
 #bc-modal.open{display:flex}
-#bc-modal .bcm-close{position:absolute;top:14px;right:14px;background:#f0f0f0;border:none;border-radius:50%;width:38px;height:38px;font-size:22px;cursor:pointer;color:#444;display:flex;align-items:center;justify-content:center;line-height:1}
-#bc-modal .bcm-name{font-size:14px;font-weight:600;color:#111;margin-bottom:6px;max-width:92vw;line-height:1.25}
-#bc-modal .bcm-meta{font-size:11px;color:#666;margin-bottom:18px}
-#bc-modal .bcm-svg-wrap{background:#fff;padding:14px 10px;border-radius:6px;max-width:96vw;display:flex;align-items:center;justify-content:center}
-#bc-modal svg{max-width:92vw;height:auto;display:block}
-#bc-modal .bcm-num{font-size:13px;font-family:monospace;color:#333;margin-top:10px;letter-spacing:1px}
-#bc-modal .bcm-hint{font-size:10px;color:#999;margin-top:18px;text-transform:uppercase;letter-spacing:.5px}
-#bc-modal .bcm-stack{display:flex;flex-direction:column;gap:14px;align-items:center;width:100%}
-#bc-modal .bcm-block{display:flex;flex-direction:column;align-items:center;gap:4px}
-#bc-modal .bcm-fmt-lbl{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-#bc-modal .bcm-svg-wrap svg{max-height:120px}
+#bc-modal .bcm-close{position:absolute;top:8px;right:8px;background:#f0f0f0;border:none;border-radius:50%;width:36px;height:36px;font-size:22px;cursor:pointer;color:#444;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2}
+#bc-modal .bcm-top{flex-shrink:0;padding:10px 50px 6px 14px;text-align:center}
+#bc-modal .bcm-name{font-size:13px;font-weight:600;color:#111;margin-bottom:2px;line-height:1.2}
+#bc-modal .bcm-meta{font-size:10px;color:#666}
+#bc-modal .bcm-rotate-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;overflow:hidden;min-height:0}
+#bc-modal .bcm-svg-wrap{background:#fff;width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform:rotate(90deg);transform-origin:center}
+#bc-modal svg{max-width:96vh;max-height:88vw;width:auto;height:auto;display:block}
+#bc-modal .bcm-bottom{flex-shrink:0;padding:6px 12px 14px 12px}
+#bc-modal .bcm-num{font-size:14px;font-family:monospace;color:#333;margin-bottom:8px;letter-spacing:1.5px;font-weight:600}
+#bc-modal .bcm-fmt-row{display:flex;gap:5px;justify-content:center;margin-bottom:6px;flex-wrap:wrap}
+#bc-modal .bcm-fmt-btn{background:#f0f0f0;border:1px solid #ddd;color:#444;font-size:11px;padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;min-width:60px}
+#bc-modal .bcm-fmt-btn.on{background:#000;color:#fff;border-color:#000}
+#bc-modal .bcm-hint{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.4px}
 
 
 .item-tags{display:flex;gap:3px;flex-wrap:wrap}
@@ -426,52 +428,77 @@ function calcWH(bc,whQty){var dq=getQty(bc);var need=Math.max(0,TARGET-dq);if(ne
 function showBarcodeModal(bc, opts){
   opts = opts || {};
   var m = document.getElementById('bc-modal');
-  var svg1 = document.getElementById('bcm-svg-1');
-  var svg2 = document.getElementById('bcm-svg-2');
-  var lbl1 = document.getElementById('bcm-fmt-1');
+  var svg = document.getElementById('bcm-svg');
   var nameEl = document.getElementById('bcm-name');
   var metaEl = document.getElementById('bcm-meta');
   var numEl = document.getElementById('bcm-num');
-  if(!m||!svg1||!svg2||!window.JsBarcode){return;}
-  var common = {width:2.6, height:100, fontSize:15, margin:6, background:'#fff', lineColor:'#000'};
+  if(!m||!svg||!window.JsBarcode){return;}
 
-  // ── Top: best retail format for this barcode ────────────────
-  var topLabel = 'CODE 128';
-  var topOk = false;
-  if(/^\d{13}$/.test(bc)){
+  // Persist last-used format per device — staff finds what works once, keeps using it
+  var lastFmt='auto';try{lastFmt=localStorage.getItem('cc_bc_fmt')||'auto';}catch(e){}
+  window.__bcCurrent = {bc:bc};
+
+  function renderFmt(fmt){
+    // Optimised for laser scanners: thicker bars, large quiet zones, no rounded
+    var opts = {
+      width: 6,           // bar width — thick for laser scanners
+      height: 200,        // tall bars
+      margin: 25,         // quiet zone (white margin)
+      fontSize: 22,
+      background: '#fff',
+      lineColor: '#000',
+      displayValue: true,
+      flat: true
+    };
+    var actualFmt = fmt;
+    var bcValue = bc;
     try{
-      JsBarcode(svg1, bc, Object.assign({}, common, {format:'EAN13', width:3, height:110, fontSize:17}));
-      topLabel = 'EAN-13'; topOk = true;
-    }catch(e){}
-  } else if(/^\d{12}$/.test(bc)){
-    try{
-      JsBarcode(svg1, bc, Object.assign({}, common, {format:'UPC', width:3, height:110, fontSize:17}));
-      topLabel = 'UPC-A'; topOk = true;
-    }catch(e){}
-  } else if(/^\d{8}$/.test(bc)){
-    try{
-      JsBarcode(svg1, bc, Object.assign({}, common, {format:'EAN8', width:3, height:110, fontSize:17}));
-      topLabel = 'EAN-8'; topOk = true;
-    }catch(e){}
-  }
-  if(!topOk){
-    // No matching retail format — render Code 39 as the top alternative
-    try{
-      JsBarcode(svg1, bc, Object.assign({}, common, {format:'CODE39'}));
-      topLabel = 'CODE 39';
+      if(fmt==='auto'){
+        // Pick best for the barcode
+        if(/^\d{13}$/.test(bc)){actualFmt='EAN13';}
+        else if(/^\d{12}$/.test(bc)){actualFmt='UPC';}
+        else if(/^\d{8}$/.test(bc)){actualFmt='EAN8';}
+        else {actualFmt='CODE128';}
+      }
+      if(actualFmt==='EAN13'){
+        // If it's 12 digits, pad with leading 0 to make valid EAN-13
+        if(/^\d{12}$/.test(bc))bcValue='0'+bc;
+        else if(!/^\d{13}$/.test(bc)){
+          // Can't make EAN-13 from this — fall back
+          actualFmt='CODE128';
+        }
+      } else if(actualFmt==='UPC'){
+        if(!/^\d{12}$/.test(bc)){
+          actualFmt='CODE128';
+        }
+      }
+      opts.format = actualFmt;
+      JsBarcode(svg, bcValue, opts);
     }catch(e){
-      JsBarcode(svg1, bc, Object.assign({}, common, {format:'CODE128'}));
-      topLabel = 'CODE 128';
+      // Fall back to Code 128 if format fails
+      try{
+        opts.format='CODE128';
+        JsBarcode(svg, bc, opts);
+        actualFmt='CODE128';
+      }catch(e2){
+        svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" font-size="16" fill="#900">Cannot render '+bc+'</text>';
+      }
     }
+    // Update button highlighting
+    document.querySelectorAll('.bcm-fmt-btn').forEach(function(b){
+      b.classList.toggle('on', b.dataset.fmt===fmt);
+    });
+    try{localStorage.setItem('cc_bc_fmt', fmt);}catch(e){}
   }
-  lbl1.textContent = topLabel;
-
-  // ── Bottom: Code 128 (always works) ─────────────────────────
-  JsBarcode(svg2, bc, Object.assign({}, common, {format:'CODE128'}));
 
   nameEl.textContent = opts.name || '';
   metaEl.textContent = opts.meta || '';
   numEl.textContent = bc;
+  renderFmt(lastFmt);
+  // Wire format buttons (re-bind every open since modal HTML is static)
+  document.querySelectorAll('.bcm-fmt-btn').forEach(function(b){
+    b.onclick = function(e){e.stopPropagation();renderFmt(b.dataset.fmt);};
+  });
   m.classList.add('open');
 }
 function closeBarcodeModal(ev, force){
@@ -1840,20 +1867,23 @@ document.getElementById('sc-recheck').addEventListener('click',runSysCheck);
 </div>
 <div id="bc-modal" onclick="closeBarcodeModal(event)">
   <button class="bcm-close" onclick="closeBarcodeModal(event,true)">×</button>
-  <div class="bcm-name" id="bcm-name"></div>
-  <div class="bcm-meta" id="bcm-meta"></div>
-  <div class="bcm-stack">
-    <div class="bcm-block">
-      <div class="bcm-fmt-lbl" id="bcm-fmt-1">Format A</div>
-      <div class="bcm-svg-wrap"><svg id="bcm-svg-1"></svg></div>
-    </div>
-    <div class="bcm-block">
-      <div class="bcm-fmt-lbl">CODE 128 (fallback)</div>
-      <div class="bcm-svg-wrap"><svg id="bcm-svg-2"></svg></div>
-    </div>
+  <div class="bcm-top">
+    <div class="bcm-name" id="bcm-name"></div>
+    <div class="bcm-meta" id="bcm-meta"></div>
   </div>
-  <div class="bcm-num" id="bcm-num"></div>
-  <div class="bcm-hint">Try scanning both &middot; tap to close</div>
+  <div class="bcm-rotate-wrap">
+    <div class="bcm-svg-wrap"><svg id="bcm-svg"></svg></div>
+  </div>
+  <div class="bcm-bottom">
+    <div class="bcm-num" id="bcm-num"></div>
+    <div class="bcm-fmt-row">
+      <button class="bcm-fmt-btn" data-fmt="auto" id="bcm-fmt-auto">Auto</button>
+      <button class="bcm-fmt-btn" data-fmt="EAN13">EAN-13</button>
+      <button class="bcm-fmt-btn" data-fmt="UPC">UPC-A</button>
+      <button class="bcm-fmt-btn" data-fmt="CODE128">Code 128</button>
+    </div>
+    <div class="bcm-hint">Tap format to retry &middot; turn phone sideways for bigger bars</div>
+  </div>
 </div>
 </body>
 </html>
