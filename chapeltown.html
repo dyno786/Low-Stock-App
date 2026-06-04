@@ -669,7 +669,7 @@ async function loadImgs(){
 
 // ── RENDER ─────────────────────────────────────────────────
 function renderView(){
-  var isCollect=view.charAt(0)==='s';
+  var isCollect=/^s[0-9]+$/.test(view);
   var isLow=view==='low';
   document.getElementById('day-filter').style.display=view==='oos'?'block':'none';
   document.getElementById('prog-wrap').style.display=(view!=='oos'&&view!=='imgs')?'block':'none';
@@ -1844,7 +1844,7 @@ document.getElementById('vtabs').addEventListener('click',function(e){
   vt.classList.add('on');
   view=vt.dataset.v;
   // Lazy load — only fetch when tab is first opened
-  if(view.charAt(0)==='s'){var idx=parseInt(view.substring(1));if(!srcLoaded[idx])loadSrc(idx);collectDept='ALL';}
+  if(/^s[0-9]+$/.test(view)){var idx=parseInt(view.substring(1));if(!srcLoaded[idx])loadSrc(idx);collectDept='ALL';}
   else if(view==='low'){collectDept='ALL';if(!srcLoaded[lowSubIdx])loadSrc(lowSubIdx);}
   else if(view==='oos'){oosActiveDepts=[];oosStockFilter='all';SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   else if(view==='over'){SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
