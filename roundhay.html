@@ -1195,6 +1195,7 @@ function addToShopify(bc, btn){
 function renderCollect(srcIdx){
   var el=document.getElementById('out');
   var sc=SOURCES[srcIdx];
+  if(!sc){el.innerHTML='<div class="empty">Invalid source #'+srcIdx+'</div>';return;}
   if(!destLoaded||!srcLoaded[srcIdx]){
     el.innerHTML='<div class="loading"><div class="spin"></div>Loading '+sc.name+'…</div>';return;
   }
@@ -2077,8 +2078,10 @@ async function runSysCheck(){
   document.getElementById('sc-content').innerHTML=html;
 }
 
-document.getElementById('sc-panel').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
-document.getElementById('sc-recheck').addEventListener('click',runSysCheck);
+var __scp=document.getElementById('sc-panel');
+if(__scp)__scp.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+var __scr=document.getElementById('sc-recheck');
+if(__scr)__scr.addEventListener('click',runSysCheck);
 </script>
 
 <!-- SYSTEM CHECK PANEL -->
