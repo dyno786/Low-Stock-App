@@ -62,6 +62,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .shop-add-btn:active{opacity:.85}
 .shop-card.added{opacity:.55}
 .shop-card.added .shop-name{text-decoration:line-through}
+.shop-brand{display:flex;align-items:center;gap:6px;margin-top:6px}
+.shop-brand label{font-size:9px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.brand-input{flex:1;min-width:0;font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);color:var(--ink);background:var(--s1)}
+.brand-input.needed{border-color:var(--amber);background:var(--amberbg)}
+.brand-input:focus{outline:none;border-color:var(--red)}
 
 .empty{padding:40px 14px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
 .err{padding:18px;margin:12px;color:var(--red);font-size:13px;line-height:1.7;background:var(--redbg);border-radius:var(--r);border:1px solid #fca5a5}
@@ -137,6 +142,23 @@ function escapeHtml(s){
   });
 }
 function escapeAttr(s){ return String(s||'').replace(/"/g,'&quot;'); }
+
+// Best-effort brand guess from the product name: take the leading words up
+// to the first product-type word (max 2). The user proofs/edits it before
+// adding — this is just a starting point until brand auto-matching lands.
+var TYPE_WORDS = ['shampoo','conditioner','conditioners','oil','oils','gel','gels','wax','spray','sprays','cream','creams','lotion','lotions','butter','moisturiser','moisturizer','serum','serums','treatment','treatments','relaxer','relaxers','mask','masque','dye','dyes','color','colour','edge','leave','leavein','mousse','pomade','toner','toners','cleanser','scrub','scrubs','soap','soaps','wash','milk','foam','jelly','balm','setting','curl','curling','styling'];
+function titleCaseWord(w){ return w ? w.charAt(0).toUpperCase()+w.slice(1).toLowerCase() : w; }
+function guessBrand(name){
+  var words = String(name||'').trim().split(/\s+/);
+  var out = [];
+  for (var i=0;i<words.length && out.length<2;i++){
+    var bare = words[i].toLowerCase().replace(/[^a-z]/g,'');
+    if (!bare) continue;
+    if (TYPE_WORDS.indexOf(bare) >= 0) break;
+    out.push(titleCaseWord(words[i]));
+  }
+  return out.join(' ');
+}
 
 function parseCSV(text){
   return Papa.parse(text, {header:true, skipEmptyLines:true}).data.map(function(row){
@@ -474,6 +496,8 @@ function render(){
             '<span class="itag itag-stock">qty '+r.qty+'</span>'+
             '<span class="itag">'+priceStr+costStr+'</span>'+
           '</div>'+
+          '<div class="shop-brand"><label>Brand</label>'+
+            '<input class="brand-input" type="text" data-bc="'+escapeAttr(r.bc)+'" value="'+escapeAttr(guessBrand(r.nm))+'" placeholder="Set brand…" autocapitalize="words" autocomplete="off" spellcheck="false"></div>'+
           '<div class="shop-status" id="status-'+escapeAttr(r.bc)+'"></div>'+
         '</div>'+
         '<div class="shop-right">'+
@@ -497,10 +521,19 @@ function addToShopify(bc, btn){
   var rows = computeRows();
   var row = rows.filter(function(r){return r.bc===bc;})[0];
   if (!row) return;
-  var statusEl = document.querySelector('.shop-card[data-bc="'+bc.replace(/"/g,'\\"')+'"] .shop-status');
+  var card = btn.closest('.shop-card');
+  var statusEl = card ? card.querySelector('.shop-status') : null;
+  var brandInput = card ? card.querySelector('.brand-input') : null;
+  var brand = brandInput ? brandInput.value.trim() : '';
+  if (!brand) {
+    if (brandInput) { brandInput.classList.add('needed'); brandInput.focus(); }
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--amber)">Set the brand first so the product is proof-ready.</span>';
+    return;
+  }
+  if (brandInput) brandInput.classList.remove('needed');
   btn.disabled = true;
   btn.textContent = 'Adding…';
-  if (statusEl) statusEl.innerHTML = '<span style="color:var(--sub)">Creating draft + AI description…</span>';
+  if (statusEl) statusEl.innerHTML = '<span style="color:var(--sub)">Building proof-ready draft + AI copy…</span>';
 
   fetch('/api/shopify-create', {
     method: 'POST',
@@ -512,7 +545,7 @@ function addToShopify(bc, btn){
       size: row.sz,
       price: row.pr,
       cost: row.cost,
-      vendor: ''
+      brand: brand
     })
   })
     .then(parseResponse)
@@ -520,7 +553,7 @@ function addToShopify(bc, btn){
       if (o.ok && o.data.ok) {
         shopRecentlyAdded[bc] = {at: Date.now(), productId: o.data.productId, adminUrl: o.data.adminUrl};
         try { localStorage.setItem(SHOP_ADDED_KEY, JSON.stringify(shopRecentlyAdded)); } catch(e) {}
-        if (statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✓ Added · <a href="'+o.data.adminUrl+'" target="_blank" style="color:var(--green);text-decoration:underline">edit on Shopify</a></span>';
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✓ '+(o.data.title?escapeHtml(o.data.title):'Draft created')+' · <a href="'+o.data.adminUrl+'" target="_blank" style="color:var(--green);text-decoration:underline">proof on Shopify</a></span>';
         btn.textContent = '✓ Added';
         btn.style.background = 'var(--green)';
         var card = btn.closest('.shop-card');
