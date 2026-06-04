@@ -10,7 +10,6 @@
   --red:#cc0000;--redbg:#fff0f0;--redtxt:#991b1b;
   --green:#15803d;--greenbg:#f0fdf4;--greentxt:#14532d;
   --amber:#b45309;--amberbg:#fffbeb;--ambertxt:#92400e;
-  --purple:#6d28d9;--purplebg:#ede9fe;--purpletxt:#4c1d95;
   --bg:#f0f0f0;--s1:#fff;--border:#e0e0e0;
   --ink:#111;--sub:#777;--r:12px;
   --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
@@ -18,10 +17,10 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:30px}
 .hdr{background:var(--red);padding:14px}
-.hdr-top{display:flex;justify-content:space-between;align-items:center}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .title{color:#fff;font-size:18px;font-weight:700}
-.hdr-sub{color:rgba(255,255,255,.7);font-size:11px;margin-top:2px}
-.back-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:7px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);text-decoration:none;display:inline-block}
+.hdr-sub{color:rgba(255,255,255,.75);font-size:11px;margin-top:2px;font-family:monospace}
+.back-btn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:7px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);text-decoration:none;display:inline-block;white-space:nowrap}
 
 .section-hdr{background:var(--s1);padding:10px 12px;border-bottom:1px solid var(--border)}
 .section-lbl{font-size:9px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
@@ -33,6 +32,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .status-bar{background:var(--s1);padding:8px 12px;border-bottom:1px solid var(--border);font-size:11px;color:var(--sub);line-height:1.5}
 .status-bar b{color:var(--ink);font-weight:600}
 .refresh-link{background:none;border:none;color:#3b82f6;text-decoration:underline;cursor:pointer;font-size:inherit;padding:0;font-family:inherit}
+
+.progress-card{margin:14px;padding:18px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);text-align:center}
+.progress-card .pc-title{font-size:14px;font-weight:700;margin-bottom:6px}
+.progress-card .pc-sub{font-size:11px;color:var(--sub);line-height:1.6}
+.progress-card .pc-count{font-size:22px;font-weight:700;color:var(--red);font-family:monospace;margin-top:8px}
+.progress-card .spin{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 .dept-hdr{padding:10px 14px 6px;background:var(--bg)}
 .dept-name{font-size:14px;font-weight:700}
@@ -57,11 +63,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .shop-card.added{opacity:.55}
 .shop-card.added .shop-name{text-decoration:line-through}
 
-.loading{padding:50px 14px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
-.spin{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
-@keyframes spin{to{transform:rotate(360deg)}}
 .empty{padding:40px 14px;text-align:center;color:var(--sub);font-size:13px;line-height:2}
-.err{padding:30px 14px;text-align:center;color:var(--red);font-size:13px;line-height:1.7;background:var(--redbg);margin:10px;border-radius:var(--r);border:1px solid #fca5a5}
+.err{padding:18px;margin:12px;color:var(--red);font-size:13px;line-height:1.7;background:var(--redbg);border-radius:var(--r);border:1px solid #fca5a5}
 .err b{display:block;margin-bottom:6px;font-size:13px}
 .err small{font-size:10px;color:var(--sub);display:block;margin-top:8px;font-family:monospace;word-break:break-all}
 .retry-btn{background:var(--red);color:#fff;border:none;border-radius:7px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);margin-top:12px}
@@ -84,7 +87,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 </div>
 
 <div class="status-bar" id="status-bar"></div>
-<div id="out"><div class="loading"><div class="spin"></div>Loading…</div></div>
+<div id="out"></div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
@@ -96,20 +99,30 @@ var BRANCHES = [
 ];
 var DEPT_FILTER = ['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'];
 
+var SHOP_CACHE_KEY = 'cc_shop_barcodes_v2';
+var SHOP_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+var SHOP_OP_KEY = 'cc_shop_opid';
+var POLL_INTERVAL_MS = 3500; // 3.5s
+
 // ── STATE ───────────────────────────────────────────────────
-var activeBranch = null;     // currently-selected branch ID
-var branchData = {};          // {chapy: [products], ...}
+var activeBranch = null;
+var branchData = {};
 var branchLoading = {};
 var branchError = {};
-var shopBarcodes = null;      // {barcode: {productId, title}}
-var shopLoading = false;
+
+var shopBarcodes = null;         // {barcode: {productId, title}}
+var shopBarcodesCount = 0;
+var shopState = 'IDLE';          // IDLE | STARTING | RUNNING | DOWNLOADING | DONE | ERROR
+var shopObjectCount = 0;
 var shopError = null;
-var imgs = {};                // barcode → Shopify image URL (from sheet, optional cosmetic)
+var shopOpId = null;
+var shopPollTimer = null;
+
+var imgs = {};
 var SHOP_ADDED_KEY = 'cc_shop_added';
 var shopRecentlyAdded = {};
 try { shopRecentlyAdded = JSON.parse(localStorage.getItem(SHOP_ADDED_KEY) || '{}'); } catch(e) {}
 
-// Restore last-used branch
 try {
   var last = localStorage.getItem('cc_shop_branch');
   if (last && BRANCHES.some(function(b){return b.id===last;})) activeBranch = last;
@@ -118,6 +131,12 @@ if (!activeBranch) activeBranch = 'chapy';
 
 // ── HELPERS ─────────────────────────────────────────────────
 function cl(v){return String(v==null?'':v).trim();}
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c];
+  });
+}
+function escapeAttr(s){ return String(s||'').replace(/"/g,'&quot;'); }
 
 function parseCSV(text){
   return Papa.parse(text, {header:true, skipEmptyLines:true}).data.map(function(row){
@@ -138,7 +157,137 @@ function imgEl(bc){
   return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
 }
 
-// ── LOADERS ─────────────────────────────────────────────────
+// ── SHOPIFY BARCODES VIA BULK OPERATIONS ────────────────────
+function loadShopifyFromCache(){
+  try {
+    var cached = localStorage.getItem(SHOP_CACHE_KEY);
+    if (!cached) return false;
+    var o = JSON.parse(cached);
+    if (!o || !o.ts || !o.barcodes) return false;
+    if (Date.now() - o.ts > SHOP_CACHE_TTL) return false;
+    shopBarcodes = o.barcodes;
+    shopBarcodesCount = Object.keys(o.barcodes).length;
+    shopState = 'DONE';
+    return true;
+  } catch(e) { return false; }
+}
+
+function saveShopifyCache(){
+  try {
+    localStorage.setItem(SHOP_CACHE_KEY, JSON.stringify({
+      ts: Date.now(),
+      barcodes: shopBarcodes
+    }));
+  } catch(e) {
+    // localStorage might overflow with 10k+ barcodes — drop the cache
+    try { localStorage.removeItem(SHOP_CACHE_KEY); } catch(e2) {}
+  }
+}
+
+function startShopify(force){
+  // Force = bypass cache + start fresh
+  if (!force && loadShopifyFromCache()) {
+    render();
+    return;
+  }
+  if (shopState === 'STARTING' || shopState === 'RUNNING' || shopState === 'DOWNLOADING') return;
+  shopState = 'STARTING';
+  shopError = null;
+  shopBarcodes = null;
+  shopObjectCount = 0;
+  if (shopPollTimer) { clearTimeout(shopPollTimer); shopPollTimer = null; }
+  render();
+
+  var url = force ? '/api/shopify-products?action=start' : '/api/shopify-products';
+  fetch(url)
+    .then(parseResponse)
+    .then(function(o){
+      if (o.data.error) throw new Error(o.data.error);
+      if (o.data.status === 'COMPLETED' && o.data.barcodes) {
+        // Already done — use immediately
+        shopBarcodes = o.data.barcodes;
+        shopBarcodesCount = o.data.count || Object.keys(o.data.barcodes).length;
+        shopState = 'DONE';
+        saveShopifyCache();
+        render();
+        return;
+      }
+      // Otherwise: queued or running → start polling
+      shopOpId = o.data.operationId || null;
+      shopObjectCount = o.data.objectCount || 0;
+      shopState = 'RUNNING';
+      try { localStorage.setItem(SHOP_OP_KEY, shopOpId || ''); } catch(e) {}
+      render();
+      schedulePoll();
+    })
+    .catch(function(e){
+      shopState = 'ERROR';
+      shopError = e.message || 'Network error';
+      render();
+    });
+}
+
+function pollShopify(){
+  if (!shopOpId) {
+    // Without an id we can still call auto-mode which returns the current op
+    fetch('/api/shopify-products?action=poll&id=')
+      .then(parseResponse).then(handlePoll).catch(handlePollErr);
+    return;
+  }
+  fetch('/api/shopify-products?action=poll&id='+encodeURIComponent(shopOpId))
+    .then(parseResponse).then(handlePoll).catch(handlePollErr);
+}
+
+function handlePoll(o){
+  if (o.data.error) {
+    shopState = 'ERROR';
+    shopError = o.data.error;
+    render();
+    return;
+  }
+  var st = o.data.status;
+  if (st === 'COMPLETED' && o.data.barcodes) {
+    shopBarcodes = o.data.barcodes;
+    shopBarcodesCount = o.data.count || Object.keys(o.data.barcodes).length;
+    shopState = 'DONE';
+    saveShopifyCache();
+    render();
+    return;
+  }
+  if (st === 'FAILED' || st === 'CANCELED' || st === 'EXPIRED') {
+    shopState = 'ERROR';
+    shopError = 'Bulk op '+st+(o.data.errorCode?' ('+o.data.errorCode+')':'');
+    render();
+    return;
+  }
+  // Still running / created
+  shopState = 'RUNNING';
+  shopObjectCount = o.data.objectCount || 0;
+  render();
+  schedulePoll();
+}
+
+function handlePollErr(e){
+  shopState = 'ERROR';
+  shopError = e.message || 'Network error during poll';
+  render();
+}
+
+function schedulePoll(){
+  if (shopPollTimer) clearTimeout(shopPollTimer);
+  shopPollTimer = setTimeout(pollShopify, POLL_INTERVAL_MS);
+}
+
+function parseResponse(r){
+  return r.text().then(function(txt){
+    var data;
+    try { data = JSON.parse(txt); }
+    catch(e){ throw new Error('Server returned non-JSON: '+txt.slice(0,300)); }
+    return { ok: r.ok, status: r.status, data: data };
+  });
+}
+
+// ── BRANCH DATA LOADER ──────────────────────────────────────
 function loadBranch(id){
   if (branchData[id] || branchLoading[id]) return;
   branchLoading[id] = true;
@@ -160,42 +309,7 @@ function loadBranch(id){
     });
 }
 
-function loadShopify(force){
-  if (shopLoading) return;
-  if (shopBarcodes && !force) return;
-  shopLoading = true;
-  shopError = null;
-  render();
-  fetch('/api/shopify-products')
-    .then(function(r){
-      return r.text().then(function(txt){
-        // Defensive: try to parse JSON, surface a clear error if it's HTML/text
-        var data;
-        try { data = JSON.parse(txt); }
-        catch(e){ throw new Error('Server returned non-JSON: '+txt.slice(0,200)); }
-        return { ok: r.ok, status: r.status, data: data };
-      });
-    })
-    .then(function(o){
-      shopLoading = false;
-      if (!o.ok || o.data.error) {
-        shopError = o.data.error || ('HTTP '+o.status);
-        shopBarcodes = null;
-      } else {
-        shopBarcodes = o.data.barcodes || {};
-      }
-      render();
-    })
-    .catch(function(e){
-      shopLoading = false;
-      shopError = e.message || 'Network error';
-      shopBarcodes = null;
-      render();
-    });
-}
-
 function loadImagesFromSheet(){
-  // Optional cosmetic — re-uses your existing shopify-images cache so cards have thumbnails
   try {
     var cached = localStorage.getItem('cc_shopify_imgs');
     if (cached) {
@@ -264,17 +378,23 @@ function renderStatus(){
   var el = document.getElementById('status-bar');
   if (!el) return;
   var parts = [];
-  if (shopBarcodes) {
-    parts.push('<b>'+Object.keys(shopBarcodes).length.toLocaleString()+'</b> products on Shopify');
-  } else if (shopLoading) {
-    parts.push('<b>Loading Shopify catalog…</b>');
+  if (shopState === 'DONE') {
+    parts.push('<b>'+shopBarcodesCount.toLocaleString()+'</b> products on Shopify');
+  } else if (shopState === 'RUNNING') {
+    parts.push('<b>Bulk-fetching Shopify catalog…</b> ('+shopObjectCount.toLocaleString()+' so far)');
+  } else if (shopState === 'STARTING') {
+    parts.push('<b>Starting Shopify bulk operation…</b>');
+  } else if (shopState === 'ERROR') {
+    parts.push('<b>⚠️ Shopify error</b>');
   }
   var bData = branchData[activeBranch];
-  if (bData) {
+  if (bData && shopState === 'DONE') {
     var rows = computeRows();
     parts.push('<b>'+rows.length+'</b> items missing for '+BRANCHES.filter(function(b){return b.id===activeBranch;})[0].name);
   }
-  parts.push('<button class="refresh-link" onclick="loadShopify(true)">refresh catalog</button>');
+  if (shopState === 'DONE' || shopState === 'ERROR') {
+    parts.push('<button class="refresh-link" onclick="startShopify(true)">refresh catalog</button>');
+  }
   el.innerHTML = parts.join(' · ');
 }
 
@@ -282,14 +402,14 @@ function render(){
   renderBranchPills();
   renderStatus();
   var out = document.getElementById('out');
+  var hdrSub = document.getElementById('hdr-sub');
 
-  // Error states first
-  if (shopError) {
+  if (shopState === 'ERROR') {
     out.innerHTML = '<div class="err"><b>⚠️ Shopify catalog error</b>'+
-      escapeHtml(shopError)+
-      '<small>Common causes: SHOPIFY_TOKEN env var missing scopes (needs read_products), wrong SHOPIFY_STORE, or API rate limit. Check Vercel env vars.</small>'+
-      '<button class="retry-btn" onclick="loadShopify(true)">Retry</button></div>';
-    document.getElementById('hdr-sub').textContent = 'error · check console';
+      escapeHtml(shopError||'Unknown error')+
+      '<small>If timeout: bulk ops should avoid this. If "Access denied": SHOPIFY_TOKEN needs read_products scope. If "Already in progress": wait 30s and retry.</small>'+
+      '<button class="retry-btn" onclick="startShopify(true)">Retry</button></div>';
+    if (hdrSub) hdrSub.textContent = 'error';
     return;
   }
   if (branchError[activeBranch]) {
@@ -299,28 +419,37 @@ function render(){
     return;
   }
 
-  // Loading states
-  if (shopLoading || !shopBarcodes) {
-    out.innerHTML = '<div class="loading"><div class="spin"></div>Loading Shopify catalog…<br><small>(first load takes ~30 seconds for 18,000+ products)</small></div>';
-    document.getElementById('hdr-sub').textContent = 'fetching Shopify catalog…';
+  if (shopState === 'STARTING' || shopState === 'RUNNING' || shopState === 'IDLE') {
+    var msg = shopState === 'STARTING' ? 'Starting bulk operation on Shopify…' :
+              shopState === 'RUNNING'  ? 'Bulk export running on Shopify…' :
+              'Initializing…';
+    out.innerHTML = '<div class="progress-card">'+
+      '<div class="spin"></div>'+
+      '<div class="pc-title">'+msg+'</div>'+
+      '<div class="pc-sub">Shopify is exporting your full catalog in the background.<br>'+
+      'This usually takes 30 seconds to 2 minutes. Page will update automatically.</div>'+
+      (shopObjectCount > 0 ? '<div class="pc-count">'+shopObjectCount.toLocaleString()+' products processed</div>' : '')+
+    '</div>';
+    if (hdrSub) hdrSub.textContent = shopState === 'RUNNING' ? 'polling Shopify…' : 'starting…';
     return;
   }
+
+  // shopState === 'DONE' from here
   if (branchLoading[activeBranch] || !branchData[activeBranch]) {
-    out.innerHTML = '<div class="loading"><div class="spin"></div>Loading branch stock data…</div>';
-    document.getElementById('hdr-sub').textContent = 'fetching branch stock…';
+    out.innerHTML = '<div class="progress-card"><div class="spin"></div><div class="pc-title">Loading branch stock data…</div></div>';
+    if (hdrSub) hdrSub.textContent = 'fetching branch stock…';
     return;
   }
 
   var branch = BRANCHES.filter(function(b){return b.id===activeBranch;})[0];
-  document.getElementById('hdr-sub').textContent = 'showing items in stock at ' + branch.name;
+  if (hdrSub) hdrSub.textContent = 'showing items in stock at ' + branch.name;
 
   var rows = computeRows();
   if (rows.length === 0) {
-    out.innerHTML = '<div class="empty">✓ All in-stock items at '+branch.name+'<br>are already on Shopify</div>';
+    out.innerHTML = '<div class="empty">✓ All in-stock items at '+escapeHtml(branch.name)+'<br>are already on Shopify</div>';
     return;
   }
 
-  // Group by dept
   var byDept = {};
   rows.forEach(function(r){
     if (!byDept[r.dp]) byDept[r.dp] = [];
@@ -356,7 +485,6 @@ function render(){
   });
   out.innerHTML = html;
 
-  // Wire add buttons
   document.querySelectorAll('.shop-add-btn').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.stopPropagation();
@@ -369,9 +497,7 @@ function addToShopify(bc, btn){
   var rows = computeRows();
   var row = rows.filter(function(r){return r.bc===bc;})[0];
   if (!row) return;
-  var statusEl = document.getElementById('status-'+CSS.escape(bc));
-  // CSS.escape may not be everywhere — fall back to query
-  if (!statusEl) statusEl = document.querySelector('.shop-card[data-bc="'+bc.replace(/"/g,'\\"')+'"] .shop-status');
+  var statusEl = document.querySelector('.shop-card[data-bc="'+bc.replace(/"/g,'\\"')+'"] .shop-status');
   btn.disabled = true;
   btn.textContent = 'Adding…';
   if (statusEl) statusEl.innerHTML = '<span style="color:var(--sub)">Creating draft + AI description…</span>';
@@ -389,14 +515,7 @@ function addToShopify(bc, btn){
       vendor: ''
     })
   })
-    .then(function(r){
-      return r.text().then(function(txt){
-        var data;
-        try { data = JSON.parse(txt); }
-        catch(e){ throw new Error('Server returned non-JSON: '+txt.slice(0,200)); }
-        return { ok: r.ok, status: r.status, data: data };
-      });
-    })
+    .then(parseResponse)
     .then(function(o){
       if (o.ok && o.data.ok) {
         shopRecentlyAdded[bc] = {at: Date.now(), productId: o.data.productId, adminUrl: o.data.adminUrl};
@@ -406,7 +525,6 @@ function addToShopify(bc, btn){
         btn.style.background = 'var(--green)';
         var card = btn.closest('.shop-card');
         if (card) card.classList.add('added');
-        // After 1.5s remove from view
         setTimeout(function(){ render(); }, 1500);
       } else if (o.status === 409) {
         shopRecentlyAdded[bc] = {at: Date.now(), productId: o.data.existingProductId, adminUrl: o.data.adminUrl||''};
@@ -427,18 +545,11 @@ function addToShopify(bc, btn){
     });
 }
 
-function escapeHtml(s){
-  return String(s||'').replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c];
-  });
-}
-function escapeAttr(s){ return String(s||'').replace(/"/g,'&quot;'); }
-
 // ── BOOT ────────────────────────────────────────────────────
 renderBranchPills();
 loadBranch(activeBranch);
-loadShopify();
 loadImagesFromSheet();
+startShopify(false);
 </script>
 </body>
 </html>
