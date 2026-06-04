@@ -109,6 +109,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .over-subtab .over-sub-name{font-size:11px;line-height:1.2}
 .over-subtab .over-sub-cnt{font-size:13px;font-family:monospace;font-weight:600}
 .over-tick.on{background:var(--green);border-color:var(--green)}
+.shop-card{display:flex;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:8px;margin-bottom:6px;gap:8px;transition:opacity .2s}
+.shop-img{flex-shrink:0;width:46px;height:46px;background:var(--card2);border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.shop-img img{max-width:100%;max-height:100%}
+.shop-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.shop-name{font-size:12px;font-weight:600;color:var(--ink);line-height:1.25}
+.shop-bc{font-size:9px;color:var(--sub);font-family:monospace}
+.shop-tags{display:flex;gap:3px;flex-wrap:wrap}
+.shop-status{font-size:10px;margin-top:3px;line-height:1.3}
+.shop-right{flex-shrink:0;display:flex;align-items:center}
+.shop-add-btn{background:var(--green);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.shop-add-btn:disabled{opacity:.6;cursor:wait}
+.shop-add-btn:active{opacity:.85}
+.shop-retry-btn{background:var(--card);border:1px solid var(--border);color:var(--ink);font-size:12px;padding:6px 14px;border-radius:7px;cursor:pointer;font-family:var(--font);margin-top:8px}
+.shop-refresh-link{background:none;border:none;color:var(--blue,#3b82f6);text-decoration:underline;cursor:pointer;font-family:var(--font);font-size:inherit;padding:0;-webkit-tap-highlight-color:transparent}
 
 .item-bc:active,.neg-bc:active,.oos-bc:active,.img-bc:active{opacity:.55}
 #bc-modal{position:fixed;inset:0;background:#fff;z-index:9999;display:none;flex-direction:column;padding:0;text-align:center;overflow:hidden}
@@ -264,6 +278,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
+  <div class="vtab" data-v="shop">📤 Not on Shopify</div>
   <div class="vtab" data-v="imgs">📸 Images</div>
 </div>
 
@@ -601,7 +616,7 @@ function parseCSV(text){
   return Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(function(row){
     var ls=cl(row['LastSold']);
     return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),
-           qty:parseInt(row['StockQty'])||0,pr:parseFloat(row['Price'])||0,
+           qty:parseInt(row['StockQty'])||0,pr:parseFloat(row['Price'])||0,cost:parseFloat(row['AvgCost'])||0,
            dp:cl(row['Department']),ls:(ls&&ls!=='NULL')?ls:'Never'};
   }).filter(function(p){return p.bc&&p.nm;});
 }
@@ -664,6 +679,7 @@ function renderView(){
   else if(view==='neg')renderNeg();
   else if(view==='oos')renderOOS();
   else if(view==='over')renderOverstock();
+  else if(view==='shop')renderShopify();
   else renderImgs();
 }
 
@@ -982,6 +998,219 @@ function renderLow(){
 
 // Restore lowSubIdx from localStorage on load
 try{var __ls=parseInt(localStorage.getItem('cc_lowsub')); if(!isNaN(__ls)&&__ls>=0&&__ls<=2)lowSubIdx=__ls;}catch(e){}
+
+// ── NOT ON SHOPIFY ─────────────────────────────────────────
+// Shows EPOS items in stock (any branch) that don't exist on Shopify yet.
+// Tap "+ Add to Shopify" → server creates draft product + AI description.
+
+var SHOP_DEPT_FILTER=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'];
+var shopBarcodes=null;       // Set of barcodes that ARE on Shopify
+var shopBarcodesLoading=false;
+var shopBarcodesError=null;
+var SHOP_ADDED_KEY='cc_shop_added';
+var shopRecentlyAdded={};    // barcode -> {at, productId, adminUrl}
+try{shopRecentlyAdded=JSON.parse(localStorage.getItem(SHOP_ADDED_KEY)||'{}');}catch(e){}
+
+function loadShopifyBarcodes(force){
+  if(shopBarcodesLoading)return;
+  if(shopBarcodes&&!force)return;
+  shopBarcodesLoading=true;shopBarcodesError=null;
+  if(view==='shop')renderShopify();
+  fetch('/api/shopify-products')
+    .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+    .then(function(o){
+      shopBarcodesLoading=false;
+      if(!o.ok||o.j.error){shopBarcodesError=o.j.error||'Shopify fetch failed';shopBarcodes=null;}
+      else{shopBarcodes=o.j.barcodes||{};}
+      if(view==='shop')renderShopify();
+    })
+    .catch(function(e){
+      shopBarcodesLoading=false;
+      shopBarcodesError=e.message||'Network error';
+      shopBarcodes=null;
+      if(view==='shop')renderShopify();
+    });
+}
+
+function computeNotOnShopify(){
+  // Aggregate stock across all sources: barcode -> {qty, name, dp, sz, pr, cost, where}
+  // "qty" is the MAX qty across sources (since user wants "in stock somewhere")
+  // We also include the destination branch's own data.
+  var byBc={};
+  function add(arr, label){
+    if(!arr)return;
+    arr.forEach(function(p){
+      if(!p.bc||!p.nm)return;
+      if(p.qty<=0)return;
+      var e=byBc[p.bc];
+      if(!e){
+        byBc[p.bc]={bc:p.bc,nm:p.nm,sz:p.sz||'',dp:p.dp||'',pr:p.pr||0,cost:p.cost||0,qty:p.qty,where:[label]};
+      }else{
+        if(p.qty>e.qty){e.qty=p.qty;e.nm=p.nm;e.sz=p.sz||e.sz;e.dp=p.dp||e.dp;e.pr=p.pr||e.pr;e.cost=p.cost||e.cost;}
+        if(e.where.indexOf(label)<0)e.where.push(label);
+      }
+    });
+  }
+  add(destData, DEST_NAME||'Here');
+  for(var i=0;i<SOURCES.length;i++){
+    if(srcData[i])add(srcData[i], SOURCES[i].short);
+  }
+  // Filter: dept matches, NOT on Shopify, NOT recently added
+  var rows=[];
+  for(var bc in byBc){
+    var e=byBc[bc];
+    var dept=(e.dp||'').toUpperCase();
+    if(SHOP_DEPT_FILTER.indexOf(dept)<0)continue;
+    if(shopBarcodes&&shopBarcodes[bc])continue;
+    if(shopRecentlyAdded[bc])continue;
+    rows.push(e);
+  }
+  rows.sort(function(a,b){
+    if(a.dp!==b.dp)return a.dp<b.dp?-1:1;
+    return a.nm<b.nm?-1:1;
+  });
+  return rows;
+}
+
+function renderShopify(){
+  var el=document.getElementById('out');
+  // Header always renders
+  var header='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr">'+
+    '<div class="src-name">📤 Items not on Shopify</div>'+
+    '<div class="src-rule" style="color:var(--sub)">In-stock items missing from your online store. Tap + to create a draft product.</div>'+
+    '</div></div>';
+
+  // Status / loading states
+  if(shopBarcodesLoading&&!shopBarcodes){
+    el.innerHTML=header+'<div class="loading"><div class="spin"></div>Loading Shopify catalog… (first load ~30s)</div>';
+    return;
+  }
+  if(shopBarcodesError){
+    el.innerHTML=header+'<div class="empty" style="color:var(--red)">⚠️ '+shopBarcodesError+'<br><br><button class="shop-retry-btn" onclick="loadShopifyBarcodes(true)">Retry</button></div>';
+    return;
+  }
+  if(!shopBarcodes){
+    el.innerHTML=header+'<div class="empty">Tap to load Shopify catalog: <button class="shop-retry-btn" onclick="loadShopifyBarcodes()">Load</button></div>';
+    return;
+  }
+  if(!destLoaded){
+    el.innerHTML=header+'<div class="loading"><div class="spin"></div>Loading stock data…</div>';
+    return;
+  }
+
+  var rows=computeNotOnShopify();
+  // Stats badge
+  var shopCount=Object.keys(shopBarcodes).length;
+  header='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr">'+
+    '<div class="src-name">📤 Items not on Shopify</div>'+
+    '<div class="src-rule" style="color:var(--sub)">'+rows.length+' in-stock items missing from Shopify · '+shopCount.toLocaleString()+' products already on Shopify · '+
+    '<button class="shop-refresh-link" onclick="loadShopifyBarcodes(true)">refresh catalog</button></div>'+
+    '</div></div>';
+
+  if(rows.length===0){
+    el.innerHTML=header+'<div class="empty">Everything in stock is already on Shopify ✓</div>';
+    setProg(0,0,'All listed');
+    return;
+  }
+  setProg(rows.length, 0, rows.length+' items to add');
+
+  // Group by dept
+  var byDept={};
+  rows.forEach(function(r){if(!byDept[r.dp])byDept[r.dp]=[];byDept[r.dp].push(r);});
+
+  var html=header;
+  Object.keys(byDept).forEach(function(dept){
+    var items=byDept[dept];
+    html+='<div class="dept-hdr"><div class="dept-name">'+dept+'</div>'+
+      '<div class="dept-sub" style="color:var(--sub)">'+items.length+' items</div></div>';
+    html+='<div class="card-list">';
+    items.forEach(function(r){
+      var priceStr=r.pr>0?'£'+r.pr.toFixed(2):'(no price)';
+      var costStr=r.cost>0?' · cost £'+r.cost.toFixed(2):'';
+      html+='<div class="shop-card" data-bc="'+r.bc+'">'+
+        '<div class="shop-img">'+imgEl(r.bc,46)+'</div>'+
+        '<div class="shop-body">'+
+          '<div class="shop-name">'+r.nm+(r.sz?' · '+r.sz:'')+'</div>'+
+          '<div class="shop-bc item-bc">'+r.bc+'</div>'+
+          '<div class="shop-tags">'+
+            '<span class="itag itag-info">qty '+r.qty+'</span>'+
+            '<span class="itag itag-info">'+priceStr+costStr+'</span>'+
+          '</div>'+
+          '<div class="shop-status" id="shop-status-'+r.bc+'"></div>'+
+        '</div>'+
+        '<div class="shop-right">'+
+          '<button class="shop-add-btn" data-bc="'+r.bc+'">+ Add to Shopify</button>'+
+        '</div>'+
+      '</div>';
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+
+  // Wire add buttons
+  el.querySelectorAll('.shop-add-btn').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var bc=this.dataset.bc;
+      addToShopify(bc, this);
+    });
+  });
+}
+
+function addToShopify(bc, btn){
+  // Find the row data
+  var rows=computeNotOnShopify();
+  var row=rows.filter(function(r){return r.bc===bc;})[0];
+  if(!row){return;}
+  var statusEl=document.getElementById('shop-status-'+bc);
+  btn.disabled=true;
+  btn.textContent='Adding…';
+  if(statusEl)statusEl.innerHTML='<span style="color:var(--sub)">Creating draft + AI description…</span>';
+
+  fetch('/api/shopify-create', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      barcode:row.bc,
+      name:row.nm,
+      dept:row.dp,
+      size:row.sz,
+      price:row.pr,
+      cost:row.cost,
+      vendor:''
+    })
+  })
+    .then(function(r){return r.json().then(function(j){return{ok:r.ok,status:r.status,j:j};});})
+    .then(function(o){
+      if(o.ok&&o.j.ok){
+        // Success — record in localStorage + remove from view next render
+        shopRecentlyAdded[bc]={at:Date.now(),productId:o.j.productId,adminUrl:o.j.adminUrl};
+        try{localStorage.setItem(SHOP_ADDED_KEY,JSON.stringify(shopRecentlyAdded));}catch(e){}
+        if(statusEl)statusEl.innerHTML='<span style="color:var(--green)">✓ Added · <a href="'+o.j.adminUrl+'" target="_blank" style="color:var(--green);text-decoration:underline">edit on Shopify</a></span>';
+        btn.textContent='✓ Added';
+        btn.style.background='var(--green)';
+        btn.style.color='#fff';
+        // After 1.5s remove the row from view
+        setTimeout(function(){if(view==='shop')renderShopify();},1500);
+      }else if(o.status===409){
+        // Already exists — treat as if added so it disappears
+        shopRecentlyAdded[bc]={at:Date.now(),productId:o.j.existingProductId,adminUrl:o.j.adminUrl||''};
+        try{localStorage.setItem(SHOP_ADDED_KEY,JSON.stringify(shopRecentlyAdded));}catch(e){}
+        if(statusEl)statusEl.innerHTML='<span style="color:var(--sub)">Already on Shopify · refreshing list…</span>';
+        btn.textContent='Already there';
+        setTimeout(function(){if(view==='shop')renderShopify();},1200);
+      }else{
+        btn.disabled=false;
+        btn.textContent='+ Add to Shopify';
+        if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">⚠️ '+(o.j.error||'Failed')+'</span>';
+      }
+    })
+    .catch(function(e){
+      btn.disabled=false;
+      btn.textContent='+ Add to Shopify';
+      if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">⚠️ '+e.message+'</span>';
+    });
+}
 
 // ── COLLECT ────────────────────────────────────────────────
 function renderCollect(srcIdx){
@@ -1618,6 +1847,7 @@ document.getElementById('vtabs').addEventListener('click',function(e){
   else if(view==='low'){collectDept='ALL';if(!srcLoaded[lowSubIdx])loadSrc(lowSubIdx);}
   else if(view==='oos'){oosActiveDepts=[];oosStockFilter='all';SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   else if(view==='over'){SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
+  else if(view==='shop'){SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});loadShopifyBarcodes();}
   renderView();
 });
 document.getElementById('day-pills').addEventListener('click',function(e){
