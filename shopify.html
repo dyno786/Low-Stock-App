@@ -367,6 +367,10 @@ function computeRows(){
     var dept = (p.dp || '').toUpperCase();
     if (DEPT_FILTER.indexOf(dept) < 0) continue;
     if (shopBarcodes && shopBarcodes[p.bc]) continue;
+    // The shopify-images sheet is built from live Shopify listings, so an
+    // image for this barcode means the product is already on Shopify — even
+    // if the bulk-op barcode list missed it. Treat it as listed.
+    if (imgs[p.bc]) continue;
     if (shopRecentlyAdded[p.bc]) continue;
     rows.push(p);
   }
@@ -545,7 +549,8 @@ function addToShopify(bc, btn){
       size: row.sz,
       price: row.pr,
       cost: row.cost,
-      brand: brand
+      brand: brand,
+      image: (imgs[row.bc] || '')
     })
   })
     .then(parseResponse)
