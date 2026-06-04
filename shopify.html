@@ -527,12 +527,39 @@ function addToShopify(bc, btn){
         if (card) card.classList.add('added');
         setTimeout(function(){ render(); }, 1500);
       } else if (o.status === 409) {
-        shopRecentlyAdded[bc] = {at: Date.now(), productId: o.data.existingProductId, adminUrl: o.data.adminUrl||''};
-        try { localStorage.setItem(SHOP_ADDED_KEY, JSON.stringify(shopRecentlyAdded)); } catch(e) {}
-        if (statusEl) statusEl.innerHTML = '<span style="color:var(--sub)">Already on Shopify — refreshing list</span>';
-        btn.textContent = 'Already there';
-        setTimeout(function(){ render(); }, 1200);
+        // Server says barcode already exists. Show full details so the user
+        // can verify on Shopify directly — including product status (active/
+        // draft/archived/unknown). The "Mark as listed" button only hides the
+        // row when the user confirms it really is on Shopify.
+        btn.disabled = false;
+        btn.style.background = '';
+        btn.textContent = '+ Add to Shopify';
+        var status = o.data.existingStatus || 'unknown';
+        var title = o.data.existingTitle || '(no title)';
+        var adminUrl = o.data.adminUrl || '';
+        var statusColor = status === 'ACTIVE' ? 'var(--green)' :
+                          status === 'ARCHIVED' ? 'var(--amber)' :
+                          status === 'DRAFT' ? '#3b82f6' : 'var(--sub)';
+        if (statusEl) {
+          statusEl.innerHTML =
+            '<div style="color:var(--red);margin-bottom:3px">⚠️ Shopify says barcode already exists</div>'+
+            '<div style="color:var(--ink);font-size:10px">Found: <b>'+escapeHtml(title)+'</b></div>'+
+            '<div style="font-size:10px;margin-top:2px">Status: <b style="color:'+statusColor+'">'+escapeHtml(status)+'</b>'+
+              (adminUrl ? ' · <a href="'+adminUrl+'" target="_blank" style="color:#3b82f6;text-decoration:underline">verify on Shopify</a>' : '')+
+            '</div>'+
+            '<button class="dismiss-btn" data-bc="'+escapeAttr(bc)+'" style="margin-top:5px;background:var(--bg);border:1px solid var(--border);color:var(--sub);font-size:10px;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:var(--font)">Hide this row anyway</button>';
+          // Wire the dismiss button
+          var dbtn = statusEl.querySelector('.dismiss-btn');
+          if (dbtn) {
+            dbtn.addEventListener('click', function(){
+              shopRecentlyAdded[bc] = {at: Date.now(), productId: o.data.existingProductId, adminUrl: adminUrl, manual: true};
+              try { localStorage.setItem(SHOP_ADDED_KEY, JSON.stringify(shopRecentlyAdded)); } catch(e) {}
+              render();
+            });
+          }
+        }
       } else {
+
         btn.disabled = false;
         btn.textContent = '+ Add to Shopify';
         if (statusEl) statusEl.innerHTML = '<span style="color:var(--red)">⚠️ '+escapeHtml(o.data.error || ('HTTP '+o.status))+'</span>';
