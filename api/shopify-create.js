@@ -54,19 +54,50 @@ export default async function handler(req) {
   const vendor = (body.vendor || '').trim();
 
   try {
-    // ── 1. Re-check barcode doesn't already exist on Shopify ────────────────
-    const variantLookup = await fetch(
-      `https://${store}/admin/api/${API_VERSION}/variants.json?barcode=${encodeURIComponent(barcode)}`,
-      { headers: { 'X-Shopify-Access-Token': token } }
-    );
+    // ── 1. Re-check barcode via GraphQL (same data source as the bulk op) ─
+    // The REST /variants.json?barcode= endpoint can return ghost variants
+    // and archived products that the bulk-op list doesn't see, leading to
+    // false "already exists" errors. GraphQL productVariants is consistent.
+    const lookupQuery = `
+{
+  productVariants(first: 5, query: "barcode:${barcode.replace(/"/g,'\\"')}") {
+    edges {
+      node {
+        id
+        barcode
+        product {
+          id
+          title
+          status
+        }
+      }
+    }
+  }
+}`.trim();
+
+    const variantLookup = await fetch(`https://${store}/admin/api/${API_VERSION}/graphql.json`, {
+      method: 'POST',
+      headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: lookupQuery })
+    });
+
     if (variantLookup.ok) {
       const vd = await variantLookup.json();
-      if (vd.variants && vd.variants.length > 0) {
-        const existing = vd.variants[0];
+      const edges = vd?.data?.productVariants?.edges || [];
+      // Filter to exact barcode match (GraphQL search is loose by default)
+      const matches = edges.filter(e => (e.node.barcode || '').trim() === barcode);
+      if (matches.length > 0) {
+        const existing = matches[0].node;
+        const productGid = existing.product?.id || '';
+        const productId = productGid.split('/').pop();
+        const status = existing.product?.status || 'unknown';
+        const storeShort = store.replace('.myshopify.com', '');
         return new Response(JSON.stringify({
-          error: 'Barcode already exists on Shopify',
-          existingProductId: existing.product_id,
-          adminUrl: `https://${store.replace('.myshopify.com', '')}.myshopify.com/admin/products/${existing.product_id}`,
+          error: `Barcode already exists on Shopify (status: ${status})`,
+          existingProductId: productId,
+          existingTitle: existing.product?.title || '',
+          existingStatus: status,
+          adminUrl: `https://admin.shopify.com/store/${storeShort}/products/${productId}`,
         }), { status: 409, headers: cors });
       }
     }
