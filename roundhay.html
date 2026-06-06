@@ -1183,12 +1183,26 @@ function renderOOS(){
     });
   });
 
-  // All OOS items — qty<=0 and has sold before
+  // All OOS items — qty<=0 at this branch
+  // Two cases:
+  //   1. Sold here before → include with day count from LastSold
+  //   2. Never sold here but in stock at another branch → include as actionable transfer
+  //      (real example: barcode appears at WH+Roundhay but qty=0 here, never sold here)
   var allItems=(destData||[]).filter(function(p){
     if(!p.bc||!p.nm||p.qty>0)return false;
-    if(!p.ls||p.ls==='Never')return false;
-    var d=dAgo(p.ls);if(d===null||d<0)return false;
-    p._days=d;
+    var hasHist = p.ls && p.ls !== 'Never';
+    if(hasHist){
+      var d=dAgo(p.ls);
+      if(d===null||d<0)return false;
+      p._days=d;
+      p._neverSoldHere=false;
+    } else {
+      // No sales history at this branch — only show if available at another branch
+      var av=avail[p.bc];
+      if(!av||av.length===0)return false;
+      p._days=null;
+      p._neverSoldHere=true;
+    }
     return true;
   });
 
@@ -1208,11 +1222,12 @@ function renderOOS(){
     ?allItems.filter(function(p){return oosActiveDepts.indexOf(p.dp)>=0;})
     :allItems;
 
-  // Apply days filter
+  // Apply days filter — never-sold items only appear under "All OOS"
   var dayFiltered=deptFiltered;
   if(oosFilt!=='all'){
     var n=parseInt(oosFilt);
     dayFiltered=deptFiltered.filter(function(p){
+      if(p._neverSoldHere)return false;
       var d=p._days;
       if(n===0) return d<=6;
       if(n===7) return d>=7&&d<=13;
@@ -1232,7 +1247,13 @@ function renderOOS(){
     return av.some(function(a){return a.short===oosStockFilter;});
   });
 
-  items.sort(function(a,b){return a._days-b._days;});
+  items.sort(function(a,b){
+    // Never-sold-here items always at the end (no day count to sort by)
+    if(a._neverSoldHere&&!b._neverSoldHere)return 1;
+    if(!a._neverSoldHere&&b._neverSoldHere)return -1;
+    if(a._neverSoldHere&&b._neverSoldHere)return a.nm<b.nm?-1:1;
+    return (a._days||0)-(b._days||0);
+  });
 
   var canCollect=dayFiltered.filter(function(p){return(avail[p.bc]||[]).length>0;}).length;
   var nobody=dayFiltered.filter(function(p){return(avail[p.bc]||[]).length===0;}).length;
@@ -1294,12 +1315,17 @@ function renderOOS(){
     html+='<div class="card-list">';
     dits.forEach(function(p){
       var av=avail[p.bc]||[];var has=av.length>0;
-      var dc=p._days>=90?'var(--red)':p._days>=30?'var(--amber)':'var(--sub)';
+      var dc=p._neverSoldHere?'var(--purpletxt)':p._days>=90?'var(--red)':p._days>=30?'var(--amber)':'var(--sub)';
       var stockTags=has?av.map(function(a){
         var tc=a.qty>=6?'var(--greentxt)':a.qty>=1?'var(--ambertxt)':'var(--redtxt)';
         var tb=a.qty>=6?'var(--greenbg)':a.qty>=1?'var(--amberbg)':'var(--redbg)';
         return '<span class="itag" style="background:'+tb+';color:'+tc+'">'+a.short+':'+a.qty+'</span>';
       }).join(''):'<span class="itag itag-day">Reorder needed</span>';
+
+      // Last-sold display: real date with day tag, or "Never sold here" badge
+      var lastSoldTag = p._neverSoldHere
+        ? '<span class="itag" style="background:var(--purplebg);color:var(--purpletxt)">Never sold here</span>'
+        : '<span class="itag '+(p._days>=90?'itag-day-red':p._days>=30?'itag-day':'itag-info')+'">Last sold: '+p.ls+'</span>';
 
       html+='<div class="oos-row'+(has?' has':'')+'">'+
         '<div class="oos-img">'+imgEl(p.bc,42)+'</div>'+
@@ -1307,15 +1333,15 @@ function renderOOS(){
           '<div class="oos-name">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
           '<div class="oos-bc">'+p.bc+'</div>'+
           '<div class="oos-tags" style="margin-bottom:3px">'+
-            '<span class="itag '+(p._days>=90?'itag-day-red':p._days>=30?'itag-day':'itag-info')+'">Last sold: '+p.ls+'</span>'+
+            lastSoldTag+
             (p.pr>0?'<span class="itag itag-info">£'+p.pr.toFixed(2)+'</span>':'')+
           '</div>'+
           '<div class="oos-tags">'+stockTags+'</div>'+
         '</div>'+
         '<div class="oos-right">'+
-          '<div class="oos-days" style="color:'+dc+'">'+p._days+'</div>'+
-          '<div class="oos-lbl">days ago</div>'+
-          '<div style="font-size:7px;color:var(--sub)">last sold</div>'+
+          '<div class="oos-days" style="color:'+dc+';font-size:'+(p._neverSoldHere?'13px':'20px')+'">'+(p._neverSoldHere?'NEW':p._days)+'</div>'+
+          '<div class="oos-lbl">'+(p._neverSoldHere?'transfer':'days ago')+'</div>'+
+          '<div style="font-size:7px;color:var(--sub)">'+(p._neverSoldHere?'not on till':'last sold')+'</div>'+
         '</div></div>';
     });
     html+='</div>';
