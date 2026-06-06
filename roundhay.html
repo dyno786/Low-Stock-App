@@ -1206,6 +1206,29 @@ function renderOOS(){
     return true;
   });
 
+  // ── INJECT items this branch has NO till record of at all ───────────────
+  // destData only contains products that exist on this branch's till. A
+  // product stocked at the warehouse (or another branch) but never set up
+  // here won't be in destData, so the loop above can never see it. Pull
+  // those in as never-sold-here transfer candidates so all branches surface
+  // the same warehouse-available stock.
+  var destSet={};
+  (destData||[]).forEach(function(p){if(p.bc)destSet[p.bc]=true;});
+  var injectedSeen={};
+  [0,1,2].forEach(function(si){            // srcData indexes follow this page's SOURCES
+    (srcData[si]||[]).forEach(function(p){
+      if(!p.bc||!p.nm)return;
+      if(destSet[p.bc]||injectedSeen[p.bc])return;   // already on till, or already injected
+      if(!(avail[p.bc]&&avail[p.bc].length))return;  // only if genuinely in stock somewhere
+      injectedSeen[p.bc]=true;
+      allItems.push({
+        bc:p.bc, nm:p.nm, sz:p.sz, qty:0, pr:p.pr, cost:p.cost,
+        dp:p.dp||'General', ls:'Never',
+        _days:null, _neverSoldHere:true
+      });
+    });
+  });
+
   // Get all departments in OOS items
   var allDepts={};
   allItems.forEach(function(p){if(p.dp)allDepts[p.dp]=(allDepts[p.dp]||0)+1;});
