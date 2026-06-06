@@ -1231,6 +1231,30 @@ function renderOOS(){
     return true;
   });
 
+  // ── INJECT items City has NO till record of at all ──────────────────────
+  // destData only contains products that exist on City's till. A product
+  // stocked at the warehouse (or another branch) but never set up at City
+  // won't be in destData, so the loop above can never see it. Pull those in
+  // as never-sold-here transfer candidates.
+  // Real example: ECO 48H COCONUT EDGE GEL (748378004380) — 12 at WH, no City
+  // till record at all, so it was silently invisible before this pass.
+  var destSet={};
+  (destData||[]).forEach(function(p){if(p.bc)destSet[p.bc]=true;});
+  var injectedSeen={};
+  [0,1,2].forEach(function(si){            // srcData indexes: WH, Chapeltown, Roundhay
+    (srcData[si]||[]).forEach(function(p){
+      if(!p.bc||!p.nm)return;
+      if(destSet[p.bc]||injectedSeen[p.bc])return;   // already on till, or already injected
+      if(!(avail[p.bc]&&avail[p.bc].length))return;  // only if genuinely in stock somewhere
+      injectedSeen[p.bc]=true;
+      allItems.push({
+        bc:p.bc, nm:p.nm, sz:p.sz, qty:0, pr:p.pr, cost:p.cost,
+        dp:p.dp||'General', ls:'Never',
+        _days:null, _neverSoldHere:true
+      });
+    });
+  });
+
   // Get all departments in OOS items
   var allDepts={};
   allItems.forEach(function(p){if(p.dp)allDepts[p.dp]=(allDepts[p.dp]||0)+1;});
