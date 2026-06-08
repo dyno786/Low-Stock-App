@@ -38,6 +38,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .secT small{font-weight:600;color:var(--sub)}
 .panel{background:var(--s1);border:1px solid var(--border);border-radius:11px;margin:6px 11px;padding:11px 12px}
 .row{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid var(--border);background:var(--s1)}
+.pthumb{width:46px;height:46px;border-radius:8px;background:var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pthumb img{width:46px;height:46px;object-fit:cover}
 .row.neg{background:var(--redbg)}
 .rm{flex:1;min-width:0}.rn{font-size:12px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rmeta{font-size:10px;color:var(--sub);margin-top:2px}
@@ -90,7 +92,7 @@ const WIN_START=9, WIN_END=20, SLOT_MIN=30;
 const SLOTS=(WIN_END-WIN_START)*60/SLOT_MIN;
 // ══════════════════════════════════════════════════════════════════════
 
-let RECORDS=[], STATE={branch:'all', tab:'today', dayIdx:0, filt:'all'};
+let RECORDS=[], IMG={}, STATE={branch:'all', tab:'today', dayIdx:0, filt:'all'};
 
 function E(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function num(x){const n=parseFloat(x);return isNaN(n)?0:n;}
@@ -111,17 +113,36 @@ async function loadAll(){
         if(!row.TransactionID && !row.ProductName) return;
         const d=pd(row.Date);
         out.push({br:key, id:+row.TransactionID||0, date:d, name:(row.ProductName||'').trim(),
-          size:(row.Size||'').trim(), ref:(row.Reference||'').trim(),
+          size:(row.Size||'').trim(), ref:(row.Reference||'').trim(), bc:(row.Barcode||'').trim(),
           qty:num(row.QtyAdded), val:num(row.ValueAdded),
           before:num(row.BeforeValue), after:num(row.AfterValue)});
       });
     }catch(e){}
   }
   RECORDS=out.filter(r=>r.date);
+  await loadImages();
   buildBranchSelector();
   const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('stime').textContent = RECORDS.length ? ('live · '+t+' · '+RECORDS.length.toLocaleString()+' adjustments') : 'no data yet';
   render();
+}
+
+async function loadImages(){
+  try{
+    const r=await fetch('/api/stock-data?branch=shopify-images',{cache:'no-store'});
+    if(!r.ok) return;
+    const txt=await r.text();
+    if(txt.trim().charAt(0)==='{') return;
+    Papa.parse(txt,{header:true,skipEmptyLines:true}).data.forEach(row=>{
+      const bc=(row.Barcode||'').trim();
+      const url=(row.ImageURL||row.Image||row.URL||row.image_url||'').trim();
+      if(bc && url && url.indexOf('http')===0) IMG[bc]=url;
+    });
+  }catch(e){}
+}
+function thumb(bc){
+  if(IMG[bc]) return '<img src="'+IMG[bc]+'" loading="lazy" onerror="this.style.display=\'none\'">';
+  return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
 }
 
 function buildBranchSelector(){
@@ -147,7 +168,7 @@ function collapse(dayStr){
     const qty=rs.reduce((s,r)=>s+r.qty,0), val=rs.reduce((s,r)=>s+r.val,0);
     const tm=rs[rs.length-1].date.toTimeString().slice(0,5);
     let cat = after<0 ? 'still_neg' : before<0 ? 'corrected' : 'normal';
-    ev.push({name:rs[0].name,size:rs[0].size,ref:rs[0].ref,br:rs[0].br,time:tm,before:Math.round(before),after:Math.round(after),qty:Math.round(qty),val,cat});
+    ev.push({name:rs[0].name,size:rs[0].size,ref:rs[0].ref,br:rs[0].br,bc:rs[0].bc,time:tm,before:Math.round(before),after:Math.round(after),qty:Math.round(qty),val,cat});
   });
   ev.sort((a,b)=> (a.cat==='still_neg'?0:a.cat==='corrected'?1:2)-(b.cat==='still_neg'?0:b.cat==='corrected'?1:2) || a.time.localeCompare(b.time));
   return ev;
@@ -174,7 +195,7 @@ function renderToday(){
     const[lab,cls,desc]=LBL[cat];
     h+=`<div class="secT ${cls}">${lab} (${items.length}) <small>· ${desc}</small></div>`;
     items.forEach(e=>{ const bc=e.before<0?'bneg':'bpos', ac=e.after<0?'bneg':'bpos';
-      h+=`<div class="row ${cat==='still_neg'?'neg':''}"><div class="rm"><div class="rn">${E(e.name)}</div>
+      h+=`<div class="row ${cat==='still_neg'?'neg':''}"><div class="pthumb">${thumb(e.bc)}</div><div class="rm"><div class="rn">${E(e.name)}</div>
         <div class="rmeta">${e.size?E(e.size)+' · ':''}${STATE.branch==='all'?BR_LABEL[e.br]+' · ':''}${e.time} · ref ${E(e.ref)}</div>
         ${cat==='still_neg'?'<span class="tag">still '+e.after+'</span>':''}</div>
         <div class="rr"><div class="ba"><span class="${bc}">${e.before}</span> <span class="arr">→</span> <span class="${ac}">${e.after}</span></div>
