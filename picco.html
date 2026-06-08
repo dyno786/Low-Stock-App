@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CC — PICCO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{--red:#cc0000;--redbg:#fff0f0;--redtxt:#991b1b;--green:#15803d;--greenbg:#f0fdf4;--greentxt:#14532d;
+--amber:#b45309;--amberbg:#fffbeb;--ambertxt:#92400e;--purple:#6d28d9;--purplebg:#ede9fe;--purpletxt:#4c1d95;
+--blue:#1d4ed8;--bluebg:#eff6ff;--bg:#f0f0f0;--s1:#fff;--border:#e0e0e0;--ink:#111;--sub:#777;
+--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:30px}
+.hdr{background:var(--purple);padding:12px 14px 0;position:sticky;top:0;z-index:50}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px}
+.hdr-left{display:flex;align-items:center}
+.logo{width:32px;height:32px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--purple)}
+.title{color:#fff;font-size:16px;font-weight:700;margin-left:9px}
+.sub{color:rgba(255,255,255,.6);font-size:10px;margin-left:9px}
+.bsel{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:6px 8px;font-size:12px;font-weight:700;font-family:var(--font)}
+.bsel option{color:#111}
+.tabs{display:flex}
+.tab{flex:1;text-align:center;padding:11px 4px;color:rgba(255,255,255,.65);font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent}
+.tab.on{color:#fff;border-bottom-color:#fff}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:12px 13px 4px}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:9px 6px;text-align:center}
+.card.flag{background:var(--redbg);border-color:#f3c9c9}
+.cv{font-size:17px;font-weight:800;line-height:1}.cl{font-size:9px;color:var(--sub);margin-top:3px;font-weight:600}
+.card.flag .cv{color:var(--redtxt)}
+.daynav{display:flex;align-items:center;justify-content:center;gap:14px;padding:8px}
+.daynav button{background:var(--s1);border:1px solid var(--border);border-radius:8px;width:34px;height:30px;font-size:15px;cursor:pointer;color:var(--purpletxt);font-weight:700}
+.daynav .dlabel{font-size:13px;font-weight:800}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 13px 8px}
+.chips::-webkit-scrollbar{display:none}
+.chip{font-size:11px;font-weight:700;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--s1);color:var(--sub);cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--purplebg);border-color:var(--purple);color:var(--purpletxt)}
+.secT{padding:12px 14px 4px;font-size:12px;font-weight:800;color:var(--purpletxt)}
+.secT.r{color:var(--redtxt)}.secT.a{color:var(--ambertxt)}.secT.g{color:var(--greentxt)}
+.secT small{font-weight:600;color:var(--sub)}
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:11px;margin:6px 11px;padding:11px 12px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid var(--border);background:var(--s1)}
+.row.neg{background:var(--redbg)}
+.rm{flex:1;min-width:0}.rn{font-size:12px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rmeta{font-size:10px;color:var(--sub);margin-top:2px}
+.rr{text-align:right;flex-shrink:0}.ba{font-size:13px;font-weight:800;white-space:nowrap}
+.bneg{color:var(--red)}.bpos{color:var(--ink)}.arr{color:var(--sub)}
+.qa{font-size:10px;color:var(--green);font-weight:700;margin-top:2px}
+.tag{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:9px;margin-top:3px;background:#fff;color:var(--redtxt);border:1px solid #f3c9c9}
+.days{display:flex;gap:3px;align-items:flex-end;overflow-x:auto;padding:6px 2px 2px;height:120px}
+.days::-webkit-scrollbar{display:none}
+.dbar{flex:0 0 auto;width:13px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.dfill{width:11px;border-radius:3px 3px 0 0;min-height:2px}
+.dlab{font-size:7px;color:var(--sub);margin-top:3px;writing-mode:vertical-rl;transform:rotate(180deg);height:30px}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.dowc{background:var(--bg);border-radius:8px;padding:7px 2px}.down{font-size:10px;color:var(--sub);font-weight:700}.dowv{font-size:14px;font-weight:800;margin-top:3px}
+.tod{display:flex;gap:4px;align-items:flex-end;height:90px;padding-top:6px}
+.todbar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.todfill{width:100%;max-width:18px;background:var(--blue);border-radius:3px 3px 0 0;min-height:2px}
+.todlab{font-size:8px;color:var(--sub);margin-top:3px}
+.wk{width:100%;border-collapse:collapse;font-size:12px}
+.wk th{text-align:left;font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--border)}
+.wk td{padding:8px;border-bottom:1px solid #f1f1f1}.wk tr:last-child td{border-bottom:none}
+.bar{height:7px;background:var(--bg);border-radius:4px;overflow:hidden;margin-top:3px}.barf{height:100%;border-radius:4px}
+.note{font-size:10px;color:var(--sub);padding:8px 14px 0;line-height:1.5}
+.empty{text-align:center;color:var(--sub);padding:36px 22px;font-size:13px;line-height:1.5}
+.load{text-align:center;padding:46px;color:var(--sub)}
+.spin{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style></head><body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="hdr-left"><div class="logo">CC</div><div><div class="title">PICCO</div><div class="sub" id="stime">loading…</div></div></div>
+    <select class="bsel" id="bsel"></select>
+  </div>
+  <div class="tabs"><div class="tab on" data-tab="today">Today</div><div class="tab" data-tab="activity">Activity</div></div>
+</div>
+
+<div id="body"><div class="load"><div class="spin"></div>Loading PICCO…</div></div>
+
+<script>
+// ════════ CONFIG — paste each branch's published PICCO CSV URL ════════
+// These go through the app's own /api/stock-data proxy (ids added in stock-data.js).
+const FEEDS = {
+  roundhay:   'picco-roundhay',
+  city:       'picco-city',
+  chapy:      'picco-chapy',
+};
+const BR_LABEL = { roundhay:'Roundhay', city:'City Centre', chapy:'Chapeltown' };
+const WIN_START=9, WIN_END=20, SLOT_MIN=30;
+const SLOTS=(WIN_END-WIN_START)*60/SLOT_MIN;
+// ══════════════════════════════════════════════════════════════════════
+
+let RECORDS=[], STATE={branch:'all', tab:'today', dayIdx:0, filt:'all'};
+
+function E(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function num(x){const n=parseFloat(x);return isNaN(n)?0:n;}
+function money(v){return '£'+Math.round(v).toLocaleString();}
+function pd(s){if(!s)return null;const d=new Date(String(s).trim().replace(' ','T'));return isNaN(d)?null:d;}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+async function loadAll(){
+  const out=[];
+  for(const key of Object.keys(FEEDS)){
+    try{
+      const r=await fetch('/api/stock-data?branch='+FEEDS[key],{cache:'no-store'});
+      if(!r.ok) continue;
+      const txt=await r.text();
+      if(!txt || txt.indexOf('PASTE_')>=0 || txt.trim().charAt(0)==='{') continue; // not configured / error json
+      Papa.parse(txt,{header:true,skipEmptyLines:true}).data.forEach(row=>{
+        if(!row.TransactionID && !row.ProductName) return;
+        const d=pd(row.Date);
+        out.push({br:key, id:+row.TransactionID||0, date:d, name:(row.ProductName||'').trim(),
+          size:(row.Size||'').trim(), ref:(row.Reference||'').trim(),
+          qty:num(row.QtyAdded), val:num(row.ValueAdded),
+          before:num(row.BeforeValue), after:num(row.AfterValue)});
+      });
+    }catch(e){}
+  }
+  RECORDS=out.filter(r=>r.date);
+  buildBranchSelector();
+  const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('stime').textContent = RECORDS.length ? ('live · '+t+' · '+RECORDS.length.toLocaleString()+' adjustments') : 'no data yet';
+  render();
+}
+
+function buildBranchSelector(){
+  const present=[...new Set(RECORDS.map(r=>r.br))];
+  const sel=document.getElementById('bsel');
+  let opts='<option value="all">All branches</option>';
+  Object.keys(FEEDS).forEach(k=>{ if(present.includes(k)) opts+=`<option value="${k}">${BR_LABEL[k]}</option>`; });
+  sel.innerHTML=opts; sel.value=STATE.branch;
+}
+
+function recs(){ return STATE.branch==='all' ? RECORDS : RECORDS.filter(r=>r.br===STATE.branch); }
+
+// ─────────── TODAY ───────────
+function dayList(){ return [...new Set(recs().map(r=>ymd(r.date)))].sort(); }
+function collapse(dayStr){
+  const rows=recs().filter(r=>ymd(r.date)===dayStr);
+  const g={};
+  rows.forEach(r=>{ const k=r.name+'|'+r.size+'|'+r.ref+'|'+r.br;
+    (g[k]=g[k]||[]).push(r); });
+  const ev=[];
+  Object.values(g).forEach(rs=>{ rs.sort((a,b)=>a.id-b.id);
+    const before=rs[0].before, after=rs[rs.length-1].after;
+    const qty=rs.reduce((s,r)=>s+r.qty,0), val=rs.reduce((s,r)=>s+r.val,0);
+    const tm=rs[rs.length-1].date.toTimeString().slice(0,5);
+    let cat = after<0 ? 'still_neg' : before<0 ? 'corrected' : 'normal';
+    ev.push({name:rs[0].name,size:rs[0].size,ref:rs[0].ref,br:rs[0].br,time:tm,before:Math.round(before),after:Math.round(after),qty:Math.round(qty),val,cat});
+  });
+  ev.sort((a,b)=> (a.cat==='still_neg'?0:a.cat==='corrected'?1:2)-(b.cat==='still_neg'?0:b.cat==='corrected'?1:2) || a.time.localeCompare(b.time));
+  return ev;
+}
+function renderToday(){
+  const days=dayList();
+  if(!days.length){ document.getElementById('body').innerHTML='<div class="empty">No PICCO data for this branch yet.<br><small>Publish the branch\'s PICCO tab and paste its URL in stock-data.js.</small></div>'; return; }
+  if(STATE.dayIdx>days.length-1) STATE.dayIdx=days.length-1;
+  if(STATE.dayIdx<0) STATE.dayIdx=0;
+  const day=days[days.length-1-STATE.dayIdx];
+  const ev=collapse(day);
+  const exc=ev.filter(e=>e.cat==='still_neg').length;
+  const units=ev.reduce((s,e)=>s+e.qty,0), val=ev.reduce((s,e)=>s+e.val,0);
+  const LBL={still_neg:['⚠ Still negative after correction','r','count looks wrong — ended below zero'],
+             corrected:['Corrected from negative','a','was negative, squared up — recount'],
+             normal:['Normal top-ups','g','had stock or zero, simply restocked']};
+  let h=`<div class="daynav"><button id="prevd">◀</button><span class="dlabel">${new Date(day).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</span><button id="nextd">▶</button></div>`;
+  h+=`<div class="cards"><div class="card"><div class="cv">${ev.length}</div><div class="cl">products</div></div>
+    <div class="card"><div class="cv">${units}</div><div class="cl">units added</div></div>
+    <div class="card"><div class="cv">${money(val)}</div><div class="cl">value</div></div>
+    <div class="card flag"><div class="cv">${exc}</div><div class="cl">exceptions</div></div></div>`;
+  ['still_neg','corrected','normal'].forEach(cat=>{
+    const items=ev.filter(e=>e.cat===cat); if(!items.length)return;
+    const[lab,cls,desc]=LBL[cat];
+    h+=`<div class="secT ${cls}">${lab} (${items.length}) <small>· ${desc}</small></div>`;
+    items.forEach(e=>{ const bc=e.before<0?'bneg':'bpos', ac=e.after<0?'bneg':'bpos';
+      h+=`<div class="row ${cat==='still_neg'?'neg':''}"><div class="rm"><div class="rn">${E(e.name)}</div>
+        <div class="rmeta">${e.size?E(e.size)+' · ':''}${STATE.branch==='all'?BR_LABEL[e.br]+' · ':''}${e.time} · ref ${E(e.ref)}</div>
+        ${cat==='still_neg'?'<span class="tag">still '+e.after+'</span>':''}</div>
+        <div class="rr"><div class="ba"><span class="${bc}">${e.before}</span> <span class="arr">→</span> <span class="${ac}">${e.after}</span></div>
+        <div class="qa">+${e.qty} added</div></div></div>`;
+    });
+  });
+  h+='<div class="note"><b>Suspicious</b> = stock was <b>negative</b> before the add. Pairs are collapsed to one line per product. The red ones ended <i>still negative</i> — the count itself looks off.</div>';
+  document.getElementById('body').innerHTML=h;
+  document.getElementById('prevd').onclick=()=>{STATE.dayIdx++;render();};
+  document.getElementById('nextd').onclick=()=>{STATE.dayIdx--;render();};
+}
+
+// ─────────── ACTIVITY ───────────
+function activity(){
+  const rs=recs().filter(r=>r.date.getHours()>=WIN_START && r.date.getHours()<WIN_END);
+  const day={}, hour={}, dow={};
+  rs.forEach(r=>{ const k=ymd(r.date);
+    const slot=Math.floor(((r.date.getHours()-WIN_START)*60+r.date.getMinutes())/SLOT_MIN);
+    (day[k]=day[k]||{slots:new Set(),n:0,first:r.date,last:r.date});
+    day[k].slots.add(slot); day[k].n++;
+    if(r.date<day[k].first)day[k].first=r.date; if(r.date>day[k].last)day[k].last=r.date;
+    hour[r.date.getHours()]=(hour[r.date.getHours()]||0)+1;
+  });
+  const keys=Object.keys(day).sort();
+  if(!keys.length) return null;
+  const start=new Date(keys[0]), end=new Date(keys[keys.length-1]);
+  const daily=[];
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    const k=ymd(d), rec=day[k];
+    const active=rec?rec.slots.size:0;
+    daily.push({date:k,dow:DOW[d.getDay()],cover:Math.round(100*active/SLOTS),mins:active*SLOT_MIN,n:rec?rec.n:0,
+      first:rec?rec.first.toTimeString().slice(0,5):'',last:rec?rec.last.toTimeString().slice(0,5):''});
+  }
+  daily.forEach(d=>{ (dow[d.dow]=dow[d.dow]||[]).push(d.cover); });
+  const dowAvg={}; Object.keys(dow).forEach(k=>dowAvg[k]=Math.round(dow[k].reduce((a,b)=>a+b,0)/dow[k].length));
+  // weekly (Monday start)
+  const wk={};
+  daily.forEach(d=>{ const dd=new Date(d.date); const mon=new Date(dd); mon.setDate(dd.getDate()-((dd.getDay()+6)%7));
+    const key=ymd(mon); (wk[key]=wk[key]||{cov:[],n:0,active:0});
+    wk[key].cov.push(d.cover); wk[key].n+=d.n; if(d.cover>0)wk[key].active++; });
+  const weekly=Object.keys(wk).sort().map(k=>({week:k,avg:Math.round(wk[k].cov.reduce((a,b)=>a+b,0)/wk[k].cov.length),n:wk[k].n,active:wk[k].active}));
+  return {daily,dowAvg,weekly,hour,activeDays:daily.filter(d=>d.cover>0).length,totalDays:daily.length};
+}
+function col(p){return p>=30?'var(--green)':p>=15?'var(--amber)':p>0?'var(--red)':'#d0d0d0';}
+function renderActivity(){
+  const A=activity();
+  if(!A){ document.getElementById('body').innerHTML='<div class="empty">No activity data for this branch yet.</div>'; return; }
+  const act=A.daily.filter(d=>d.cover>0);
+  const avg=act.length?Math.round(act.reduce((s,d)=>s+d.cover,0)/act.length):0;
+  const de=Object.entries(A.dowAvg);
+  const best=de.reduce((a,b)=>b[1]>a[1]?b:a), quiet=de.reduce((a,b)=>b[1]<a[1]?b:a);
+  let h=`<div class="cards">
+    <div class="card"><div class="cv">${A.activeDays}/${A.totalDays}</div><div class="cl">active days</div></div>
+    <div class="card"><div class="cv">${avg}%</div><div class="cl">avg coverage</div></div>
+    <div class="card"><div class="cv">${best[0]} ${best[1]}%</div><div class="cl">busiest</div></div>
+    <div class="card"><div class="cv">${quiet[0]} ${quiet[1]}%</div><div class="cl">quietest</div></div></div>`;
+  // daily bars (last 35)
+  const last=A.daily.slice(-35);
+  h+='<div class="secT">Daily coverage <small>· last '+last.length+' days · 9am–8pm</small></div><div class="panel"><div class="days">';
+  last.forEach(d=>{ const ht=d.cover>0?Math.max(4,d.cover):2;
+    h+=`<div class="dbar" title="${d.date} ${d.dow}: ${d.cover}% (${d.mins}min, ${d.n} adj)"><div class="dfill" style="height:${ht}%;background:${col(d.cover)}"></div><div class="dlab">${d.date.slice(5)}</div></div>`; });
+  h+='</div></div>';
+  // time of day
+  const maxH=Math.max(1,...Object.values(A.hour));
+  h+='<div class="secT">Time of day <small>· when adjustments happen</small></div><div class="panel"><div class="tod">';
+  for(let hr=WIN_START;hr<WIN_END;hr++){ const v=A.hour[hr]||0; const ht=Math.max(2,Math.round(100*v/maxH));
+    h+=`<div class="todbar" title="${hr}:00 — ${v} adjustments"><div class="todfill" style="height:${ht}%"></div><div class="todlab">${hr}</div></div>`; }
+  h+='</div></div>';
+  // day of week
+  h+='<div class="secT">By day of week <small>· avg coverage</small></div><div class="panel"><div class="dow">';
+  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(k=>{ const v=A.dowAvg[k]||0;
+    h+=`<div class="dowc"><div class="down">${k}</div><div class="dowv" style="color:${col(v)}">${v}%</div></div>`; });
+  h+='</div></div>';
+  // weekly log (week starting Monday)
+  h+='<div class="secT">Weekly log</div><div class="panel"><table class="wk"><thead><tr><th>Week starting</th><th>Active</th><th>Adj</th><th>Avg coverage</th></tr></thead><tbody>';
+  A.weekly.slice().reverse().forEach(w=>{ const dd=new Date(w.week);
+    h+=`<tr><td>${dd.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</td><td>${w.active}/7</td><td>${w.n.toLocaleString()}</td><td>${w.avg}%<div class="bar"><div class="barf" style="width:${w.avg}%;background:${col(w.avg)}"></div></div></td></tr>`; });
+  h+='</tbody></table></div>';
+  h+='<div class="note"><b>Coverage</b> = share of 30-min slots between 9am–8pm with a logged adjustment — a proxy for time on PICCO (a recount done in one burst shows as a short window).</div>';
+  document.getElementById('body').innerHTML=h;
+}
+
+function render(){ if(!RECORDS.length && STATE.branch==='all'){} STATE.tab==='today'?renderToday():renderActivity(); }
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',function(){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on')); this.classList.add('on');
+  STATE.tab=this.getAttribute('data-tab'); STATE.dayIdx=0; render();
+}));
+document.getElementById('bsel').addEventListener('change',function(){STATE.branch=this.value;STATE.dayIdx=0;render();});
+
+loadAll();
+</script></body></html>
