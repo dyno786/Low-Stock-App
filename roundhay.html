@@ -1937,5 +1937,202 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
     <div class="bcm-hint">Tap format to retry &middot; turn phone sideways for bigger bars</div>
   </div>
 </div>
+<!-- ══════════════ PICCO HISTORY (branch-scoped, self-contained) ══════════════ -->
+<style>
+.pic-trigger{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);margin-right:6px}
+.pic-panel{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none}
+.pic-panel.open{display:block}
+.pic-sheet{position:absolute;inset:0;max-width:480px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column}
+.pic-hd{background:var(--purple);color:#fff;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.pic-htitle{font-size:15px;font-weight:700}
+.pic-close{font-size:20px;cursor:pointer;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:7px}
+.pic-close:active{background:rgba(255,255,255,.2)}
+.pic-fresh{padding:7px 13px;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);background:var(--greenbg);color:var(--greentxt)}
+.pic-fresh.stale{background:var(--redbg);color:var(--redtxt)}
+.pic-filters{background:var(--s1);border-bottom:1px solid var(--border);padding:9px 13px;display:flex;gap:12px;align-items:center;flex-shrink:0}
+.pic-filters select{border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:12px;font-family:var(--font);background:var(--s1);font-weight:600}
+.pic-fl{font-size:10px;color:var(--sub);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-right:4px}
+.pic-cb{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;cursor:pointer}
+.pic-cb input{width:16px;height:16px;accent-color:var(--red)}
+.pic-mini{margin-left:auto;background:var(--s1);border:1px solid var(--border);border-radius:7px;padding:5px 9px;font-size:11px;font-weight:700;color:var(--purpletxt);cursor:pointer;font-family:var(--font)}
+.pic-mini:disabled{opacity:.45}
+.pic-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pic-card{background:var(--s1);border:1px solid var(--border);border-radius:11px;margin:11px 13px;padding:11px 13px;display:flex;gap:14px;flex-wrap:wrap}
+.pic-stat-v{font-size:19px;font-weight:800;line-height:1}
+.pic-stat-l{font-size:10px;color:var(--sub);font-weight:600;margin-top:2px}
+.pic-stat-v.susp{color:var(--redtxt)}
+.pic-sortbar{display:flex;gap:6px;overflow-x:auto;padding:4px 13px 6px}
+.pic-sortbar::-webkit-scrollbar{display:none}
+.pic-sc{font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--s1);color:var(--sub);cursor:pointer;white-space:nowrap}
+.pic-sc.on{background:var(--purplebg);border-color:var(--purple);color:var(--purpletxt)}
+.pic-count{padding:0 14px 6px;font-size:11px;color:var(--sub);font-weight:600}
+.pic-row{display:flex;gap:9px;padding:10px 13px;border-bottom:1px solid var(--border);background:var(--s1)}
+.pic-row.s{background:rgba(194,87,61,0.07)}
+.pic-img{width:40px;height:40px;border-radius:7px;background:var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pic-img img{width:40px;height:40px;object-fit:cover}
+.pic-mid{flex:1;min-width:0}
+.pic-nm{font-size:12px;font-weight:700;line-height:1.25}
+.pic-meta{font-size:10px;color:var(--sub);margin-top:1px}
+.pic-tags{display:flex;gap:5px;align-items:center;margin-top:5px;flex-wrap:wrap}
+.pic-date{font-size:10px;color:var(--sub)}
+.pic-review{font-size:9px;font-weight:800;color:var(--redtxt);background:var(--redbg);padding:1px 6px;border-radius:10px}
+.pic-ref{font-size:10px;color:var(--sub);margin-top:3px;font-style:italic}
+.pic-right{text-align:right;flex-shrink:0;min-width:64px}
+.pic-qty{font-size:16px;font-weight:800;color:var(--green)}
+.pic-ba{font-size:11px;font-weight:700;margin-top:2px}
+.pic-ba .neg{color:var(--red)} .pic-ba .pos{color:var(--sub)}
+.pic-cluster{background:var(--redbg);border:1px solid #f3c9c9;border-radius:9px;padding:8px 10px;margin:7px 13px;font-size:11px}
+.pic-cluster b{color:var(--redtxt)}
+.pic-empty{text-align:center;color:var(--sub);padding:36px 22px;font-size:13px;line-height:1.5}
+.pic-load{text-align:center;padding:46px 20px;color:var(--sub)}
+.pic-spin{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:picsp 1s linear infinite;margin:0 auto 12px}
+@keyframes picsp{to{transform:rotate(360deg)}}
+.pic-err{margin:22px 14px;background:var(--redbg);border:1px solid #f3c9c9;border-radius:12px;padding:16px;color:var(--redtxt)}
+.pic-err h3{font-size:14px;margin-bottom:6px}.pic-err p{font-size:12px;line-height:1.5;color:#7f1d1d}
+</style>
+
+<div class="pic-panel" id="pic-panel">
+  <div class="pic-sheet">
+    <div class="pic-hd">
+      <div class="pic-htitle">🔎 PICCO History — Roundhay</div>
+      <div class="pic-close" id="pic-close">✕</div>
+    </div>
+    <div class="pic-fresh" id="pic-fresh"></div>
+    <div class="pic-filters">
+      <span class="pic-fl">Days</span>
+      <select id="pic-days"><option value="7">7</option><option value="14">14</option><option value="30" selected>30</option><option value="60">60</option><option value="90">90</option></select>
+      <label class="pic-cb"><input type="checkbox" id="pic-susp"> Suspicious only</label>
+      <button class="pic-mini" id="pic-refresh">↺ Refresh</button>
+    </div>
+    <div class="pic-body" id="pic-body"><div class="pic-load"><div class="pic-spin"></div>Loading PICCO…</div></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var PIC_BRANCH='round';        // match key: 'round' | 'chapel' | 'city'
+  var PICO=null, picLoaded=false, picBusy=false, picLast=0;
+  var picS={days:30,susp:false,col:'date',dir:'desc'};
+
+  function E(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function M(n){return '£'+(Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function NF(n){return (Number(n)||0).toLocaleString();}
+  function PD(s){if(!s)return null;var d=new Date(s);return isNaN(d)?null:d;}
+  function REL(d){if(!d)return 'unknown';var m=Math.floor((Date.now()-d.getTime())/60000);if(m<1)return 'just now';if(m<60)return m+' minute'+(m===1?'':'s')+' ago';var h=Math.floor(m/60);if(h<24)return h+' hour'+(h===1?'':'s')+' ago';var dy=Math.floor(h/24);return dy+' day'+(dy===1?'':'s')+' ago';}
+  function SD(d){if(!d)return '';return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
+  function mine(name){return (name||'').toLowerCase().indexOf(PIC_BRANCH)>=0;}
+
+  function open(){document.getElementById('pic-panel').classList.add('open');if(!picLoaded)picLoad();}
+  function close(){document.getElementById('pic-panel').classList.remove('open');}
+
+  async function picLoad(){
+    if(picBusy)return;picBusy=true;
+    var rb=document.getElementById('pic-refresh');rb.disabled=true;
+    try{
+      var r=await fetch('/api/picco',{cache:'no-store'});
+      PICO=await r.json();picLoaded=true;picLast=Date.now();picRender();
+    }catch(e){
+      PICO={ok:false,error:'Could not reach PICCO data feed',detail:'The page could not load /api/picco.'};picRender();
+    }
+    setTimeout(function(){rb.disabled=false;picBusy=false;},2500);
+  }
+
+  function picRender(){
+    var body=document.getElementById('pic-body'), fresh=document.getElementById('pic-fresh');
+    if(!PICO||PICO.ok===false){
+      fresh.className='pic-fresh stale';fresh.textContent='Feed unavailable';
+      body.innerHTML='<div class="pic-err"><h3>⚠ '+E((PICO&&PICO.error)||'Could not load PICCO data')+'</h3><p>'+E((PICO&&PICO.detail)||'The local exporter may be down.')+'</p></div>';
+      return;
+    }
+    var gen=PD(PICO.generated_at), stale=gen?(Date.now()-gen.getTime())>3600000:true;
+    if(stale){fresh.className='pic-fresh stale';fresh.innerHTML='⚠ Data is stale — exporter may have stopped. Last update '+(gen?REL(gen):'unknown')+'. Check picco_exporter.log on the office PC.';}
+    else{fresh.className='pic-fresh';fresh.innerHTML='✓ Live · updated '+REL(gen);}
+    picBody();
+  }
+
+  function items(){
+    var arr=(PICO.items||[]).filter(function(it){return mine(it.branch_name);});
+    var cut=Date.now()-picS.days*86400000;
+    arr=arr.filter(function(it){
+      if(picS.susp&&!it.is_suspicious)return false;
+      var d=PD(it.date);if(d&&d.getTime()<cut)return false;return true;
+    });
+    var dir=picS.dir==='asc'?1:-1;
+    arr.sort(function(a,b){
+      var x,y;
+      if(picS.col==='qty'){x=+a.quantity_added||0;y=+b.quantity_added||0;}
+      else if(picS.col==='before'){x=+a.before_value||0;y=+b.before_value||0;}
+      else if(picS.col==='after'){x=+a.after_value||0;y=+b.after_value||0;}
+      else{x=PD(a.date);y=PD(b.date);x=x?x.getTime():0;y=y?y.getTime():0;}
+      return (x-y)*dir;
+    });
+    return arr;
+  }
+
+  function picBody(){
+    var html='';
+    // summary card for this branch (uses exporter's per_branch — not recomputed)
+    var pb=PICO.per_branch||{}, key=Object.keys(pb).filter(mine)[0], b=key?pb[key]:null;
+    if(b){
+      var sc=+b.suspicious_count||0;
+      html+='<div class="pic-card">'+
+        '<div><div class="pic-stat-v">'+NF(b.count)+'</div><div class="pic-stat-l">corrections</div></div>'+
+        '<div><div class="pic-stat-v">'+NF(b.units_added)+'</div><div class="pic-stat-l">units added</div></div>'+
+        '<div><div class="pic-stat-v">'+M(b.value_added)+'</div><div class="pic-stat-l">value added</div></div>'+
+        '<div><div class="pic-stat-v'+(sc>0?' susp':'')+'">'+NF(sc)+'</div><div class="pic-stat-l">suspicious'+(sc>0?(' · '+NF(b.suspicious_units)+'pcs'):'')+'</div></div>'+
+      '</div><div class="pic-count">Card = full export window ('+E(PICO.days)+'d, from the exporter). List below respects the Days filter.</div>';
+    }
+    // sort bar
+    var cols=[['date','Date'],['qty','Qty'],['before','Before'],['after','After']];
+    html+='<div class="pic-sortbar">';
+    cols.forEach(function(c){var on=picS.col===c[0];html+='<div class="pic-sc'+(on?' on':'')+'" data-col="'+c[0]+'">'+c[1]+(on?(picS.dir==='desc'?' ▼':' ▲'):'')+'</div>';});
+    html+='</div>';
+    var arr=items();
+    html+='<div class="pic-count">'+NF(arr.length)+' correction'+(arr.length===1?'':'s')+' shown'+(picS.susp?' · suspicious only':'')+'</div>';
+    if(!arr.length){html+='<div class="pic-empty">No corrections for this branch with these filters.</div>';}
+    else{var cap=Math.min(arr.length,500);for(var i=0;i<cap;i++)html+=row(arr[i]);if(arr.length>cap)html+='<div class="pic-count">First 500 shown.</div>';}
+    // this-branch rapid clusters (other time analysis is cross-branch, so omitted here)
+    var ta=PICO.time_analysis;
+    if(ta&&ta.rapid_clusters){var rc=ta.rapid_clusters.filter(function(c){return mine(c.branch_name);});
+      if(rc.length){html+='<div class="pic-count" style="padding-top:10px;font-weight:700;color:var(--purpletxt)">Rapid clusters — worth a look</div>';
+        rc.forEach(function(c){var f=PD(c.first_time);html+='<div class="pic-cluster"><b>'+NF(c.count)+'</b> corrections in quick succession'+(f?(' · '+SD(f)):'')+'</div>';});}
+    }
+    document.getElementById('pic-body').innerHTML=html;
+  }
+
+  function row(it){
+    var d=PD(it.date);
+    var img=it.image_url?('<img src="'+E(it.image_url)+'" loading="lazy" onerror="this.style.display=\'none\'">'):'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+    var bf=Number(it.before_value), meta=[];
+    if(it.own_code)meta.push(E(it.own_code)); if(it.barcode)meta.push(E(it.barcode));
+    var nm=E(it.product_name||'?')+(it.size?(' <span style="color:var(--sub);font-weight:600">'+E(it.size)+'</span>'):'');
+    return '<div class="pic-row'+(it.is_suspicious?' s':'')+'"><div class="pic-img">'+img+'</div>'+
+      '<div class="pic-mid"><div class="pic-nm">'+nm+'</div>'+(meta.length?'<div class="pic-meta">'+meta.join(' · ')+'</div>':'')+
+      '<div class="pic-tags"><span class="pic-date">'+SD(d)+'</span>'+(it.is_suspicious?'<span class="pic-review">needs review</span>':'')+'</div>'+
+      (it.reference?'<div class="pic-ref">ref: '+E(it.reference)+'</div>':'')+'</div>'+
+      '<div class="pic-right"><div class="pic-qty">+'+NF(it.quantity_added)+'</div>'+
+      '<div class="pic-ba"><span class="'+(bf<=0?'neg':'pos')+'">'+(isNaN(bf)?'?':bf)+'</span> → '+(it.after_value==null?'?':E(it.after_value))+'</div></div></div>';
+  }
+
+  // wiring
+  function init(){
+    var rb=document.querySelector('.refresh-btn'), hb=document.querySelector('.hdr-top');
+    var btn=document.createElement('button');btn.className='pic-trigger';btn.type='button';btn.textContent='🔎 PICCO';
+    if(rb&&rb.parentNode)rb.parentNode.insertBefore(btn,rb);
+    else if(hb)hb.appendChild(btn);
+    else{btn.style.cssText='position:fixed;right:12px;bottom:12px;z-index:998';document.body.appendChild(btn);}
+    btn.addEventListener('click',open);
+    document.getElementById('pic-close').addEventListener('click',close);
+    document.getElementById('pic-panel').addEventListener('click',function(e){if(e.target===this)close();});
+    document.getElementById('pic-days').addEventListener('change',function(){picS.days=parseInt(this.value)||30;if(picLoaded)picBody();});
+    document.getElementById('pic-susp').addEventListener('change',function(){picS.susp=this.checked;if(picLoaded)picBody();});
+    document.getElementById('pic-refresh').addEventListener('click',function(){if(Date.now()-picLast<2500)return;picLoad();});
+    document.getElementById('pic-body').addEventListener('click',function(e){var sc=e.target.closest('.pic-sc');if(!sc)return;var c=sc.getAttribute('data-col');if(picS.col===c)picS.dir=(picS.dir==='desc'?'asc':'desc');else{picS.col=c;picS.dir=(c==='date'||c==='qty')?'desc':'asc';}picBody();});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+<!-- ════════════════════════ END PICCO HISTORY ════════════════════════ -->
+
 </body>
 </html>
