@@ -14,8 +14,9 @@ const BRANCHES = [
   // ── PICCO feeds — after you publish each branch's PICCO tab to web (CSV),
   //    paste its published URL here (same as you did for the stock tabs).
   { id: 'picco-roundhay', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRhmUF_atrBcjpWsTA21jv1snoqL9fwF-WERbK5G18l19aMY2HOWpngtIXocyJ8Up-IqTQ6fUG7Uh4S/pub?gid=844614803&single=true&output=csv' },
-  { id: 'picco-city',     url: 'PASTE_PUBLISHED_PICCO_CSV_URL_FOR_CITY' },
-  { id: 'picco-chapy',    url: 'PASTE_PUBLISHED_PICCO_CSV_URL_FOR_CHAPELTOWN' },
+  { id: 'picco-city',     url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS4sk86Jlv4xZaqxp4ogpC4TYOLSNYd3dIMd-ub5l6rzCoO-F9OOePHPNx6kgbvDLY50gKAXMyLrTv1/pub?gid=955654066&single=true&output=csv' },
+  { id: 'picco-chapy',    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWMTgDVDqdk4A-DZ-Ly2sMu-mXFTagwBiha9C1gOprWq3BdPGS3zk5eBXSSc5IpMr_u6DSzUEl6rs_/pub?gid=1658404203&single=true&output=csv' },
+  { id: 'picco-warehouse',url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_0b8x2d44NNBJIpe4GSNvD9C8bFmUvm3Nt0YPDEofOnEoGCPHft4U3bacH8Uwt0OkA9xghoC385rr/pub?gid=905022384&single=true&output=csv' },
 
   { id: 'images',    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv' },
   { id: 'shopify-images', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=604196280&single=true&output=csv' },
