@@ -47,6 +47,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .bneg{color:var(--red)}.bpos{color:var(--ink)}.arr{color:var(--sub)}
 .qa{font-size:10px;color:var(--green);font-weight:700;margin-top:2px}
 .tag{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:9px;margin-top:3px;background:#fff;color:var(--redtxt);border:1px solid #f3c9c9}
+.tag.t-amber{color:var(--ambertxt);border-color:#f3e3c9}
 .days{display:flex;gap:3px;align-items:flex-end;overflow-x:auto;padding:6px 2px 2px;height:120px}
 .days::-webkit-scrollbar{display:none}
 .dbar{flex:0 0 auto;width:13px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
@@ -168,9 +169,9 @@ function collapse(dayStr){
     const qty=rs.reduce((s,r)=>s+r.qty,0), val=rs.reduce((s,r)=>s+r.val,0);
     const tm=rs[rs.length-1].date.toTimeString().slice(0,5);
     let cat = after<0 ? 'still_neg' : before<0 ? 'corrected' : 'normal';
-    ev.push({name:rs[0].name,size:rs[0].size,ref:rs[0].ref,br:rs[0].br,bc:rs[0].bc,time:tm,before:Math.round(before),after:Math.round(after),qty:Math.round(qty),val,cat});
+    ev.push({name:rs[0].name,size:rs[0].size,ref:rs[0].ref,br:rs[0].br,bc:rs[0].bc,time:tm,before:Math.round(before),after:Math.round(after),qty:Math.round(qty),val,cat,key:rs[rs.length-1].id});
   });
-  ev.sort((a,b)=> (a.cat==='still_neg'?0:a.cat==='corrected'?1:2)-(b.cat==='still_neg'?0:b.cat==='corrected'?1:2) || a.time.localeCompare(b.time));
+  ev.sort((a,b)=> b.key-a.key);   // newest entry first
   return ev;
 }
 function renderToday(){
@@ -182,27 +183,20 @@ function renderToday(){
   const ev=collapse(day);
   const exc=ev.filter(e=>e.cat==='still_neg').length;
   const units=ev.reduce((s,e)=>s+e.qty,0), val=ev.reduce((s,e)=>s+e.val,0);
-  const LBL={still_neg:['⚠ Still negative after correction','r','count looks wrong — ended below zero'],
-             corrected:['Corrected from negative','a','was negative, squared up — recount'],
-             normal:['Normal top-ups','g','had stock or zero, simply restocked']};
   let h=`<div class="daynav"><button id="prevd">◀</button><span class="dlabel">${new Date(day).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</span><button id="nextd">▶</button></div>`;
   h+=`<div class="cards"><div class="card"><div class="cv">${ev.length}</div><div class="cl">products</div></div>
     <div class="card"><div class="cv">${units}</div><div class="cl">units added</div></div>
     <div class="card"><div class="cv">${money(val)}</div><div class="cl">value</div></div>
     <div class="card flag"><div class="cv">${exc}</div><div class="cl">exceptions</div></div></div>`;
-  ['still_neg','corrected','normal'].forEach(cat=>{
-    const items=ev.filter(e=>e.cat===cat); if(!items.length)return;
-    const[lab,cls,desc]=LBL[cat];
-    h+=`<div class="secT ${cls}">${lab} (${items.length}) <small>· ${desc}</small></div>`;
-    items.forEach(e=>{ const bc=e.before<0?'bneg':'bpos', ac=e.after<0?'bneg':'bpos';
-      h+=`<div class="row ${cat==='still_neg'?'neg':''}"><div class="pthumb">${thumb(e.bc)}</div><div class="rm"><div class="rn">${E(e.name)}</div>
-        <div class="rmeta">${e.size?E(e.size)+' · ':''}${e.bc?E(e.bc)+' · ':''}${STATE.branch==='all'?BR_LABEL[e.br]+' · ':''}${e.time} · ref ${E(e.ref)}</div>
-        ${cat==='still_neg'?'<span class="tag">still '+e.after+'</span>':''}</div>
-        <div class="rr"><div class="ba"><span class="${bc}">${e.before}</span> <span class="arr">→</span> <span class="${ac}">${e.after}</span></div>
-        <div class="qa">+${e.qty} added</div></div></div>`;
-    });
+  h+='<div class="secT">Adjustments <small>· newest first · red = still negative</small></div>';
+  ev.forEach(e=>{ const bc=e.before<0?'bneg':'bpos', ac=e.after<0?'bneg':'bpos';
+    h+=`<div class="row ${e.cat==='still_neg'?'neg':''}"><div class="pthumb">${thumb(e.bc)}</div><div class="rm"><div class="rn">${E(e.name)}</div>
+      <div class="rmeta">${e.size?E(e.size)+' · ':''}${e.bc?E(e.bc)+' · ':''}${STATE.branch==='all'?BR_LABEL[e.br]+' · ':''}${e.time} · ref ${E(e.ref)}</div>
+      ${e.cat==='still_neg'?'<span class="tag">still '+e.after+'</span>':e.cat==='corrected'?'<span class="tag t-amber">was '+e.before+'</span>':''}</div>
+      <div class="rr"><div class="ba"><span class="${bc}">${e.before}</span> <span class="arr">→</span> <span class="${ac}">${e.after}</span></div>
+      <div class="qa">+${e.qty} added</div></div></div>`;
   });
-  h+='<div class="note"><b>Suspicious</b> = stock was <b>negative</b> before the add. Pairs are collapsed to one line per product. The red ones ended <i>still negative</i> — the count itself looks off.</div>';
+  h+='<div class="note"><b>Newest first.</b> Pairs collapsed to one line per product. <b>Red rows</b> ended still negative (count looks off); amber <i>"was −N"</i> = corrected from negative.</div>';
   document.getElementById('body').innerHTML=h;
   document.getElementById('prevd').onclick=()=>{STATE.dayIdx++;render();};
   document.getElementById('nextd').onclick=()=>{STATE.dayIdx--;render();};
