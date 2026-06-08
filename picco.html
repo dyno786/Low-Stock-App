@@ -196,7 +196,7 @@ function renderToday(){
     h+=`<div class="secT ${cls}">${lab} (${items.length}) <small>· ${desc}</small></div>`;
     items.forEach(e=>{ const bc=e.before<0?'bneg':'bpos', ac=e.after<0?'bneg':'bpos';
       h+=`<div class="row ${cat==='still_neg'?'neg':''}"><div class="pthumb">${thumb(e.bc)}</div><div class="rm"><div class="rn">${E(e.name)}</div>
-        <div class="rmeta">${e.size?E(e.size)+' · ':''}${STATE.branch==='all'?BR_LABEL[e.br]+' · ':''}${e.time} · ref ${E(e.ref)}</div>
+        <div class="rmeta">${e.size?E(e.size)+' · ':''}${e.bc?E(e.bc)+' · ':''}${STATE.branch==='all'?BR_LABEL[e.br]+' · ':''}${e.time} · ref ${E(e.ref)}</div>
         ${cat==='still_neg'?'<span class="tag">still '+e.after+'</span>':''}</div>
         <div class="rr"><div class="ba"><span class="${bc}">${e.before}</span> <span class="arr">→</span> <span class="${ac}">${e.after}</span></div>
         <div class="qa">+${e.qty} added</div></div></div>`;
