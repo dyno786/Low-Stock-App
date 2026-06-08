@@ -286,5 +286,8 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',function
 }));
 document.getElementById('bsel').addEventListener('change',function(){STATE.branch=this.value;STATE.dayIdx=0;render();});
 
+// allow picco.html?branch=roundhay|city|chapy to preselect a branch (used by branch-page buttons)
+(function(){ var qb=new URLSearchParams(location.search).get('branch'); if(qb && FEEDS[qb]) STATE.branch=qb; })();
+
 loadAll();
 </script></body></html>
