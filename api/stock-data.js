@@ -10,6 +10,13 @@ const BRANCHES = [
   { id: 'city',      url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfK3RbCr-2FPtGFXio6aL6UMnYrlNupoJ259jlHuLIXKkOBLraZxgcb8WvCj2ndeARlp-uVRyNMyKt/pub?gid=0&single=true&output=csv' },
   { id: 'roundhay',  url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT2w5wBKrzvkoUPjEB_f7K9_vyehT9MCAxJ32AwtSmNqZzVwJZaH2G0kg7YuRTjstWGZSLpGCVj9NzM/pub?gid=0&single=true&output=csv' },
   { id: 'warehouse', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=0&single=true&output=csv' },
+
+  // ── PICCO feeds — after you publish each branch's PICCO tab to web (CSV),
+  //    paste its published URL here (same as you did for the stock tabs).
+  { id: 'picco-roundhay', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRhmUF_atrBcjpWsTA21jv1snoqL9fwF-WERbK5G18l19aMY2HOWpngtIXocyJ8Up-IqTQ6fUG7Uh4S/pub?gid=844614803&single=true&output=csv' },
+  { id: 'picco-city',     url: 'PASTE_PUBLISHED_PICCO_CSV_URL_FOR_CITY' },
+  { id: 'picco-chapy',    url: 'PASTE_PUBLISHED_PICCO_CSV_URL_FOR_CHAPELTOWN' },
+
   { id: 'images',    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=955535085&single=true&output=csv' },
   { id: 'shopify-images', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTpu9NMXwqZKBOM-0HcE0dqczoOdZqCXCJK5vqwXCz5YT9ZOg2Pm1vE_PvvljD7MzxxUSUknrKfao5Q/pub?gid=604196280&single=true&output=csv' },
 
