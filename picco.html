@@ -327,7 +327,10 @@ const CONFIG = {
   // Branch picco scan timestamps are stored in UTC (the till exports UTC, e.g. a
   // scan shown as 15:01 UTC is 16:01 BST). Convert them to the viewer's local time so
   // "minutes ago" is correct. Warehouse Movements are already local, so they're left alone.
-  branchTimeUTC: true
+  branchTimeUTC: true,
+  // When a shop scans stock IN, look back this many days in the Warehouse "scanned out"
+  // history to decide if it was a warehouse transfer. Transfers can lag a few days.
+  transferLookbackDays: 3
 };
 
 /* sample data in the REAL schema (shown if a sheet can't be read yet) */
@@ -646,21 +649,26 @@ function toolbar(opts){const cards=state.itemView==="cards";
 function matchSearch(p){const q=state.search.trim().toLowerCase();if(!q)return true;return ((p.barcode||"")+" "+(p.description||"")).toLowerCase().includes(q);}
 function listFoot(cap,total,key){return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} products</span>${cap<total?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
 
-/* warehouse "scanned OUT" lookup: barcode|day -> units that left the warehouse that day */
+/* warehouse "scanned OUT" history: barcode -> [{day, qty}] of units that left the warehouse */
+function normBar(b){return String(b==null?"":b).trim().replace(/\.0$/,"");}
+function dayNum(dk){const m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(dk||""));return m?Math.round(Date.UTC(+m[1],+m[2]-1,+m[3])/864e5):null;}
 function warehouseOutMap(){
   const wb=CONFIG.branches.find(b=>b.movements); if(!wb)return null;
   const d=state.data[wb.key]; if(!d||!d.items)return null;
-  if(d.demo)return {demo:true,map:{}};
-  const map={};
-  for(const it of d.items){ if((it.qty||0)<0){ const k=(it.barcode||"").trim()+"|"+dayKey(it.time); map[k]=(map[k]||0)+(-(it.qty||0)); } }
-  return {demo:false,map};
+  if(d.demo)return {demo:true,by:{}};
+  const by={};
+  for(const it of d.items){ if((it.qty||0)<0){ const bc=normBar(it.barcode), dk=dayKey(it.time); if(!bc||!dk)continue; (by[bc]=by[bc]||[]).push({day:dk,qty:-(it.qty||0)}); } }
+  return {demo:false,by};
 }
 function provTag(p,wh){
   if(!wh||wh.demo)return "";
-  const out=wh.map[(p.barcode||"").trim()+"|"+dayKey(p.time)];
-  return out>0
-    ? `<span class="provtag prov--from" title="warehouse scanned out ${fmt(out)} of this on ${esc(dayKey(p.time))}">warehouse transfer</span>`
-    : `<span class="provtag prov--neg" title="no matching warehouse dispatch that day">negative scanned in</span>`;
+  const list=wh.by[normBar(p.barcode)], pd=dayNum(dayKey(p.time)), N=CONFIG.transferLookbackDays||0;
+  if(list&&pd!=null){
+    let out=0,when=null,wd=-1;
+    for(const e of list){const ed=dayNum(e.day); if(ed==null)continue; const diff=pd-ed; if(diff>=0&&diff<=N){out+=e.qty; if(ed>wd){wd=ed;when=e.day;}}}
+    if(out>0)return `<span class="provtag prov--from" title="warehouse scanned out ${fmt(out)} on ${esc(when)} (within ${fmt(N)} days)">warehouse transfer</span>`;
+  }
+  return `<span class="provtag prov--neg" title="no warehouse dispatch in the ${fmt(N)} days before this scan">negative scanned in</span>`;
 }
 
 function cardsHTML(products,key,showProv){
