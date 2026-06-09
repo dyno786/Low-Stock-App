@@ -191,6 +191,15 @@
   .mapnote__row span{font-family:var(--mono); color:var(--ink)}
   .mapnote__row .miss{color:var(--bad)}
 
+  .daynav{display:inline-flex; align-items:center; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface); overflow:hidden}
+  .daynav button{font:inherit; border:0; background:transparent; color:var(--ink); padding:8px 9px; cursor:pointer; display:inline-flex; align-items:center}
+  .daynav button:hover:not(:disabled){background:var(--surface-2); color:var(--brand-ink)}
+  .daynav button:disabled{color:var(--faint); cursor:default}
+  .daynav .lbl{font-weight:600; font-size:13px; padding:0 8px; min-width:158px; text-align:center; font-variant-numeric:tabular-nums}
+  .daynav .latest{font-weight:600; font-size:12px; border-left:1px solid var(--line)}
+  .daynav svg{width:15px; height:15px}
+  .scanline{display:flex; gap:10px; font-size:12.5px; padding:4px 0; border-bottom:1px dotted var(--line); font-family:var(--mono)}
+  .scanline b{color:var(--muted); font-weight:600; min-width:74px; flex:0 0 auto}
   footer{border-top:1px solid var(--line); padding:18px 0; font-size:12px; color:var(--faint)}
 
   @media (max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
@@ -279,7 +288,7 @@ function demoRows(seed){
 }
 function pad(d){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
 
-const state={ active:"__overview", data:{}, search:"", filter:"all", itemView:"table", expanded:{}, showAll:{}, log:[], lastUpdated:null, images:{map:null,count:0,total:0,error:null,urlKey:null,keyKey:null} };
+const state={ active:"__overview", data:{}, search:"", filter:"all", flow:"all", itemView:"table", expanded:{}, showAll:{}, log:[], lastUpdated:null, day:null, days:[], images:{map:null,count:0,total:0,error:null,urlKey:null,keyKey:null} };
 
 /* CSV + gviz handling */
 function parseCSV(text){
@@ -370,6 +379,7 @@ async function loadAll(){
   const [imgs, ...results]=await Promise.all([loadImages(), ...CONFIG.branches.map(loadBranch)]);
   state.images=imgs;
   CONFIG.branches.forEach((b,i)=>state.data[b.key]=results[i]);
+  buildDays(); resolveDay();
   state.lastUpdated=new Date(); logCheck(state.lastUpdated);
   setRefreshing(false);
   renderTabs();renderPanel();renderUpdated();renderFooter();
@@ -412,6 +422,56 @@ function mvHTML(it){const a=it.after, b=it.before;
   const cls=(a!=null&&a<0)?"to-bad":((it.qty||0)>0?"to-up":"");
   return `<span class="mv ${cls}"><span class="from">${b==null?"·":b}</span><span class="arr">→</span><span class="to">${a==null?"·":a}</span></span>`;}
 function addHTML(it){const q=it.qty;if(q==null)return esc(it.qtyRaw)||"—";return `<span class="add ${q<0?"neg":"pos"}">${q>0?"+":""}${fmt(q)}</span>`;}
+function addNum(q){if(q==null)return "—";return `<span class="add ${q<0?"neg":"pos"}">${q>0?"+":""}${fmt(q)}</span>`;}
+function mvPair(from,to){const cls=(to!=null&&to<0)?"to-bad":((to!=null&&from!=null&&to>from)?"to-up":"");
+  return `<span class="mv ${cls}"><span class="from">${from==null?"·":from}</span><span class="arr">→</span><span class="to">${to==null?"·":to}</span></span>`;}
+
+/* ---- day handling ---- */
+function dayKey(t){const s=String(t||"");const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return m[1]+"-"+m[2]+"-"+m[3];
+  const d=new Date(s.replace(/-/g,"/"));if(!isNaN(d)){const z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate());}return "";}
+function buildDays(){const set=new Set();for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)for(const it of d.items){const k=dayKey(it.time);if(k)set.add(k);}}state.days=[...set].sort();}
+function resolveDay(){if(!state.days.length){state.day=null;return;}if(!state.day||state.days.indexOf(state.day)<0)state.day=state.days[state.days.length-1];}
+function itemsForDay(items){if(!state.day)return items;return items.filter(it=>dayKey(it.time)===state.day);}
+function humanDay(dk){if(!dk)return "All dates";const [y,m,d]=dk.split("-").map(Number);const dt=new Date(y,m-1,d);
+  const wd=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()], mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1];
+  const now=new Date(),z=n=>String(n).padStart(2,"0");
+  const tk=now.getFullYear()+"-"+z(now.getMonth()+1)+"-"+z(now.getDate());
+  const ye=new Date(now.getTime()-864e5),yk=ye.getFullYear()+"-"+z(ye.getMonth()+1)+"-"+z(ye.getDate());
+  const suffix=dk===tk?" · Today":dk===yk?" · Yesterday":"";
+  return `${wd} ${d} ${mo}${y!==now.getFullYear()?" "+y:""}${suffix}`;}
+function daynavHTML(){const idx=state.days.indexOf(state.day);const atStart=idx<=0,atEnd=idx<0||idx>=state.days.length-1;
+  return `<div class="daynav" role="group" aria-label="Day">
+    <button data-day="prev" ${atStart?"disabled":""} aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <span class="lbl">${esc(humanDay(state.day))}</span>
+    <button data-day="next" ${atEnd?"disabled":""} aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+    <button class="latest" data-day="latest" ${atEnd?"disabled":""}>Latest</button></div>`;}
+
+/* ---- collapse scan-pairs into one row per product (for the selected day) ---- */
+function firstNonNull(a){for(const v of a)if(v!=null)return v;return null;}
+function lastNonNull(a){for(let i=a.length-1;i>=0;i--)if(a[i]!=null)return a[i];return null;}
+function tval(t){return Date.parse(String(t).replace(/-/g,"/"))||0;}
+function collapse(items){
+  const groups=new Map();
+  for(const it of items){const key=(it.barcode||it.ownCode||it.productId||it.description||"?").trim();
+    if(!groups.has(key))groups.set(key,[]);groups.get(key).push(it);}
+  const out=[];
+  for(const grp of groups.values()){
+    grp.sort((a,b)=>{const d=tval(a.time)-tval(b.time);if(d)return d;return (toNumber(a.raw&&a.raw.TransactionID)||0)-(toNumber(b.raw&&b.raw.TransactionID)||0);});
+    const rep=grp.find(g=>g.description)||grp[0];
+    const from=firstNonNull(grp.map(g=>g.before)), to=lastNonNull(grp.map(g=>g.after));
+    const added=grp.reduce((a,g)=>a+(g.qty||0),0), value=grp.reduce((a,g)=>a+(g.value||0),0);
+    out.push({ barcode:rep.barcode, ownCode:rep.ownCode, productId:rep.productId, description:rep.description, size:rep.size,
+      from, to, added, value, net:(to==null?0:to)-(from==null?0:from), scans:grp, count:grp.length, time:grp[grp.length-1].time,
+      isExc:grp.some(g=>g.isExc)||(to!=null&&to<0) });
+  }
+  out.sort((a,b)=>tval(b.time)-tval(a.time));
+  return out;
+}
+function applyFlow(products){
+  if(state.flow==="added")return products.filter(p=>p.net>0||(p.net===0&&p.added>0));
+  if(state.flow==="reduced")return products.filter(p=>p.net<0);
+  return products;
+}
 
 /* tabs */
 function renderTabs(){
@@ -427,54 +487,58 @@ function renderTabs(){
   tabs.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{state.active=t.dataset.key;state.search="";state.filter="all";renderTabs();renderPanel();}));
 }
 
-function toolbar(opts){const warnSel=state.filter==="exc",cards=state.itemView==="cards";
+function toolbar(opts){const cards=state.itemView==="cards";
   return `<div class="toolbar">
+    ${opts.day?daynavHTML():""}
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input id="search" type="search" placeholder="Search product or barcode" value="${esc(state.search)}" autocomplete="off"></label>
-    ${opts.filter?`<div class="seg" role="group" aria-label="Filter"><button data-f="all" aria-pressed="${!warnSel}">All lines</button><button data-f="exc" class="warnsel" aria-pressed="${warnSel}">Exceptions</button></div>`:""}
+    ${opts.flow?`<div class="seg" role="group" aria-label="Flow">
+      <button data-flow="all" aria-pressed="${state.flow==='all'}">All</button>
+      <button data-flow="added" aria-pressed="${state.flow==='added'}">Added</button>
+      <button data-flow="reduced" aria-pressed="${state.flow==='reduced'}">Reduced</button></div>`:""}
     ${opts.view?`<div class="seg" role="group" aria-label="Layout">
       <button data-v="table" aria-pressed="${!cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Table</button>
       <button data-v="cards" aria-pressed="${cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Cards</button></div>`:""}
   </div>`;}
-function matchSearch(it){const q=state.search.trim().toLowerCase();if(!q)return true;return (it.barcode+" "+it.description).toLowerCase().includes(q);}
-function listFoot(cap,total,key){return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} lines</span>${cap<total?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
+function matchSearch(p){const q=state.search.trim().toLowerCase();if(!q)return true;return ((p.barcode||"")+" "+(p.description||"")).toLowerCase().includes(q);}
+function listFoot(cap,total,key){return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} products</span>${cap<total?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
 
-function cardsHTML(items,key){
-  if(!items.length)return emptyList();
-  const cap=state.showAll[key]?items.length:Math.min(items.length,CONFIG.maxCards);let html=`<div class="cards">`;
-  for(let i=0;i<cap;i++){const it=items[i];
-    html+=`<div class="icard ${it.isExc?"is-exc":""}">${mediaHTML(it)}
+function cardsHTML(products,key){
+  if(!products.length)return emptyList();
+  const cap=state.showAll[key]?products.length:Math.min(products.length,CONFIG.maxCards);let html=`<div class="cards">`;
+  for(let i=0;i<cap;i++){const p=products[i];
+    html+=`<div class="icard ${p.isExc?"is-exc":""}">${mediaHTML(p)}
       <div class="icard__body">
-        <div class="icard__desc">${esc(it.description)||"—"}</div>
-        <div class="icard__sub">${esc(it.barcode)||"—"}${it.size?" · "+esc(it.size):""}</div>
-        <div class="icard__mv">${mvHTML(it)}</div>
-        <div class="icard__foot"><div class="icard__qty">${addHTML(it)}<small>added</small></div>
-          ${it.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</div>
+        <div class="icard__desc">${esc(p.description)||"—"}</div>
+        <div class="icard__sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div>
+        <div class="icard__mv">${mvPair(p.from,p.to)}</div>
+        <div class="icard__foot"><div class="icard__qty">${addNum(p.added)}<small>added</small></div>
+          ${p.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</div>
       </div></div>`;}
-  return html+`</div>`+listFoot(cap,items.length,key);
+  return html+`</div>`+listFoot(cap,products.length,key);
 }
-function tableHTML(items,key,withBranch){
-  if(!items.length)return `<div class="tablecard">${emptyList()}</div>`;
-  const cap=state.showAll[key]?items.length:Math.min(items.length,CONFIG.maxRows);let rows="";
-  for(let i=0;i<cap;i++){const it=items[i];const id=key+"_"+i;const open=state.expanded[id];
-    rows+=`<tr class="row ${it.isExc?"is-exc":""}" data-id="${id}">
-      ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(it._branch)}</span></td>`:""}
-      <td class="media-cell">${mediaHTML(it)}</td>
-      <td class="prod"><div class="nm">${esc(it.description)||"—"}</div><div class="sub">${esc(it.barcode)||"—"}${it.size?" · "+esc(it.size):""}</div></td>
-      <td>${mvHTML(it)}</td>
-      <td class="num">${addHTML(it)}</td>
-      <td class="num">${money(it.value)}</td>
-      <td class="time">${esc(it.time)||"—"}<span class="since">${it.time?agoShort(new Date(String(it.time).replace(/-/g,"/"))):""}</span></td>
-      <td>${it.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</td></tr>`;
+function tableHTML(products,key,withBranch){
+  if(!products.length)return `<div class="tablecard">${emptyList()}</div>`;
+  const cap=state.showAll[key]?products.length:Math.min(products.length,CONFIG.maxRows);let rows="";
+  for(let i=0;i<cap;i++){const p=products[i];const id=key+"_"+i;const open=state.expanded[id];
+    rows+=`<tr class="row ${p.isExc?"is-exc":""}" data-id="${id}">
+      ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(p._branch)}</span></td>`:""}
+      <td class="media-cell">${mediaHTML(p)}</td>
+      <td class="prod"><div class="nm">${esc(p.description)||"—"}</div><div class="sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div></td>
+      <td>${mvPair(p.from,p.to)}</td>
+      <td class="num">${addNum(p.added)}</td>
+      <td class="num">${money(p.value)}</td>
+      <td class="time">${esc(p.time)||"—"}<span class="since">${p.time?agoShort(new Date(String(p.time).replace(/-/g,"/"))):""}</span></td>
+      <td>${p.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</td></tr>`;
     if(open){const span=7+(withBranch?1:0);
-      const fields=Object.entries(it.raw).map(([k,v])=>`<div class="field"><b>${esc(k)}</b><span>${esc(v)||"—"}</span></div>`).join("");
-      rows+=`<tr class="detail"><td colspan="${span}"><div class="fields">${fields}</div></td></tr>`;}
+      const sc=p.scans.map(s=>`<div class="scanline"><b>${esc((s.time||"").slice(11)||"—")}</b><span>${mvPair(s.before,s.after)} &nbsp; ${addNum(s.qty)} &nbsp; ${money(s.value)} &nbsp; RC ${esc(s.reason)||"—"}</span></div>`).join("");
+      rows+=`<tr class="detail"><td colspan="${span}"><div style="padding:14px 16px"><div class="sectionlabel">${fmt(p.count)} scan${p.count===1?"":"s"} this day</div>${sc}</div></td></tr>`;}
   }
   return `<div class="tablecard"><div class="tablescroll"><table>
-    <thead><tr>${withBranch?"<th>Branch</th>":""}<th></th><th>Product</th><th>From → To</th><th class="num">Added</th><th class="num">Value</th><th>Scanned</th><th>Status</th></tr></thead>
-    <tbody>${rows}</tbody></table></div>${listFoot(cap,items.length,key)}</div>`;
+    <thead><tr>${withBranch?"<th>Branch</th>":""}<th></th><th>Product</th><th>From → To</th><th class="num">Added</th><th class="num">Value</th><th>Last scan</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>${listFoot(cap,products.length,key)}</div>`;
 }
-function emptyList(){return `<div class="state"><h3>${state.filter==="exc"?"No exceptions":"No matching lines"}</h3><p>${state.filter==="exc"?"Every scanned line on this view reconciles.":"Nothing matches your search."}</p></div>`;}
+function emptyList(){return `<div class="state"><h3>No products</h3><p>Nothing matches this day, flow or search.</p></div>`;}
 
 function mapNote(d){
   const rows=Object.entries(d.map).map(([k,ix])=>`<div class="mapnote__row"><b>${k}</b><span class="${ix>=0?"":"miss"}">${ix>=0?esc(d.headers[ix]):"not found"}</span></div>`).join("");
@@ -492,45 +556,52 @@ function renderOverview(){
   let cards="";
   for(const b of CONFIG.branches){const d=state.data[b.key];
     if(!d){cards+=`<div class="bcard"><div class="bcard__name">${esc(b.name)}</div><p class="lede">Loading…</p></div>`;continue;}
-    const items=d.items,exc=branchExceptions(d),units=items.reduce((a,i)=>a+(i.qty||0),0),n=newest(items),f=freshness(n);
+    const dayItems=itemsForDay(d.items), products=collapse(dayItems), exc=products.filter(p=>p.isExc);
+    const units=dayItems.reduce((a,i)=>a+(i.qty||0),0), n=newest(d.items), f=freshness(n);
     cards+=`<button class="bcard" data-key="${b.key}" aria-label="Open ${esc(b.name)}">
       <div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span>
         <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>${esc(f.label)}</span></div>
       <div class="bcard__kpis">
-        <div class="bcard__kpi"><div class="l">Lines</div><div class="v">${fmt(items.length)}</div></div>
+        <div class="bcard__kpi"><div class="l">Products</div><div class="v">${fmt(products.length)}</div></div>
         <div class="bcard__kpi"><div class="l">Units added</div><div class="v">${fmt(Math.round(units))}</div></div>
         <div class="bcard__kpi exc ${exc.length?"hot":""}"><div class="l">Exceptions</div><div class="v">${fmt(exc.length)}</div></div></div>
       ${d.demo?`<div class="demohint">Sample data — couldn't read the live sheet (${esc(d.error||"")})</div>`:""}</button>`;}
-  return `<div class="branchhead"><div class="branchhead__name">Overview</div></div>
-    <p class="lede">All four branches at a glance — green means scanned recently, amber means stale. Tap a card to open it.</p>
+  return `<div class="branchhead"><div class="branchhead__name">Overview</div>${daynavHTML()}</div>
+    <p class="lede">Each branch for the selected day — products scanned, units added, exceptions. Green means scanned recently, amber means stale. Tap a card to open it.</p>
     <div class="overview">${cards}</div>`;
 }
 function renderBranch(b){
   const d=state.data[b.key];
   if(!d)return `<div class="state"><h3>Loading ${esc(b.name)}…</h3></div>`;
-  const items=d.items,exc=branchExceptions(d),units=items.reduce((a,i)=>a+(i.qty||0),0),n=newest(items),f=freshness(n);
-  let view=(state.filter==="exc"?exc:items).filter(matchSearch);
+  const dayItems=itemsForDay(d.items);
+  const products=collapse(dayItems);
+  const exc=products.filter(p=>p.isExc);
+  const units=dayItems.reduce((a,i)=>a+(i.qty||0),0);
+  const n=newest(d.items),f=freshness(n);
+  let view=applyFlow(products).filter(matchSearch);
   return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
       <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>${esc(f.label)}</span></div>
     ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Showing sample data — couldn't read the live sheet (${esc(d.error||"")}). Share it "anyone with the link — viewer", or we use an /api endpoint.</div>`:""}
     <div class="kpis">
-      <div class="kpi"><div class="kpi__label">Lines scanned</div><div class="kpi__value">${fmt(items.length)}</div></div>
+      <div class="kpi"><div class="kpi__label">Products</div><div class="kpi__value">${fmt(products.length)}</div></div>
       <div class="kpi"><div class="kpi__label">Units added</div><div class="kpi__value">${fmt(Math.round(units))}</div></div>
       <div class="kpi kpi--age"><div class="kpi__label">Last scan</div><div class="kpi__value">${n?esc(agoShort(n)):"—"}</div></div>
       <div class="kpi kpi--exc ${exc.length?"hot":""}"><div class="kpi__label">Exceptions</div><div class="kpi__value">${fmt(exc.length)}</div></div></div>
-    ${toolbar({filter:true,view:true})}
+    ${toolbar({day:true,flow:true,view:true})}
     ${state.itemView==="cards"?cardsHTML(view,b.key):tableHTML(view,b.key,false)}
     ${mapNote(d)}`;
 }
 function renderExceptions(){
   const all=[];
-  for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)branchExceptions(d).forEach(it=>all.push(Object.assign({_branch:b.name},it)));}
+  for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items){
+    collapse(itemsForDay(d.items)).filter(p=>p.isExc).forEach(p=>all.push(Object.assign({_branch:b.name},p)));}}
   const view=all.filter(matchSearch);
   const head=`<div class="branchhead"><div class="branchhead__name">Exceptions</div>
-    <span class="freshness freshness--${all.length?"stale":"live"}"><span class="statusdot statusdot--${all.length?"stale":"live"}"></span>${all.length?fmt(all.length)+" lines to check":"All clear"}</span></div>
-    <p class="lede">Lines flagged across all branches by <code>CONFIG.isException</code> — by default stock ending negative (<code>AfterValue &lt; 0</code>) or a negative value booked.</p>`;
-  if(!all.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing flagged</h3><p>Every scanned line across all branches reconciles.</p></div></div>`;
-  return head+toolbar({filter:false,view:false})+tableHTML(view,"__exc",true);
+    <span class="freshness freshness--${all.length?"stale":"live"}"><span class="statusdot statusdot--${all.length?"stale":"live"}"></span>${all.length?fmt(all.length)+" to check":"All clear"}</span></div>
+    <p class="lede">Products flagged on the selected day across all branches — by default stock ending negative (<code>AfterValue &lt; 0</code>) or a negative value booked.</p>
+    ${toolbar({day:true,flow:false,view:false})}`;
+  if(!all.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing flagged</h3><p>Every product on this day reconciles.</p></div></div>`;
+  return head+tableHTML(view,"__exc",true);
 }
 function renderLog(){
   let board="";
@@ -557,6 +628,7 @@ function renderLog(){
 }
 
 function renderPanel(){
+  resolveDay();
   const panel=$("#panel");panel.classList.remove("panel");void panel.offsetWidth;panel.classList.add("panel");
   if(state.active==="__overview")panel.innerHTML=renderOverview();
   else if(state.active==="__exc")panel.innerHTML=renderExceptions();
@@ -566,9 +638,16 @@ function renderPanel(){
 }
 function wirePanel(){
   const s=$("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;renderPanel();const f=$("#search");if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length);}});
-  document.querySelectorAll(".seg button[data-f]").forEach(b=>b.addEventListener("click",()=>{state.filter=b.dataset.f;renderPanel();}));
+  document.querySelectorAll(".seg button[data-flow]").forEach(b=>b.addEventListener("click",()=>{state.flow=b.dataset.flow;renderPanel();}));
   document.querySelectorAll(".seg button[data-v]").forEach(b=>b.addEventListener("click",()=>{state.itemView=b.dataset.v;renderPanel();}));
-  document.querySelectorAll(".bcard[data-key]").forEach(c=>{const go=()=>{state.active=c.dataset.key;state.search="";state.filter="all";renderTabs();renderPanel();window.scrollTo({top:0,behavior:"smooth"});};
+  document.querySelectorAll(".daynav button[data-day]").forEach(b=>b.addEventListener("click",()=>{
+    const idx=state.days.indexOf(state.day);
+    if(b.dataset.day==="prev"&&idx>0)state.day=state.days[idx-1];
+    else if(b.dataset.day==="next"&&idx>=0&&idx<state.days.length-1)state.day=state.days[idx+1];
+    else if(b.dataset.day==="latest"&&state.days.length)state.day=state.days[state.days.length-1];
+    state.expanded={}; renderPanel();
+  }));
+  document.querySelectorAll(".bcard[data-key]").forEach(c=>{const go=()=>{state.active=c.dataset.key;state.search="";state.flow="all";renderTabs();renderPanel();window.scrollTo({top:0,behavior:"smooth"});};
     c.addEventListener("click",go);c.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});});
   document.querySelectorAll("tr.row").forEach(tr=>tr.addEventListener("click",()=>{const id=tr.dataset.id;state.expanded[id]=!state.expanded[id];renderPanel();}));
   document.querySelectorAll("[data-showall]").forEach(b=>b.addEventListener("click",()=>{state.showAll[b.dataset.showall]=true;renderPanel();}));
