@@ -612,7 +612,10 @@ function collapse(items){
     grp.sort((a,b)=>{const d=tval(a.time)-tval(b.time);if(d)return d;return (toNumber(a.raw&&a.raw.TransactionID)||0)-(toNumber(b.raw&&b.raw.TransactionID)||0);});
     const rep=grp.find(g=>g.description)||grp[0];
     const from=firstNonNull(grp.map(g=>g.before)), to=lastNonNull(grp.map(g=>g.after));
-    const added=grp.reduce((a,g)=>a+(g.qty||0),0), value=grp.reduce((a,g)=>a+(g.value||0),0);
+    // "added" is measured FROM ZERO: clearing a negative (oversold) balance up to 0 is NOT stock arriving,
+    // only the part at/above 0 counts. e.g. -1 -> 4 is +4, not +5; 2 -> 6 is +4; 610 -> 500 is -110.
+    const fz=v=>Math.max(0, v==null?0:v);
+    const added=fz(to)-fz(from), value=grp.reduce((a,g)=>a+(g.value||0),0);
     out.push({ barcode:rep.barcode, ownCode:rep.ownCode, productId:rep.productId, description:rep.description, size:rep.size,
       from, to, added, value, net:(to==null?0:to)-(from==null?0:from), scans:grp, count:grp.length, time:grp[grp.length-1].time,
       isExc:grp.some(g=>g.isExc)||(to!=null&&to<0) });
@@ -774,7 +777,7 @@ function renderOverview(){
   for(const b of CONFIG.branches){const d=state.data[b.key];
     if(!d){cards+=`<div class="bcard"><div class="bcard__name">${esc(b.name)}</div><p class="lede">Loading…</p></div>`;continue;}
     const dayItems=itemsForDay(d.items), products=collapse(dayItems), exc=products.filter(p=>p.isExc);
-    const units=dayItems.reduce((a,i)=>a+(i.qty||0),0), n=newest(d.items), f=freshness(n);
+    const units=d.movements?dayItems.reduce((a,i)=>a+(i.qty||0),0):products.reduce((a,p)=>a+(p.added||0),0), n=newest(d.items), f=freshness(n);
     const ps=provStats(d);
     cards+=`<button class="bcard" data-key="${b.key}" aria-label="Open ${esc(b.name)}">
       <div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span>
@@ -797,7 +800,7 @@ function renderBranch(b){
   const dayItems=itemsForDay(d.items);
   const products=collapse(dayItems);
   const exc=products.filter(p=>p.isExc);
-  const units=dayItems.reduce((a,i)=>a+(i.qty||0),0);
+  const units=d.movements?dayItems.reduce((a,i)=>a+(i.qty||0),0):products.reduce((a,p)=>a+(p.added||0),0);
   const n=newest(d.items),f=freshness(n);
   const ps=d.movements?null:provStats(d);
   let view=applyFlow(products); if(!d.movements)view=applyProv(view); view=view.filter(matchSearch);
