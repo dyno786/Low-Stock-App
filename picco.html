@@ -289,7 +289,11 @@ const CONFIG = {
   staleAfterMinutes: 60,
   refreshMinutes: 5,
   maxRows: 400,
-  maxCards: 120
+  maxCards: 120,
+  // Branch picco scan timestamps are stored in UTC (the till exports UTC, e.g. a
+  // scan shown as 15:01 UTC is 16:01 BST). Convert them to the viewer's local time so
+  // "minutes ago" is correct. Warehouse Movements are already local, so they're left alone.
+  branchTimeUTC: true
 };
 
 /* sample data in the REAL schema (shown if a sheet can't be read yet) */
@@ -352,7 +356,7 @@ function normalise(rows){
     const o={ barcode:String(get(map.barcode)).replace(/\.0$/,""), description:get(map.description), size:get(map.size),
       qty:toNumber(get(map.qty)), qtyRaw:get(map.qty), value:toNumber(get(map.value)),
       before:toNumber(get(map.before)), after:toNumber(get(map.after)),
-      time:get(map.timestamp), productId:String(get(map.productId)).replace(/\.0$/,""),
+      time:(CONFIG.branchTimeUTC?utcToLocal(get(map.timestamp)):get(map.timestamp)), productId:String(get(map.productId)).replace(/\.0$/,""),
       ownCode:String(get(map.ownCode)||"").trim(),
       stock:get(map.stock), reason:get(map.reason),
       raw:headers.reduce((a,h,i)=>{a[h]=r[i]!==undefined?cleanCell(r[i]):"";return a;},{}) };
@@ -367,6 +371,13 @@ function movementsUrl(m){ return m.url || `https://docs.google.com/spreadsheets/
 /* dd/mm/yyyy [hh:mm:ss] -> yyyy-mm-dd hh:mm:ss (so dayKey/newest work). Leaves yyyy-… untouched. */
 function ukDate(s){const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(String(s||"").trim());
   if(!m)return s;const z=n=>String(n).padStart(2,"0");return `${m[3]}-${z(m[2])}-${z(m[1])} ${z(m[4]||0)}:${z(m[5]||0)}:${z(m[6]||0)}`;}
+
+/* "yyyy-mm-dd hh:mm:ss" understood as UTC -> same format in the viewer's local timezone.
+   Fixes branch scans showing ~1h stale on BST when the till stores UTC. */
+function utcToLocal(s){const m=/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(s||"").trim());
+  if(!m)return s;const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]||0));
+  if(isNaN(d))return s;const z=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
 
 /* trackMovementsAll "Movements" tab -> picco-shaped items, but before/after are REAL stock
    levels and qty is the signed delta. Reuses collapse/render so warehouse shows in-stock -> reduced-to. */
