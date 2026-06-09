@@ -146,6 +146,11 @@
   .prov--store{color:var(--muted); background:var(--surface-2)}
   .prov--out{color:var(--warn); background:var(--warn-wash)}
   .prov--in{color:var(--ok); background:var(--ok-wash)}
+  .traceverdict{margin:-4px 0 10px; font-size:13.5px}
+  .trace-ok{color:var(--ok); font-weight:600}
+  .trace-warn{color:var(--warn); font-weight:600}
+  .trace-muted{color:var(--muted)}
+  td .add{white-space:nowrap}
 
   .tablecard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
   .tablescroll{overflow-x:auto}
@@ -223,7 +228,9 @@
   @media (max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:760px){.overview{grid-template-columns:1fr}}
   @media (max-width:560px){
-    .kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px}
+    .kpis{grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px} .branchhead__name{font-size:21px}
+    .kpi{padding:10px 12px} .kpi__label{font-size:10px}
+    .kpi__value{font-size:18px; margin-top:2px} .kpi--age .kpi__value{font-size:14px}
     /* tabs: compact, snap-scroll, hide line-count chips (keep exceptions count) */
     /* tabs: fixed 4-across grid (wraps to rows of 4), no sideways scroll */
     .tabwrap{position:static}
@@ -789,35 +796,38 @@ function traceEvents(query){
 }
 function renderTrace(){
   const head=`<div class="branchhead"><div class="branchhead__name">Trace a product</div></div>
-    <p class="lede">Search a barcode (or name) to follow it across every branch and the warehouse over the loaded days — and see whether stock came in from the <b>Warehouse</b> or was added <b>in-store</b>.</p>
+    <p class="lede">Search a barcode (or name). For each day it shows what each shop <b>scanned IN</b> and how much the Warehouse <b>scanned OUT</b> — so if Roundhay took in 6, you can see whether the warehouse dispatched 6.</p>
     ${toolbar({day:false,flow:false,view:false})}`;
   const q=state.search.trim();
-  if(!q)return head+`<div class="tablecard"><div class="state"><h3>Enter a barcode</h3><p>Type a barcode or product name above to trace where it has moved, by day and location.</p></div></div>`;
+  if(!q)return head+`<div class="tablecard"><div class="state"><h3>Enter a barcode</h3><p>Type a barcode or product name above to trace it across the shops and warehouse.</p></div></div>`;
   const evs=traceEvents(q);
-  if(!evs.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing found</h3><p>No branch or warehouse activity for “${esc(q)}” in the loaded data (the feeds usually hold the last day or two).</p></div></div>`;
+  if(!evs.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing found</h3><p>No activity for “${esc(q)}” in the loaded data (the feeds usually hold the last day or two).</p></div></div>`;
   const rep=evs.find(e=>e.desc)||evs[0];
-  const prod=`<div class="traceprod">${mediaHTML({description:rep.desc,barcode:rep.barcode})}<div><div class="nm">${esc(rep.desc)||"—"}</div><div class="sub">${esc(rep.barcode||q)}${rep.size?" · "+esc(rep.size):""}</div></div></div>`;
+  const prod=`<div class="traceprod">${mediaHTML({description:rep.desc,barcode:rep.barcode})}<div><div class="nm">${esc(rep.desc)||"—"}</div><div class="sub">${esc(rep.barcode||q)}</div></div></div>`;
   const days=[...new Set(evs.map(e=>e.day))].filter(Boolean).sort().reverse();
   let blocks="";
   for(const day of days){
     const de=evs.filter(e=>e.day===day);
-    const whOut=de.some(e=>e.movements&&(e.qty||0)<0);   // warehouse dispatched (REMOVED) this barcode that day
-    const byLoc=new Map();
-    for(const e of de){if(!byLoc.has(e.key))byLoc.set(e.key,{name:e.branch,movements:e.movements,net:0,count:0,last:e.time,evs:[]});
-      const o=byLoc.get(e.key);o.net+=(e.qty||0);o.count++;o.evs.push(e);if(tval(e.time)>tval(o.last))o.last=e.time;}
-    const ordered=[...byLoc.values()].sort((a,b)=>(b.movements?1:0)-(a.movements?1:0)); // warehouse first
-    let locRows="";
-    for(const o of ordered){
-      const sorted=o.evs.slice().sort((a,b)=>tval(a.time)-tval(b.time));
-      const moved=o.movements
-        ? `${mvPair(firstNonNull(sorted.map(e=>e.from)),lastNonNull(sorted.map(e=>e.to)))}<span class="addtag">${addNum(o.net)}</span>`
-        : `${addNum(o.net)} <small>${fmt(o.count)} scan${o.count===1?"":"s"}</small>`;
-      const prov=o.movements
-        ? (o.net<0?`<span class="provtag prov--out">dispatched from warehouse</span>`:`<span class="provtag prov--in">delivered into warehouse</span>`)
-        : (whOut?`<span class="provtag prov--from">likely from warehouse</span>`:`<span class="provtag prov--store">in-store</span>`);
-      locRows+=`<tr><td class="prod"><div class="nm">${esc(o.name)}</div></td><td class="mv-cell">${moved}</td><td class="time-cell"><span class="ts">${timeOnly(o.last)}</span></td><td style="text-align:right">${prov}</td></tr>`;
+    let whOut=0, whIn=0; const byBranch=new Map();
+    for(const e of de){
+      if(e.movements){ if((e.qty||0)<0)whOut+=-(e.qty); else if((e.qty||0)>0)whIn+=(e.qty||0); }
+      else{ const o=byBranch.get(e.key)||{name:e.branch,inq:0,count:0,last:e.time}; o.inq+=(e.qty||0); o.count++; if(tval(e.time)>tval(o.last))o.last=e.time; byBranch.set(e.key,o); }
     }
-    blocks+=`<p class="sectionlabel">${esc(humanDay(day))}</p><div class="tablecard"><div class="tablescroll"><table><tbody>${locRows}</tbody></table></div></div>`;
+    const totalIn=[...byBranch.values()].reduce((a,o)=>a+o.inq,0);
+    let rows="";
+    for(const o of byBranch.values()){
+      const tag = whOut>0 ? `<span class="provtag prov--from">likely from warehouse</span>` : `<span class="provtag prov--store">in-store / supplier</span>`;
+      rows+=`<tr><td class="prod"><div class="nm">${esc(o.name)}</div><div class="sub">${fmt(o.count)} scan${o.count===1?"":"s"} · last ${esc(timeOnly(o.last))}</div></td>
+        <td><span class="add pos">scanned IN +${fmt(o.inq)}</span></td><td style="text-align:right">${tag}</td></tr>`;
+    }
+    if(whOut>0)rows+=`<tr><td class="prod"><div class="nm">Warehouse</div></td><td><span class="add neg">scanned OUT −${fmt(whOut)}</span></td><td style="text-align:right"><span class="provtag prov--out">dispatched</span></td></tr>`;
+    if(whIn>0)rows+=`<tr><td class="prod"><div class="nm">Warehouse</div></td><td><span class="add pos">delivered IN +${fmt(whIn)}</span></td><td style="text-align:right"><span class="provtag prov--in">delivery</span></td></tr>`;
+    let verdict="";
+    if(byBranch.size&&whOut>0) verdict = (totalIn===whOut)
+      ? `<span class="trace-ok">✓ Matches — shops took in ${fmt(totalIn)}, warehouse sent out ${fmt(whOut)}</span>`
+      : `<span class="trace-warn">Shops took in ${fmt(totalIn)} · warehouse sent out ${fmt(whOut)}${totalIn>whOut?" (more taken in than warehouse dispatched)":" (warehouse sent out more than shops logged)"}</span>`;
+    else if(byBranch.size) verdict = `<span class="trace-muted">No warehouse dispatch this day — added in-store / from supplier</span>`;
+    blocks+=`<p class="sectionlabel">${esc(humanDay(day))}</p>${verdict?`<p class="traceverdict">${verdict}</p>`:""}<div class="tablecard"><div class="tablescroll"><table><tbody>${rows}</tbody></table></div></div>`;
   }
   return head+prod+blocks;
 }
