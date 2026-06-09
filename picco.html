@@ -205,7 +205,30 @@
 
   @media (max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:760px){.overview{grid-template-columns:1fr}}
-  @media (max-width:520px){.kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px} thead th{top:0}}
+  @media (max-width:560px){
+    .kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px} thead th{top:0}
+    /* tabs: compact, snap-scroll, hide line-count chips (keep exceptions count) */
+    .tabwrap{position:relative}
+    .tabs{scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; padding-right:26px}
+    .tab{padding:10px 11px 12px; font-size:13.5px; scroll-snap-align:start}
+    .tab .tab__count{display:none}
+    .tab--exc .tab__count{display:inline-block}
+    .tabwrap::after{content:""; position:absolute; top:10px; right:0; bottom:0; width:30px;
+      background:linear-gradient(to right, rgba(244,246,248,0), rgba(244,246,248,.95)); pointer-events:none}
+    /* product table: fit everything on screen — drop secondary columns, keep movement + added */
+    .tablescroll{overflow-x:visible}
+    table{min-width:0; width:100%; table-layout:fixed}
+    thead th, tbody td{padding:9px 8px}
+    th.val-cell, td.val-cell, th.time-cell, td.time-cell, th.status-cell, td.status-cell{display:none}
+    td.media-cell{width:42px; padding:7px 0 7px 10px}
+    th.media-cell{width:42px}
+    td.media-cell .media{width:34px; height:34px}
+    td.prod{min-width:0} td.prod .nm{font-size:14px; line-height:1.25} td.prod .sub{font-size:10.5px}
+    th.mv-cell, td.mv-cell{width:84px; white-space:nowrap}
+    .mv{font-size:12px; gap:5px}
+    th.add-cell, td.add-cell{width:52px; padding-right:12px}
+    .scanline{flex-wrap:wrap}
+  }
   @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
 </style>
 </head>
@@ -220,7 +243,7 @@
       <button class="btn" id="refresh" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Refresh</button>
     </div>
-    <nav class="tabs" id="tabs" role="tablist" aria-label="Views"></nav>
+    <div class="tabwrap"><nav class="tabs" id="tabs" role="tablist" aria-label="Views"></nav></div>
   </div>
 </header>
 
@@ -571,17 +594,17 @@ function tableHTML(products,key,withBranch){
       ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(p._branch)}</span></td>`:""}
       <td class="media-cell">${mediaHTML(p)}</td>
       <td class="prod"><div class="nm">${esc(p.description)||"—"}</div><div class="sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div></td>
-      <td>${mvPair(p.from,p.to)}</td>
-      <td class="num">${addNum(p.added)}</td>
-      <td class="num">${money(p.value)}</td>
-      <td class="time">${esc(p.time)||"—"}<span class="since">${p.time?agoShort(new Date(String(p.time).replace(/-/g,"/"))):""}</span></td>
-      <td>${p.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</td></tr>`;
+      <td class="mv-cell">${mvPair(p.from,p.to)}</td>
+      <td class="num add-cell">${addNum(p.added)}</td>
+      <td class="num val-cell">${money(p.value)}</td>
+      <td class="time time-cell"><span class="ts">${esc(p.time)||"—"}</span><span class="since">${p.time?agoShort(new Date(String(p.time).replace(/-/g,"/"))):""}</span></td>
+      <td class="status-cell">${p.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</td></tr>`;
     if(open){const span=7+(withBranch?1:0);
       const sc=p.scans.map(s=>`<div class="scanline"><b>${esc((s.time||"").slice(11)||"—")}</b><span>${mvPair(s.before,s.after)} &nbsp; ${addNum(s.qty)} &nbsp; ${money(s.value)} &nbsp; RC ${esc(s.reason)||"—"}</span></div>`).join("");
       rows+=`<tr class="detail"><td colspan="${span}"><div style="padding:14px 16px"><div class="sectionlabel">${fmt(p.count)} scan${p.count===1?"":"s"} this day</div>${sc}</div></td></tr>`;}
   }
   return `<div class="tablecard"><div class="tablescroll"><table>
-    <thead><tr>${withBranch?"<th>Branch</th>":""}<th></th><th>Product</th><th>From → To</th><th class="num">Added</th><th class="num">Value</th><th>Last scan</th><th>Status</th></tr></thead>
+    <thead><tr>${withBranch?"<th>Branch</th>":""}<th class="media-cell"></th><th>Product</th><th class="mv-cell">From → To</th><th class="num add-cell">Added</th><th class="num val-cell">Value</th><th class="time-cell">Last scan</th><th class="status-cell">Status</th></tr></thead>
     <tbody>${rows}</tbody></table></div>${listFoot(cap,products.length,key)}</div>`;
 }
 function emptyList(){return `<div class="state"><h3>No products</h3><p>Nothing matches this day, flow or search.</p></div>`;}
