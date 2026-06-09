@@ -102,6 +102,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .pk-scanout .so-lbl{font-size:7px;color:var(--purpletxt);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;font-weight:700}
 .pk-scanout.done{background:var(--greenbg)}
 .pk-scanout.done .so-num,.pk-scanout.done .so-lbl{color:var(--green)}
+.pk-scanout{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pk-rowbar{height:5px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden}
+.pk-rowbar-fill{height:100%;width:0;background:var(--green);border-radius:3px;transition:width .25s}
+.zoomable{cursor:zoom-in}
+#lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
+#lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 
 /* PICK STRIP — horizontal 3 column */
 .pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
@@ -250,6 +256,7 @@ var pkTx={};
 try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
 // editable warehouse send quantities: whQty[bc] = [n,n,n]; and top-up target (default 7)
 var whQty={};try{whQty=JSON.parse(localStorage.getItem('cc_wh_qty')||'{}');}catch(e){}
+var pickCounts=[0,0,0];
 function loadTarget(){var v=parseInt(localStorage.getItem('cc_wh_target'));return (isNaN(v)||v<1)?7:v;}
 function saveTarget(v){try{localStorage.setItem('cc_wh_target',String(v));}catch(e){}}
 
@@ -309,7 +316,9 @@ function cl(v){return String(v==null?'':v).trim();}
 function pD(s){if(!s||s==='Never'||s==='NULL')return null;var p=s.split('/');if(p.length===3){var d=new Date(+p[2],+p[1]-1,+p[0]);return isNaN(d)?null:d;}return null;}
 function dAgo(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
 function getQty(bi,bc){var p=bm[bi]?bm[bi][bc]:null;return p?p.qty:0;}
-function imgEl(bc,sz){sz=sz||44;if(imgs[bc])return '<img src="'+imgs[bc]+'" loading="lazy" onerror="this.style.display=\'none\'" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';}
+function imgPH(){return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';}
+function imgErr(img){try{img.outerHTML=imgPH();}catch(e){img.style.display='none';}}
+function imgEl(bc,sz){sz=sz||44;if(imgs[bc])return '<img src="'+imgs[bc]+'" loading="lazy" data-full="'+imgs[bc]+'" class="zoomable" onerror="imgErr(this)" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';return imgPH();}
 
 // ── DEAD STOCK CLASSIFIER (uses branch sales, not WH) ──────
 // Warehouse has no till — LastSold there is meaningless
@@ -389,15 +398,14 @@ function updateBranchCards(){
     var data=bd[bi]||[];
     var neg=data.filter(function(p){return p.qty<0;}).length;
     var oos=data.filter(function(p){return p.qty===0&&p.ls&&p.ls!=='Never';}).length;
-    // Count today's picks for this branch
-    var picks=Object.keys(pkTx).filter(function(k){return pkTx[k]&&pkTx[k][bi];}).length;
+    var picks=(typeof pickCounts!=='undefined'&&pickCounts[bi])||0;  // items needing picking for this branch
     var nc=neg>0?'var(--red)':'var(--green)';
     html+='<div class="bc-card">'+
       '<div class="bc-name" style="color:'+bColors[bi]+'">'+bNames[bi]+'</div>'+
       '<div class="bc-stats">'+
         '<div><div class="bc-stat-val" style="color:'+nc+'">'+neg+'</div><div class="bc-stat-lbl">Neg</div></div>'+
         '<div><div class="bc-stat-val" style="color:var(--amber)">'+oos+'</div><div class="bc-stat-lbl">OOS</div></div>'+
-        '<div><div class="bc-stat-val" style="color:var(--purpletxt)">'+picks+'</div><div class="bc-stat-lbl">Picks</div></div>'+
+        '<div><div class="bc-stat-val" style="color:var(--purpletxt)">'+picks+'</div><div class="bc-stat-lbl">To Pick</div></div>'+
       '</div>'+
     '</div>';
   });
@@ -451,6 +459,7 @@ function renderWH(){
   document.getElementById('prog-fill').style.width=pct+'%';
   document.getElementById('prog-txt').textContent=pct+'%';
   document.getElementById('prog-sub').textContent=doneCells+' of '+totalCells+' picks done · '+all.length+' products total';
+  pickCounts=tp.slice();
   updateBranchCards();
   var T=loadTarget();
   var targetCtl='<div class="wh-target"><span class="wh-target-lbl">Top up each branch to</span>'+
@@ -528,7 +537,10 @@ function mkRow(item){
       '<div class="pc-sub">'+(ticked?'packed':(take>0?'tap to pack':'—'))+'</div>'+
     '</div>';
   }
-  html+='</div></div>';
+  html+='</div>';
+  var rTot=0,rDone=0;for(var b2=0;b2<3;b2++){if(item.sp[b2]>0){rTot++;if(t[b2])rDone++;}}
+  var rpct=rTot>0?Math.round(rDone/rTot*100):0;
+  html+='<div class="pk-rowbar"><div class="pk-rowbar-fill" style="width:'+rpct+'%"></div></div></div>';
   return html;
 }
 
@@ -542,6 +554,7 @@ function wireTicks(all){
     var cells=row.querySelectorAll('.pk-cell[data-take="1"]');var allDone=cells.length>0;
     cells.forEach(function(c){if(!c.classList.contains('on'))allDone=false;});
     row.classList.toggle('all-done',allDone);
+    var __bar=row.querySelector('.pk-rowbar-fill');if(__bar){var __dd=0;cells.forEach(function(c){if(c.classList.contains('on'))__dd++;});__bar.style.width=(cells.length>0?Math.round(__dd/cells.length*100):0)+'%';}
     var so=row.querySelector('.pk-scanout');
     if(so){so.classList.toggle('done',allDone);var sl=so.querySelector('.so-lbl');if(sl)sl.textContent=allDone?'✓ out':'scan out';}
   }
@@ -568,6 +581,23 @@ function wireTicks(all){
       var sub=cell.querySelector('.pc-sub');if(sub)sub.textContent=cell.classList.contains('on')?'packed':(next>0?'tap to pack':'—');
       refreshRow(cell.closest('.pk-row'));
       updateProgress();
+    });
+  });
+  // tap the SCAN OUT box to pack/unpack the whole item at once
+  el.querySelectorAll('.pk-scanout').forEach(function(box){
+    box.addEventListener('click',function(){
+      var row=this.closest('.pk-row');if(!row)return;
+      var bc=row.dataset.bc;
+      var cells=row.querySelectorAll('.pk-cell[data-take="1"]');
+      if(!cells.length)return;
+      var allDone=true;cells.forEach(function(c){if(!c.classList.contains('on'))allDone=false;});
+      var mark=!allDone;
+      if(!pkTx[bc])pkTx[bc]=[false,false,false];
+      cells.forEach(function(c){var bi=+c.dataset.bi;pkTx[bc][bi]=mark;c.classList.toggle('on',mark);var dot=c.querySelector('.pc-tdot');if(dot)dot.textContent=mark?'✓':'';var sub=c.querySelector('.pc-sub');if(sub)sub.textContent=mark?'packed':'tap to pack';});
+      try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
+      if(typeof syncSave==='function')syncSave('cc_pk_ticks',pkTx);
+      refreshRow(row);updateProgress();updateBranchCards();
+      if(mark&&typeof tmrPick==='function')tmrPick();
     });
   });
   el.querySelectorAll('.pk-cell').forEach(function(cell){
@@ -642,6 +672,8 @@ document.getElementById('refresh-btn').addEventListener('click',function(){
   Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();
 });
 document.getElementById('sync-btn').addEventListener('click',doSync);
+// tap any product image to enlarge
+document.addEventListener('click',function(e){var z=e.target.closest&&e.target.closest('.zoomable');if(z&&z.dataset.full){var lb=document.getElementById('lightbox');var li=document.getElementById('lightbox-img');if(lb&&li){li.src=z.dataset.full;lb.style.display='flex';}}});
 
 // ── START ──────────────────────────────────────────────────
 Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
@@ -897,5 +929,6 @@ document.getElementById('sc-recheck').addEventListener('click',runSysCheck);
     <div id="sc-content"><div style="padding:30px;text-align:center;color:var(--sub);font-size:12px"><div class="spin" style="border-top-color:var(--purple);margin:0 auto 10px"></div>Checking all systems…</div></div>
   </div>
 </div>
+<div id="lightbox" onclick="this.style.display='none'"><img id="lightbox-img" src="" alt=""></div>
 </body>
 </html>
