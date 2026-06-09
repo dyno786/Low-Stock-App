@@ -96,6 +96,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .pk-tag-fast{background:var(--greenbg);color:var(--greentxt)}
 .pk-tag-price{background:var(--bg);color:var(--sub)}
 
+/* SCAN-OUT TOTAL */
+.pk-scanout{text-align:center;flex-shrink:0;min-width:52px;background:var(--purplebg);border-radius:9px;padding:5px 4px}
+.pk-scanout .so-num{font-size:21px;font-weight:700;color:var(--purpletxt);font-family:monospace;line-height:1}
+.pk-scanout .so-lbl{font-size:7px;color:var(--purpletxt);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;font-weight:700}
+.pk-scanout.done{background:var(--greenbg)}
+.pk-scanout.done .so-num,.pk-scanout.done .so-lbl{color:var(--green)}
+
 /* PICK STRIP — horizontal 3 column */
 .pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
 .pk-cell{border-radius:9px;padding:8px 5px;border:2px solid;text-align:center;cursor:pointer;user-select:none;position:relative;transition:background .1s,border .1s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
@@ -180,7 +187,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
         <div class="hdr-sub" id="stime" style="margin-left:9px">loading…</div>
       </div>
     </div>
-    <button onclick="document.getElementById('sc-panel').classList.add('open');runSysCheck();" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:6px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);margin-right:6px">📡</button><button class="refresh-btn" id="refresh-btn">↺ Refresh</button>
+    <button onclick="location.href='picco.html?branch=warehouse'" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:6px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);margin-right:6px">🔎 PICCO</button><button onclick="document.getElementById('sc-panel').classList.add('open');runSysCheck();" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:6px 9px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);margin-right:6px">📡</button><button class="refresh-btn" id="refresh-btn">↺ Refresh</button>
   </div>
   <div class="trolley">
     <div class="trolley-title">🛒 Picking trolley — 3 colour-coded boxes</div>
@@ -440,8 +447,9 @@ function renderWH(){
     html+=renderSection(L.normal,dp,tp);
   }
   if(!all.length)html='<div class="empty">No warehouse picks needed right now<br><small>All branches are at their target stock levels</small></div>';
+  var grandOut=all.reduce(function(s,it){return s+it.sp[0]+it.sp[1]+it.sp[2];},0);
   html+='<div class="wa-footer">'+
-    '<div class="wa-row"><span>Send pick list to all branch managers</span><span>'+all.length+' products</span></div>'+
+    '<div class="wa-row"><span>Send pick list to all branch managers</span><span>'+all.length+' products · '+grandOut+' pcs out</span></div>'+
     '<button class="wa-btn wa-btn-purple" id="wa-btn">'+waSVG()+'Send pick list</button>'+
   '</div>';
   el.innerHTML=html;
@@ -450,18 +458,8 @@ function renderWH(){
 }
 
 function renderSection(items,dp,tp){
-  var byDept={};
-  items.forEach(function(item){if(!byDept[item.dp])byDept[item.dp]=[];byDept[item.dp].push(item);});
   var html='';
-  Object.keys(byDept).sort().forEach(function(dept){
-    var di=byDept[dept];
-    var done=di.filter(function(x){var t=pkTx[x.bc]||[false,false,false];return t[0]&&t[1]&&t[2];}).length;
-    html+='<div class="pk-dept" data-dept="'+dept.replace(/"/g,'&quot;')+'">'+
-      '<span class="pk-dept-name">'+dept+'</span>'+
-      '<span class="pk-dept-sub">'+done+'/'+di.length+' picked</span>'+
-    '</div>';
-    di.forEach(function(item){html+=mkRow(item);});
-  });
+  items.slice().sort(function(a,b){return a.nm.localeCompare(b.nm);}).forEach(function(item){html+=mkRow(item);});
   return html;
 }
 
@@ -486,7 +484,7 @@ function mkRow(item){
           (item.prc>0?'<span class="pk-tag pk-tag-price">£'+item.prc.toFixed(2)+'</span>':'')+
         '</div>'+
       '</div>'+
-      '<span style="font-size:18px;flex-shrink:0">'+(allDone?'✅':'')+'</span>'+
+      '<div class="pk-scanout'+(allDone?' done':'')+'"><div class="so-num">'+(item.sp[0]+item.sp[1]+item.sp[2])+'</div><div class="so-lbl">'+(allDone?'✓ out':'scan out')+'</div></div>'+
     '</div>'+
     '<div class="pk-strip">';
   for(var bi=0;bi<3;bi++){
@@ -528,8 +526,8 @@ function wireTicks(all){
         var allDone=true;
         cells.forEach(function(c){if(!c.classList.contains('on'))allDone=false;});
         row.classList.toggle('all-done',allDone);
-        var chk=row.querySelector('span[style*="font-size:18px"]');
-        if(chk)chk.textContent=allDone?'✅':'';
+        var so=row.querySelector('.pk-scanout');
+        if(so){so.classList.toggle('done',allDone);var sl=so.querySelector('.so-lbl');if(sl)sl.textContent=allDone?'✓ out':'scan out';}
       }
       updateProgress();
       updateBranchCards();
@@ -567,10 +565,13 @@ function updateProgress(){
 function sendWA(all){
   var date=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
   var time=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  var msg='CC Warehouse Pick List\n'+date+' '+time+'\n\n';
+  var sorted=all.slice().sort(function(a,b){return a.nm.localeCompare(b.nm);});
+  var grandOut=all.reduce(function(s,it){return s+it.sp[0]+it.sp[1]+it.sp[2];},0);
+  var msg='CC Warehouse Pick List\n'+date+' '+time+'\nTOTAL TO SCAN OUT: '+grandOut+' pcs\n\n';
   ['Chapeltown','City Center','Roundhay'].forEach(function(bn,bi){
-    msg+=bn.toUpperCase()+':\n';
-    all.forEach(function(item){if(item.sp[bi]>0)msg+='  '+item.nm+(item.sz?' ('+item.sz+')':'')+' x'+item.sp[bi]+'\n';});
+    var bTotal=sorted.reduce(function(s,it){return s+(it.sp[bi]>0?it.sp[bi]:0);},0);
+    msg+=bn.toUpperCase()+' ('+bTotal+' pcs):\n';
+    sorted.forEach(function(item){if(item.sp[bi]>0)msg+='  '+item.nm+(item.sz?' ('+item.sz+')':'')+' x'+item.sp[bi]+'\n';});
     msg+='\n';
   });
   msg+='Sent from CC Warehouse App';
