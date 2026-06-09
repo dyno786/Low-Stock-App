@@ -129,11 +129,28 @@
   .mv.to-down .to{color:var(--warn)} .mv.to-down .arr{color:var(--warn)}
   .add{font-family:var(--mono); font-weight:600; font-variant-numeric:tabular-nums}
   .add.pos{color:var(--ok)} .add.neg{color:var(--bad)}
+  .addtag{margin-left:10px; padding-left:10px; border-left:1px solid var(--line)}
+  td.mv-cell .mv{display:inline-flex}
+  .listtop{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--surface-2)}
+  .listtop__val{font-size:13px; color:var(--muted)} .listtop__val b{color:var(--ink); font-family:var(--mono); font-size:14px; margin-left:4px}
+  .listtop__cnt{font-size:12px; color:var(--faint); font-family:var(--mono)}
+  .freshwrap{display:inline-flex; flex-direction:column; align-items:flex-end; gap:4px}
+  .checked{font-size:12px; color:var(--muted); font-family:var(--mono)}
+  .checked b{color:var(--ink); font-weight:600}
+  .bcard .checked{align-self:flex-start; margin-top:2px}
+  .traceprod{display:flex; align-items:center; gap:13px; margin:4px 0 18px}
+  .traceprod .media{width:54px; height:54px; border-radius:9px; border:1px solid var(--line)}
+  .traceprod .nm{font-weight:600; font-size:16px} .traceprod .sub{font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .provtag{display:inline-block; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:20px; white-space:nowrap}
+  .prov--from{color:var(--brand-ink); background:#E2F1F2}
+  .prov--store{color:var(--muted); background:var(--surface-2)}
+  .prov--out{color:var(--warn); background:var(--warn-wash)}
+  .prov--in{color:var(--ok); background:var(--ok-wash)}
 
   .tablecard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
   .tablescroll{overflow-x:auto}
-  table{border-collapse:collapse; width:100%; min-width:760px}
-  thead th{position:sticky; top:62px; background:var(--surface-2); z-index:1; text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:11px 14px; border-bottom:1px solid var(--line)}
+  table{border-collapse:collapse; width:100%; min-width:560px}
+  thead th{background:var(--surface-2); text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:11px 14px; border-bottom:1px solid var(--line)}
   th.num,td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums}
   tbody td{padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle}
   tbody tr:last-child td{border-bottom:0}
@@ -206,7 +223,7 @@
   @media (max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:760px){.overview{grid-template-columns:1fr}}
   @media (max-width:560px){
-    .kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px} thead th{top:0}
+    .kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px}
     /* tabs: compact, snap-scroll, hide line-count chips (keep exceptions count) */
     .tabwrap{position:relative}
     .tabs{scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; padding-right:26px}
@@ -215,18 +232,21 @@
     .tab--exc .tab__count{display:inline-block}
     .tabwrap::after{content:""; position:absolute; top:10px; right:0; bottom:0; width:30px;
       background:linear-gradient(to right, rgba(244,246,248,0), rgba(244,246,248,.95)); pointer-events:none}
-    /* product table: fit everything on screen — drop secondary columns, keep movement + added */
+    /* product table: everything on one screen — image, product, movement+added, time */
     .tablescroll{overflow-x:visible}
     table{min-width:0; width:100%; table-layout:fixed}
     thead th, tbody td{padding:9px 8px}
-    th.val-cell, td.val-cell, th.time-cell, td.time-cell, th.status-cell, td.status-cell{display:none}
-    td.media-cell{width:42px; padding:7px 0 7px 10px}
-    th.media-cell{width:42px}
+    td.media-cell{width:40px; padding:7px 0 7px 10px}
+    th.media-cell{width:40px}
     td.media-cell .media{width:34px; height:34px}
-    td.prod{min-width:0} td.prod .nm{font-size:14px; line-height:1.25} td.prod .sub{font-size:10.5px}
-    th.mv-cell, td.mv-cell{width:84px; white-space:nowrap}
-    .mv{font-size:12px; gap:5px}
-    th.add-cell, td.add-cell{width:52px; padding-right:12px}
+    td.prod{min-width:0} td.prod .nm{font-size:13.5px; line-height:1.25} td.prod .sub{font-size:10.5px}
+    th.mv-cell, td.mv-cell{width:104px; white-space:nowrap}
+    .mv{font-size:12px; gap:4px}
+    .addtag{margin-left:6px; padding-left:6px}
+    th.time-cell, td.time-cell{width:58px}
+    td.time-cell .ts{display:none}            /* phone: show only "x ago", not the clock */
+    td.time-cell .since{font-size:11px}
+    .listtop{padding:9px 12px} .listtop__cnt{display:none}
     .scanline{flex-wrap:wrap}
   }
   @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
@@ -448,7 +468,7 @@ async function loadBranch(b){
     if(/^\s*</.test(text)) throw new Error(useMv?"Movements tab not shared / wrong tab name":"not shared for link access");
     const d=useMv?normaliseMovements(parseCSV(text)):normalise(parseCSV(text));
     if(!d.items.length) throw new Error(useMv?"no movement rows found":"empty sheet");
-    return{demo:false,movements:useMv,...d};
+    return{demo:false,movements:useMv,checkedAt:new Date(),...d};
   }catch(err){
     if(useMv)return{demo:true,movements:true,error:String(err.message||err),...normaliseMovements(demoMovementRows())};
     return{demo:true, error:String(err.message||err), ...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};
@@ -480,6 +500,16 @@ function freshness(d){if(!d)return{cls:"none",label:"No timestamp",dot:"none"};c
   return{cls:"stale",label:"Stale · "+ago(m),dot:"stale"};}
 function ago(m){if(m<1)return"just now";if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+(h===1?" hr ago":" hrs ago");const dys=Math.floor(h/24);return dys+(dys===1?" day ago":" days ago");}
 function agoShort(d){if(!d)return"—";return ago(Math.max(0,Math.round((Date.now()-d.getTime())/60000)));}
+function timeOnly(t){const m=/\d{4}-\d{1,2}-\d{1,2}[ T](\d{1,2}:\d{2}(?::\d{2})?)/.exec(String(t||""));return m?m[1]:(String(t||"").trim()||"—");}
+/* dual readout: when the till last SCANNED vs when the monitor last CHECKED (read) the sheet */
+function freshBlock(d){
+  const n=newest(d.items), f=freshness(n);
+  const scan=n?agoShort(n):"no scans yet";
+  const checked=d.demo?"sample":(d.checkedAt?ago(Math.max(0,Math.round((Date.now()-d.checkedAt.getTime())/60000))):"—");
+  return `<div class="freshwrap">
+    <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>Scan · ${esc(scan)}</span>
+    <span class="checked">Checked <b>${esc(checked)}</b></span></div>`;
+}
 
 /* helpers */
 const $=(s,el=document)=>el.querySelector(s);
@@ -562,6 +592,7 @@ function renderTabs(){
     html+=`<button class="tab" role="tab" aria-selected="${state.active===b.key}" data-key="${b.key}"><span class="statusdot statusdot--${dot}"></span>${esc(b.name)}<span class="tab__count">${count}</span></button>`;}
   const exc=totalExceptions();
   html+=`<button class="tab tab--exc" role="tab" aria-selected="${state.active==="__exc"}" data-key="__exc"><span>Exceptions</span><span class="tab__count ${exc>0?"hot":""}">${fmt(exc)}</span></button>`;
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__trace"}" data-key="__trace">Trace</button>`;
   html+=`<button class="tab" role="tab" aria-selected="${state.active==="__log"}" data-key="__log">Update log</button>`;
   tabs.innerHTML=html;
   tabs.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{state.active=t.dataset.key;state.search="";state.filter="all";renderTabs();renderPanel();}));
@@ -599,23 +630,23 @@ function cardsHTML(products,key){
 }
 function tableHTML(products,key,withBranch){
   if(!products.length)return `<div class="tablecard">${emptyList()}</div>`;
-  const cap=state.showAll[key]?products.length:Math.min(products.length,CONFIG.maxRows);let rows="";
+  const cap=state.showAll[key]?products.length:Math.min(products.length,CONFIG.maxRows);
+  const totalVal=products.reduce((a,p)=>a+(p.value||0),0);
+  let rows="";
   for(let i=0;i<cap;i++){const p=products[i];const id=key+"_"+i;const open=state.expanded[id];
     rows+=`<tr class="row ${p.isExc?"is-exc":""}" data-id="${id}">
       ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(p._branch)}</span></td>`:""}
       <td class="media-cell">${mediaHTML(p)}</td>
       <td class="prod"><div class="nm">${esc(p.description)||"—"}</div><div class="sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div></td>
-      <td class="mv-cell">${mvPair(p.from,p.to)}</td>
-      <td class="num add-cell">${addNum(p.added)}</td>
-      <td class="num val-cell">${money(p.value)}</td>
-      <td class="time time-cell"><span class="ts">${esc(p.time)||"—"}</span><span class="since">${p.time?agoShort(new Date(String(p.time).replace(/-/g,"/"))):""}</span></td>
-      <td class="status-cell">${p.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</td></tr>`;
-    if(open){const span=7+(withBranch?1:0);
-      const sc=p.scans.map(s=>`<div class="scanline"><b>${esc((s.time||"").slice(11)||"—")}</b><span>${mvPair(s.before,s.after)} &nbsp; ${addNum(s.qty)} &nbsp; ${money(s.value)} &nbsp; RC ${esc(s.reason)||"—"}</span></div>`).join("");
+      <td class="mv-cell">${mvPair(p.from,p.to)}<span class="addtag">${addNum(p.added)}</span></td>
+      <td class="time time-cell"><span class="ts">${timeOnly(p.time)}</span><span class="since">${p.time?agoShort(new Date(String(p.time).replace(/-/g,"/"))):""}</span></td></tr>`;
+    if(open){const span=4+(withBranch?1:0);
+      const sc=(p.scans||[]).map(s=>`<div class="scanline"><b>${esc(timeOnly(s.time)||"—")}</b><span>${mvPair(s.before,s.after)} &nbsp; ${addNum(s.qty)} &nbsp; ${money(s.value)}${s.reason?" &nbsp; "+(p.scans&&p.scans[0]&&p.scans[0].reason&&isNaN(+s.reason)?esc(s.reason):"RC "+esc(s.reason)):""}</span></div>`).join("");
       rows+=`<tr class="detail"><td colspan="${span}"><div style="padding:14px 16px"><div class="sectionlabel">${fmt(p.count)} scan${p.count===1?"":"s"} this day</div>${sc}</div></td></tr>`;}
   }
-  return `<div class="tablecard"><div class="tablescroll"><table>
-    <thead><tr>${withBranch?"<th>Branch</th>":""}<th class="media-cell"></th><th>Product</th><th class="mv-cell">From → To</th><th class="num add-cell">Added</th><th class="num val-cell">Value</th><th class="time-cell">Last scan</th><th class="status-cell">Status</th></tr></thead>
+  const top=`<div class="listtop"><span class="listtop__val">Total value<b>${money(totalVal)}</b></span><span class="listtop__cnt">${fmt(products.length)} product${products.length===1?"":"s"}</span></div>`;
+  return `<div class="tablecard">${top}<div class="tablescroll"><table>
+    <thead><tr>${withBranch?"<th>Branch</th>":""}<th class="media-cell"></th><th>Product</th><th class="mv-cell">From → To · Added</th><th class="time-cell">Time</th></tr></thead>
     <tbody>${rows}</tbody></table></div>${listFoot(cap,products.length,key)}</div>`;
 }
 function emptyList(){return `<div class="state"><h3>No products</h3><p>Nothing matches this day, flow or search.</p></div>`;}
@@ -640,7 +671,7 @@ function renderOverview(){
     const units=dayItems.reduce((a,i)=>a+(i.qty||0),0), n=newest(d.items), f=freshness(n);
     cards+=`<button class="bcard" data-key="${b.key}" aria-label="Open ${esc(b.name)}">
       <div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span>
-        <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>${esc(f.label)}</span></div>
+        ${freshBlock(d)}</div>
       <div class="bcard__kpis">
         <div class="bcard__kpi"><div class="l">Products</div><div class="v">${fmt(products.length)}</div></div>
         <div class="bcard__kpi"><div class="l">${d.movements?"Net change":"Units added"}</div><div class="v">${fmt(Math.round(units))}</div></div>
@@ -660,7 +691,7 @@ function renderBranch(b){
   const n=newest(d.items),f=freshness(n);
   let view=applyFlow(products).filter(matchSearch);
   return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
-      <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>${esc(f.label)}</span></div>
+      ${freshBlock(d)}</div>
     ${d.movements?`<p class="lede">Real stock movements — <b>From → To</b> is the on-hand level before and after each change. <b>Reduced</b> = removals/transfers out (e.g. <span class="mv to-down"><span class="from">610</span><span class="arr">→</span><span class="to">500</span></span>), <b>Added</b> = deliveries in. Use the toggle below.</p>`:""}
     ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Showing sample data — couldn't read the live sheet (${esc(d.error||"")}). Share it "anyone with the link — viewer", or we use an /api endpoint.</div>`:""}
     <div class="kpis">
@@ -708,11 +739,60 @@ function renderLog(){
     <div class="tablecard"><div class="tablescroll"><table><thead><tr><th>Checked at</th>${heads}</tr></thead><tbody>${logRows||`<tr><td colspan="${CONFIG.branches.length+1}" style="padding:16px;color:var(--muted)">No checks yet.</td></tr>`}</tbody></table></div></div>`;
 }
 
+/* ---- barcode trace across branches + warehouse ---- */
+function traceEvents(query){
+  const q=String(query||"").trim().toLowerCase(); if(!q)return [];
+  const evs=[];
+  for(const b of CONFIG.branches){const d=state.data[b.key]; if(!d||!d.items)continue;
+    for(const it of d.items){
+      const hay=((it.barcode||"")+" "+(it.description||"")).toLowerCase();
+      if(!hay.includes(q))continue;
+      evs.push({key:b.key,branch:b.name,movements:!!d.movements,time:it.time,day:dayKey(it.time),
+        from:it.before,to:it.after,qty:it.qty,reason:it.reason,desc:it.description,size:it.size,barcode:it.barcode});
+    }}
+  return evs;
+}
+function renderTrace(){
+  const head=`<div class="branchhead"><div class="branchhead__name">Trace a product</div></div>
+    <p class="lede">Search a barcode (or name) to follow it across every branch and the warehouse over the loaded days — and see whether stock came in from the <b>Warehouse</b> or was added <b>in-store</b>.</p>
+    ${toolbar({day:false,flow:false,view:false})}`;
+  const q=state.search.trim();
+  if(!q)return head+`<div class="tablecard"><div class="state"><h3>Enter a barcode</h3><p>Type a barcode or product name above to trace where it has moved, by day and location.</p></div></div>`;
+  const evs=traceEvents(q);
+  if(!evs.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing found</h3><p>No branch or warehouse activity for “${esc(q)}” in the loaded data (the feeds usually hold the last day or two).</p></div></div>`;
+  const rep=evs.find(e=>e.desc)||evs[0];
+  const prod=`<div class="traceprod">${mediaHTML({description:rep.desc,barcode:rep.barcode})}<div><div class="nm">${esc(rep.desc)||"—"}</div><div class="sub">${esc(rep.barcode||q)}${rep.size?" · "+esc(rep.size):""}</div></div></div>`;
+  const days=[...new Set(evs.map(e=>e.day))].filter(Boolean).sort().reverse();
+  let blocks="";
+  for(const day of days){
+    const de=evs.filter(e=>e.day===day);
+    const whOut=de.some(e=>e.movements&&(e.qty||0)<0);   // warehouse dispatched (REMOVED) this barcode that day
+    const byLoc=new Map();
+    for(const e of de){if(!byLoc.has(e.key))byLoc.set(e.key,{name:e.branch,movements:e.movements,net:0,count:0,last:e.time,evs:[]});
+      const o=byLoc.get(e.key);o.net+=(e.qty||0);o.count++;o.evs.push(e);if(tval(e.time)>tval(o.last))o.last=e.time;}
+    const ordered=[...byLoc.values()].sort((a,b)=>(b.movements?1:0)-(a.movements?1:0)); // warehouse first
+    let locRows="";
+    for(const o of ordered){
+      const sorted=o.evs.slice().sort((a,b)=>tval(a.time)-tval(b.time));
+      const moved=o.movements
+        ? `${mvPair(firstNonNull(sorted.map(e=>e.from)),lastNonNull(sorted.map(e=>e.to)))}<span class="addtag">${addNum(o.net)}</span>`
+        : `${addNum(o.net)} <small>${fmt(o.count)} scan${o.count===1?"":"s"}</small>`;
+      const prov=o.movements
+        ? (o.net<0?`<span class="provtag prov--out">dispatched from warehouse</span>`:`<span class="provtag prov--in">delivered into warehouse</span>`)
+        : (whOut?`<span class="provtag prov--from">likely from warehouse</span>`:`<span class="provtag prov--store">in-store</span>`);
+      locRows+=`<tr><td class="prod"><div class="nm">${esc(o.name)}</div></td><td class="mv-cell">${moved}</td><td class="time-cell"><span class="ts">${timeOnly(o.last)}</span></td><td style="text-align:right">${prov}</td></tr>`;
+    }
+    blocks+=`<p class="sectionlabel">${esc(humanDay(day))}</p><div class="tablecard"><div class="tablescroll"><table><tbody>${locRows}</tbody></table></div></div>`;
+  }
+  return head+prod+blocks;
+}
+
 function renderPanel(){
   resolveDay();
   const panel=$("#panel");panel.classList.remove("panel");void panel.offsetWidth;panel.classList.add("panel");
   if(state.active==="__overview")panel.innerHTML=renderOverview();
   else if(state.active==="__exc")panel.innerHTML=renderExceptions();
+  else if(state.active==="__trace")panel.innerHTML=renderTrace();
   else if(state.active==="__log")panel.innerHTML=renderLog();
   else panel.innerHTML=renderBranch(CONFIG.branches.find(x=>x.key===state.active));
   wirePanel();
