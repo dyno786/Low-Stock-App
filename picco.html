@@ -1,288 +1,607 @@
-<!DOCTYPE html>
-<html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>CC — PICCO</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PICCO · Scan monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--red:#cc0000;--redbg:#fff0f0;--redtxt:#991b1b;--green:#15803d;--greenbg:#f0fdf4;--greentxt:#14532d;
---amber:#b45309;--amberbg:#fffbeb;--ambertxt:#92400e;--purple:#6d28d9;--purplebg:#ede9fe;--purpletxt:#4c1d95;
---blue:#1d4ed8;--bluebg:#eff6ff;--bg:#f0f0f0;--s1:#fff;--border:#e0e0e0;--ink:#111;--sub:#777;
---font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:30px}
-.hdr{background:var(--purple);padding:12px 14px 0;position:sticky;top:0;z-index:50}
-.hdr-top{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px}
-.hdr-left{display:flex;align-items:center}
-.logo{width:32px;height:32px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--purple)}
-.title{color:#fff;font-size:16px;font-weight:700;margin-left:9px}
-.sub{color:rgba(255,255,255,.6);font-size:10px;margin-left:9px}
-.bsel{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:6px 8px;font-size:12px;font-weight:700;font-family:var(--font)}
-.bsel option{color:#111}
-.tabs{display:flex}
-.tab{flex:1;text-align:center;padding:11px 4px;color:rgba(255,255,255,.65);font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent}
-.tab.on{color:#fff;border-bottom-color:#fff}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:12px 13px 4px}
-.card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:9px 6px;text-align:center}
-.card.flag{background:var(--redbg);border-color:#f3c9c9}
-.cv{font-size:17px;font-weight:800;line-height:1}.cl{font-size:9px;color:var(--sub);margin-top:3px;font-weight:600}
-.card.flag .cv{color:var(--redtxt)}
-.daynav{display:flex;align-items:center;justify-content:center;gap:14px;padding:8px}
-.daynav button{background:var(--s1);border:1px solid var(--border);border-radius:8px;width:34px;height:30px;font-size:15px;cursor:pointer;color:var(--purpletxt);font-weight:700}
-.daynav .dlabel{font-size:13px;font-weight:800}
-.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 13px 8px}
-.chips::-webkit-scrollbar{display:none}
-.chip{font-size:11px;font-weight:700;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--s1);color:var(--sub);cursor:pointer;white-space:nowrap}
-.chip.on{background:var(--purplebg);border-color:var(--purple);color:var(--purpletxt)}
-.secT{padding:12px 14px 4px;font-size:12px;font-weight:800;color:var(--purpletxt)}
-.secT.r{color:var(--redtxt)}.secT.a{color:var(--ambertxt)}.secT.g{color:var(--greentxt)}
-.secT small{font-weight:600;color:var(--sub)}
-.panel{background:var(--s1);border:1px solid var(--border);border-radius:11px;margin:6px 11px;padding:11px 12px}
-.row{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid var(--border);background:var(--s1)}
-.pthumb{width:46px;height:46px;border-radius:8px;background:var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.pthumb img{width:46px;height:46px;object-fit:cover}
-.row.neg{background:var(--redbg)}
-.rm{flex:1;min-width:0}.rn{font-size:12px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rmeta{font-size:10px;color:var(--sub);margin-top:2px}
-.rr{text-align:right;flex-shrink:0}.ba{font-size:13px;font-weight:800;white-space:nowrap}
-.bneg{color:var(--red)}.bpos{color:var(--ink)}.arr{color:var(--sub)}
-.qa{font-size:10px;color:var(--green);font-weight:700;margin-top:2px}
-.tag{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:9px;margin-top:3px;background:#fff;color:var(--redtxt);border:1px solid #f3c9c9}
-.tag.t-amber{color:var(--ambertxt);border-color:#f3e3c9}
-.days{display:flex;gap:3px;align-items:flex-end;overflow-x:auto;padding:6px 2px 2px;height:120px}
-.days::-webkit-scrollbar{display:none}
-.dbar{flex:0 0 auto;width:13px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
-.dfill{width:11px;border-radius:3px 3px 0 0;min-height:2px}
-.dlab{font-size:7px;color:var(--sub);margin-top:3px;writing-mode:vertical-rl;transform:rotate(180deg);height:30px}
-.dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
-.dowc{background:var(--bg);border-radius:8px;padding:7px 2px}.down{font-size:10px;color:var(--sub);font-weight:700}.dowv{font-size:14px;font-weight:800;margin-top:3px}
-.tod{display:flex;gap:4px;align-items:flex-end;height:90px;padding-top:6px}
-.todbar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
-.todfill{width:100%;max-width:18px;background:var(--blue);border-radius:3px 3px 0 0;min-height:2px}
-.todlab{font-size:8px;color:var(--sub);margin-top:3px}
-.wk{width:100%;border-collapse:collapse;font-size:12px}
-.wk th{text-align:left;font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--border)}
-.wk td{padding:8px;border-bottom:1px solid #f1f1f1}.wk tr:last-child td{border-bottom:none}
-.bar{height:7px;background:var(--bg);border-radius:4px;overflow:hidden;margin-top:3px}.barf{height:100%;border-radius:4px}
-.note{font-size:10px;color:var(--sub);padding:8px 14px 0;line-height:1.5}
-.empty{text-align:center;color:var(--sub);padding:36px 22px;font-size:13px;line-height:1.5}
-.load{text-align:center;padding:46px;color:var(--sub)}
-.spin{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 12px}
-@keyframes sp{to{transform:rotate(360deg)}}
-</style></head><body>
+  :root{
+    --bg:#F4F6F8; --surface:#FFFFFF; --surface-2:#FBFCFD;
+    --ink:#171A21; --muted:#69727E; --faint:#9AA3AD;
+    --line:#E3E8EE; --line-strong:#D2D9E1;
+    --brand:#0F6E78; --brand-ink:#0B545C; --brand-wash:#E4F1F2;
+    --ok:#11804A; --ok-wash:#DCF3E6;
+    --warn:#9A6700; --warn-wash:#FFF4D6;
+    --bad:#B42318; --bad-wash:#FDE6E3;
+    --radius:12px; --radius-sm:8px;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --shadow:0 1px 2px rgba(20,30,45,.04),0 4px 16px rgba(20,30,45,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:"Inter",system-ui,sans-serif; font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 20px}
 
-<div class="hdr">
-  <div class="hdr-top">
-    <div class="hdr-left"><div class="logo">CC</div><div><div class="title">PICCO</div><div class="sub" id="stime">loading…</div></div></div>
-    <select class="bsel" id="bsel"></select>
+  /* top bar */
+  .topbar{position:sticky; top:0; z-index:30; background:rgba(244,246,248,.86); backdrop-filter:saturate(140%) blur(8px); border-bottom:1px solid var(--line)}
+  .topbar__inner{display:flex; align-items:center; gap:16px; height:62px}
+  .brand{display:flex; align-items:baseline; gap:10px; margin-right:auto}
+  .brand__mark{font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:22px; letter-spacing:.14em}
+  .brand__dot{color:var(--brand)}
+  .brand__sub{font-size:12px; color:var(--muted)}
+  .updated{font-size:12px; color:var(--muted); text-align:right; line-height:1.3}
+  .updated b{color:var(--ink); font-weight:600}
+  .btn{font:inherit; font-weight:600; font-size:13px; cursor:pointer; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); padding:8px 13px; border-radius:var(--radius-sm); display:inline-flex; align-items:center; gap:7px; transition:border-color .15s,background .15s,transform .05s}
+  .btn:hover{border-color:var(--brand); color:var(--brand-ink)}
+  .btn:active{transform:translateY(1px)}
+  .btn svg{width:14px; height:14px}
+  .btn.spin svg{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* tabs */
+  .tabs{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; padding:10px 0 0}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{position:relative; flex:0 0 auto; background:transparent; border:0; cursor:pointer; font:inherit; font-weight:600; font-size:13.5px; color:var(--muted); padding:11px 15px 14px; border-radius:8px 8px 0 0; white-space:nowrap; display:flex; align-items:center; gap:9px; transition:color .15s}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--ink)}
+  .tab[aria-selected="true"]::after{content:""; position:absolute; left:12px; right:12px; bottom:-1px; height:2.5px; background:var(--brand); border-radius:2px}
+  .tab__count{font-family:var(--mono); font-size:11px; font-weight:600; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:1px 7px}
+  .tab--exc[aria-selected="true"]::after{background:var(--warn)}
+  .tab--exc .tab__count.hot{background:var(--warn-wash); color:var(--warn); border-color:transparent}
+  .statusdot{width:8px; height:8px; border-radius:50%; flex:0 0 auto; background:var(--faint)}
+  .statusdot--live{background:var(--ok); box-shadow:0 0 0 3px var(--ok-wash); animation:pulse 2.4s ease-in-out infinite}
+  .statusdot--stale{background:var(--warn); box-shadow:0 0 0 3px var(--warn-wash)}
+  .statusdot--none{background:var(--faint)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+  main{padding:22px 0 80px}
+  .panel{animation:rise .25s ease both}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+
+  .branchhead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap}
+  .branchhead__name{font-family:"Space Grotesk",sans-serif; font-size:25px; font-weight:600; letter-spacing:-.01em}
+  .lede{color:var(--muted); margin:-6px 0 16px; max-width:640px}
+  .lede code,.state code,.demohint code{font-family:var(--mono); font-size:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:1px 6px}
+
+  .freshness{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:20px; border:1px solid var(--line); background:var(--surface)}
+  .freshness--live{color:var(--ok); border-color:transparent; background:var(--ok-wash)}
+  .freshness--stale{color:var(--warn); border-color:transparent; background:var(--warn-wash)}
+  .freshness--none{color:var(--muted)}
+
+  /* KPI strip */
+  .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px}
+  .kpi{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:15px 17px; box-shadow:var(--shadow)}
+  .kpi__label{font-size:11.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+  .kpi__value{font-family:"Space Grotesk",sans-serif; font-size:30px; font-weight:600; margin-top:6px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+  .kpi__value small{font-size:14px; color:var(--faint); font-weight:500; margin-left:4px}
+  .kpi--exc.hot .kpi__value{color:var(--warn)}
+
+  /* overview branch cards */
+  .overview{display:grid; grid-template-columns:repeat(2,1fr); gap:14px}
+  .bcard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; cursor:pointer; transition:border-color .15s,transform .06s; text-align:left; width:100%; font:inherit; color:inherit; display:block}
+  .bcard:hover{border-color:var(--brand)}
+  .bcard:active{transform:translateY(1px)}
+  .bcard:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .bcard__top{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:15px}
+  .bcard__name{font-family:"Space Grotesk",sans-serif; font-size:19px; font-weight:600}
+  .bcard__kpis{display:flex; gap:22px; margin-bottom:14px}
+  .bcard__kpi .l{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600}
+  .bcard__kpi .v{font-family:"Space Grotesk",sans-serif; font-size:23px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:3px}
+  .bcard__kpi.exc.hot .v{color:var(--warn)}
+  .bcard__thumbs{display:flex; gap:6px}
+  .bcard__thumbs .t{flex:1; height:48px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:6px}
+  .bcard__thumbs .t .bc{max-width:100%; height:auto}
+  .bcard__thumbs .t img{max-width:100%; max-height:100%; object-fit:contain}
+  .demohint{margin-top:13px; font-size:12px; color:var(--warn); font-weight:600}
+
+  /* toolbar */
+  .toolbar{display:flex; align-items:center; gap:10px; margin-bottom:13px; flex-wrap:wrap}
+  .search{position:relative; flex:1 1 240px; min-width:0}
+  .search input{width:100%; font:inherit; font-size:13.5px; padding:9px 12px 9px 34px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface); color:var(--ink)}
+  .search input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-wash)}
+  .search svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--faint)}
+  .seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:var(--radius-sm); overflow:hidden; background:var(--surface)}
+  .seg button{font:inherit; font-weight:600; font-size:13px; border:0; background:transparent; color:var(--muted); padding:9px 13px; cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--brand); color:#fff}
+  .seg button[aria-pressed="true"].warnsel{background:var(--warn)}
+  .seg svg{width:15px;height:15px;vertical-align:-2px}
+
+  /* item cards (with images) */
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(214px,1fr)); gap:12px}
+  .icard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column}
+  .icard.is-exc{border-color:#EFCF86}
+  .icard__media{height:92px; display:flex; align-items:center; justify-content:center; background:var(--surface-2); border-bottom:1px solid var(--line); padding:10px}
+  .icard.is-exc .icard__media{background:var(--warn-wash); border-bottom-color:#EFCF86}
+  .icard__media .bc{max-width:100%; height:auto}
+  .icard__media img{max-width:100%; max-height:100%; object-fit:contain}
+  .icard__body{padding:12px 13px; display:flex; flex-direction:column; gap:5px; flex:1}
+  .icard__desc{font-weight:600; font-size:13.5px; line-height:1.3}
+  .icard__code{font-family:var(--mono); font-size:11.5px; color:var(--brand-ink)}
+  .icard__foot{margin-top:auto; padding-top:7px; display:flex; align-items:flex-end; justify-content:space-between; gap:8px}
+  .icard__qty{font-family:"Space Grotesk",sans-serif; font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1}
+  .icard__qty small{font-size:10.5px; color:var(--faint); font-weight:500; margin-left:3px}
+
+  /* table */
+  .tablecard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
+  .tablescroll{overflow-x:auto}
+  table{border-collapse:collapse; width:100%; min-width:640px}
+  thead th{position:sticky; top:62px; background:var(--surface-2); z-index:1; text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:11px 16px; border-bottom:1px solid var(--line)}
+  th.num,td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums}
+  tbody td{padding:11px 16px; border-bottom:1px solid var(--line); vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr.row{cursor:pointer}
+  tbody tr.row:hover{background:var(--surface-2)}
+  td.media-cell{width:74px}
+  td.media-cell .bc{height:30px; width:auto; max-width:64px}
+  td.media-cell img{height:34px; width:auto; max-width:64px; object-fit:contain; border-radius:4px}
+  td.code{font-family:var(--mono); font-size:12.5px; color:var(--brand-ink); white-space:nowrap}
+  td.desc{max-width:360px}
+  td.time{color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+  tr.is-exc{background:var(--warn-wash)}
+  tr.is-exc:hover{background:#FCEDC4}
+  tr.is-exc td.code{color:var(--warn)}
+  .pill{display:inline-block; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:20px}
+  .pill--ok{color:var(--ok); background:var(--ok-wash)}
+  .pill--exc{color:var(--warn); background:#FBE7B8}
+  .branchtag{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--muted)}
+  .branchtag .statusdot{width:7px; height:7px; box-shadow:none; animation:none}
+  tr.detail td{background:var(--surface-2); padding:0}
+  .detailwrap{display:flex; gap:18px; padding:14px 16px; align-items:flex-start; flex-wrap:wrap}
+  .detailwrap .bc{height:48px; width:auto}
+  .fields{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:2px 22px; flex:1; min-width:240px}
+  .field{display:flex; gap:8px; font-size:12.5px; padding:3px 0; border-bottom:1px dotted var(--line)}
+  .field b{color:var(--muted); font-weight:600; min-width:118px; flex:0 0 auto}
+  .field span{font-family:var(--mono); color:var(--ink); word-break:break-word}
+
+  .listfoot{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 4px 0; font-size:12.5px; color:var(--muted); flex-wrap:wrap}
+  .tablecard .listfoot{padding:12px 16px; border-top:1px solid var(--line)}
+  .linkbtn{font:inherit; font-weight:600; font-size:12.5px; color:var(--brand-ink); background:none; border:0; cursor:pointer; padding:0}
+  .linkbtn:hover{text-decoration:underline}
+
+  /* update log */
+  .board{margin-bottom:24px}
+  .agetag{font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px; display:inline-block}
+  .age--live{color:var(--ok); background:var(--ok-wash)}
+  .age--stale{color:var(--warn); background:var(--warn-wash)}
+  .age--none{color:var(--muted); background:var(--surface-2)}
+  .age--err{color:var(--bad); background:var(--bad-wash)}
+  .sectionlabel{font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 10px}
+
+  /* states */
+  .state{text-align:center; padding:50px 20px; color:var(--muted)}
+  .state h3{font-family:"Space Grotesk",sans-serif; font-size:18px; color:var(--ink); margin:0 0 6px; font-weight:600}
+  .state p{margin:0 auto; max-width:460px; font-size:13.5px}
+  .state--err h3{color:var(--bad)}
+  .demobar{display:flex; align-items:center; gap:9px; font-size:12.5px; font-weight:600; color:var(--warn); background:var(--warn-wash); border:1px solid #F2DFA8; border-radius:var(--radius-sm); padding:9px 13px; margin-bottom:14px}
+  .demobar svg{width:15px; height:15px; flex:0 0 auto}
+
+  .mapnote{margin-top:16px}
+  .mapnote summary{cursor:pointer; font-size:12.5px; color:var(--muted); font-weight:600; list-style:none}
+  .mapnote summary::-webkit-details-marker{display:none}
+  .mapnote summary::before{content:"▸ "; color:var(--faint)}
+  .mapnote[open] summary::before{content:"▾ "}
+  .mapnote__body{margin-top:10px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px; font-size:12.5px}
+  .mapnote__row{display:flex; gap:10px; padding:4px 0}
+  .mapnote__row b{min-width:118px; color:var(--muted); font-weight:600}
+  .mapnote__row span{font-family:var(--mono); color:var(--ink)}
+  .mapnote__row .miss{color:var(--bad)}
+
+  footer{border-top:1px solid var(--line); padding:18px 0; font-size:12px; color:var(--faint)}
+
+  @media (max-width:760px){.overview{grid-template-columns:1fr}}
+  @media (max-width:680px){.kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px} thead th{top:0}}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="topbar__inner">
+      <div class="brand">
+        <span class="brand__mark">PICCO<span class="brand__dot">.</span></span>
+        <span class="brand__sub">Scan monitor — CC Hair &amp; Beauty</span>
+      </div>
+      <div class="updated" id="updated">—</div>
+      <button class="btn" id="refresh" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+        Refresh
+      </button>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Views"></nav>
   </div>
-  <div class="tabs"><div class="tab on" data-tab="today">Today</div><div class="tab" data-tab="activity">Activity</div></div>
-</div>
+</header>
 
-<div id="body"><div class="load"><div class="spin"></div>Loading PICCO…</div></div>
+<main class="wrap"><div id="panel" class="panel" role="tabpanel"></div></main>
+<footer class="wrap" id="footer"></footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script>
-// ════════ CONFIG — paste each branch's published PICCO CSV URL ════════
-// These go through the app's own /api/stock-data proxy (ids added in stock-data.js).
-const FEEDS = {
-  roundhay:   'picco-roundhay',
-  city:       'picco-city',
-  chapy:      'picco-chapy',
-  warehouse:  'picco-warehouse',
+/* ============================================================
+   CONFIG — the only block you need to touch.
+   ============================================================ */
+const CONFIG = {
+  // For each branch paste its PUBLISHED-TO-WEB csv link:
+  //   picco sheet → File → Share → Publish to web → pick the picco tab → CSV → copy link.
+  // Leave url:"" to show sample data for that tab so you can see the layout.
+  branches: [
+    { key:"roundhay",   name:"Roundhay",    url:"" },
+    { key:"city",       name:"City Centre", url:"" },
+    { key:"chapeltown", name:"Chapeltown",  url:"" },
+    { key:"warehouse",  name:"Warehouse",   url:"" }
+  ],
+
+  // Force a mapping if auto-detect guesses wrong. Use exact header text or a
+  // 0-based column index. Leave null to auto-detect by header name.
+  // `image` is optional: if your CSV has a product-image URL column, name it here
+  // (or let it auto-detect) and cards/rows show the photo instead of the barcode.
+  columns: { barcode:null, description:null, qty:null, timestamp:null, status:null, image:null },
+
+  // A scanned line counts as an EXCEPTION when this returns true.
+  // Default: negative quantity, or a status/variance column that isn't empty/ok/0.
+  // Send me your real picco columns and I'll lock this to the exact rule.
+  isException: (r) => {
+    if (typeof r.qty === "number" && r.qty < 0) return true;
+    const s = (r.status == null ? "" : String(r.status)).trim();
+    if (!s) return false;
+    return !/^(ok|clear|0|0\.0|0\.00|n\/a|-)$/i.test(s);
+  },
+
+  staleAfterMinutes: 45,
+  refreshMinutes: 5,
+  maxRows: 400,     // table rows before "show all"
+  maxCards: 120     // cards before "show all"
 };
-const BR_LABEL = { roundhay:'Roundhay', city:'City Centre', chapy:'Chapeltown', warehouse:'Warehouse' };
-const WIN_START=9, WIN_END=20, SLOT_MIN=30;
-const SLOTS=(WIN_END-WIN_START)*60/SLOT_MIN;
-// ══════════════════════════════════════════════════════════════════════
 
-let RECORDS=[], IMG={}, STATE={branch:'all', tab:'today', dayIdx:0, filt:'all'};
+const HINTS = {
+  barcode:    /bar.?code|ean|sku|item.?code|product.?code|^code$/i,
+  description:/descr|product.?name|^name$|title|^desc/i,
+  qty:        /qty|quantity|scanned|^count$|units|pieces|pcs/i,
+  timestamp:  /time.?stamp|scanned.?at|date.?time|^date$|^time$|when/i,
+  status:     /exception|error|status|variance|^var$|diff|delta|flag|suspicious|reason|mismatch/i,
+  image:      /image|img|photo|thumb|picture|^pic$|imageurl|image.?url/i
+};
 
-function E(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function num(x){const n=parseFloat(x);return isNaN(n)?0:n;}
-function money(v){return '£'+Math.round(v).toLocaleString();}
-function pd(s){if(!s)return null;const d=new Date(String(s).trim().replace(' ','T'));return isNaN(d)?null:d;}
-function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+/* sample data (only when a branch url is blank) */
+function demoRows(seed){
+  const base = [
+    ["5012345678900","Argan Oil Treatment 100ml","12","ok"],
+    ["5012345671234","Ceramic Round Brush 53mm","8","ok"],
+    ["5012345679991","Bleach Powder 500g","-3","NEGATIVE"],
+    ["5012345670007","Colour Developer 1L","20","ok"],
+    ["5012345678017","Foil Roll 100m","5","ok"],
+    ["5012345670441","Sectioning Clips x10","40","ok"],
+    ["5012345677788","Unknown scan","2","NOT FOUND"],
+    ["5012345679003","Toner 9.1 60ml","16","ok"],
+    ["5012345670118","Cutting Cape","7","ok"],
+    ["5012345671991","Neck Brush","11","ok"],
+    ["5012345672222","Heat Protect Spray 200ml","9","ok"],
+    ["5012345673333","Tint Bowl & Brush Set","14","ok"]
+  ];
+  const now=new Date();
+  return base.map((r,i)=>{
+    const t=new Date(now.getTime()-(i*6+seed*30)*60000);
+    return [r[0], r[1], r[2], pad(t), r[3]];
+  });
+}
+function pad(d){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
+const DEMO_HEADERS=["Barcode","Description","Qty","ScannedAt","Status"];
 
+const state={ active:"__overview", data:{}, search:"", filter:"all", itemView:"cards", expanded:{}, showAll:{}, log:[], lastUpdated:null };
+
+/* CSV parse + normalise */
+function parseCSV(text){
+  const rows=[]; let row=[],field="",inQ=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(inQ){ if(c==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false;} else field+=c; }
+    else{ if(c==='"')inQ=true; else if(c===","){row.push(field);field="";}
+      else if(c==="\n"){row.push(field);rows.push(row);row=[];field="";}
+      else if(c==="\r"){} else field+=c; }
+  }
+  if(field.length||row.length){row.push(field);rows.push(row);}
+  return rows.filter(r=>r.length>1||(r.length===1&&r[0].trim()!==""));
+}
+function resolveCol(headers,want,override){
+  if(override!=null){ if(typeof override==="number") return (override>=0&&override<headers.length)?override:-1;
+    return headers.findIndex(h=>h.trim().toLowerCase()===String(override).trim().toLowerCase()); }
+  return headers.findIndex(h=>HINTS[want].test(h.trim()));
+}
+function buildMap(headers){const m={};for(const k of ["barcode","description","qty","timestamp","status","image"])m[k]=resolveCol(headers,k,CONFIG.columns[k]);return m;}
+function toNumber(v){if(v==null)return null;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,""));return isNaN(n)?null:n;}
+function normalise(rows){
+  if(!rows.length)return{headers:[],map:{},items:[]};
+  const headers=rows[0].map(h=>h.trim());
+  const map=buildMap(headers);
+  const items=rows.slice(1).map(r=>{
+    const get=i=>(i>=0&&i<r.length)?r[i]:"";
+    const qtyRaw=get(map.qty);
+    const o={barcode:get(map.barcode),description:get(map.description),qty:toNumber(qtyRaw),qtyRaw,time:get(map.timestamp),status:get(map.status),image:get(map.image),
+      raw:headers.reduce((a,h,i)=>{a[h]=r[i]!==undefined?r[i]:"";return a;},{})};
+    if(o.image && !/^https?:\/\//i.test(String(o.image).trim())) o.image="";
+    o.isExc=!!CONFIG.isException(o);
+    return o;
+  });
+  return{headers,map,items};
+}
+
+/* fetch */
+async function loadBranch(b){
+  if(!b.url){return{demo:true,...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};}
+  try{const res=await fetch(b.url,{cache:"no-store"});if(!res.ok)throw new Error("HTTP "+res.status);
+    return{demo:false,...normalise(parseCSV(await res.text()))};}
+  catch(err){return{error:String(err.message||err)};}
+}
 async function loadAll(){
-  const out=[];
-  for(const key of Object.keys(FEEDS)){
-    try{
-      const r=await fetch('/api/stock-data?branch='+FEEDS[key],{cache:'no-store'});
-      if(!r.ok) continue;
-      const txt=await r.text();
-      if(!txt || txt.indexOf('PASTE_')>=0 || txt.trim().charAt(0)==='{') continue; // not configured / error json
-      Papa.parse(txt,{header:true,skipEmptyLines:true}).data.forEach(row=>{
-        if(!row.TransactionID && !row.ProductName) return;
-        const d=pd(row.Date);
-        out.push({br:key, id:+row.TransactionID||0, date:d, name:(row.ProductName||'').trim(),
-          size:(row.Size||'').trim(), ref:(row.Reference||'').trim(), bc:(row.Barcode||'').trim(),
-          qty:num(row.QtyAdded), val:num(row.ValueAdded),
-          before:num(row.BeforeValue), after:num(row.AfterValue)});
-      });
-    }catch(e){}
+  setRefreshing(true);
+  const results=await Promise.all(CONFIG.branches.map(loadBranch));
+  CONFIG.branches.forEach((b,i)=>state.data[b.key]=results[i]);
+  state.lastUpdated=new Date();
+  logCheck(state.lastUpdated);
+  setRefreshing(false);
+  renderTabs();renderPanel();renderUpdated();renderFooter();
+}
+function logCheck(at){
+  const entry={at,branches:{}};
+  for(const b of CONFIG.branches){
+    const d=state.data[b.key];
+    let rec={lines:null,exc:0,ageMin:null,demo:false,error:false};
+    if(d&&d.error)rec.error=true;
+    else if(d&&d.items){const n=newest(d.items);rec.lines=d.items.length;rec.exc=branchExceptions(d).length;rec.demo=!!d.demo;rec.ageMin=n?Math.max(0,Math.round((at.getTime()-n.getTime())/60000)):null;}
+    entry.branches[b.key]=rec;
   }
-  RECORDS=out.filter(r=>r.date);
-  await loadImages();
-  buildBranchSelector();
-  const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  document.getElementById('stime').textContent = RECORDS.length ? ('live · '+t+' · '+RECORDS.length.toLocaleString()+' adjustments') : 'no data yet';
-  render();
+  state.log.unshift(entry); if(state.log.length>150)state.log.pop();
 }
 
-async function loadImages(){
-  try{
-    const r=await fetch('/api/stock-data?branch=shopify-images',{cache:'no-store'});
-    if(!r.ok) return;
-    const txt=await r.text();
-    if(txt.trim().charAt(0)==='{') return;
-    Papa.parse(txt,{header:true,skipEmptyLines:true}).data.forEach(row=>{
-      const bc=(row.Barcode||'').trim();
-      const url=(row.ImageURL||row.Image||row.URL||row.image_url||'').trim();
-      if(bc && url && url.indexOf('http')===0) IMG[bc]=url;
-    });
-  }catch(e){}
-}
-function thumb(bc){
-  if(IMG[bc]) return '<img src="'+IMG[bc]+'" loading="lazy" onerror="this.style.display=\'none\'">';
-  return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+/* freshness */
+function newest(items){let max=null;for(const it of items){if(!it.time)continue;const d=new Date(String(it.time).replace(/-/g,"/").replace("T"," "));if(!isNaN(d)){if(!max||d>max)max=d;}}return max;}
+function freshness(d){if(!d)return{cls:"none",label:"No timestamp",dot:"none"};const mins=Math.round((Date.now()-d.getTime())/60000);
+  if(mins<=0)return{cls:"live",label:"Live · just now",dot:"live"};
+  if(mins<=CONFIG.staleAfterMinutes)return{cls:"live",label:"Live · scanned "+ago(mins),dot:"live"};
+  return{cls:"stale",label:"Stale · last scan "+ago(mins),dot:"stale"};}
+function ago(mins){if(mins<1)return"just now";if(mins<60)return mins+" min ago";const h=Math.floor(mins/60);if(h<24)return h+(h===1?" hr ago":" hrs ago");const days=Math.floor(h/24);return days+(days===1?" day ago":" days ago");}
+
+/* helpers */
+const $=(s,el=document)=>el.querySelector(s);
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function fmt(n){return n==null?"—":n.toLocaleString("en-GB");}
+function branchExceptions(d){return(d&&d.items)?d.items.filter(i=>i.isExc):[];}
+function totalExceptions(){return CONFIG.branches.reduce((a,b)=>{const d=state.data[b.key];return a+(d&&d.items?branchExceptions(d).length:0);},0);}
+function mediaHTML(it){
+  if(it.image)return `<img loading="lazy" src="${esc(it.image)}" alt="" onerror="this.remove()">`;
+  return `<svg class="bc" data-code="${esc(it.barcode)}"></svg>`;
 }
 
-function buildBranchSelector(){
-  const present=[...new Set(RECORDS.map(r=>r.br))];
-  const sel=document.getElementById('bsel');
-  let opts='<option value="all">All branches</option>';
-  Object.keys(FEEDS).forEach(k=>{ if(present.includes(k)) opts+=`<option value="${k}">${BR_LABEL[k]}</option>`; });
-  sel.innerHTML=opts; sel.value=STATE.branch;
+/* barcodes (lazy, client-side, no API) */
+let bcObserver=null;
+function renderBC(el){el.setAttribute("data-done","1");const code=el.getAttribute("data-code")||"";
+  if(!code){el.remove();return;}
+  try{window.JsBarcode(el,code,{format:"CODE128",height:34,width:1.4,margin:0,displayValue:false,background:"transparent",lineColor:"#171A21"});}
+  catch(e){const s=document.createElement("span");s.style.cssText="font-family:var(--mono);font-size:11px;color:var(--faint)";s.textContent=code;el.replaceWith(s);}
+}
+function lazyBarcodes(){
+  if(!window.JsBarcode)return;
+  if(bcObserver)bcObserver.disconnect();
+  bcObserver=new IntersectionObserver((ents)=>{ents.forEach(e=>{if(e.isIntersecting){renderBC(e.target);bcObserver.unobserve(e.target);}});},{rootMargin:"150px"});
+  document.querySelectorAll("svg.bc[data-code]:not([data-done])").forEach(el=>bcObserver.observe(el));
 }
 
-function recs(){ return STATE.branch==='all' ? RECORDS : RECORDS.filter(r=>r.br===STATE.branch); }
-
-// ─────────── TODAY ───────────
-function dayList(){ return [...new Set(recs().map(r=>ymd(r.date)))].sort(); }
-function collapse(dayStr){
-  const rows=recs().filter(r=>ymd(r.date)===dayStr);
-  const g={};
-  rows.forEach(r=>{ const k=r.name+'|'+r.size+'|'+r.ref+'|'+r.br;
-    (g[k]=g[k]||[]).push(r); });
-  const ev=[];
-  Object.values(g).forEach(rs=>{ rs.sort((a,b)=>a.id-b.id);
-    const before=rs[0].before, after=rs[rs.length-1].after;
-    const qty=rs.reduce((s,r)=>s+r.qty,0), val=rs.reduce((s,r)=>s+r.val,0);
-    const tm=rs[rs.length-1].date.toTimeString().slice(0,5);
-    let cat = after<0 ? 'still_neg' : before<0 ? 'corrected' : 'normal';
-    ev.push({name:rs[0].name,size:rs[0].size,ref:rs[0].ref,br:rs[0].br,bc:rs[0].bc,time:tm,before:Math.round(before),after:Math.round(after),qty:Math.round(qty),val,cat,key:rs[rs.length-1].id});
-  });
-  ev.sort((a,b)=> b.key-a.key);   // newest entry first
-  return ev;
-}
-function renderToday(){
-  const days=dayList();
-  if(!days.length){ document.getElementById('body').innerHTML='<div class="empty">No PICCO data for this branch yet.<br><small>Publish the branch\'s PICCO tab and paste its URL in stock-data.js.</small></div>'; return; }
-  if(STATE.dayIdx>days.length-1) STATE.dayIdx=days.length-1;
-  if(STATE.dayIdx<0) STATE.dayIdx=0;
-  const day=days[days.length-1-STATE.dayIdx];
-  const ev=collapse(day);
-  const exc=ev.filter(e=>e.cat==='still_neg').length;
-  const units=ev.reduce((s,e)=>s+e.qty,0), val=ev.reduce((s,e)=>s+e.val,0);
-  let h=`<div class="daynav"><button id="prevd">◀</button><span class="dlabel">${new Date(day).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</span><button id="nextd">▶</button></div>`;
-  h+=`<div class="cards"><div class="card"><div class="cv">${ev.length}</div><div class="cl">products</div></div>
-    <div class="card"><div class="cv">${units}</div><div class="cl">units added</div></div>
-    <div class="card"><div class="cv">${money(val)}</div><div class="cl">value</div></div>
-    <div class="card flag"><div class="cv">${exc}</div><div class="cl">exceptions</div></div></div>`;
-  h+='<div class="secT">Adjustments <small>· newest first · red = still negative</small></div>';
-  ev.forEach(e=>{ const bc=e.before<0?'bneg':'bpos', ac=e.after<0?'bneg':'bpos';
-    h+=`<div class="row ${e.cat==='still_neg'?'neg':''}"><div class="pthumb">${thumb(e.bc)}</div><div class="rm"><div class="rn">${E(e.name)}</div>
-      <div class="rmeta">${e.size?E(e.size)+' · ':''}${e.bc?E(e.bc)+' · ':''}${STATE.branch==='all'?BR_LABEL[e.br]+' · ':''}${e.time} · ref ${E(e.ref)}</div>
-      ${e.cat==='still_neg'?'<span class="tag">still '+e.after+'</span>':e.cat==='corrected'?'<span class="tag t-amber">was '+e.before+'</span>':''}</div>
-      <div class="rr"><div class="ba"><span class="${bc}">${e.before}</span> <span class="arr">→</span> <span class="${ac}">${e.after}</span></div>
-      <div class="qa">+${e.qty} added</div></div></div>`;
-  });
-  h+='<div class="note"><b>Newest first.</b> Pairs collapsed to one line per product. <b>Red rows</b> ended still negative (count looks off); amber <i>"was −N"</i> = corrected from negative.</div>';
-  document.getElementById('body').innerHTML=h;
-  document.getElementById('prevd').onclick=()=>{STATE.dayIdx++;render();};
-  document.getElementById('nextd').onclick=()=>{STATE.dayIdx--;render();};
-}
-
-// ─────────── ACTIVITY ───────────
-function activity(){
-  const rs=recs().filter(r=>r.date.getHours()>=WIN_START && r.date.getHours()<WIN_END);
-  const day={}, hour={}, dow={};
-  rs.forEach(r=>{ const k=ymd(r.date);
-    const slot=Math.floor(((r.date.getHours()-WIN_START)*60+r.date.getMinutes())/SLOT_MIN);
-    (day[k]=day[k]||{slots:new Set(),n:0,first:r.date,last:r.date});
-    day[k].slots.add(slot); day[k].n++;
-    if(r.date<day[k].first)day[k].first=r.date; if(r.date>day[k].last)day[k].last=r.date;
-    hour[r.date.getHours()]=(hour[r.date.getHours()]||0)+1;
-  });
-  const keys=Object.keys(day).sort();
-  if(!keys.length) return null;
-  const start=new Date(keys[0]), end=new Date(keys[keys.length-1]);
-  const daily=[];
-  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-    const k=ymd(d), rec=day[k];
-    const active=rec?rec.slots.size:0;
-    daily.push({date:k,dow:DOW[d.getDay()],cover:Math.round(100*active/SLOTS),mins:active*SLOT_MIN,n:rec?rec.n:0,
-      first:rec?rec.first.toTimeString().slice(0,5):'',last:rec?rec.last.toTimeString().slice(0,5):''});
+/* tabs */
+function renderTabs(){
+  const tabs=$("#tabs");let html="";
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__overview"}" data-key="__overview">Overview</button>`;
+  for(const b of CONFIG.branches){
+    const d=state.data[b.key];let dot="none",count="—";
+    if(d&&d.items){dot=freshness(newest(d.items)).dot;count=fmt(d.items.length);}
+    else if(d&&d.error){count="!";}
+    html+=`<button class="tab" role="tab" aria-selected="${state.active===b.key}" data-key="${b.key}">
+      <span class="statusdot statusdot--${dot}"></span>${esc(b.name)}<span class="tab__count">${count}</span></button>`;
   }
-  daily.forEach(d=>{ (dow[d.dow]=dow[d.dow]||[]).push(d.cover); });
-  const dowAvg={}; Object.keys(dow).forEach(k=>dowAvg[k]=Math.round(dow[k].reduce((a,b)=>a+b,0)/dow[k].length));
-  // weekly (Monday start)
-  const wk={};
-  daily.forEach(d=>{ const dd=new Date(d.date); const mon=new Date(dd); mon.setDate(dd.getDate()-((dd.getDay()+6)%7));
-    const key=ymd(mon); (wk[key]=wk[key]||{cov:[],n:0,active:0});
-    wk[key].cov.push(d.cover); wk[key].n+=d.n; if(d.cover>0)wk[key].active++; });
-  const weekly=Object.keys(wk).sort().map(k=>({week:k,avg:Math.round(wk[k].cov.reduce((a,b)=>a+b,0)/wk[k].cov.length),n:wk[k].n,active:wk[k].active}));
-  return {daily,dowAvg,weekly,hour,activeDays:daily.filter(d=>d.cover>0).length,totalDays:daily.length};
-}
-function col(p){return p>=30?'var(--green)':p>=15?'var(--amber)':p>0?'var(--red)':'#d0d0d0';}
-function renderActivity(){
-  const A=activity();
-  if(!A){ document.getElementById('body').innerHTML='<div class="empty">No activity data for this branch yet.</div>'; return; }
-  const act=A.daily.filter(d=>d.cover>0);
-  const avg=act.length?Math.round(act.reduce((s,d)=>s+d.cover,0)/act.length):0;
-  const de=Object.entries(A.dowAvg);
-  const best=de.reduce((a,b)=>b[1]>a[1]?b:a), quiet=de.reduce((a,b)=>b[1]<a[1]?b:a);
-  let h=`<div class="cards">
-    <div class="card"><div class="cv">${A.activeDays}/${A.totalDays}</div><div class="cl">active days</div></div>
-    <div class="card"><div class="cv">${avg}%</div><div class="cl">avg coverage</div></div>
-    <div class="card"><div class="cv">${best[0]} ${best[1]}%</div><div class="cl">busiest</div></div>
-    <div class="card"><div class="cv">${quiet[0]} ${quiet[1]}%</div><div class="cl">quietest</div></div></div>`;
-  // daily bars (last 35)
-  const last=A.daily.slice(-35);
-  h+='<div class="secT">Daily coverage <small>· last '+last.length+' days · 9am–8pm</small></div><div class="panel"><div class="days">';
-  last.forEach(d=>{ const ht=d.cover>0?Math.max(4,d.cover):2;
-    h+=`<div class="dbar" title="${d.date} ${d.dow}: ${d.cover}% (${d.mins}min, ${d.n} adj)"><div class="dfill" style="height:${ht}%;background:${col(d.cover)}"></div><div class="dlab">${d.date.slice(5)}</div></div>`; });
-  h+='</div></div>';
-  // time of day
-  const maxH=Math.max(1,...Object.values(A.hour));
-  h+='<div class="secT">Time of day <small>· when adjustments happen</small></div><div class="panel"><div class="tod">';
-  for(let hr=WIN_START;hr<WIN_END;hr++){ const v=A.hour[hr]||0; const ht=Math.max(2,Math.round(100*v/maxH));
-    h+=`<div class="todbar" title="${hr}:00 — ${v} adjustments"><div class="todfill" style="height:${ht}%"></div><div class="todlab">${hr}</div></div>`; }
-  h+='</div></div>';
-  // day of week
-  h+='<div class="secT">By day of week <small>· avg coverage</small></div><div class="panel"><div class="dow">';
-  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(k=>{ const v=A.dowAvg[k]||0;
-    h+=`<div class="dowc"><div class="down">${k}</div><div class="dowv" style="color:${col(v)}">${v}%</div></div>`; });
-  h+='</div></div>';
-  // weekly log (week starting Monday)
-  h+='<div class="secT">Weekly log</div><div class="panel"><table class="wk"><thead><tr><th>Week starting</th><th>Active</th><th>Adj</th><th>Avg coverage</th></tr></thead><tbody>';
-  A.weekly.slice().reverse().forEach(w=>{ const dd=new Date(w.week);
-    h+=`<tr><td>${dd.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</td><td>${w.active}/7</td><td>${w.n.toLocaleString()}</td><td>${w.avg}%<div class="bar"><div class="barf" style="width:${w.avg}%;background:${col(w.avg)}"></div></div></td></tr>`; });
-  h+='</tbody></table></div>';
-  h+='<div class="note"><b>Coverage</b> = share of 30-min slots between 9am–8pm with a logged adjustment — a proxy for time on PICCO (a recount done in one burst shows as a short window).</div>';
-  document.getElementById('body').innerHTML=h;
+  const exc=totalExceptions();
+  html+=`<button class="tab tab--exc" role="tab" aria-selected="${state.active==="__exc"}" data-key="__exc">
+    <span>Exceptions</span><span class="tab__count ${exc>0?"hot":""}">${fmt(exc)}</span></button>`;
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__log"}" data-key="__log">Update log</button>`;
+  tabs.innerHTML=html;
+  tabs.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{state.active=t.dataset.key;state.search="";state.filter="all";renderTabs();renderPanel();}));
 }
 
-function render(){ if(!RECORDS.length && STATE.branch==='all'){} STATE.tab==='today'?renderToday():renderActivity(); }
+/* toolbar */
+function toolbar(opts){
+  const warnSel=state.filter==="exc";
+  const cards=state.itemView==="cards";
+  return `<div class="toolbar">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="search" placeholder="Search barcode or description" value="${esc(state.search)}" autocomplete="off"></label>
+    ${opts.filter?`<div class="seg" role="group" aria-label="Filter rows">
+      <button data-f="all" aria-pressed="${!warnSel}">All lines</button>
+      <button data-f="exc" class="warnsel" aria-pressed="${warnSel}">Exceptions only</button></div>`:""}
+    ${opts.view?`<div class="seg" role="group" aria-label="Layout">
+      <button data-v="cards" aria-pressed="${cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Cards</button>
+      <button data-v="table" aria-pressed="${!cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Table</button></div>`:""}
+  </div>`;
+}
+function matchSearch(it){const q=state.search.trim().toLowerCase();if(!q)return true;return (it.barcode+" "+it.description).toLowerCase().includes(q);}
 
-document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',function(){
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on')); this.classList.add('on');
-  STATE.tab=this.getAttribute('data-tab'); STATE.dayIdx=0; render();
-}));
-document.getElementById('bsel').addEventListener('change',function(){STATE.branch=this.value;STATE.dayIdx=0;render();});
+/* list renderers */
+function listFoot(cap,total,key){const more=cap<total;return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} lines</span>${more?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
 
-// allow picco.html?branch=roundhay|city|chapy to preselect a branch (used by branch-page buttons)
-(function(){ var qb=new URLSearchParams(location.search).get('branch'); if(qb && FEEDS[qb]) STATE.branch=qb; })();
+function cardsHTML(items,key){
+  if(!items.length)return emptyList();
+  const cap=state.showAll[key]?items.length:Math.min(items.length,CONFIG.maxCards);
+  let html=`<div class="cards">`;
+  for(let i=0;i<cap;i++){const it=items[i];
+    html+=`<div class="icard ${it.isExc?"is-exc":""}">
+      <div class="icard__media">${mediaHTML(it)}</div>
+      <div class="icard__body">
+        <div class="icard__desc">${esc(it.description)||"—"}</div>
+        <div class="icard__code">${esc(it.barcode)||"—"}</div>
+        <div class="icard__foot">
+          <div class="icard__qty">${it.qty==null?esc(it.qtyRaw)||"—":fmt(it.qty)}<small>qty</small></div>
+          ${it.isExc?`<span class="pill pill--exc">${esc(it.status)||"exception"}</span>`:`<span class="pill pill--ok">ok</span>`}
+        </div></div></div>`;
+  }
+  html+=`</div>`+listFoot(cap,items.length,key);
+  return html;
+}
+function tableHTML(items,key,withBranch){
+  if(!items.length)return `<div class="tablecard">${emptyList()}</div>`;
+  const cap=state.showAll[key]?items.length:Math.min(items.length,CONFIG.maxRows);
+  let rows="";
+  for(let i=0;i<cap;i++){const it=items[i];const id=key+"_"+i;const open=state.expanded[id];
+    rows+=`<tr class="row ${it.isExc?"is-exc":""}" data-id="${id}">
+      ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(it._branch)}</span></td>`:""}
+      <td class="media-cell">${mediaHTML(it)}</td>
+      <td class="code">${esc(it.barcode)||"—"}</td>
+      <td class="desc">${esc(it.description)||"—"}</td>
+      <td class="num">${it.qty==null?esc(it.qtyRaw)||"—":fmt(it.qty)}</td>
+      <td class="time">${esc(it.time)||"—"}</td>
+      <td>${it.isExc?`<span class="pill pill--exc">${esc(it.status)||"exception"}</span>`:`<span class="pill pill--ok">ok</span>`}</td></tr>`;
+    if(open){const span=6+(withBranch?1:0);
+      const fields=Object.entries(it.raw).map(([k,v])=>`<div class="field"><b>${esc(k)}</b><span>${esc(v)||"—"}</span></div>`).join("");
+      rows+=`<tr class="detail"><td colspan="${span}"><div class="detailwrap"><svg class="bc" data-code="${esc(it.barcode)}"></svg><div class="fields">${fields}</div></div></td></tr>`;}
+  }
+  return `<div class="tablecard"><div class="tablescroll"><table>
+    <thead><tr>${withBranch?"<th>Branch</th>":""}<th>Code</th><th>Barcode</th><th>Description</th><th class="num">Qty</th><th>Scanned</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>${listFoot(cap,items.length,key)}</div>`;
+}
+function emptyList(){return `<div class="state"><h3>${state.filter==="exc"?"No exceptions":"No matching lines"}</h3><p>${state.filter==="exc"?"Every scanned line on this view reconciles.":"Nothing matches your search."}</p></div>`;}
 
-loadAll();
-</script></body></html>
+function mapNote(d){
+  const rows=Object.entries(d.map).map(([k,ix])=>`<div class="mapnote__row"><b>${k}</b><span class="${ix>=0?"":"miss"}">${ix>=0?esc(d.headers[ix]):"not detected"}</span></div>`).join("");
+  return `<details class="mapnote"><summary>Column mapping (${d.headers.length} columns detected)</summary>
+    <div class="mapnote__body">${rows}<div class="mapnote__row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><b>all headers</b><span>${d.headers.map(esc).join(" · ")}</span></div></div></details>`;
+}
+
+/* views */
+function renderOverview(){
+  let cards="";
+  for(const b of CONFIG.branches){
+    const d=state.data[b.key];
+    if(!d){cards+=`<div class="bcard"><div class="bcard__name">${esc(b.name)}</div><p class="lede">Loading…</p></div>`;continue;}
+    if(d.error){cards+=`<button class="bcard" data-key="${b.key}"><div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span><span class="freshness freshness--none">Error</span></div><p class="demohint">${esc(d.error)} — check the published CSV link.</p></button>`;continue;}
+    const items=d.items,exc=branchExceptions(d),qty=items.reduce((a,i)=>a+(i.qty||0),0),f=freshness(newest(items));
+    const thumbs=items.slice(0,5).map(it=>`<div class="t">${mediaHTML(it)}</div>`).join("");
+    cards+=`<button class="bcard" data-key="${b.key}" aria-label="Open ${esc(b.name)}">
+      <div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span>
+        <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>${esc(f.label)}</span></div>
+      <div class="bcard__kpis">
+        <div class="bcard__kpi"><div class="l">Lines</div><div class="v">${fmt(items.length)}</div></div>
+        <div class="bcard__kpi"><div class="l">Qty</div><div class="v">${fmt(Math.round(qty))}</div></div>
+        <div class="bcard__kpi exc ${exc.length?"hot":""}"><div class="l">Exceptions</div><div class="v">${fmt(exc.length)}</div></div></div>
+      <div class="bcard__thumbs">${thumbs}</div>
+      ${d.demo?`<div class="demohint">Sample data — connect this branch in <code>CONFIG.branches</code></div>`:""}
+    </button>`;
+  }
+  return `<div class="branchhead"><div class="branchhead__name">Overview</div></div>
+    <p class="lede">All four branches at a glance. A green dot means scanned recently, amber means the data has gone stale. Tap a card to open it.</p>
+    <div class="overview">${cards}</div>`;
+}
+
+function renderBranch(b){
+  const d=state.data[b.key];
+  if(!d)return `<div class="state"><h3>Loading ${esc(b.name)}…</h3></div>`;
+  if(d.error)return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div></div>
+    <div class="tablecard"><div class="state state--err"><h3>Couldn't load this branch</h3>
+    <p>${esc(d.error)}. Check the published CSV link is reachable and the sheet is shared to <b>anyone with the link</b> or published to the web. The link goes in <code>CONFIG.branches</code> at the top of <code>picco.html</code>.</p></div></div>`;
+  const items=d.items,exc=branchExceptions(d),qty=items.reduce((a,i)=>a+(i.qty||0),0),f=freshness(newest(items));
+  let view=(state.filter==="exc"?exc:items).filter(matchSearch);
+  return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
+      <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>${esc(f.label)}</span></div>
+    ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Sample data — no live source connected. Paste this branch's published CSV link in <code>CONFIG.branches</code>.</div>`:""}
+    <div class="kpis">
+      <div class="kpi"><div class="kpi__label">Lines scanned</div><div class="kpi__value">${fmt(items.length)}</div></div>
+      <div class="kpi"><div class="kpi__label">Total quantity</div><div class="kpi__value">${fmt(Math.round(qty))}<small>units</small></div></div>
+      <div class="kpi kpi--exc ${exc.length?"hot":""}"><div class="kpi__label">Exceptions</div><div class="kpi__value">${fmt(exc.length)}</div></div></div>
+    ${toolbar({filter:true,view:true})}
+    ${state.itemView==="cards"?cardsHTML(view,b.key):tableHTML(view,b.key,false)}
+    ${mapNote(d)}`;
+}
+
+function renderExceptions(){
+  const all=[];
+  for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)branchExceptions(d).forEach(it=>all.push(Object.assign({_branch:b.name},it)));}
+  const view=all.filter(matchSearch);
+  const head=`<div class="branchhead"><div class="branchhead__name">Exceptions</div>
+    <span class="freshness freshness--${all.length?"stale":"live"}"><span class="statusdot statusdot--${all.length?"stale":"live"}"></span>${all.length?fmt(all.length)+" lines need a look":"All clear"}</span></div>
+    <p class="lede">Lines flagged across all four branches by the rule in <code>CONFIG.isException</code> — by default a negative quantity or a non-empty status/variance value.</p>`;
+  if(!all.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing flagged</h3><p>Every scanned line across all branches reconciles. New exceptions appear here as scans come in.</p></div></div>`;
+  return head+toolbar({filter:false,view:false})+tableHTML(view,"__exc",true);
+}
+
+function renderLog(){
+  let board="";
+  for(const b of CONFIG.branches){const d=state.data[b.key];
+    if(!d){board+=`<tr><td>${esc(b.name)}</td><td>—</td><td>—</td><td class="num">—</td><td class="num">—</td><td>—</td></tr>`;continue;}
+    if(d.error){board+=`<tr><td><span class="statusdot statusdot--none"></span> ${esc(b.name)}</td><td>—</td><td><span class="agetag age--err">Error</span></td><td class="num">—</td><td class="num">—</td><td>error</td></tr>`;continue;}
+    const n=newest(d.items),f=freshness(n);
+    board+=`<tr><td><span class="statusdot statusdot--${f.dot}"></span> ${esc(b.name)}</td>
+      <td class="time">${n?pad(n):"—"}</td>
+      <td><span class="agetag age--${f.cls}">${esc(f.label)}</span></td>
+      <td class="num">${fmt(d.items.length)}</td>
+      <td class="num">${fmt(branchExceptions(d).length)}</td>
+      <td>${d.demo?"sample":"live"}</td></tr>`;
+  }
+  let logRows="";
+  for(const e of state.log){
+    let cells="";
+    for(const b of CONFIG.branches){const r=e.branches[b.key];
+      let cls="age--none",txt="—";
+      if(r.error){cls="age--err";txt="error";}
+      else if(r.ageMin!=null){cls=r.ageMin<=CONFIG.staleAfterMinutes?"age--live":"age--stale";txt=ago(r.ageMin);}
+      else if(r.lines!=null){cls="age--none";txt="no time";}
+      cells+=`<td><span class="agetag ${cls}">${txt}</span></td>`;
+    }
+    logRows+=`<tr><td class="time">${e.at.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</td>${cells}</tr>`;
+  }
+  const heads=CONFIG.branches.map(b=>`<th>${esc(b.name)}</th>`).join("");
+  return `<div class="branchhead"><div class="branchhead__name">Update log</div></div>
+    <p class="lede">How fresh each branch is right now, and a running log of every refresh this session. If a branch's age stops shrinking, its slave export or importer has stalled. (Resets on reload — say the word if you want this written to a sheet for permanent history.)</p>
+    <p class="sectionlabel">Freshness now</p>
+    <div class="tablecard board"><div class="tablescroll"><table>
+      <thead><tr><th>Branch</th><th>Last scan</th><th>Age</th><th class="num">Lines</th><th class="num">Exceptions</th><th>Source</th></tr></thead>
+      <tbody>${board}</tbody></table></div></div>
+    <p class="sectionlabel">Refresh log · ${fmt(state.log.length)} check${state.log.length===1?"":"s"} this session</p>
+    <div class="tablecard"><div class="tablescroll"><table>
+      <thead><tr><th>Checked at</th>${heads}</tr></thead>
+      <tbody>${logRows||`<tr><td colspan="${CONFIG.branches.length+1}" style="color:var(--muted);padding:16px">No checks logged yet.</td></tr>`}</tbody></table></div></div>`;
+}
+
+/* panel */
+function renderPanel(){
+  const panel=$("#panel");
+  panel.classList.remove("panel");void panel.offsetWidth;panel.classList.add("panel");
+  if(state.active==="__overview")panel.innerHTML=renderOverview();
+  else if(state.active==="__exc")panel.innerHTML=renderExceptions();
+  else if(state.active==="__log")panel.innerHTML=renderLog();
+  else panel.innerHTML=renderBranch(CONFIG.branches.find(x=>x.key===state.active));
+  wirePanel();lazyBarcodes();
+}
+function wirePanel(){
+  const s=$("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;renderPanel();const f=$("#search");if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length);}});
+  document.querySelectorAll(".seg button[data-f]").forEach(b=>b.addEventListener("click",()=>{state.filter=b.dataset.f;renderPanel();}));
+  document.querySelectorAll(".seg button[data-v]").forEach(b=>b.addEventListener("click",()=>{state.itemView=b.dataset.v;renderPanel();}));
+  document.querySelectorAll(".bcard[data-key]").forEach(c=>{
+    const go=()=>{state.active=c.dataset.key;state.search="";state.filter="all";renderTabs();renderPanel();window.scrollTo({top:0,behavior:"smooth"});};
+    c.addEventListener("click",go);
+    c.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});
+  });
+  document.querySelectorAll("tr.row").forEach(tr=>tr.addEventListener("click",()=>{const id=tr.dataset.id;state.expanded[id]=!state.expanded[id];renderPanel();}));
+  document.querySelectorAll("[data-showall]").forEach(b=>b.addEventListener("click",()=>{state.showAll[b.dataset.showall]=true;renderPanel();}));
+}
+
+function renderUpdated(){const el=$("#updated");if(!state.lastUpdated){el.textContent="";return;}
+  const t=state.lastUpdated.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  el.innerHTML=`Updated <b>${t}</b>${CONFIG.refreshMinutes?` · auto every ${CONFIG.refreshMinutes} min`:""}`;}
+function renderFooter(){$("#footer").innerHTML="PICCO scan monitor · reads each branch's published picco CSV · imports run every 10 min, exports every 3 min · barcodes rendered locally.";}
+function setRefreshing(on){const b=$("#refresh");if(!b)return;b.classList.toggle("spin",on);b.disabled=on;}
+
+/* boot */
+$("#refresh").addEventListener("click",loadAll);
+renderTabs();renderPanel();loadAll();
+if(CONFIG.refreshMinutes>0)setInterval(loadAll,CONFIG.refreshMinutes*60000);
+</script>
+</body>
+</html>
