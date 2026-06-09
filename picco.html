@@ -146,6 +146,8 @@
   .prov--store{color:var(--muted); background:var(--surface-2)}
   .prov--out{color:var(--warn); background:var(--warn-wash)}
   .prov--in{color:var(--ok); background:var(--ok-wash)}
+  .prov--neg{color:var(--warn); background:var(--warn-wash)}
+  .provrow{margin-top:5px}
   .traceverdict{margin:-4px 0 10px; font-size:13.5px}
   .trace-ok{color:var(--ok); font-weight:600}
   .trace-warn{color:var(--warn); font-weight:600}
@@ -644,30 +646,50 @@ function toolbar(opts){const cards=state.itemView==="cards";
 function matchSearch(p){const q=state.search.trim().toLowerCase();if(!q)return true;return ((p.barcode||"")+" "+(p.description||"")).toLowerCase().includes(q);}
 function listFoot(cap,total,key){return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} products</span>${cap<total?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
 
-function cardsHTML(products,key){
+/* warehouse "scanned OUT" lookup: barcode|day -> units that left the warehouse that day */
+function warehouseOutMap(){
+  const wb=CONFIG.branches.find(b=>b.movements); if(!wb)return null;
+  const d=state.data[wb.key]; if(!d||!d.items)return null;
+  if(d.demo)return {demo:true,map:{}};
+  const map={};
+  for(const it of d.items){ if((it.qty||0)<0){ const k=(it.barcode||"").trim()+"|"+dayKey(it.time); map[k]=(map[k]||0)+(-(it.qty||0)); } }
+  return {demo:false,map};
+}
+function provTag(p,wh){
+  if(!wh||wh.demo)return "";
+  const out=wh.map[(p.barcode||"").trim()+"|"+dayKey(p.time)];
+  return out>0
+    ? `<span class="provtag prov--from" title="warehouse scanned out ${fmt(out)} of this on ${esc(dayKey(p.time))}">warehouse transfer</span>`
+    : `<span class="provtag prov--neg" title="no matching warehouse dispatch that day">negative scanned in</span>`;
+}
+
+function cardsHTML(products,key,showProv){
   if(!products.length)return emptyList();
+  const wh=showProv?warehouseOutMap():null;
   const cap=state.showAll[key]?products.length:Math.min(products.length,CONFIG.maxCards);let html=`<div class="cards">`;
-  for(let i=0;i<cap;i++){const p=products[i];
+  for(let i=0;i<cap;i++){const p=products[i];const tag=wh?provTag(p,wh):"";
     html+=`<div class="icard ${p.isExc?"is-exc":""}">${mediaHTML(p)}
       <div class="icard__body">
         <div class="icard__desc">${esc(p.description)||"—"}</div>
         <div class="icard__sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div>
+        ${tag?`<div class="provrow">${tag}</div>`:""}
         <div class="icard__mv">${mvPair(p.from,p.to)}</div>
         <div class="icard__foot"><div class="icard__qty">${addNum(p.added)}<small>added</small></div>
           ${p.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</div>
       </div></div>`;}
   return html+`</div>`+listFoot(cap,products.length,key);
 }
-function tableHTML(products,key,withBranch){
+function tableHTML(products,key,withBranch,showProv){
   if(!products.length)return `<div class="tablecard">${emptyList()}</div>`;
+  const wh=showProv?warehouseOutMap():null;
   const cap=state.showAll[key]?products.length:Math.min(products.length,CONFIG.maxRows);
   const totalVal=products.reduce((a,p)=>a+(p.value||0),0);
   let rows="";
-  for(let i=0;i<cap;i++){const p=products[i];const id=key+"_"+i;const open=state.expanded[id];
+  for(let i=0;i<cap;i++){const p=products[i];const id=key+"_"+i;const open=state.expanded[id];const tag=wh?provTag(p,wh):"";
     rows+=`<tr class="row ${p.isExc?"is-exc":""}" data-id="${id}">
       ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(p._branch)}</span></td>`:""}
       <td class="media-cell">${mediaHTML(p)}</td>
-      <td class="prod"><div class="nm">${esc(p.description)||"—"}</div><div class="sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div></td>
+      <td class="prod"><div class="nm">${esc(p.description)||"—"}</div><div class="sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div>${tag?`<div class="provrow">${tag}</div>`:""}</td>
       <td class="mv-cell">${mvPair(p.from,p.to)}<span class="addtag">${addNum(p.added)}</span></td>
       <td class="time time-cell"><span class="ts">${timeOnly(p.time)}</span><span class="since">${p.time?agoShort(new Date(String(p.time).replace(/-/g,"/"))):""}</span></td></tr>`;
     if(open){const span=4+(withBranch?1:0);
@@ -730,7 +752,7 @@ function renderBranch(b){
       <div class="kpi kpi--age"><div class="kpi__label">Last scan</div><div class="kpi__value">${n?esc(agoShort(n)):"—"}</div></div>
       <div class="kpi kpi--exc ${exc.length?"hot":""}"><div class="kpi__label">Exceptions</div><div class="kpi__value">${fmt(exc.length)}</div></div></div>
     ${toolbar({day:true,flow:true,view:true})}
-    ${state.itemView==="cards"?cardsHTML(view,b.key):tableHTML(view,b.key,false)}
+    ${state.itemView==="cards"?cardsHTML(view,b.key,!d.movements):tableHTML(view,b.key,false,!d.movements)}
     ${mapNote(d)}`;
 }
 function renderExceptions(){
