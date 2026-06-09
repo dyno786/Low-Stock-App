@@ -25,7 +25,6 @@
   body{background:var(--bg); color:var(--ink); font-family:"Inter",system-ui,sans-serif; font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased}
   .wrap{max-width:1180px; margin:0 auto; padding:0 20px}
 
-  /* top bar */
   .topbar{position:sticky; top:0; z-index:30; background:rgba(244,246,248,.86); backdrop-filter:saturate(140%) blur(8px); border-bottom:1px solid var(--line)}
   .topbar__inner{display:flex; align-items:center; gap:16px; height:62px}
   .brand{display:flex; align-items:baseline; gap:10px; margin-right:auto}
@@ -41,7 +40,6 @@
   .btn.spin svg{animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* tabs */
   .tabs{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; padding:10px 0 0}
   .tabs::-webkit-scrollbar{display:none}
   .tab{position:relative; flex:0 0 auto; background:transparent; border:0; cursor:pointer; font:inherit; font-weight:600; font-size:13.5px; color:var(--muted); padding:11px 15px 14px; border-radius:8px 8px 0 0; white-space:nowrap; display:flex; align-items:center; gap:9px; transition:color .15s}
@@ -63,23 +61,22 @@
 
   .branchhead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap}
   .branchhead__name{font-family:"Space Grotesk",sans-serif; font-size:25px; font-weight:600; letter-spacing:-.01em}
-  .lede{color:var(--muted); margin:-6px 0 16px; max-width:640px}
-  .lede code,.state code,.demohint code{font-family:var(--mono); font-size:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:1px 6px}
+  .lede{color:var(--muted); margin:-6px 0 16px; max-width:660px}
+  .lede code,.state code,.demobar code{font-family:var(--mono); font-size:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:1px 6px}
 
   .freshness{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:20px; border:1px solid var(--line); background:var(--surface)}
   .freshness--live{color:var(--ok); border-color:transparent; background:var(--ok-wash)}
   .freshness--stale{color:var(--warn); border-color:transparent; background:var(--warn-wash)}
   .freshness--none{color:var(--muted)}
 
-  /* KPI strip */
-  .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px}
   .kpi{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:15px 17px; box-shadow:var(--shadow)}
-  .kpi__label{font-size:11.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
-  .kpi__value{font-family:"Space Grotesk",sans-serif; font-size:30px; font-weight:600; margin-top:6px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
-  .kpi__value small{font-size:14px; color:var(--faint); font-weight:500; margin-left:4px}
+  .kpi__label{font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+  .kpi__value{font-family:"Space Grotesk",sans-serif; font-size:27px; font-weight:600; margin-top:6px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+  .kpi__value small{font-size:13px; color:var(--faint); font-weight:500; margin-left:4px}
   .kpi--exc.hot .kpi__value{color:var(--warn)}
+  .kpi--age .kpi__value{font-size:21px}
 
-  /* overview branch cards */
   .overview{display:grid; grid-template-columns:repeat(2,1fr); gap:14px}
   .bcard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; cursor:pointer; transition:border-color .15s,transform .06s; text-align:left; width:100%; font:inherit; color:inherit; display:block}
   .bcard:hover{border-color:var(--brand)}
@@ -87,73 +84,80 @@
   .bcard:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
   .bcard__top{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:15px}
   .bcard__name{font-family:"Space Grotesk",sans-serif; font-size:19px; font-weight:600}
-  .bcard__kpis{display:flex; gap:22px; margin-bottom:14px}
+  .bcard__kpis{display:flex; gap:20px}
   .bcard__kpi .l{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600}
-  .bcard__kpi .v{font-family:"Space Grotesk",sans-serif; font-size:23px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:3px}
+  .bcard__kpi .v{font-family:"Space Grotesk",sans-serif; font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:3px}
   .bcard__kpi.exc.hot .v{color:var(--warn)}
-  .bcard__thumbs{display:flex; gap:6px}
-  .bcard__thumbs .t{flex:1; height:48px; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:6px}
-  .bcard__thumbs .t .bc{max-width:100%; height:auto}
-  .bcard__thumbs .t img{max-width:100%; max-height:100%; object-fit:contain}
   .demohint{margin-top:13px; font-size:12px; color:var(--warn); font-weight:600}
 
-  /* toolbar */
   .toolbar{display:flex; align-items:center; gap:10px; margin-bottom:13px; flex-wrap:wrap}
   .search{position:relative; flex:1 1 240px; min-width:0}
   .search input{width:100%; font:inherit; font-size:13.5px; padding:9px 12px 9px 34px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface); color:var(--ink)}
   .search input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-wash)}
   .search svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--faint)}
   .seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:var(--radius-sm); overflow:hidden; background:var(--surface)}
-  .seg button{font:inherit; font-weight:600; font-size:13px; border:0; background:transparent; color:var(--muted); padding:9px 13px; cursor:pointer}
+  .seg button{font:inherit; font-weight:600; font-size:13px; border:0; background:transparent; color:var(--muted); padding:9px 13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px}
   .seg button[aria-pressed="true"]{background:var(--brand); color:#fff}
   .seg button[aria-pressed="true"].warnsel{background:var(--warn)}
-  .seg svg{width:15px;height:15px;vertical-align:-2px}
+  .seg svg{width:15px;height:15px}
 
-  /* item cards (with images) */
-  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(214px,1fr)); gap:12px}
+  /* product media (photo slot, falls back to clean placeholder — never a barcode) */
+  .media{position:relative; background:var(--surface-2); display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .media .ph{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:var(--brand-ink)}
+  .media .ph .ini{font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:20px}
+  .media .ph .lbl{font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+  .media img{position:relative; z-index:1; max-width:100%; max-height:100%; object-fit:contain}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px}
   .icard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column}
   .icard.is-exc{border-color:#EFCF86}
-  .icard__media{height:92px; display:flex; align-items:center; justify-content:center; background:var(--surface-2); border-bottom:1px solid var(--line); padding:10px}
-  .icard.is-exc .icard__media{background:var(--warn-wash); border-bottom-color:#EFCF86}
-  .icard__media .bc{max-width:100%; height:auto}
-  .icard__media img{max-width:100%; max-height:100%; object-fit:contain}
+  .icard .media{height:104px; border-bottom:1px solid var(--line); padding:10px}
   .icard__body{padding:12px 13px; display:flex; flex-direction:column; gap:5px; flex:1}
   .icard__desc{font-weight:600; font-size:13.5px; line-height:1.3}
-  .icard__code{font-family:var(--mono); font-size:11.5px; color:var(--brand-ink)}
-  .icard__foot{margin-top:auto; padding-top:7px; display:flex; align-items:flex-end; justify-content:space-between; gap:8px}
+  .icard__sub{font-family:var(--mono); font-size:11px; color:var(--muted)}
+  .icard__mv{margin-top:4px}
+  .icard__foot{margin-top:auto; padding-top:8px; display:flex; align-items:flex-end; justify-content:space-between; gap:8px}
   .icard__qty{font-family:"Space Grotesk",sans-serif; font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1}
   .icard__qty small{font-size:10.5px; color:var(--faint); font-weight:500; margin-left:3px}
 
-  /* table */
+  /* movement from -> to */
+  .mv{display:inline-flex; align-items:center; gap:7px; font-family:var(--mono); font-size:12.5px; font-variant-numeric:tabular-nums}
+  .mv .from{color:var(--muted)} .mv .to{font-weight:600}
+  .mv .arr{color:var(--faint)}
+  .mv.to-bad .to{color:var(--bad)}
+  .mv.to-up .to{color:var(--ok)}
+  .add{font-family:var(--mono); font-weight:600; font-variant-numeric:tabular-nums}
+  .add.pos{color:var(--ok)} .add.neg{color:var(--bad)}
+
   .tablecard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
   .tablescroll{overflow-x:auto}
-  table{border-collapse:collapse; width:100%; min-width:640px}
-  thead th{position:sticky; top:62px; background:var(--surface-2); z-index:1; text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:11px 16px; border-bottom:1px solid var(--line)}
+  table{border-collapse:collapse; width:100%; min-width:760px}
+  thead th{position:sticky; top:62px; background:var(--surface-2); z-index:1; text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:11px 14px; border-bottom:1px solid var(--line)}
   th.num,td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums}
-  tbody td{padding:11px 16px; border-bottom:1px solid var(--line); vertical-align:middle}
+  tbody td{padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle}
   tbody tr:last-child td{border-bottom:0}
   tbody tr.row{cursor:pointer}
   tbody tr.row:hover{background:var(--surface-2)}
-  td.media-cell{width:74px}
-  td.media-cell .bc{height:30px; width:auto; max-width:64px}
-  td.media-cell img{height:34px; width:auto; max-width:64px; object-fit:contain; border-radius:4px}
-  td.code{font-family:var(--mono); font-size:12.5px; color:var(--brand-ink); white-space:nowrap}
-  td.desc{max-width:360px}
+  td.media-cell{width:54px; padding:6px 14px}
+  td.media-cell .media{width:42px; height:42px; border-radius:7px; border:1px solid var(--line)}
+  td.media-cell .ph .ini{font-size:13px}
+  td.media-cell .ph .lbl{display:none}
+  td.prod{min-width:220px}
+  td.prod .nm{font-weight:600}
+  td.prod .sub{font-family:var(--mono); font-size:11px; color:var(--muted)}
   td.time{color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+  td.time .since{display:block; font-size:11px; color:var(--faint)}
   tr.is-exc{background:var(--warn-wash)}
   tr.is-exc:hover{background:#FCEDC4}
-  tr.is-exc td.code{color:var(--warn)}
   .pill{display:inline-block; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:20px}
   .pill--ok{color:var(--ok); background:var(--ok-wash)}
   .pill--exc{color:var(--warn); background:#FBE7B8}
   .branchtag{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--muted)}
   .branchtag .statusdot{width:7px; height:7px; box-shadow:none; animation:none}
   tr.detail td{background:var(--surface-2); padding:0}
-  .detailwrap{display:flex; gap:18px; padding:14px 16px; align-items:flex-start; flex-wrap:wrap}
-  .detailwrap .bc{height:48px; width:auto}
-  .fields{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:2px 22px; flex:1; min-width:240px}
+  .fields{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:2px 22px; padding:14px 16px}
   .field{display:flex; gap:8px; font-size:12.5px; padding:3px 0; border-bottom:1px dotted var(--line)}
-  .field b{color:var(--muted); font-weight:600; min-width:118px; flex:0 0 auto}
+  .field b{color:var(--muted); font-weight:600; min-width:108px; flex:0 0 auto}
   .field span{font-family:var(--mono); color:var(--ink); word-break:break-word}
 
   .listfoot{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 4px 0; font-size:12.5px; color:var(--muted); flex-wrap:wrap}
@@ -161,7 +165,6 @@
   .linkbtn{font:inherit; font-weight:600; font-size:12.5px; color:var(--brand-ink); background:none; border:0; cursor:pointer; padding:0}
   .linkbtn:hover{text-decoration:underline}
 
-  /* update log */
   .board{margin-bottom:24px}
   .agetag{font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px; display:inline-block}
   .age--live{color:var(--ok); background:var(--ok-wash)}
@@ -170,10 +173,9 @@
   .age--err{color:var(--bad); background:var(--bad-wash)}
   .sectionlabel{font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 10px}
 
-  /* states */
   .state{text-align:center; padding:50px 20px; color:var(--muted)}
   .state h3{font-family:"Space Grotesk",sans-serif; font-size:18px; color:var(--ink); margin:0 0 6px; font-weight:600}
-  .state p{margin:0 auto; max-width:460px; font-size:13.5px}
+  .state p{margin:0 auto; max-width:470px; font-size:13.5px}
   .state--err h3{color:var(--bad)}
   .demobar{display:flex; align-items:center; gap:9px; font-size:12.5px; font-weight:600; color:var(--warn); background:var(--warn-wash); border:1px solid #F2DFA8; border-radius:var(--radius-sm); padding:9px 13px; margin-bottom:14px}
   .demobar svg{width:15px; height:15px; flex:0 0 auto}
@@ -185,14 +187,15 @@
   .mapnote[open] summary::before{content:"▾ "}
   .mapnote__body{margin-top:10px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px; font-size:12.5px}
   .mapnote__row{display:flex; gap:10px; padding:4px 0}
-  .mapnote__row b{min-width:118px; color:var(--muted); font-weight:600}
+  .mapnote__row b{min-width:108px; color:var(--muted); font-weight:600}
   .mapnote__row span{font-family:var(--mono); color:var(--ink)}
   .mapnote__row .miss{color:var(--bad)}
 
   footer{border-top:1px solid var(--line); padding:18px 0; font-size:12px; color:var(--faint)}
 
+  @media (max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:760px){.overview{grid-template-columns:1fr}}
-  @media (max-width:680px){.kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px} thead th{top:0}}
+  @media (max-width:520px){.kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px} thead th{top:0}}
   @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
 </style>
 </head>
@@ -201,15 +204,11 @@
 <header class="topbar">
   <div class="wrap">
     <div class="topbar__inner">
-      <div class="brand">
-        <span class="brand__mark">PICCO<span class="brand__dot">.</span></span>
-        <span class="brand__sub">Scan monitor — CC Hair &amp; Beauty</span>
-      </div>
+      <div class="brand"><span class="brand__mark">PICCO<span class="brand__dot">.</span></span>
+        <span class="brand__sub">Scan monitor — CC Hair &amp; Beauty</span></div>
       <div class="updated" id="updated">—</div>
       <button class="btn" id="refresh" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
-        Refresh
-      </button>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Refresh</button>
     </div>
     <nav class="tabs" id="tabs" role="tablist" aria-label="Views"></nav>
   </div>
@@ -218,81 +217,71 @@
 <main class="wrap"><div id="panel" class="panel" role="tabpanel"></div></main>
 <footer class="wrap" id="footer"></footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script>
 /* ============================================================
-   CONFIG — the only block you need to touch.
+   CONFIG
    ============================================================ */
 const CONFIG = {
-  // For each branch paste its PUBLISHED-TO-WEB csv link:
-  //   picco sheet → File → Share → Publish to web → pick the picco tab → CSV → copy link.
-  // Leave url:"" to show sample data for that tab so you can see the layout.
+  // Connected directly to your picco sheets by ID (no publish step needed).
+  // Requires each sheet shared "Anyone with the link — Viewer" for the browser
+  // to read it. If you keep them private, we switch to a small /api endpoint.
   branches: [
-    { key:"roundhay",   name:"Roundhay",    url:"" },
-    { key:"city",       name:"City Centre", url:"" },
-    { key:"chapeltown", name:"Chapeltown",  url:"" },
-    { key:"warehouse",  name:"Warehouse",   url:"" }
+    { key:"roundhay",   name:"Roundhay",    sheetId:"1XmZ8sl6T8cT-Iuwp1uB-eXths121GIW2zU9bDCpc-IQ" },
+    { key:"city",       name:"City Centre", sheetId:"1n-Xb3Zowb7J-FQ9rjZrChCrSC7UFT3iscFGPnjfWxas" },
+    { key:"chapeltown", name:"Chapeltown",  sheetId:"10o97Gmcoa41MglKmIQb8bkTnCyHb5Qqix9znu8WBDRg" },
+    { key:"warehouse",  name:"Warehouse",   sheetId:"1f9uvQSTJo9Rns6lniUJ0sZZIwZVIGQhpUCpAHSdC4vs" }
   ],
 
-  // Force a mapping if auto-detect guesses wrong. Use exact header text or a
-  // 0-based column index. Leave null to auto-detect by header name.
-  // `image` is optional: if your CSV has a product-image URL column, name it here
-  // (or let it auto-detect) and cards/rows show the photo instead of the barcode.
-  columns: { barcode:null, description:null, qty:null, timestamp:null, status:null, image:null },
+  // PRODUCT IMAGES: pulled from your shopify-images feed (barcode -> Shopify CDN
+  // url), the same source your stock pages use. Loaded once, then each scan's
+  // Barcode is matched against it (OwnCode tried as a fallback key).
+  imagesFeedUrl: "/api/stock-data?branch=shopify-images",
+  // Optional direct override instead of the feed: a plain pattern with {barcode}
+  //   e.g. "https://cdn.shopify.com/s/files/.../{barcode}.jpg"
+  imageUrlPattern: "",
 
-  // A scanned line counts as an EXCEPTION when this returns true.
-  // Default: negative quantity, or a status/variance column that isn't empty/ok/0.
-  // Send me your real picco columns and I'll lock this to the exact rule.
-  isException: (r) => {
-    if (typeof r.qty === "number" && r.qty < 0) return true;
-    const s = (r.status == null ? "" : String(r.status)).trim();
-    if (!s) return false;
-    return !/^(ok|clear|0|0\.0|0\.00|n\/a|-)$/i.test(s);
-  },
+  // Real picco columns. Override only if a sheet ever differs.
+  columns: { barcode:"Barcode", description:"ProductName", size:"Size", qty:"QtyAdded",
+             value:"ValueAdded", before:"BeforeValue", after:"AfterValue",
+             timestamp:"Date", productId:"ProductID", ownCode:"OwnCode", stock:"CurrentStock", reason:"ReasonCode" },
 
-  staleAfterMinutes: 45,
+  // A line is an EXCEPTION when this is true. Default: stock ends negative, or a
+  // negative value booked. (BeforeValue<0 would flag ~half your rows because each
+  // scan writes a pair, so it's not used here — tell me your real rule to change.)
+  isException: (r) => (r.after!=null && r.after<0) || (r.value!=null && r.value<0),
+
+  staleAfterMinutes: 60,
   refreshMinutes: 5,
-  maxRows: 400,     // table rows before "show all"
-  maxCards: 120     // cards before "show all"
+  maxRows: 400,
+  maxCards: 120
 };
 
-const HINTS = {
-  barcode:    /bar.?code|ean|sku|item.?code|product.?code|^code$/i,
-  description:/descr|product.?name|^name$|title|^desc/i,
-  qty:        /qty|quantity|scanned|^count$|units|pieces|pcs/i,
-  timestamp:  /time.?stamp|scanned.?at|date.?time|^date$|^time$|when/i,
-  status:     /exception|error|status|variance|^var$|diff|delta|flag|suspicious|reason|mismatch/i,
-  image:      /image|img|photo|thumb|picture|^pic$|imageurl|image.?url/i
-};
-
-/* sample data (only when a branch url is blank) */
+/* sample data in the REAL schema (shown if a sheet can't be read yet) */
+const DEMO_HEADERS = ["TransactionID","Date","BranchID","Branch","ProductID","ProductName","Size","OwnCode","Barcode","QtyAdded","ValueAdded","BeforeValue","AfterValue","Suspicious","CurrentStock","Reference","ReasonCode","CashierCode"];
 function demoRows(seed){
-  const base = [
-    ["5012345678900","Argan Oil Treatment 100ml","12","ok"],
-    ["5012345671234","Ceramic Round Brush 53mm","8","ok"],
-    ["5012345679991","Bleach Powder 500g","-3","NEGATIVE"],
-    ["5012345670007","Colour Developer 1L","20","ok"],
-    ["5012345678017","Foil Roll 100m","5","ok"],
-    ["5012345670441","Sectioning Clips x10","40","ok"],
-    ["5012345677788","Unknown scan","2","NOT FOUND"],
-    ["5012345679003","Toner 9.1 60ml","16","ok"],
-    ["5012345670118","Cutting Cape","7","ok"],
-    ["5012345671991","Neck Brush","11","ok"],
-    ["5012345672222","Heat Protect Spray 200ml","9","ok"],
-    ["5012345673333","Tint Bowl & Brush Set","14","ok"]
+  const items=[
+    ["DEXE BLACK HAIR SHAMPOO","400ML","799439313934",4,25.98,0,4,4,7],
+    ["A-PRIDE D-KIDS OIL MISTURIZER","8OZ","802535472099",6,15.96,0,6,6,7],
+    ["NM COLOR SHAMPO DARK BROWN","500ML","5060844823710",4,59.95,0,4,4,7],
+    ["HAZ PURE ACETONE 400ML","400ML","5060433980763",4,15.96,0,4,4,7],
+    ["SCHW CURL BALM","150ML","5012583212959",5,0,-6,-1,6,7],
+    ["SM MANUKA & HONEY INT HYD COND","13OZ","764302231059",6,-9.99,0,6,6,7],
+    ["BIGEN SPEEDY MEN D/BROWN","1","4987205933844",8,31.96,0,8,8,7],
+    ["LETS JAM SHINING COND GEL","396GM","72790615573",8,31.96,0,8,8,7],
+    ["VASELINE COCOA BUTTER LOTION","400ML","8712561483162",6,24.95,0,6,6,7],
+    ["ORS OLIVE OIL GIRLS RELAXER","","632169191550",8,29.96,0,8,8,7]
   ];
-  const now=new Date();
-  return base.map((r,i)=>{
-    const t=new Date(now.getTime()-(i*6+seed*30)*60000);
-    return [r[0], r[1], r[2], pad(t), r[3]];
+  const now=new Date(); let tx=445565+seed*7;
+  return items.map((it,i)=>{
+    const t=new Date(now.getTime()-(i*6+seed*25)*60000);
+    return [tx--, pad(t), "2", "BRANCH", 20000+i, it[0], it[1], "", it[2], it[3], it[4], it[5], it[6], 1, it[7], 2897-i, it[8], 1];
   });
 }
 function pad(d){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
-const DEMO_HEADERS=["Barcode","Description","Qty","ScannedAt","Status"];
 
-const state={ active:"__overview", data:{}, search:"", filter:"all", itemView:"cards", expanded:{}, showAll:{}, log:[], lastUpdated:null };
+const state={ active:"__overview", data:{}, search:"", filter:"all", itemView:"table", expanded:{}, showAll:{}, log:[], lastUpdated:null, images:{map:null,count:0,total:0,error:null,urlKey:null,keyKey:null} };
 
-/* CSV parse + normalise */
+/* CSV + gviz handling */
 function parseCSV(text){
   const rows=[]; let row=[],field="",inQ=false;
   for(let i=0;i<text.length;i++){const c=text[i];
@@ -304,301 +293,291 @@ function parseCSV(text){
   if(field.length||row.length){row.push(field);rows.push(row);}
   return rows.filter(r=>r.length>1||(r.length===1&&r[0].trim()!==""));
 }
-function resolveCol(headers,want,override){
-  if(override!=null){ if(typeof override==="number") return (override>=0&&override<headers.length)?override:-1;
-    return headers.findIndex(h=>h.trim().toLowerCase()===String(override).trim().toLowerCase()); }
-  return headers.findIndex(h=>HINTS[want].test(h.trim()));
+// gviz returns date cells as Date(y,m,d,h,mi,s) with 0-based month
+function cleanCell(v){
+  if(v==null)return "";
+  const m=/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)$/.exec(String(v).trim());
+  if(m){const z=n=>String(n).padStart(2,"0");
+    return `${+m[1]}-${z(+m[2]+1)}-${z(+m[3])} ${z(+(m[4]||0))}:${z(+(m[5]||0))}:${z(+(m[6]||0))}`;}
+  return v;
 }
-function buildMap(headers){const m={};for(const k of ["barcode","description","qty","timestamp","status","image"])m[k]=resolveCol(headers,k,CONFIG.columns[k]);return m;}
-function toNumber(v){if(v==null)return null;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,""));return isNaN(n)?null:n;}
+function resolveCol(headers,name){
+  if(name==null)return -1;
+  return headers.findIndex(h=>h.trim().toLowerCase()===String(name).trim().toLowerCase());
+}
+function buildMap(headers){const m={};for(const k in CONFIG.columns)m[k]=resolveCol(headers,CONFIG.columns[k]);return m;}
+function toNumber(v){if(v==null||v==="")return null;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,""));return isNaN(n)?null:n;}
 function normalise(rows){
   if(!rows.length)return{headers:[],map:{},items:[]};
-  const headers=rows[0].map(h=>h.trim());
+  const headers=rows[0].map(h=>cleanCell(h).trim());
   const map=buildMap(headers);
   const items=rows.slice(1).map(r=>{
-    const get=i=>(i>=0&&i<r.length)?r[i]:"";
-    const qtyRaw=get(map.qty);
-    const o={barcode:get(map.barcode),description:get(map.description),qty:toNumber(qtyRaw),qtyRaw,time:get(map.timestamp),status:get(map.status),image:get(map.image),
-      raw:headers.reduce((a,h,i)=>{a[h]=r[i]!==undefined?r[i]:"";return a;},{})};
-    if(o.image && !/^https?:\/\//i.test(String(o.image).trim())) o.image="";
+    const get=i=>(i>=0&&i<r.length)?cleanCell(r[i]):"";
+    const o={ barcode:String(get(map.barcode)).replace(/\.0$/,""), description:get(map.description), size:get(map.size),
+      qty:toNumber(get(map.qty)), qtyRaw:get(map.qty), value:toNumber(get(map.value)),
+      before:toNumber(get(map.before)), after:toNumber(get(map.after)),
+      time:get(map.timestamp), productId:String(get(map.productId)).replace(/\.0$/,""),
+      ownCode:String(get(map.ownCode)||"").trim(),
+      stock:get(map.stock), reason:get(map.reason),
+      raw:headers.reduce((a,h,i)=>{a[h]=r[i]!==undefined?cleanCell(r[i]):"";return a;},{}) };
     o.isExc=!!CONFIG.isException(o);
     return o;
   });
   return{headers,map,items};
 }
+function gvizUrl(b){ return b.url || `https://docs.google.com/spreadsheets/d/${b.sheetId}/gviz/tq?tqx=out:csv`; }
 
-/* fetch */
+/* shopify-images feed -> { barcode/code : imageUrl } */
+async function loadImages(){
+  const out={map:null,count:0,total:0,error:null,urlKey:null,keyKey:null};
+  if(!CONFIG.imagesFeedUrl)return out;
+  try{
+    const res=await fetch(CONFIG.imagesFeedUrl,{cache:"no-store"});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const text=await res.text();
+    let records=null;
+    try{const j=JSON.parse(text); if(Array.isArray(j))records=j; else if(j&&Array.isArray(j.rows))records=j.rows; else if(j&&Array.isArray(j.data))records=j.data; else if(j&&Array.isArray(j.values))records=j.values;}catch(e){}
+    if(!records){const rows=parseCSV(text); if(rows.length){const hs=rows[0].map(h=>cleanCell(h).trim()); records=rows.slice(1).map(r=>hs.reduce((a,h,i)=>{a[h]=r[i]!==undefined?cleanCell(r[i]):"";return a;},{}));}}
+    if(!records||!records.length)throw new Error("empty feed");
+    const keys=Object.keys(records[0]);
+    const urlKey=keys.find(k=>/^image\s*url$|^imageurl$|^image$|^url$|image_url|^img$|photo/i.test(k.trim()))
+              || keys.find(k=>records.some(r=>/^https?:\/\//i.test(String(r[k]||""))));
+    const keyKey=keys.find(k=>/^barcode$/i.test(k.trim()))
+              || keys.find(k=>/barcode|ean|^bar$|^code$/i.test(k.trim()))
+              || keys.find(k=>records.some(r=>/^\d{6,}$/.test(String(r[k]||"").trim()))) || keys[0];
+    const map={};
+    for(const r of records){const k=String(r[keyKey]||"").trim().replace(/\.0$/,"");const u=String(r[urlKey]||"").trim();if(k&&/^https?:\/\//i.test(u))map[k]=u;}
+    out.map=map;out.total=records.length;out.count=Object.keys(map).length;out.urlKey=urlKey;out.keyKey=keyKey;
+    return out;
+  }catch(err){out.error=String(err.message||err);return out;}
+}
+
 async function loadBranch(b){
-  if(!b.url){return{demo:true,...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};}
-  try{const res=await fetch(b.url,{cache:"no-store"});if(!res.ok)throw new Error("HTTP "+res.status);
-    return{demo:false,...normalise(parseCSV(await res.text()))};}
-  catch(err){return{error:String(err.message||err)};}
+  try{
+    const res=await fetch(gvizUrl(b),{cache:"no-store"});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const text=await res.text();
+    if(/^\s*</.test(text)) throw new Error("not shared for link access");
+    const d=normalise(parseCSV(text));
+    if(!d.items.length) throw new Error("empty sheet");
+    return{demo:false,...d};
+  }catch(err){
+    return{demo:true, error:String(err.message||err), ...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};
+  }
 }
 async function loadAll(){
   setRefreshing(true);
-  const results=await Promise.all(CONFIG.branches.map(loadBranch));
+  const [imgs, ...results]=await Promise.all([loadImages(), ...CONFIG.branches.map(loadBranch)]);
+  state.images=imgs;
   CONFIG.branches.forEach((b,i)=>state.data[b.key]=results[i]);
-  state.lastUpdated=new Date();
-  logCheck(state.lastUpdated);
+  state.lastUpdated=new Date(); logCheck(state.lastUpdated);
   setRefreshing(false);
   renderTabs();renderPanel();renderUpdated();renderFooter();
 }
 function logCheck(at){
-  const entry={at,branches:{}};
-  for(const b of CONFIG.branches){
-    const d=state.data[b.key];
-    let rec={lines:null,exc:0,ageMin:null,demo:false,error:false};
-    if(d&&d.error)rec.error=true;
-    else if(d&&d.items){const n=newest(d.items);rec.lines=d.items.length;rec.exc=branchExceptions(d).length;rec.demo=!!d.demo;rec.ageMin=n?Math.max(0,Math.round((at.getTime()-n.getTime())/60000)):null;}
-    entry.branches[b.key]=rec;
-  }
-  state.log.unshift(entry); if(state.log.length>150)state.log.pop();
+  const e={at,branches:{}};
+  for(const b of CONFIG.branches){const d=state.data[b.key];let r={lines:null,exc:0,ageMin:null,demo:false};
+    if(d&&d.items){const n=newest(d.items);r.lines=d.items.length;r.exc=branchExceptions(d).length;r.demo=!!d.demo;r.ageMin=n?Math.max(0,Math.round((at.getTime()-n.getTime())/60000)):null;}
+    e.branches[b.key]=r;}
+  state.log.unshift(e); if(state.log.length>150)state.log.pop();
 }
 
 /* freshness */
 function newest(items){let max=null;for(const it of items){if(!it.time)continue;const d=new Date(String(it.time).replace(/-/g,"/").replace("T"," "));if(!isNaN(d)){if(!max||d>max)max=d;}}return max;}
-function freshness(d){if(!d)return{cls:"none",label:"No timestamp",dot:"none"};const mins=Math.round((Date.now()-d.getTime())/60000);
-  if(mins<=0)return{cls:"live",label:"Live · just now",dot:"live"};
-  if(mins<=CONFIG.staleAfterMinutes)return{cls:"live",label:"Live · scanned "+ago(mins),dot:"live"};
-  return{cls:"stale",label:"Stale · last scan "+ago(mins),dot:"stale"};}
-function ago(mins){if(mins<1)return"just now";if(mins<60)return mins+" min ago";const h=Math.floor(mins/60);if(h<24)return h+(h===1?" hr ago":" hrs ago");const days=Math.floor(h/24);return days+(days===1?" day ago":" days ago");}
+function freshness(d){if(!d)return{cls:"none",label:"No timestamp",dot:"none"};const m=Math.round((Date.now()-d.getTime())/60000);
+  if(m<=0)return{cls:"live",label:"Live · just now",dot:"live"};
+  if(m<=CONFIG.staleAfterMinutes)return{cls:"live",label:"Live · "+ago(m),dot:"live"};
+  return{cls:"stale",label:"Stale · "+ago(m),dot:"stale"};}
+function ago(m){if(m<1)return"just now";if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+(h===1?" hr ago":" hrs ago");const dys=Math.floor(h/24);return dys+(dys===1?" day ago":" days ago");}
+function agoShort(d){if(!d)return"—";return ago(Math.max(0,Math.round((Date.now()-d.getTime())/60000)));}
 
 /* helpers */
 const $=(s,el=document)=>el.querySelector(s);
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function fmt(n){return n==null?"—":n.toLocaleString("en-GB");}
+function money(n){return n==null?"—":"£"+n.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function branchExceptions(d){return(d&&d.items)?d.items.filter(i=>i.isExc):[];}
 function totalExceptions(){return CONFIG.branches.reduce((a,b)=>{const d=state.data[b.key];return a+(d&&d.items?branchExceptions(d).length:0);},0);}
-function mediaHTML(it){
-  if(it.image)return `<img loading="lazy" src="${esc(it.image)}" alt="" onerror="this.remove()">`;
-  return `<svg class="bc" data-code="${esc(it.barcode)}"></svg>`;
+function initials(name){const w=String(name||"").trim().split(/\s+/).filter(Boolean);return ((w[0]?w[0][0]:"")+(w[1]?w[1][0]:"")||"·").toUpperCase();}
+function imageSrc(it){
+  const M=state.images&&state.images.map;
+  if(M){const u=M[(it.barcode||"").trim()]||M[(it.ownCode||"").trim()];if(u)return u;}
+  const p=CONFIG.imageUrlPattern;
+  if(p)return p.replace(/\{barcode\}/gi,encodeURIComponent(it.barcode||"")).replace(/\{productId\}/gi,encodeURIComponent(it.productId||""));
+  return"";
 }
-
-/* barcodes (lazy, client-side, no API) */
-let bcObserver=null;
-function renderBC(el){el.setAttribute("data-done","1");const code=el.getAttribute("data-code")||"";
-  if(!code){el.remove();return;}
-  try{window.JsBarcode(el,code,{format:"CODE128",height:34,width:1.4,margin:0,displayValue:false,background:"transparent",lineColor:"#171A21"});}
-  catch(e){const s=document.createElement("span");s.style.cssText="font-family:var(--mono);font-size:11px;color:var(--faint)";s.textContent=code;el.replaceWith(s);}
-}
-function lazyBarcodes(){
-  if(!window.JsBarcode)return;
-  if(bcObserver)bcObserver.disconnect();
-  bcObserver=new IntersectionObserver((ents)=>{ents.forEach(e=>{if(e.isIntersecting){renderBC(e.target);bcObserver.unobserve(e.target);}});},{rootMargin:"150px"});
-  document.querySelectorAll("svg.bc[data-code]:not([data-done])").forEach(el=>bcObserver.observe(el));
-}
+function mediaHTML(it){const src=imageSrc(it);
+  return `<div class="media"><span class="ph"><span class="ini">${esc(initials(it.description))}</span><span class="lbl">no photo</span></span>${src?`<img loading="lazy" src="${esc(src)}" alt="" onerror="this.remove()">`:""}</div>`;}
+function mvHTML(it){const a=it.after, b=it.before;
+  const cls=(a!=null&&a<0)?"to-bad":((it.qty||0)>0?"to-up":"");
+  return `<span class="mv ${cls}"><span class="from">${b==null?"·":b}</span><span class="arr">→</span><span class="to">${a==null?"·":a}</span></span>`;}
+function addHTML(it){const q=it.qty;if(q==null)return esc(it.qtyRaw)||"—";return `<span class="add ${q<0?"neg":"pos"}">${q>0?"+":""}${fmt(q)}</span>`;}
 
 /* tabs */
 function renderTabs(){
   const tabs=$("#tabs");let html="";
   html+=`<button class="tab" role="tab" aria-selected="${state.active==="__overview"}" data-key="__overview">Overview</button>`;
-  for(const b of CONFIG.branches){
-    const d=state.data[b.key];let dot="none",count="—";
+  for(const b of CONFIG.branches){const d=state.data[b.key];let dot="none",count="—";
     if(d&&d.items){dot=freshness(newest(d.items)).dot;count=fmt(d.items.length);}
-    else if(d&&d.error){count="!";}
-    html+=`<button class="tab" role="tab" aria-selected="${state.active===b.key}" data-key="${b.key}">
-      <span class="statusdot statusdot--${dot}"></span>${esc(b.name)}<span class="tab__count">${count}</span></button>`;
-  }
+    html+=`<button class="tab" role="tab" aria-selected="${state.active===b.key}" data-key="${b.key}"><span class="statusdot statusdot--${dot}"></span>${esc(b.name)}<span class="tab__count">${count}</span></button>`;}
   const exc=totalExceptions();
-  html+=`<button class="tab tab--exc" role="tab" aria-selected="${state.active==="__exc"}" data-key="__exc">
-    <span>Exceptions</span><span class="tab__count ${exc>0?"hot":""}">${fmt(exc)}</span></button>`;
+  html+=`<button class="tab tab--exc" role="tab" aria-selected="${state.active==="__exc"}" data-key="__exc"><span>Exceptions</span><span class="tab__count ${exc>0?"hot":""}">${fmt(exc)}</span></button>`;
   html+=`<button class="tab" role="tab" aria-selected="${state.active==="__log"}" data-key="__log">Update log</button>`;
   tabs.innerHTML=html;
   tabs.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{state.active=t.dataset.key;state.search="";state.filter="all";renderTabs();renderPanel();}));
 }
 
-/* toolbar */
-function toolbar(opts){
-  const warnSel=state.filter==="exc";
-  const cards=state.itemView==="cards";
+function toolbar(opts){const warnSel=state.filter==="exc",cards=state.itemView==="cards";
   return `<div class="toolbar">
-    <label class="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="search" type="search" placeholder="Search barcode or description" value="${esc(state.search)}" autocomplete="off"></label>
-    ${opts.filter?`<div class="seg" role="group" aria-label="Filter rows">
-      <button data-f="all" aria-pressed="${!warnSel}">All lines</button>
-      <button data-f="exc" class="warnsel" aria-pressed="${warnSel}">Exceptions only</button></div>`:""}
+    <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="search" placeholder="Search product or barcode" value="${esc(state.search)}" autocomplete="off"></label>
+    ${opts.filter?`<div class="seg" role="group" aria-label="Filter"><button data-f="all" aria-pressed="${!warnSel}">All lines</button><button data-f="exc" class="warnsel" aria-pressed="${warnSel}">Exceptions</button></div>`:""}
     ${opts.view?`<div class="seg" role="group" aria-label="Layout">
-      <button data-v="cards" aria-pressed="${cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Cards</button>
-      <button data-v="table" aria-pressed="${!cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Table</button></div>`:""}
-  </div>`;
-}
+      <button data-v="table" aria-pressed="${!cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Table</button>
+      <button data-v="cards" aria-pressed="${cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Cards</button></div>`:""}
+  </div>`;}
 function matchSearch(it){const q=state.search.trim().toLowerCase();if(!q)return true;return (it.barcode+" "+it.description).toLowerCase().includes(q);}
-
-/* list renderers */
-function listFoot(cap,total,key){const more=cap<total;return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} lines</span>${more?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
+function listFoot(cap,total,key){return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} lines</span>${cap<total?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
 
 function cardsHTML(items,key){
   if(!items.length)return emptyList();
-  const cap=state.showAll[key]?items.length:Math.min(items.length,CONFIG.maxCards);
-  let html=`<div class="cards">`;
+  const cap=state.showAll[key]?items.length:Math.min(items.length,CONFIG.maxCards);let html=`<div class="cards">`;
   for(let i=0;i<cap;i++){const it=items[i];
-    html+=`<div class="icard ${it.isExc?"is-exc":""}">
-      <div class="icard__media">${mediaHTML(it)}</div>
+    html+=`<div class="icard ${it.isExc?"is-exc":""}">${mediaHTML(it)}
       <div class="icard__body">
         <div class="icard__desc">${esc(it.description)||"—"}</div>
-        <div class="icard__code">${esc(it.barcode)||"—"}</div>
-        <div class="icard__foot">
-          <div class="icard__qty">${it.qty==null?esc(it.qtyRaw)||"—":fmt(it.qty)}<small>qty</small></div>
-          ${it.isExc?`<span class="pill pill--exc">${esc(it.status)||"exception"}</span>`:`<span class="pill pill--ok">ok</span>`}
-        </div></div></div>`;
-  }
-  html+=`</div>`+listFoot(cap,items.length,key);
-  return html;
+        <div class="icard__sub">${esc(it.barcode)||"—"}${it.size?" · "+esc(it.size):""}</div>
+        <div class="icard__mv">${mvHTML(it)}</div>
+        <div class="icard__foot"><div class="icard__qty">${addHTML(it)}<small>added</small></div>
+          ${it.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</div>
+      </div></div>`;}
+  return html+`</div>`+listFoot(cap,items.length,key);
 }
 function tableHTML(items,key,withBranch){
   if(!items.length)return `<div class="tablecard">${emptyList()}</div>`;
-  const cap=state.showAll[key]?items.length:Math.min(items.length,CONFIG.maxRows);
-  let rows="";
+  const cap=state.showAll[key]?items.length:Math.min(items.length,CONFIG.maxRows);let rows="";
   for(let i=0;i<cap;i++){const it=items[i];const id=key+"_"+i;const open=state.expanded[id];
     rows+=`<tr class="row ${it.isExc?"is-exc":""}" data-id="${id}">
       ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(it._branch)}</span></td>`:""}
       <td class="media-cell">${mediaHTML(it)}</td>
-      <td class="code">${esc(it.barcode)||"—"}</td>
-      <td class="desc">${esc(it.description)||"—"}</td>
-      <td class="num">${it.qty==null?esc(it.qtyRaw)||"—":fmt(it.qty)}</td>
-      <td class="time">${esc(it.time)||"—"}</td>
-      <td>${it.isExc?`<span class="pill pill--exc">${esc(it.status)||"exception"}</span>`:`<span class="pill pill--ok">ok</span>`}</td></tr>`;
-    if(open){const span=6+(withBranch?1:0);
+      <td class="prod"><div class="nm">${esc(it.description)||"—"}</div><div class="sub">${esc(it.barcode)||"—"}${it.size?" · "+esc(it.size):""}</div></td>
+      <td>${mvHTML(it)}</td>
+      <td class="num">${addHTML(it)}</td>
+      <td class="num">${money(it.value)}</td>
+      <td class="time">${esc(it.time)||"—"}<span class="since">${it.time?agoShort(new Date(String(it.time).replace(/-/g,"/"))):""}</span></td>
+      <td>${it.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</td></tr>`;
+    if(open){const span=7+(withBranch?1:0);
       const fields=Object.entries(it.raw).map(([k,v])=>`<div class="field"><b>${esc(k)}</b><span>${esc(v)||"—"}</span></div>`).join("");
-      rows+=`<tr class="detail"><td colspan="${span}"><div class="detailwrap"><svg class="bc" data-code="${esc(it.barcode)}"></svg><div class="fields">${fields}</div></div></td></tr>`;}
+      rows+=`<tr class="detail"><td colspan="${span}"><div class="fields">${fields}</div></td></tr>`;}
   }
   return `<div class="tablecard"><div class="tablescroll"><table>
-    <thead><tr>${withBranch?"<th>Branch</th>":""}<th>Code</th><th>Barcode</th><th>Description</th><th class="num">Qty</th><th>Scanned</th><th>Status</th></tr></thead>
+    <thead><tr>${withBranch?"<th>Branch</th>":""}<th></th><th>Product</th><th>From → To</th><th class="num">Added</th><th class="num">Value</th><th>Scanned</th><th>Status</th></tr></thead>
     <tbody>${rows}</tbody></table></div>${listFoot(cap,items.length,key)}</div>`;
 }
 function emptyList(){return `<div class="state"><h3>${state.filter==="exc"?"No exceptions":"No matching lines"}</h3><p>${state.filter==="exc"?"Every scanned line on this view reconciles.":"Nothing matches your search."}</p></div>`;}
 
 function mapNote(d){
-  const rows=Object.entries(d.map).map(([k,ix])=>`<div class="mapnote__row"><b>${k}</b><span class="${ix>=0?"":"miss"}">${ix>=0?esc(d.headers[ix]):"not detected"}</span></div>`).join("");
-  return `<details class="mapnote"><summary>Column mapping (${d.headers.length} columns detected)</summary>
-    <div class="mapnote__body">${rows}<div class="mapnote__row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><b>all headers</b><span>${d.headers.map(esc).join(" · ")}</span></div></div></details>`;
+  const rows=Object.entries(d.map).map(([k,ix])=>`<div class="mapnote__row"><b>${k}</b><span class="${ix>=0?"":"miss"}">${ix>=0?esc(d.headers[ix]):"not found"}</span></div>`).join("");
+  const im=state.images||{};
+  let matched=0; if(im.map){for(const it of d.items){if(im.map[(it.barcode||"").trim()]||im.map[(it.ownCode||"").trim()])matched++;}}
+  const imgLine = im.error
+    ? `<div class="mapnote__row"><b>images</b><span class="miss">feed error — ${esc(im.error)}</span></div>`
+    : (im.map
+        ? `<div class="mapnote__row"><b>images</b><span>${fmt(matched)} of ${fmt(d.items.length)} rows matched · feed "${esc(im.keyKey)}" → "${esc(im.urlKey)}" (${fmt(im.count)} mapped)</span></div>`
+        : `<div class="mapnote__row"><b>images</b><span class="miss">feed not loaded yet</span></div>`);
+  return `<details class="mapnote"><summary>Column mapping &amp; image match</summary><div class="mapnote__body">${rows}${imgLine}</div></details>`;
 }
 
-/* views */
 function renderOverview(){
   let cards="";
-  for(const b of CONFIG.branches){
-    const d=state.data[b.key];
+  for(const b of CONFIG.branches){const d=state.data[b.key];
     if(!d){cards+=`<div class="bcard"><div class="bcard__name">${esc(b.name)}</div><p class="lede">Loading…</p></div>`;continue;}
-    if(d.error){cards+=`<button class="bcard" data-key="${b.key}"><div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span><span class="freshness freshness--none">Error</span></div><p class="demohint">${esc(d.error)} — check the published CSV link.</p></button>`;continue;}
-    const items=d.items,exc=branchExceptions(d),qty=items.reduce((a,i)=>a+(i.qty||0),0),f=freshness(newest(items));
-    const thumbs=items.slice(0,5).map(it=>`<div class="t">${mediaHTML(it)}</div>`).join("");
+    const items=d.items,exc=branchExceptions(d),units=items.reduce((a,i)=>a+(i.qty||0),0),n=newest(items),f=freshness(n);
     cards+=`<button class="bcard" data-key="${b.key}" aria-label="Open ${esc(b.name)}">
       <div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span>
         <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>${esc(f.label)}</span></div>
       <div class="bcard__kpis">
         <div class="bcard__kpi"><div class="l">Lines</div><div class="v">${fmt(items.length)}</div></div>
-        <div class="bcard__kpi"><div class="l">Qty</div><div class="v">${fmt(Math.round(qty))}</div></div>
+        <div class="bcard__kpi"><div class="l">Units added</div><div class="v">${fmt(Math.round(units))}</div></div>
         <div class="bcard__kpi exc ${exc.length?"hot":""}"><div class="l">Exceptions</div><div class="v">${fmt(exc.length)}</div></div></div>
-      <div class="bcard__thumbs">${thumbs}</div>
-      ${d.demo?`<div class="demohint">Sample data — connect this branch in <code>CONFIG.branches</code></div>`:""}
-    </button>`;
-  }
+      ${d.demo?`<div class="demohint">Sample data — couldn't read the live sheet (${esc(d.error||"")})</div>`:""}</button>`;}
   return `<div class="branchhead"><div class="branchhead__name">Overview</div></div>
-    <p class="lede">All four branches at a glance. A green dot means scanned recently, amber means the data has gone stale. Tap a card to open it.</p>
+    <p class="lede">All four branches at a glance — green means scanned recently, amber means stale. Tap a card to open it.</p>
     <div class="overview">${cards}</div>`;
 }
-
 function renderBranch(b){
   const d=state.data[b.key];
   if(!d)return `<div class="state"><h3>Loading ${esc(b.name)}…</h3></div>`;
-  if(d.error)return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div></div>
-    <div class="tablecard"><div class="state state--err"><h3>Couldn't load this branch</h3>
-    <p>${esc(d.error)}. Check the published CSV link is reachable and the sheet is shared to <b>anyone with the link</b> or published to the web. The link goes in <code>CONFIG.branches</code> at the top of <code>picco.html</code>.</p></div></div>`;
-  const items=d.items,exc=branchExceptions(d),qty=items.reduce((a,i)=>a+(i.qty||0),0),f=freshness(newest(items));
+  const items=d.items,exc=branchExceptions(d),units=items.reduce((a,i)=>a+(i.qty||0),0),n=newest(items),f=freshness(n);
   let view=(state.filter==="exc"?exc:items).filter(matchSearch);
   return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
       <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>${esc(f.label)}</span></div>
-    ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Sample data — no live source connected. Paste this branch's published CSV link in <code>CONFIG.branches</code>.</div>`:""}
+    ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Showing sample data — couldn't read the live sheet (${esc(d.error||"")}). Share it "anyone with the link — viewer", or we use an /api endpoint.</div>`:""}
     <div class="kpis">
       <div class="kpi"><div class="kpi__label">Lines scanned</div><div class="kpi__value">${fmt(items.length)}</div></div>
-      <div class="kpi"><div class="kpi__label">Total quantity</div><div class="kpi__value">${fmt(Math.round(qty))}<small>units</small></div></div>
+      <div class="kpi"><div class="kpi__label">Units added</div><div class="kpi__value">${fmt(Math.round(units))}</div></div>
+      <div class="kpi kpi--age"><div class="kpi__label">Last scan</div><div class="kpi__value">${n?esc(agoShort(n)):"—"}</div></div>
       <div class="kpi kpi--exc ${exc.length?"hot":""}"><div class="kpi__label">Exceptions</div><div class="kpi__value">${fmt(exc.length)}</div></div></div>
     ${toolbar({filter:true,view:true})}
     ${state.itemView==="cards"?cardsHTML(view,b.key):tableHTML(view,b.key,false)}
     ${mapNote(d)}`;
 }
-
 function renderExceptions(){
   const all=[];
   for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)branchExceptions(d).forEach(it=>all.push(Object.assign({_branch:b.name},it)));}
   const view=all.filter(matchSearch);
   const head=`<div class="branchhead"><div class="branchhead__name">Exceptions</div>
-    <span class="freshness freshness--${all.length?"stale":"live"}"><span class="statusdot statusdot--${all.length?"stale":"live"}"></span>${all.length?fmt(all.length)+" lines need a look":"All clear"}</span></div>
-    <p class="lede">Lines flagged across all four branches by the rule in <code>CONFIG.isException</code> — by default a negative quantity or a non-empty status/variance value.</p>`;
-  if(!all.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing flagged</h3><p>Every scanned line across all branches reconciles. New exceptions appear here as scans come in.</p></div></div>`;
+    <span class="freshness freshness--${all.length?"stale":"live"}"><span class="statusdot statusdot--${all.length?"stale":"live"}"></span>${all.length?fmt(all.length)+" lines to check":"All clear"}</span></div>
+    <p class="lede">Lines flagged across all branches by <code>CONFIG.isException</code> — by default stock ending negative (<code>AfterValue &lt; 0</code>) or a negative value booked.</p>`;
+  if(!all.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing flagged</h3><p>Every scanned line across all branches reconciles.</p></div></div>`;
   return head+toolbar({filter:false,view:false})+tableHTML(view,"__exc",true);
 }
-
 function renderLog(){
   let board="";
   for(const b of CONFIG.branches){const d=state.data[b.key];
     if(!d){board+=`<tr><td>${esc(b.name)}</td><td>—</td><td>—</td><td class="num">—</td><td class="num">—</td><td>—</td></tr>`;continue;}
-    if(d.error){board+=`<tr><td><span class="statusdot statusdot--none"></span> ${esc(b.name)}</td><td>—</td><td><span class="agetag age--err">Error</span></td><td class="num">—</td><td class="num">—</td><td>error</td></tr>`;continue;}
     const n=newest(d.items),f=freshness(n);
-    board+=`<tr><td><span class="statusdot statusdot--${f.dot}"></span> ${esc(b.name)}</td>
-      <td class="time">${n?pad(n):"—"}</td>
-      <td><span class="agetag age--${f.cls}">${esc(f.label)}</span></td>
-      <td class="num">${fmt(d.items.length)}</td>
-      <td class="num">${fmt(branchExceptions(d).length)}</td>
-      <td>${d.demo?"sample":"live"}</td></tr>`;
-  }
+    board+=`<tr><td><span class="statusdot statusdot--${f.dot}"></span> ${esc(b.name)}</td><td class="time">${n?pad(n):"—"}</td>
+      <td><span class="agetag age--${f.cls}">${esc(f.label)}</span></td><td class="num">${fmt(d.items.length)}</td>
+      <td class="num">${fmt(branchExceptions(d).length)}</td><td>${d.demo?"sample":"live"}</td></tr>`;}
   let logRows="";
-  for(const e of state.log){
-    let cells="";
-    for(const b of CONFIG.branches){const r=e.branches[b.key];
-      let cls="age--none",txt="—";
-      if(r.error){cls="age--err";txt="error";}
-      else if(r.ageMin!=null){cls=r.ageMin<=CONFIG.staleAfterMinutes?"age--live":"age--stale";txt=ago(r.ageMin);}
-      else if(r.lines!=null){cls="age--none";txt="no time";}
-      cells+=`<td><span class="agetag ${cls}">${txt}</span></td>`;
-    }
-    logRows+=`<tr><td class="time">${e.at.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</td>${cells}</tr>`;
-  }
+  for(const e of state.log){let cells="";
+    for(const b of CONFIG.branches){const r=e.branches[b.key];let cls="age--none",txt="—";
+      if(r&&r.ageMin!=null){cls=r.ageMin<=CONFIG.staleAfterMinutes?"age--live":"age--stale";txt=ago(r.ageMin);}
+      else if(r&&r.lines!=null){txt="no time";}
+      cells+=`<td><span class="agetag ${cls}">${txt}</span></td>`;}
+    logRows+=`<tr><td class="time">${e.at.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</td>${cells}</tr>`;}
   const heads=CONFIG.branches.map(b=>`<th>${esc(b.name)}</th>`).join("");
   return `<div class="branchhead"><div class="branchhead__name">Update log</div></div>
-    <p class="lede">How fresh each branch is right now, and a running log of every refresh this session. If a branch's age stops shrinking, its slave export or importer has stalled. (Resets on reload — say the word if you want this written to a sheet for permanent history.)</p>
+    <p class="lede">How long since each branch last scanned, and a running log of every refresh this session. If an age stops shrinking, that branch's export or importer has stalled. (Resets on reload — say the word for a permanent sheet-backed log.)</p>
     <p class="sectionlabel">Freshness now</p>
-    <div class="tablecard board"><div class="tablescroll"><table>
-      <thead><tr><th>Branch</th><th>Last scan</th><th>Age</th><th class="num">Lines</th><th class="num">Exceptions</th><th>Source</th></tr></thead>
-      <tbody>${board}</tbody></table></div></div>
-    <p class="sectionlabel">Refresh log · ${fmt(state.log.length)} check${state.log.length===1?"":"s"} this session</p>
-    <div class="tablecard"><div class="tablescroll"><table>
-      <thead><tr><th>Checked at</th>${heads}</tr></thead>
-      <tbody>${logRows||`<tr><td colspan="${CONFIG.branches.length+1}" style="color:var(--muted);padding:16px">No checks logged yet.</td></tr>`}</tbody></table></div></div>`;
+    <div class="tablecard board"><div class="tablescroll"><table><thead><tr><th>Branch</th><th>Last scan</th><th>Age</th><th class="num">Lines</th><th class="num">Exceptions</th><th>Source</th></tr></thead><tbody>${board}</tbody></table></div></div>
+    <p class="sectionlabel">Refresh log · ${fmt(state.log.length)} check${state.log.length===1?"":"s"}</p>
+    <div class="tablecard"><div class="tablescroll"><table><thead><tr><th>Checked at</th>${heads}</tr></thead><tbody>${logRows||`<tr><td colspan="${CONFIG.branches.length+1}" style="padding:16px;color:var(--muted)">No checks yet.</td></tr>`}</tbody></table></div></div>`;
 }
 
-/* panel */
 function renderPanel(){
-  const panel=$("#panel");
-  panel.classList.remove("panel");void panel.offsetWidth;panel.classList.add("panel");
+  const panel=$("#panel");panel.classList.remove("panel");void panel.offsetWidth;panel.classList.add("panel");
   if(state.active==="__overview")panel.innerHTML=renderOverview();
   else if(state.active==="__exc")panel.innerHTML=renderExceptions();
   else if(state.active==="__log")panel.innerHTML=renderLog();
   else panel.innerHTML=renderBranch(CONFIG.branches.find(x=>x.key===state.active));
-  wirePanel();lazyBarcodes();
+  wirePanel();
 }
 function wirePanel(){
   const s=$("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;renderPanel();const f=$("#search");if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length);}});
   document.querySelectorAll(".seg button[data-f]").forEach(b=>b.addEventListener("click",()=>{state.filter=b.dataset.f;renderPanel();}));
   document.querySelectorAll(".seg button[data-v]").forEach(b=>b.addEventListener("click",()=>{state.itemView=b.dataset.v;renderPanel();}));
-  document.querySelectorAll(".bcard[data-key]").forEach(c=>{
-    const go=()=>{state.active=c.dataset.key;state.search="";state.filter="all";renderTabs();renderPanel();window.scrollTo({top:0,behavior:"smooth"});};
-    c.addEventListener("click",go);
-    c.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});
-  });
+  document.querySelectorAll(".bcard[data-key]").forEach(c=>{const go=()=>{state.active=c.dataset.key;state.search="";state.filter="all";renderTabs();renderPanel();window.scrollTo({top:0,behavior:"smooth"});};
+    c.addEventListener("click",go);c.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});});
   document.querySelectorAll("tr.row").forEach(tr=>tr.addEventListener("click",()=>{const id=tr.dataset.id;state.expanded[id]=!state.expanded[id];renderPanel();}));
   document.querySelectorAll("[data-showall]").forEach(b=>b.addEventListener("click",()=>{state.showAll[b.dataset.showall]=true;renderPanel();}));
 }
-
 function renderUpdated(){const el=$("#updated");if(!state.lastUpdated){el.textContent="";return;}
-  const t=state.lastUpdated.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
-  el.innerHTML=`Updated <b>${t}</b>${CONFIG.refreshMinutes?` · auto every ${CONFIG.refreshMinutes} min`:""}`;}
-function renderFooter(){$("#footer").innerHTML="PICCO scan monitor · reads each branch's published picco CSV · imports run every 10 min, exports every 3 min · barcodes rendered locally.";}
+  el.innerHTML=`Updated <b>${state.lastUpdated.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</b>${CONFIG.refreshMinutes?` · auto every ${CONFIG.refreshMinutes} min`:""}`;}
+function renderFooter(){$("#footer").innerHTML="PICCO scan monitor · reads each branch's picco sheet directly · imports run every 10 min, exports every 3 min.";}
 function setRefreshing(on){const b=$("#refresh");if(!b)return;b.classList.toggle("spin",on);b.disabled=on;}
 
-/* boot */
 $("#refresh").addEventListener("click",loadAll);
 renderTabs();renderPanel();loadAll();
 if(CONFIG.refreshMinutes>0)setInterval(loadAll,CONFIG.refreshMinutes*60000);
