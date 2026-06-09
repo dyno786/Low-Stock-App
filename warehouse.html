@@ -123,6 +123,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .pk-cell-c .pc-num{color:#b45309}
 .pk-cell-x .pc-num{color:var(--green)}
 .pk-cell-r .pc-num{color:var(--blue)}
+.pc-qrow{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:2px}
+.pc-qbtn{width:22px;height:22px;border:1px solid var(--border);background:#fff;border-radius:6px;font-size:14px;font-weight:700;line-height:1;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;padding:0}
+.pc-qbtn:active{background:var(--border)}
+.wh-target{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--s1,#fff);border:1px solid var(--border);border-radius:9px;padding:8px 11px;margin:8px 11px}
+.wh-target-lbl{font-size:12px;font-weight:600;color:var(--ink)}
+.wh-target-ctl{display:flex;align-items:center;gap:6px}
+.wh-tbtn{width:26px;height:26px;border:1px solid var(--border);background:var(--card2,#f5f5f5);border-radius:6px;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.wh-tval{font-size:18px;font-weight:700;font-family:monospace;min-width:22px;text-align:center}
+.wh-target-note{font-size:10px;color:var(--sub);flex-basis:100%;line-height:1.3}
 .pc-sub{font-size:7px;color:var(--sub);text-transform:uppercase;margin-top:2px}
 .pc-full{font-size:17px;font-weight:700;color:var(--green)}
 .pc-low{font-size:17px;font-weight:700;color:var(--sub)}
@@ -239,6 +248,10 @@ var IURL='/api/stock-data?branch=shopify-images'; // ShopifyImages tab — updat
 var bd=[null,null,null,null],bm=[{},{},{},{}],imgs={},shopifyData={},loaded=0;
 var pkTx={};
 try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
+// editable warehouse send quantities: whQty[bc] = [n,n,n]; and top-up target (default 7)
+var whQty={};try{whQty=JSON.parse(localStorage.getItem('cc_wh_qty')||'{}');}catch(e){}
+function loadTarget(){var v=parseInt(localStorage.getItem('cc_wh_target'));return (isNaN(v)||v<1)?7:v;}
+function saveTarget(v){try{localStorage.setItem('cc_wh_target',String(v));}catch(e){}}
 
 // ── TIMER ──────────────────────────────────────────────────
 var tmr={on:false,start:0,last:0,count:0,gaps:[],iv:null};
@@ -394,26 +407,30 @@ function updateBranchCards(){
 // ── BUILD PICK LIST ─────────────────────────────────────────
 function buildPickList(){
   var whData=bd[3];if(!whData)return{dead:[],normal:[]};
+  var T=loadTarget();
   var dead=[],normal=[];
   whData.forEach(function(p){
     if(!p.bc||!p.nm||p.qty<=0)return;
     var st=gst(p.bc,p);
-    var rounT=st.type==='slow'?6:12;
-    var tgts=[SPLIT[0],SPLIT[1],rounT];
-    var needs=[
-      {i:0,n:Math.max(0,tgts[0]-getQty(0,p.bc)),c:getQty(0,p.bc)},
-      {i:1,n:Math.max(0,tgts[1]-getQty(1,p.bc)),c:getQty(1,p.bc)},
-      {i:2,n:Math.max(0,tgts[2]-getQty(2,p.bc)),c:getQty(2,p.bc)},
-    ];
-    needs.sort(function(a,b){return a.c-b.c;});
-    var rem=p.qty,sp=[0,0,0];
-    needs.forEach(function(n){if(n.n>0&&rem>0){var g=Math.min(n.n,rem);sp[n.i]=g;rem-=g;}});
-    if(sp[0]+sp[1]+sp[2]<=0)return;
-    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,st:st,
-              bq:[getQty(0,p.bc),getQty(1,p.bc),getQty(2,p.bc)],sp:sp,tgts:tgts};
+    var tgts=[T,T,T];
+    var c=[getQty(0,p.bc),getQty(1,p.bc),getQty(2,p.bc)];
+    var need=[Math.max(0,T-c[0]),Math.max(0,T-c[1]),Math.max(0,T-c[2])];
+    if(need[0]+need[1]+need[2]<=0)return;
+    var sp;
+    if(whQty[p.bc]){
+      var o=whQty[p.bc];
+      sp=[Math.max(0,o[0]|0),Math.max(0,o[1]|0),Math.max(0,o[2]|0)];
+      var tot=sp[0]+sp[1]+sp[2];
+      if(tot>p.qty){var over=tot-p.qty;for(var k=2;k>=0&&over>0;k--){var cut=Math.min(sp[k],over);sp[k]-=cut;over-=cut;}}
+    }else{
+      var needs=[{i:0,n:need[0],c:c[0]},{i:1,n:need[1],c:c[1]},{i:2,n:need[2],c:c[2]}];
+      needs.sort(function(a,b){return a.c-b.c;});
+      var rem=p.qty;sp=[0,0,0];
+      needs.forEach(function(n){if(n.n>0&&rem>0){var g=Math.min(n.n,rem);sp[n.i]=g;rem-=g;}});
+    }
+    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,st:st,bq:c,sp:sp,tgts:tgts};
     if(st.type==='dead')dead.push(item);else normal.push(item);
   });
-  // Sort alphabetically A-Z so same brands are grouped
   dead.sort(function(a,b){return a.nm.localeCompare(b.nm);});
   normal.sort(function(a,b){return a.nm.localeCompare(b.nm);});
   return{dead:dead,normal:normal};
@@ -435,7 +452,11 @@ function renderWH(){
   document.getElementById('prog-txt').textContent=pct+'%';
   document.getElementById('prog-sub').textContent=doneCells+' of '+totalCells+' picks done · '+all.length+' products total';
   updateBranchCards();
-  var html='';
+  var T=loadTarget();
+  var targetCtl='<div class="wh-target"><span class="wh-target-lbl">Top up each branch to</span>'+
+    '<div class="wh-target-ctl"><button class="wh-tbtn" data-d="-1">−</button><span class="wh-tval">'+T+'</span><button class="wh-tbtn" data-d="1">+</button></div>'+
+    '<span class="wh-target-note">Suggested send = target minus what the branch has. Tap −/+ on any box to adjust (you can\'t send more than the warehouse has).</span></div>';
+  var html=targetCtl;
   if(L.dead.length){
     html+='<div class="sec-hdr"><div class="sec-title" style="color:var(--redtxt)">☠ Dead stock — clear first</div>'+
       '<div class="sec-sub">Not sold 90+ days across any branch. Split to branches or return to supplier.</div></div>';
@@ -443,16 +464,17 @@ function renderWH(){
   }
   if(L.normal.length){
     html+='<div class="sec-hdr" style="'+(L.dead.length?'padding-top:16px':'')+'"><div class="sec-title" style="color:var(--purpletxt)">📦 Normal restock</div>'+
-      '<div class="sec-sub">Top up to shelf target. Fast sellers = 12 all branches. Slow sellers = Roundhay gets 6.</div></div>';
+      '<div class="sec-sub">Top up each branch to your target (default 7). Tap −/+ on any box to change how many to send.</div></div>';
     html+=renderSection(L.normal,dp,tp);
   }
-  if(!all.length)html='<div class="empty">No warehouse picks needed right now<br><small>All branches are at their target stock levels</small></div>';
+  if(!all.length)html=targetCtl+'<div class="empty">No warehouse picks needed right now<br><small>All branches are at their target stock levels</small></div>';
   var grandOut=all.reduce(function(s,it){return s+it.sp[0]+it.sp[1]+it.sp[2];},0);
   html+='<div class="wa-footer">'+
     '<div class="wa-row"><span>Send pick list to all branch managers</span><span>'+all.length+' products · '+grandOut+' pcs out</span></div>'+
     '<button class="wa-btn wa-btn-purple" id="wa-btn">'+waSVG()+'Send pick list</button>'+
   '</div>';
   el.innerHTML=html;
+  el.querySelectorAll('.wh-tbtn').forEach(function(b){b.addEventListener('click',function(){var v=loadTarget()+(+this.dataset.d);if(v<1)v=1;if(v>99)v=99;saveTarget(v);renderWH();});});
   wireTicks(all);
   document.getElementById('wa-btn').addEventListener('click',function(){sendWA(all);});
 }
@@ -465,13 +487,15 @@ function renderSection(items,dp,tp){
 
 function mkRow(item){
   var t=pkTx[item.bc]||[false,false,false];
-  var allDone=true;for(var b=0;b<3;b++){if(item.sp[b]>0&&!t[b])allDone=false;}
+  var anyPick=(item.sp[0]+item.sp[1]+item.sp[2])>0;
+  var allDone=anyPick;for(var b=0;b<3;b++){if(item.sp[b]>0&&!t[b])allDone=false;}
   var stag=item.st.type==='dead'?'<span class="pk-tag pk-tag-dead">☠ DEAD '+(item.st.d!==null?item.st.d+'d':'?')+'</span>':
            item.st.type==='slow'?'<span class="pk-tag pk-tag-slow">🐌 SLOW '+item.st.d+'d</span>':
            '<span class="pk-tag pk-tag-fast">⚡ FAST '+item.st.d+'d</span>';
   var BN=['Chapeltown','City','Roundhay'];
   var BC=['c','x','r'];
   var BCOL=['#b45309','var(--green)','var(--blue)'];
+  var scan=item.sp[0]+item.sp[1]+item.sp[2];
   var html='<div class="pk-row'+(allDone?' all-done':'')+'" data-bc="'+item.bc+'">'+
     '<div class="pk-top">'+
       '<div class="pk-img">'+imgEl(item.bc,44)+'</div>'+
@@ -484,54 +508,85 @@ function mkRow(item){
           (item.prc>0?'<span class="pk-tag pk-tag-price">£'+item.prc.toFixed(2)+'</span>':'')+
         '</div>'+
       '</div>'+
-      '<div class="pk-scanout'+(allDone?' done':'')+'"><div class="so-num">'+(item.sp[0]+item.sp[1]+item.sp[2])+'</div><div class="so-lbl">'+(allDone?'✓ out':'scan out')+'</div></div>'+
+      '<div class="pk-scanout'+(allDone?' done':'')+'"><div class="so-num">'+scan+'</div><div class="so-lbl">'+(allDone?'✓ out':'scan out')+'</div></div>'+
     '</div>'+
     '<div class="pk-strip">';
   for(var bi=0;bi<3;bi++){
     var take=item.sp[bi],has=item.bq[bi],tgt=item.tgts[bi],ticked=!!(t[bi]);
-    var badge=has<=0?'<div class="pc-badge pc-badge-out">OUT</div>':has<tgt&&has>0?'<div class="pc-badge pc-badge-low">LOW</div>':'';
+    var badge=has<=0?'<div class="pc-badge pc-badge-out">OUT</div>':(has<tgt?'<div class="pc-badge pc-badge-low">LOW</div>':'');
+    var hasLbl=has>=tgt?'has '+has+' ✓':'has '+has+' → '+tgt;
     html+='<div class="pk-cell pk-cell-'+BC[bi]+(ticked?' on':'')+'" data-bc="'+item.bc+'" data-bi="'+bi+'" data-take="'+(take>0?'1':'0')+'">'+
       '<div class="pc-tdot">'+(ticked?'✓':'')+'</div>'+
-      '<div class="pc-bl">'+BN[bi]+'</div>';
-    if(take>0){
-      html+=badge+'<div class="pc-has">'+has+' → tgt '+tgt+'</div>'+
-        '<div class="pc-num" style="color:'+BCOL[bi]+'">'+take+'</div>'+
-        '<div class="pc-sub">pick</div>';
-    }else if(has>=tgt){
-      html+='<div class="pc-has">has '+has+'</div><div class="pc-full">✓</div><div class="pc-sub">full</div>';
-    }else{
-      html+=badge+'<div class="pc-has">has '+has+'</div><div class="pc-low">—</div><div class="pc-sub">WH low</div>';
-    }
-    html+='</div>';
+      '<div class="pc-bl">'+BN[bi]+'</div>'+
+      badge+
+      '<div class="pc-has">'+hasLbl+'</div>'+
+      '<div class="pc-qrow">'+
+        '<button class="pc-qbtn" data-bc="'+item.bc+'" data-bi="'+bi+'" data-d="-1">−</button>'+
+        '<span class="pc-num" style="color:'+BCOL[bi]+'">'+take+'</span>'+
+        '<button class="pc-qbtn" data-bc="'+item.bc+'" data-bi="'+bi+'" data-d="1">+</button>'+
+      '</div>'+
+      '<div class="pc-sub">'+(ticked?'packed':(take>0?'tap to pack':'—'))+'</div>'+
+    '</div>';
   }
   html+='</div></div>';
   return html;
 }
 
 function wireTicks(all){
-  document.getElementById('out').querySelectorAll('.pk-cell').forEach(function(cell){
+  var el=document.getElementById('out');
+  function findItem(bc){for(var i=0;i<all.length;i++)if(all[i].bc===bc)return all[i];return null;}
+  function refreshRow(row){
+    if(!row)return;
+    var scan=0;row.querySelectorAll('.pc-num').forEach(function(n){scan+=parseInt(n.textContent)||0;});
+    var sn=row.querySelector('.pk-scanout .so-num');if(sn)sn.textContent=scan;
+    var cells=row.querySelectorAll('.pk-cell[data-take="1"]');var allDone=cells.length>0;
+    cells.forEach(function(c){if(!c.classList.contains('on'))allDone=false;});
+    row.classList.toggle('all-done',allDone);
+    var so=row.querySelector('.pk-scanout');
+    if(so){so.classList.toggle('done',allDone);var sl=so.querySelector('.so-lbl');if(sl)sl.textContent=allDone?'✓ out':'scan out';}
+  }
+  el.querySelectorAll('.pc-qbtn').forEach(function(b){
+    b.addEventListener('click',function(e){
+      e.stopPropagation();
+      var bc=this.dataset.bc,bi=+this.dataset.bi,d=+this.dataset.d;
+      var item=findItem(bc);if(!item)return;
+      var next=item.sp[bi]+d;if(next<0)next=0;
+      var others=0;for(var k=0;k<3;k++)if(k!==bi)others+=item.sp[k];
+      if(next+others>item.wh)next=Math.max(0,item.wh-others);
+      item.sp[bi]=next;
+      whQty[bc]=item.sp.slice();
+      try{localStorage.setItem('cc_wh_qty',JSON.stringify(whQty));}catch(e){}
+      if(typeof syncSave==='function')syncSave('cc_wh_qty',whQty);
+      var cell=this.closest('.pk-cell');
+      var num=cell.querySelector('.pc-num');if(num)num.textContent=next;
+      cell.dataset.take=next>0?'1':'0';
+      if(next<=0){
+        if(pkTx[bc])pkTx[bc][bi]=false;
+        try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
+        cell.classList.remove('on');var dot=cell.querySelector('.pc-tdot');if(dot)dot.textContent='';
+      }
+      var sub=cell.querySelector('.pc-sub');if(sub)sub.textContent=cell.classList.contains('on')?'packed':(next>0?'tap to pack':'—');
+      refreshRow(cell.closest('.pk-row'));
+      updateProgress();
+    });
+  });
+  el.querySelectorAll('.pk-cell').forEach(function(cell){
     cell.addEventListener('click',function(){
       var bc=this.dataset.bc,bi=+this.dataset.bi;
+      var num=this.querySelector('.pc-num');var cur=num?(parseInt(num.textContent)||0):0;
+      if(cur<=0)return;
       if(!pkTx[bc])pkTx[bc]=[false,false,false];
       var nowDone=!pkTx[bc][bi];
       pkTx[bc][bi]=nowDone;
       try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
-      syncSave('cc_pk_ticks',pkTx);
-      // Instant DOM update
+      if(typeof syncSave==='function')syncSave('cc_pk_ticks',pkTx);
       this.classList.toggle('on',nowDone);
       var dot=this.querySelector('.pc-tdot');if(dot)dot.textContent=nowDone?'✓':'';
-      var row=this.closest('.pk-row');
-      if(row){
-        var cells=row.querySelectorAll('.pk-cell[data-take="1"]');
-        var allDone=true;
-        cells.forEach(function(c){if(!c.classList.contains('on'))allDone=false;});
-        row.classList.toggle('all-done',allDone);
-        var so=row.querySelector('.pk-scanout');
-        if(so){so.classList.toggle('done',allDone);var sl=so.querySelector('.so-lbl');if(sl)sl.textContent=allDone?'✓ out':'scan out';}
-      }
+      var sub=this.querySelector('.pc-sub');if(sub)sub.textContent=nowDone?'packed':'tap to pack';
+      refreshRow(this.closest('.pk-row'));
       updateProgress();
       updateBranchCards();
-      if(nowDone)tmrPick();
+      if(nowDone&&typeof tmrPick==='function')tmrPick();
     });
   });
 }
