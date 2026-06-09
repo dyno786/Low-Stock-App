@@ -225,13 +225,18 @@
   @media (max-width:560px){
     .kpis{grid-template-columns:1fr} .branchhead__name{font-size:21px}
     /* tabs: compact, snap-scroll, hide line-count chips (keep exceptions count) */
-    .tabwrap{position:relative}
-    .tabs{scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; padding-right:26px}
-    .tab{padding:10px 11px 12px; font-size:13.5px; scroll-snap-align:start}
+    /* tabs: fixed 4-across grid (wraps to rows of 4), no sideways scroll */
+    .tabwrap{position:static}
+    .tabwrap::after{display:none}
+    .tabs{display:grid; grid-template-columns:repeat(4,1fr); gap:5px; overflow:visible; padding:8px 0 2px}
+    .tab{flex:none; justify-content:center; text-align:center; gap:5px; padding:9px 4px; font-size:11.5px; line-height:1.15; border-radius:9px; white-space:normal; min-height:42px; background:var(--surface); border:1px solid var(--line)}
+    .tab[aria-selected="true"]{background:#E2F1F2; border-color:transparent; color:var(--ink)}
+    .tab[aria-selected="true"]::after{display:none}
+    .tab .statusdot{width:7px; height:7px}
     .tab .tab__count{display:none}
-    .tab--exc .tab__count{display:inline-block}
-    .tabwrap::after{content:""; position:absolute; top:10px; right:0; bottom:0; width:30px;
-      background:linear-gradient(to right, rgba(244,246,248,0), rgba(244,246,248,.95)); pointer-events:none}
+    .tab--exc .tab__count{display:none}
+    .seg--flow{overflow-x:auto; scrollbar-width:none} .seg--flow::-webkit-scrollbar{display:none}
+    .seg--flow button{white-space:nowrap}
     /* product table: everything on one screen — image, product, movement+added, time */
     .tablescroll{overflow-x:visible}
     table{min-width:0; width:100%; table-layout:fixed}
@@ -410,7 +415,7 @@ function normaliseMovements(rows){
     idx={date:f(/date|time/,0),branch:f(/branch/,1),barcode:f(/barcode|ean|^code$/,2),name:f(/name|product/,3),before:f(/before/,4),after:f(/after/,5),delta:f(/delta|change|qty/,6),reason:f(/reason|status|type/,8)};data=rows.slice(1);}
   else{idx={date:0,branch:1,barcode:2,name:3,before:4,after:5,delta:6,reason:8};data=rows;}
   const headers=["Date","Branch","Barcode","Product","Before","After","Delta","Suspicious","Reason"];
-  const items=data.map(r=>{const g=i=>(i>=0&&i<r.length)?cleanCell(r[i]):"";
+  let items=data.map(r=>{const g=i=>(i>=0&&i<r.length)?cleanCell(r[i]):"";
     const before=toNumber(g(idx.before)),after=toNumber(g(idx.after));
     let delta=toNumber(g(idx.delta));if(delta==null&&before!=null&&after!=null)delta=after-before;
     const reason=String(g(idx.reason)||"").trim();
@@ -420,7 +425,23 @@ function normaliseMovements(rows){
       raw:{Date:ukDate(g(idx.date)),Branch:g(idx.branch),Barcode:g(idx.barcode),Product:g(idx.name),Before:g(idx.before),After:g(idx.after),Delta:(delta==null?"":delta),Reason:reason},
       isExc:(after!=null&&after<0) };
   }).filter(it=>it.barcode||it.description);
-  return{headers,map:idx,items,movements:true};
+  // Drop PHANTOM movements from a bad/empty stock snapshot: a single timestamp where many
+  // products all drop to 0 (an empty export) and then get "re-delivered" next snapshot.
+  // Those net to nothing and aren't real stock moving anywhere.
+  const byTs={}; for(const it of items){(byTs[it.time]=byTs[it.time]||[]).push(it);}
+  const badTs=new Set();
+  for(const ts in byTs){const arr=byTs[ts], zeros=arr.filter(x=>x.after===0&&(x.before||0)>0).length;
+    if(arr.length>=4 && zeros>=4 && zeros/arr.length>=0.5) badTs.add(ts);}
+  let dropped=0;
+  if(badTs.size){
+    const phantom=new Set(); // barcode|day that suffered a phantom zero-out
+    for(const it of items){if(badTs.has(it.time)&&it.after===0)phantom.add(it.barcode+"|"+dayKey(it.time));}
+    items=items.filter(it=>{
+      if(badTs.has(it.time)&&it.after===0){dropped++;return false;}                                  // the →0 leg
+      if((it.before===0)&&(it.qty||0)>0&&phantom.has(it.barcode+"|"+dayKey(it.time))){dropped++;return false;} // the 0→ restore leg
+      return true;});
+  }
+  return{headers,map:idx,items,movements:true,dropped};
 }
 function demoMovementRows(){const now=new Date(),z=n=>String(n).padStart(2,"0");
   const d=`${z(now.getDate())}/${z(now.getMonth()+1)}/${now.getFullYear()} ${z(now.getHours())}:${z(now.getMinutes())}:${z(now.getSeconds())}`;
@@ -580,6 +601,7 @@ function collapse(items){
 function applyFlow(products){
   if(state.flow==="added")return products.filter(p=>p.net>0||(p.net===0&&p.added>0));
   if(state.flow==="reduced")return products.filter(p=>p.net<0);
+  if(state.flow==="exc")return products.filter(p=>p.isExc);
   return products;
 }
 
@@ -603,10 +625,11 @@ function toolbar(opts){const cards=state.itemView==="cards";
     ${opts.day?daynavHTML():""}
     <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input id="search" type="search" placeholder="Search product or barcode" value="${esc(state.search)}" autocomplete="off"></label>
-    ${opts.flow?`<div class="seg" role="group" aria-label="Flow">
+    ${opts.flow?`<div class="seg seg--flow" role="group" aria-label="Flow">
       <button data-flow="all" aria-pressed="${state.flow==='all'}">All</button>
       <button data-flow="added" aria-pressed="${state.flow==='added'}">Added</button>
-      <button data-flow="reduced" aria-pressed="${state.flow==='reduced'}">Reduced</button></div>`:""}
+      <button data-flow="reduced" aria-pressed="${state.flow==='reduced'}">Reduced</button>
+      <button data-flow="exc" class="flow-exc" aria-pressed="${state.flow==='exc'}">Exceptions</button></div>`:""}
     ${opts.view?`<div class="seg" role="group" aria-label="Layout">
       <button data-v="table" aria-pressed="${!cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Table</button>
       <button data-v="cards" aria-pressed="${cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Cards</button></div>`:""}
@@ -692,7 +715,7 @@ function renderBranch(b){
   let view=applyFlow(products).filter(matchSearch);
   return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
       ${freshBlock(d)}</div>
-    ${d.movements?`<p class="lede">Real stock movements — <b>From → To</b> is the on-hand level before and after each change. <b>Reduced</b> = removals/transfers out (e.g. <span class="mv to-down"><span class="from">610</span><span class="arr">→</span><span class="to">500</span></span>), <b>Added</b> = deliveries in. Use the toggle below.</p>`:""}
+    ${d.movements?`<p class="lede">These are changes in the <b>Warehouse's own</b> on-hand count between stock snapshots. <b>From → To</b> is the level before and after. <b>Reduced</b> = stock <b>left</b> the warehouse — transferred out to a shop or written off (e.g. <span class="mv to-down"><span class="from">610</span><span class="arr">→</span><span class="to">500</span></span>); <b>Added</b> = stock <b>arrived</b> (a delivery in). The feed doesn't record <em>which shop</em> a transfer went to — use the <b>Trace</b> tab to follow a barcode into the branches.${d.dropped?` <span style="color:var(--muted)">${fmt(d.dropped)} phantom row${d.dropped===1?"":"s"} from an empty stock snapshot were hidden.</span>`:""}</p>`:""}
     ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Showing sample data — couldn't read the live sheet (${esc(d.error||"")}). Share it "anyone with the link — viewer", or we use an /api endpoint.</div>`:""}
     <div class="kpis">
       <div class="kpi"><div class="kpi__label">Products</div><div class="kpi__value">${fmt(products.length)}</div></div>
@@ -731,8 +754,20 @@ function renderLog(){
       cells+=`<td><span class="agetag ${cls}">${txt}</span></td>`;}
     logRows+=`<tr><td class="time">${e.at.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</td>${cells}</tr>`;}
   const heads=CONFIG.branches.map(b=>`<th>${esc(b.name)}</th>`).join("");
+  const last=state.lastUpdated, z=n=>String(n).padStart(2,"0");
+  const lastStr=last?`${z(last.getHours())}:${z(last.getMinutes())}:${z(last.getSeconds())}`:"—";
+  const nextStr=(last&&CONFIG.refreshMinutes)?(()=>{const t=new Date(last.getTime()+CONFIG.refreshMinutes*6e4);return `${z(t.getHours())}:${z(t.getMinutes())}`;})():"—";
+  const sched=`<p class="sectionlabel">What updates when</p>
+    <div class="tablecard"><div class="tablescroll"><table><thead><tr><th>Step</th><th>How often</th><th>What it does</th></tr></thead><tbody>
+      <tr><td>Till export (each shop PC)</td><td>every 3 min</td><td>writes the latest scans to picco.csv</td></tr>
+      <tr><td>Sheet import (Apps Script)</td><td>every 10 min</td><td>loads picco.csv into each branch's picco sheet</td></tr>
+      <tr><td>Warehouse stock snapshot</td><td>~hourly (8×/day)</td><td>diffs warehouse stock → Movements (deliveries / removals)</td></tr>
+      <tr><td>This monitor re-reads sheets</td><td>every ${fmt(CONFIG.refreshMinutes)} min</td><td>last checked <b>${esc(lastStr)}</b> · next ≈ <b>${esc(nextStr)}</b></td></tr>
+    </tbody></table></div></div>
+    <p class="lede" style="margin-top:6px">A fresh scan can take up to ~13 min to reach this page (3-min export + 10-min import), plus up to ${fmt(CONFIG.refreshMinutes)} more for the page to pull it. Warehouse stock changes show after the next hourly snapshot.</p>`;
   return `<div class="branchhead"><div class="branchhead__name">Update log</div></div>
     <p class="lede">How long since each branch last scanned, and a running log of every refresh this session. If an age stops shrinking, that branch's export or importer has stalled. (Resets on reload — say the word for a permanent sheet-backed log.)</p>
+    ${sched}
     <p class="sectionlabel">Freshness now</p>
     <div class="tablecard board"><div class="tablescroll"><table><thead><tr><th>Branch</th><th>Last scan</th><th>Age</th><th class="num">Lines</th><th class="num">Exceptions</th><th>Source</th></tr></thead><tbody>${board}</tbody></table></div></div>
     <p class="sectionlabel">Refresh log · ${fmt(state.log.length)} check${state.log.length===1?"":"s"}</p>
