@@ -559,18 +559,27 @@ async function loadImages(){
   }catch(err){out.error=String(err.message||err);return out;}
 }
 
+async function fetchSheet(url){
+  const res=await fetch(url,{cache:"no-store"});
+  if(!res.ok)throw new Error("HTTP "+res.status);
+  const text=await res.text();
+  if(/^\s*</.test(text)) throw new Error("not shared for link access");
+  const d=normalise(parseCSV(text));
+  if(!d.items.length) throw new Error("empty sheet");
+  return d;
+}
 async function loadBranch(b){
-  try{
-    const res=await fetch(gvizUrl(b),{cache:"no-store"});
-    if(!res.ok)throw new Error("HTTP "+res.status);
-    const text=await res.text();
-    if(/^\s*</.test(text)) throw new Error("not shared for link access");
-    const d=normalise(parseCSV(text));
-    if(!d.items.length) throw new Error("empty sheet");
-    return{demo:false,warehouse:!!b.warehouse,checkedAt:new Date(),...d};
-  }catch(err){
-    return{demo:true, warehouse:!!b.warehouse, error:String(err.message||err), ...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};
+  // gviz defaults to the FIRST tab. If a tab was added/reordered so the picco data isn't first,
+  // the default read comes back empty — so fall back to targeting the data tab by name.
+  const base = b.url ? b.url : `https://docs.google.com/spreadsheets/d/${b.sheetId}/gviz/tq?tqx=out:csv`;
+  const urls=[ gvizUrl(b) ];
+  for(const t of [b.tab,"picco","Picco","Sheet1"]) if(t) urls.push(bust(base+(base.includes("?")?"&":"?")+"sheet="+encodeURIComponent(t)));
+  let lastErr=null;
+  for(const url of urls){
+    try{ const d=await fetchSheet(url); return{demo:false,warehouse:!!b.warehouse,checkedAt:new Date(),...d}; }
+    catch(err){ lastErr=err; }
   }
+  return{demo:true, warehouse:!!b.warehouse, error:String((lastErr&&lastErr.message)||lastErr), ...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};
 }
 async function loadAll(){
   setRefreshing(true);
@@ -1144,12 +1153,21 @@ function renderTrace(){
 function renderPanel(){
   resolveDay();
   const panel=$("#panel");panel.classList.remove("panel");void panel.offsetWidth;panel.classList.add("panel");
-  if(state.active==="__overview")panel.innerHTML=renderOverview();
-  else if(state.active==="__exc")panel.innerHTML=renderExceptions();
-  else if(state.active==="__trace")panel.innerHTML=renderTrace();
-  else if(state.active==="__returns")panel.innerHTML=renderReturns();
-  else if(state.active==="__log")panel.innerHTML=renderLog();
-  else panel.innerHTML=renderBranch(CONFIG.branches.find(x=>x.key===state.active));
+  let html="";
+  try{
+    if(state.active==="__overview")html=renderOverview();
+    else if(state.active==="__exc")html=renderExceptions();
+    else if(state.active==="__trace")html=renderTrace();
+    else if(state.active==="__returns")html=renderReturns();
+    else if(state.active==="__log")html=renderLog();
+    else html=renderBranch(CONFIG.branches.find(x=>x.key===state.active));
+  }catch(err){
+    console.error("renderPanel error:",err);
+    html=`<div class="tablecard"><div class="state"><h3>Couldn't display this tab</h3>`+
+      `<p>The data loaded fine — your sheet is healthy — but something went wrong while drawing this view. Use the button below or switch tabs; this won't affect the other branches.</p>`+
+      `<p style="font-family:monospace;font-size:12px;white-space:pre-wrap;color:var(--warn);text-align:left;margin-top:12px">${esc(String((err&&err.message)||err))}\n${esc(String((err&&err.stack)||"").split("\n").slice(1,4).join("\n"))}</p></div></div>`;
+  }
+  panel.innerHTML=html;
   wirePanel();
 }
 function wirePanel(){
