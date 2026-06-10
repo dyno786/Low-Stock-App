@@ -166,6 +166,11 @@
   .negbanner{display:flex; align-items:center; gap:9px; padding:11px 15px; margin:0 0 16px; border-radius:12px; font-size:13.5px; background:var(--bad-wash); color:var(--bad); border:1px solid #F3C9C3} .negbanner b{font-weight:700}
   .negbanner--ok{background:var(--ok-wash); color:var(--ok); border-color:#BFE6CF}
   .negbanner__dot{width:9px; height:9px; border-radius:50%; background:currentColor; flex:none}
+  .ret-out{color:var(--bad); font-weight:700; font-variant-numeric:tabular-nums}
+  .retbranch{margin-bottom:22px}
+  .retbranch__head{display:flex; align-items:center; gap:9px; margin:2px 2px 10px; flex-wrap:wrap}
+  .retbranch__name{font-weight:700; font-size:16px; letter-spacing:-.01em}
+  .retbranch__tot{margin-left:auto; font-size:12.5px; color:var(--muted)} .retbranch__tot b{color:var(--ink); font-weight:700}
   .pfiles{margin:0 0 16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow:hidden}
   .pfiles>summary{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 15px; cursor:pointer; list-style:none; font-size:13.5px}
   .pfiles>summary::-webkit-details-marker{display:none}
@@ -689,6 +694,7 @@ function renderTabs(){
   for(const b of CONFIG.branches){const d=state.data[b.key];let dot="none",count="—";
     if(d&&d.items){dot=freshness(newest(d.items)).dot;count=fmt(d.items.length);}
     html+=`<button class="tab" role="tab" aria-selected="${state.active===b.key}" data-key="${b.key}"><span class="statusdot statusdot--${dot}"></span>${esc(b.name)}<span class="tab__count">${count}</span></button>`;}
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__returns"}" data-key="__returns">Returns</button>`;
   const exc=totalExceptions();
   html+=`<button class="tab tab--exc" role="tab" aria-selected="${state.active==="__exc"}" data-key="__exc"><span>Exceptions</span><span class="tab__count ${exc>0?"hot":""}">${fmt(exc)}</span></button>`;
   html+=`<button class="tab" role="tab" aria-selected="${state.active==="__trace"}" data-key="__trace">Trace</button>`;
@@ -739,7 +745,75 @@ function warehouseOutMap(){
   }
   return {demo:false,by};
 }
-/* was the item in a negative / not-stock-controlled state? Only true on a genuine signal:
+/* warehouse "scanned IN" history: barcode -> [{day, qty}] of units that came BACK INTO the warehouse
+   (net rise = a delivery in OR a branch return that staff stock-controlled back in). */
+function warehouseInMap(){
+  const wb=CONFIG.branches.find(b=>b.warehouse); if(!wb)return null;
+  const d=state.data[wb.key]; if(!d||!d.items)return null;
+  if(d.demo)return {demo:true,by:{}};
+  const by={};
+  const days={};
+  for(const it of d.items){const dk=dayKey(it.time); if(!dk)continue; (days[dk]=days[dk]||[]).push(it);}
+  for(const dk in days){
+    for(const p of collapse(days[dk])){
+      const net=(p.to||0)+(p.from||0);
+      if(net>0){const bc=normBar(p.barcode); if(!bc)continue; (by[bc]=by[bc]||[]).push({day:dk,qty:net});}
+    }
+  }
+  return {demo:false,by};
+}
+/* A confirmed RETURN from a shop branch: the branch's count DROPPED (net < 0 = stock left the shop)
+   AND the warehouse's count ROSE for the same barcode within the window [dropDay-1, dropDay+N] —
+   i.e. staff stock-controlled it back into the warehouse. A drop with no matching warehouse rise is
+   treated as an ordinary sale, not a return. Returns the confirmed returns for one shop branch. */
+function branchReturns(d){
+  if(!d||!d.items||d.warehouse)return [];
+  const win=warehouseInMap(); if(!win||win.demo)return [];
+  const N=CONFIG.transferLookbackDays||0;
+  const out=[];
+  for(const p of collapse(itemsForDay(d.items))){
+    const net=(p.to||0)+(p.from||0);
+    if(net>=0)continue;                       // only drops (stock that left the shop)
+    const bc=normBar(p.barcode); const dd=dayNum(dayKey(p.time)); if(!bc||dd==null)continue;
+    const list=win.by[bc]; if(!list)continue;
+    let backIn=0, when=null, wd=-1;
+    for(const e of list){const ed=dayNum(e.day); if(ed==null)continue; const diff=ed-dd; if(diff>=-1&&diff<=N){backIn+=e.qty; if(ed>wd){wd=ed;when=e.day;}}}
+    if(backIn<=0)continue;                     // not confirmed back into the warehouse → treat as a sale
+    out.push({ description:p.description, barcode:p.barcode, size:p.size,
+      returnedQty:-net, shopFloorQty:(p.to!=null?p.to:null), value:Math.abs(p.value||0),
+      backIn, when, time:p.time });
+  }
+  out.sort((a,b)=>b.returnedQty-a.returnedQty);
+  return out;
+}
+function renderReturns(){
+  const head=`<div class="branchhead"><div class="branchhead__name">Returns</div>${daynavHTML()}</div>
+    <p class="lede">Stock each shop <b>scanned out</b> that the <b>Warehouse stock-controlled back in</b> — i.e. confirmed returns, not sales. <b>Returned</b> is how many left the shop; <b>On shop floor</b> is what the shop still has counted for that product. A drop with no matching warehouse scan-in is treated as a sale and isn't shown here.</p>`;
+  const wh=state.data[(CONFIG.branches.find(b=>b.warehouse)||{}).key];
+  if(!wh||wh.demo) return head+`<div class="tablecard"><div class="state"><h3>Warehouse not loaded</h3><p>Returns are confirmed against the Warehouse scanning items back in, so the Warehouse sheet needs to be live. It's currently showing ${wh&&wh.demo?"sample data":"nothing"}.</p></div></div>`;
+  let blocks=""; let grand=0;
+  for(const b of CONFIG.branches){
+    if(b.warehouse)continue;
+    const d=state.data[b.key]; if(!d)continue;
+    const rs=branchReturns(d).filter(r=>{const q=state.search.trim().toLowerCase(); if(!q)return true; return ((r.barcode||"")+" "+(r.description||"")).toLowerCase().includes(q);});
+    const units=rs.reduce((a,r)=>a+r.returnedQty,0); grand+=units;
+    const f=freshness(newest(d.items));
+    const rows=rs.map(r=>`<tr>
+        <td class="prod">${mediaHTML({description:r.description,barcode:r.barcode})}<div><div class="nm">${esc(r.description)||"—"}</div><div class="sub">${esc(r.barcode||"")}${r.size?" · "+esc(r.size):""}</div></div></td>
+        <td style="text-align:right"><span class="ret-out">−${fmt(r.returnedQty)}</span></td>
+        <td style="text-align:right"><b>${r.shopFloorQty==null?"—":fmt(r.shopFloorQty)}</b><div class="sub">on floor</div></td>
+        <td style="text-align:right">${money(r.value)}</td>
+        <td style="text-align:right" class="time">${esc(timeOnly(r.time))}<div class="sub">${esc(humanDay(dayKey(r.time)))}</div></td></tr>`).join("");
+    blocks+=`<div class="retbranch">
+      <div class="retbranch__head"><span class="statusdot statusdot--${f.dot}"></span><span class="retbranch__name">${esc(b.name)}</span>
+        <span class="retbranch__tot">${rs.length?`<b>${fmt(units)}</b> unit${units===1?"":"s"} returned · ${fmt(rs.length)} product${rs.length===1?"":"s"}`:"No confirmed returns"}</span></div>
+      ${rs.length?`<div class="tablecard"><div class="tablescroll tablescroll--x"><table><thead><tr><th>Product</th><th style="text-align:right">Returned</th><th style="text-align:right">On shop floor</th><th style="text-align:right">Value</th><th style="text-align:right">When</th></tr></thead><tbody>${rows}</tbody></table></div></div>`:""}
+    </div>`;
+  }
+  const banner=`<div class="negbanner ${grand>0?"":"negbanner--ok"}"><span class="negbanner__dot"></span>${grand>0?`<b>${fmt(grand)}</b> units confirmed returned to the warehouse on this day (across all shops)`:"No confirmed returns on this day"}</div>`;
+  return head+`${toolbar({day:false,flow:false,view:false})}`+banner+blocks+
+    `<p class="lede" style="margin-top:4px;color:var(--muted)">Note: the feed records <b>what</b> and <b>how much</b> was returned, but not <b>why</b> — there's no reason field in the PICCO data. Matching a shop's drop to a warehouse scan-in is an inference; tell me if you want the window (currently ${fmt(CONFIG.transferLookbackDays)} day${CONFIG.transferLookbackDays===1?"":"s"}) or the definition tightened.</p>`;
+}
    the dashboard exception flag (stock or value ended negative) or a negative CurrentStock.
    NOTE: the "before" leg of a PICCO pair is always stored negative (it's the clearing leg),
    so it is NOT a negative-stock signal and must not be used here. */
@@ -1068,6 +1142,7 @@ function renderPanel(){
   if(state.active==="__overview")panel.innerHTML=renderOverview();
   else if(state.active==="__exc")panel.innerHTML=renderExceptions();
   else if(state.active==="__trace")panel.innerHTML=renderTrace();
+  else if(state.active==="__returns")panel.innerHTML=renderReturns();
   else if(state.active==="__log")panel.innerHTML=renderLog();
   else panel.innerHTML=renderBranch(CONFIG.branches.find(x=>x.key===state.active));
   wirePanel();
