@@ -168,13 +168,24 @@
   .pf-flag.ok{color:var(--ok); background:var(--ok-wash)} .pf-flag.hot{color:var(--warn); background:var(--warn-wash)}
   .pfiles__body{border-top:1px solid var(--line); padding:12px 15px}
   .pf-note{font-size:12px; color:var(--muted); margin-bottom:10px} .pf-note b{color:var(--ink)}
-  .pf-scroll{max-height:330px; overflow:auto; border:1px solid var(--line); border-radius:8px}
-  .pftable{width:100%; border-collapse:collapse; font-size:13px}
-  .pftable th{position:sticky; top:0; background:var(--surface-2); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); padding:8px 12px; border-bottom:1px solid var(--line)}
-  .pftable td{padding:8px 12px; border-bottom:1px solid var(--line)} .pftable tr:last-child td{border-bottom:0}
-  .pftable .num{text-align:right} .pf-ref{font-family:var(--mono); font-weight:700} .pf-gap{font-variant-numeric:tabular-nums}
   .pf-first{color:var(--faint)}
-  .pftable tr.pf-over td{background:var(--warn-wash)} .pftable tr.pf-over .pf-gap{color:var(--warn); font-weight:700}
+  .pfile{border:1px solid var(--line); border-radius:9px; margin-bottom:8px; overflow:hidden; background:var(--surface)}
+  .pfile:last-child{margin-bottom:0}
+  .pfile--over{border-color:#F0D9A8}
+  .pfile>summary{display:flex; align-items:center; gap:12px; padding:10px 13px; cursor:pointer; list-style:none; font-size:13.5px}
+  .pfile>summary::-webkit-details-marker{display:none}
+  .pfile__ref{font-family:var(--mono); font-weight:700; color:var(--brand-ink)}
+  .pfile__time{font-variant-numeric:tabular-nums; font-weight:600}
+  .pfile__gap{font-size:12.5px; color:var(--muted)} .pfile--over .pfile__gap b{color:var(--warn)}
+  .pfile__cnt{margin-left:auto; font-size:12.5px; color:var(--muted)} .pfile__exc{color:var(--warn)}
+  .pfile__chev{transition:transform .15s; color:var(--faint)} .pfile[open] .pfile__chev{transform:rotate(180deg)}
+  .pfile__body{border-top:1px solid var(--line); padding:6px 13px 10px}
+  .pfline{display:flex; align-items:center; gap:12px; padding:7px 0; border-bottom:1px solid var(--line)}
+  .pfline:last-of-type{border-bottom:0}
+  .pfline.is-exc{background:var(--warn-wash); margin:0 -13px; padding:7px 13px}
+  .pfline__nm{flex:1; min-width:0; font-size:13px; line-height:1.3} .pfline__nm small{display:block; font-family:var(--mono); font-size:11px; color:var(--muted)}
+  .pfline__mv{flex:none} .pfline__add{flex:none; min-width:42px; text-align:right}
+  .pfile__tot{margin-top:9px; text-align:right; font-size:12.5px; color:var(--muted)} .pfile__tot b{color:var(--ink); font-variant-numeric:tabular-nums}
   .seg--prov button[aria-pressed="true"].prov-from{background:var(--brand)} .seg--prov button[aria-pressed="true"].prov-fixed{background:var(--viol)} .seg--prov button[aria-pressed="true"].prov-neg{background:var(--warn)}
   .traceverdict{margin:-4px 0 10px; font-size:13.5px}
   .trace-ok{color:var(--ok); font-weight:600}
@@ -748,26 +759,43 @@ function piccoFiles(d){
   if(!items.length)return null;
   const by={};
   for(const it of items){const ref=it.reference; const tv=tval(it.time);
-    if(!by[ref])by[ref]={ref,t:0,last:null,bars:new Set(),rows:0};
-    const f=by[ref]; f.rows++; f.bars.add(normBar(it.barcode)); if(tv>=f.t){f.t=tv;f.last=it.time;}}
+    if(!by[ref])by[ref]={ref,t:0,first:Infinity,last:null,start:null,rows:[]};
+    const f=by[ref]; f.rows.push(it); if(tv>=f.t){f.t=tv;f.last=it.time;} if(tv<f.first){f.first=tv;f.start=it.time;}}
   const files=Object.values(by).sort((a,b)=>a.t-b.t||(toNumber(a.ref)-toNumber(b.ref)));
   const tgt=CONFIG.piccoTargetMinutes||15; let over=0,maxGap=0;
-  for(let i=0;i<files.length;i++){files[i].products=files[i].bars.size;
-    files[i].gap=i>0?Math.round((files[i].t-files[i-1].t)/60000):null;
-    if(files[i].gap!=null){if(files[i].gap>tgt)over++; if(files[i].gap>maxGap)maxGap=files[i].gap;}}
+  for(let i=0;i<files.length;i++){const f=files[i];
+    f.products=collapse(f.rows);
+    f.units=f.products.reduce((a,p)=>a+(p.added>0?p.added:0),0);
+    f.value=f.products.reduce((a,p)=>a+(p.value||0),0);
+    f.exc=f.products.filter(p=>p.isExc).length;
+    f.gap=i>0?Math.round((f.t-files[i-1].t)/60000):null;
+    if(f.gap!=null){if(f.gap>tgt)over++; if(f.gap>maxGap)maxGap=f.gap;}}
   return {files,over,tgt,maxGap};
 }
 function piccoFilesHTML(pf){
   if(!pf||!pf.files.length)return "";
   const last=pf.files[pf.files.length-1];
   const lastAgo=last.last?agoShort(new Date(String(last.last).replace(/-/g,"/"))):"";
-  const rows=pf.files.slice().reverse().map(f=>{const over=f.gap!=null&&f.gap>pf.tgt;
-    return `<tr class="${over?"pf-over":""}"><td class="pf-ref">#${esc(f.ref)}</td><td>${esc(timeOnly(f.last))}</td><td class="pf-gap">${f.gap==null?'<span class="pf-first">first today</span>':(f.gap+" min")}</td><td class="num">${fmt(f.products)}</td></tr>`;}).join("");
+  const blocks=pf.files.slice().reverse().map(f=>{
+    const over=f.gap!=null&&f.gap>pf.tgt;
+    const lines=f.products.map(p=>`<div class="pfline ${p.isExc?"is-exc":""}">
+        <span class="pfline__nm">${esc(p.description)||"—"}<small>${esc(p.barcode)||""}${p.size?" · "+esc(p.size):""}</small></span>
+        <span class="pfline__mv">${mvPair(p.from,p.to)}</span>
+        <span class="pfline__add">${addNum(p.added)}</span></div>`).join("");
+    return `<details class="pfile${over?" pfile--over":""}"><summary>
+        <span class="pfile__ref">#${esc(f.ref)}</span>
+        <span class="pfile__time">${esc(timeOnly(f.last))}</span>
+        <span class="pfile__gap">${f.gap==null?'<span class="pf-first">first today</span>':(over?`<b>${fmt(f.gap)} min</b>`:fmt(f.gap)+" min")}</span>
+        <span class="pfile__cnt">${fmt(f.products.length)} product${f.products.length===1?"":"s"} · ${fmt(Math.round(f.units))} units${f.exc?` · <b class="pfile__exc">${fmt(f.exc)} check</b>`:""}</span>
+        <span class="pfile__chev">▾</span></summary>
+      <div class="pfile__body">${lines||'<div class="pf-note">No lines in this file.</div>'}
+        <div class="pfile__tot">Total value <b>${money(f.value)}</b></div></div></details>`;
+  }).join("");
   return `<details class="pfiles"><summary>
       <span class="pfiles__lead"><b>PICCO files</b> — ${fmt(pf.files.length)} today · last <b>${esc(timeOnly(last.last))}</b> <span class="muted">(${esc(lastAgo)})</span></span>
       <span class="pf-flag ${pf.over?"hot":"ok"}">${pf.over?fmt(pf.over)+" gap"+(pf.over===1?"":"s")+" over "+pf.tgt+" min":"on cadence"}</span></summary>
-    <div class="pfiles__body"><div class="pf-note">Each file = one finished PICCO. Target: a new file every ${pf.tgt} min — longer gaps are amber. Longest gap today: <b>${fmt(pf.maxGap)} min</b>.</div>
-      <div class="pf-scroll"><table class="pftable"><thead><tr><th>File #</th><th>Done</th><th>Gap before</th><th class="num">Products</th></tr></thead><tbody>${rows}</tbody></table></div></div></details>`;
+    <div class="pfiles__body"><div class="pf-note">Each file = one finished PICCO. Tap a file to see what was scanned in it. Target: a new file every ${pf.tgt} min — gaps over that are amber. Longest gap today: <b>${fmt(pf.maxGap)} min</b>.</div>
+      ${blocks}</div></details>`;
 }
 
 function cardsHTML(products,key,showProv){
