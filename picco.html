@@ -369,10 +369,11 @@ const CONFIG = {
   refreshMinutes: 5,
   maxRows: 400,
   maxCards: 120,
-  // Branch picco scan timestamps are stored in UTC (the till exports UTC, e.g. a
-  // scan shown as 15:01 UTC is 16:01 BST). Convert them to the viewer's local time so
-  // "minutes ago" is correct. Warehouse Movements are already local, so they're left alone.
-  branchTimeUTC: true,
+  // Branch picco "Date" is written by the branch PC in LOCAL (UK) time, the same wall-clock
+  // time staff see, so it is shown as-is. (It is NOT UTC: e.g. file #2360 stored 11:51:58 was
+  // really done at 11:51 local — adding a BST hour wrongly pushed it to 12:51, into the future.)
+  // Warehouse Movements are also local. Set this true ONLY if a feed is ever exported in UTC.
+  branchTimeUTC: false,
   // When a shop scans stock IN, look back this many days in the Warehouse "scanned out"
   // history to decide if it was a warehouse transfer. Transfers can lag a few days.
   transferLookbackDays: 3,
