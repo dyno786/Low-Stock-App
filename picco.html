@@ -160,6 +160,12 @@
   .bcard__pf{display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12.5px; color:var(--muted)} .bcard__pf b{color:var(--ink); font-weight:700}
   .bcard__pf.hot{color:var(--warn)} .bcard__pf.hot b{color:var(--warn)}
   .bcard__pfdot{width:7px; height:7px; border-radius:50%; background:var(--ok); flex:none} .bcard__pfdot.hot{background:var(--warn)}
+  .bcard__pfdot.bad{background:var(--bad)} .bcard__pfdot.ok{background:var(--ok)}
+  .bcard__neg{display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12.5px; color:var(--muted)} .bcard__neg b{color:var(--ink); font-weight:700}
+  .bcard__neg.hot{color:var(--bad)} .bcard__neg.hot b{color:var(--bad)}
+  .negbanner{display:flex; align-items:center; gap:9px; padding:11px 15px; margin:0 0 16px; border-radius:12px; font-size:13.5px; background:var(--bad-wash); color:var(--bad); border:1px solid #F3C9C3} .negbanner b{font-weight:700}
+  .negbanner--ok{background:var(--ok-wash); color:var(--ok); border-color:#BFE6CF}
+  .negbanner__dot{width:9px; height:9px; border-radius:50%; background:currentColor; flex:none}
   .pfiles{margin:0 0 16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow:hidden}
   .pfiles>summary{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 15px; cursor:pointer; list-style:none; font-size:13.5px}
   .pfiles>summary::-webkit-details-marker{display:none}
@@ -710,12 +716,29 @@ function warehouseOutMap(){
   for(const it of d.items){ if((it.qty||0)<0){ const bc=normBar(it.barcode), dk=dayKey(it.time); if(!bc||!dk)continue; (by[bc]=by[bc]||[]).push({day:dk,qty:-(it.qty||0)}); } }
   return {demo:false,by};
 }
-/* was the item in a negative / not-stock-controlled state? (oversold value, negative stock, or flagged exception) */
+/* was the item in a negative / not-stock-controlled state? Only true on a genuine signal:
+   the dashboard exception flag (stock or value ended negative) or a negative CurrentStock.
+   NOTE: the "before" leg of a PICCO pair is always stored negative (it's the clearing leg),
+   so it is NOT a negative-stock signal and must not be used here. */
 function wasNegative(p){
   if(p.isExc)return true;
   if(p.scans&&p.scans.some(s=>toNumber(s.stock)<0))return true;
-  if(p.from!=null&&p.from<0)return true;
   return false;
+}
+/* genuine negative stock: an item whose resulting on-hand is below zero.
+   Read from CurrentStock (the true level); fall back to the ending AfterValue. */
+function negUnits(p){
+  let s=null;
+  if(p.scans&&p.scans.length){for(const sc of p.scans){const v=toNumber(sc.stock); if(v!=null&&(s==null||v<s))s=v;}}
+  if(s==null&&p.to!=null)s=p.to;
+  else if(p.to!=null&&p.to<0&&(s==null||p.to<s))s=p.to;
+  return (s!=null&&s<0)?-s:0;
+}
+function negStockStats(d){
+  if(!d||!d.items)return {count:0,units:0};
+  let count=0,units=0;
+  for(const p of collapse(itemsForDay(d.items))){const u=negUnits(p); if(u>0){count++;units+=u;}}
+  return {count,units};
 }
 /* classify one shop product by warehouse provenance within the lookback window.
    kind: "from" (clean warehouse transfer) | "fixed" (warehouse top-up of a negative/oversold item) | "neg" (no warehouse dispatch). */
@@ -852,12 +875,15 @@ function mapNote(d){
 
 function renderOverview(){
   let cards="";
+  const negTotal={count:0,units:0};
   for(const b of CONFIG.branches){const d=state.data[b.key];
     if(!d){cards+=`<div class="bcard"><div class="bcard__name">${esc(b.name)}</div><p class="lede">Loading…</p></div>`;continue;}
     const dayItems=itemsForDay(d.items), products=collapse(dayItems), exc=products.filter(p=>p.isExc);
     const units=d.movements?dayItems.reduce((a,i)=>a+(i.qty||0),0):products.reduce((a,p)=>a+(p.added||0),0), n=newest(d.items), f=freshness(n);
     const ps=provStats(d);
     const pf=piccoFiles(d);
+    const ns=negStockStats(d);
+    negTotal.count+=ns.count; negTotal.units+=ns.units;
     cards+=`<button class="bcard" data-key="${b.key}" aria-label="Open ${esc(b.name)}">
       <div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span>
         ${freshBlock(d)}</div>
@@ -869,9 +895,14 @@ function renderOverview(){
         <span><span class="provsum__dot prov--from"></span>From warehouse <b>${fmt(ps.whItems)}</b> item${ps.whItems===1?"":"s"} · <b>${fmt(ps.whUnits)}</b> units</span>
         <span><span class="provsum__dot prov--fixed"></span>Topped up <b>${fmt(ps.topUnits)}</b> units</span></div>`:""}
       ${pf?`<div class="bcard__pf ${pf.over?"hot":""}"><span class="bcard__pfdot ${pf.over?"hot":""}"></span>PICCO: <b>${fmt(pf.files.length)}</b> files · last <b>${esc(timeOnly(pf.files[pf.files.length-1].last))}</b>${pf.over?` · <b>${fmt(pf.over)}</b> over ${pf.tgt}m`:" · on cadence"}</div>`:""}
+      <div class="bcard__neg ${ns.units>0?"hot":""}"><span class="bcard__pfdot ${ns.units>0?"bad":"ok"}"></span>${ns.units>0?`Negative stock: <b>${fmt(ns.units)}</b> units short across <b>${fmt(ns.count)}</b> product${ns.count===1?"":"s"}`:"No negative stock"}</div>
       ${d.demo?`<div class="demohint">Sample data — couldn't read the live sheet (${esc(d.error||"")})</div>`:""}</button>`;}
+  const negBanner = negTotal.units>0
+    ? `<div class="negbanner"><span class="negbanner__dot"></span><b>${fmt(negTotal.units)}</b> units of negative stock across <b>${fmt(negTotal.count)}</b> product${negTotal.count===1?"":"s"} (all branches, this day)</div>`
+    : `<div class="negbanner negbanner--ok"><span class="negbanner__dot"></span>No negative stock on this day — every item recounts to zero or above.</div>`;
   return `<div class="branchhead"><div class="branchhead__name">Overview</div>${daynavHTML()}</div>
     <p class="lede">Each branch for the selected day — products scanned, units added, exceptions. Green means scanned recently, amber means stale. Tap a card to open it.</p>
+    ${negBanner}
     <div class="overview">${cards}</div>`;
 }
 function renderBranch(b){
