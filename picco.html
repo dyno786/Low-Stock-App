@@ -157,6 +157,24 @@
   .provsum__dot.prov--from{background:var(--brand)} .provsum__dot.prov--fixed{background:var(--viol)} .provsum__dot.prov--neg{background:var(--warn)}
   .bcard__prov{display:flex; flex-direction:column; gap:3px; margin-top:11px; padding-top:11px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted)}
   .bcard__prov span{display:inline-flex; align-items:center; gap:6px} .bcard__prov b{color:var(--ink); font-weight:700}
+  .bcard__pf{display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12.5px; color:var(--muted)} .bcard__pf b{color:var(--ink); font-weight:700}
+  .bcard__pf.hot{color:var(--warn)} .bcard__pf.hot b{color:var(--warn)}
+  .bcard__pfdot{width:7px; height:7px; border-radius:50%; background:var(--ok); flex:none} .bcard__pfdot.hot{background:var(--warn)}
+  .pfiles{margin:0 0 16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow:hidden}
+  .pfiles>summary{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 15px; cursor:pointer; list-style:none; font-size:13.5px}
+  .pfiles>summary::-webkit-details-marker{display:none}
+  .pfiles__lead b{font-weight:700} .pfiles .muted{color:var(--muted)}
+  .pf-flag{font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; white-space:nowrap}
+  .pf-flag.ok{color:var(--ok); background:var(--ok-wash)} .pf-flag.hot{color:var(--warn); background:var(--warn-wash)}
+  .pfiles__body{border-top:1px solid var(--line); padding:12px 15px}
+  .pf-note{font-size:12px; color:var(--muted); margin-bottom:10px} .pf-note b{color:var(--ink)}
+  .pf-scroll{max-height:330px; overflow:auto; border:1px solid var(--line); border-radius:8px}
+  .pftable{width:100%; border-collapse:collapse; font-size:13px}
+  .pftable th{position:sticky; top:0; background:var(--surface-2); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); padding:8px 12px; border-bottom:1px solid var(--line)}
+  .pftable td{padding:8px 12px; border-bottom:1px solid var(--line)} .pftable tr:last-child td{border-bottom:0}
+  .pftable .num{text-align:right} .pf-ref{font-family:var(--mono); font-weight:700} .pf-gap{font-variant-numeric:tabular-nums}
+  .pf-first{color:var(--faint)}
+  .pftable tr.pf-over td{background:var(--warn-wash)} .pftable tr.pf-over .pf-gap{color:var(--warn); font-weight:700}
   .seg--prov button[aria-pressed="true"].prov-from{background:var(--brand)} .seg--prov button[aria-pressed="true"].prov-fixed{background:var(--viol)} .seg--prov button[aria-pressed="true"].prov-neg{background:var(--warn)}
   .traceverdict{margin:-4px 0 10px; font-size:13.5px}
   .trace-ok{color:var(--ok); font-weight:600}
@@ -323,7 +341,7 @@ const CONFIG = {
   // Real picco columns. Override only if a sheet ever differs.
   columns: { barcode:"Barcode", description:"ProductName", size:"Size", qty:"QtyAdded",
              value:"ValueAdded", before:"BeforeValue", after:"AfterValue",
-             timestamp:"Date", productId:"ProductID", ownCode:"OwnCode", stock:"CurrentStock", reason:"ReasonCode" },
+             timestamp:"Date", productId:"ProductID", ownCode:"OwnCode", stock:"CurrentStock", reason:"ReasonCode", reference:"Reference" },
 
   // A line is an EXCEPTION when this is true. Default: stock ends negative, or a
   // negative value booked. (BeforeValue<0 would flag ~half your rows because each
@@ -340,7 +358,10 @@ const CONFIG = {
   branchTimeUTC: true,
   // When a shop scans stock IN, look back this many days in the Warehouse "scanned out"
   // history to decide if it was a warehouse transfer. Transfers can lag a few days.
-  transferLookbackDays: 3
+  transferLookbackDays: 3,
+  // Staff are told to finish a PICCO (which creates a new Reference / file number) this often.
+  // Gaps between consecutive files longer than this are flagged.
+  piccoTargetMinutes: 15
 };
 
 /* sample data in the REAL schema (shown if a sheet can't be read yet) */
@@ -405,7 +426,7 @@ function normalise(rows){
       before:toNumber(get(map.before)), after:toNumber(get(map.after)),
       time:(CONFIG.branchTimeUTC?utcToLocal(get(map.timestamp)):get(map.timestamp)), productId:String(get(map.productId)).replace(/\.0$/,""),
       ownCode:String(get(map.ownCode)||"").trim(),
-      stock:get(map.stock), reason:get(map.reason),
+      stock:get(map.stock), reason:get(map.reason), reference:String(get(map.reference)||"").trim(),
       raw:headers.reduce((a,h,i)=>{a[h]=r[i]!==undefined?cleanCell(r[i]):"";return a;},{}) };
     o.isExc=!!CONFIG.isException(o);
     return o;
@@ -719,6 +740,35 @@ function applyProv(products){
   const wh=warehouseOutMap(); if(!wh||wh.demo)return products;
   return products.filter(p=>{const c=classifyProv(p,wh); return c&&c.kind===state.prov;});
 }
+/* PICCO files: every finished PICCO writes a new Reference (file number) shared by all its rows.
+   Group the selected day's rows by Reference, time each file by its latest row, and gap consecutive files. */
+function piccoFiles(d){
+  if(!d||!d.items||d.movements)return null;
+  const items=itemsForDay(d.items).filter(it=>it.reference);
+  if(!items.length)return null;
+  const by={};
+  for(const it of items){const ref=it.reference; const tv=tval(it.time);
+    if(!by[ref])by[ref]={ref,t:0,last:null,bars:new Set(),rows:0};
+    const f=by[ref]; f.rows++; f.bars.add(normBar(it.barcode)); if(tv>=f.t){f.t=tv;f.last=it.time;}}
+  const files=Object.values(by).sort((a,b)=>a.t-b.t||(toNumber(a.ref)-toNumber(b.ref)));
+  const tgt=CONFIG.piccoTargetMinutes||15; let over=0,maxGap=0;
+  for(let i=0;i<files.length;i++){files[i].products=files[i].bars.size;
+    files[i].gap=i>0?Math.round((files[i].t-files[i-1].t)/60000):null;
+    if(files[i].gap!=null){if(files[i].gap>tgt)over++; if(files[i].gap>maxGap)maxGap=files[i].gap;}}
+  return {files,over,tgt,maxGap};
+}
+function piccoFilesHTML(pf){
+  if(!pf||!pf.files.length)return "";
+  const last=pf.files[pf.files.length-1];
+  const lastAgo=last.last?agoShort(new Date(String(last.last).replace(/-/g,"/"))):"";
+  const rows=pf.files.slice().reverse().map(f=>{const over=f.gap!=null&&f.gap>pf.tgt;
+    return `<tr class="${over?"pf-over":""}"><td class="pf-ref">#${esc(f.ref)}</td><td>${esc(timeOnly(f.last))}</td><td class="pf-gap">${f.gap==null?'<span class="pf-first">first today</span>':(f.gap+" min")}</td><td class="num">${fmt(f.products)}</td></tr>`;}).join("");
+  return `<details class="pfiles"><summary>
+      <span class="pfiles__lead"><b>PICCO files</b> — ${fmt(pf.files.length)} today · last <b>${esc(timeOnly(last.last))}</b> <span class="muted">(${esc(lastAgo)})</span></span>
+      <span class="pf-flag ${pf.over?"hot":"ok"}">${pf.over?fmt(pf.over)+" gap"+(pf.over===1?"":"s")+" over "+pf.tgt+" min":"on cadence"}</span></summary>
+    <div class="pfiles__body"><div class="pf-note">Each file = one finished PICCO. Target: a new file every ${pf.tgt} min — longer gaps are amber. Longest gap today: <b>${fmt(pf.maxGap)} min</b>.</div>
+      <div class="pf-scroll"><table class="pftable"><thead><tr><th>File #</th><th>Done</th><th>Gap before</th><th class="num">Products</th></tr></thead><tbody>${rows}</tbody></table></div></div></details>`;
+}
 
 function cardsHTML(products,key,showProv){
   if(!products.length)return emptyList();
@@ -779,6 +829,7 @@ function renderOverview(){
     const dayItems=itemsForDay(d.items), products=collapse(dayItems), exc=products.filter(p=>p.isExc);
     const units=d.movements?dayItems.reduce((a,i)=>a+(i.qty||0),0):products.reduce((a,p)=>a+(p.added||0),0), n=newest(d.items), f=freshness(n);
     const ps=provStats(d);
+    const pf=piccoFiles(d);
     cards+=`<button class="bcard" data-key="${b.key}" aria-label="Open ${esc(b.name)}">
       <div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span>
         ${freshBlock(d)}</div>
@@ -789,6 +840,7 @@ function renderOverview(){
       ${ps?`<div class="bcard__prov">
         <span><span class="provsum__dot prov--from"></span>From warehouse <b>${fmt(ps.whItems)}</b> item${ps.whItems===1?"":"s"} · <b>${fmt(ps.whUnits)}</b> units</span>
         <span><span class="provsum__dot prov--fixed"></span>Topped up <b>${fmt(ps.topUnits)}</b> units</span></div>`:""}
+      ${pf?`<div class="bcard__pf ${pf.over?"hot":""}"><span class="bcard__pfdot ${pf.over?"hot":""}"></span>PICCO: <b>${fmt(pf.files.length)}</b> files · last <b>${esc(timeOnly(pf.files[pf.files.length-1].last))}</b>${pf.over?` · <b>${fmt(pf.over)}</b> over ${pf.tgt}m`:" · on cadence"}</div>`:""}
       ${d.demo?`<div class="demohint">Sample data — couldn't read the live sheet (${esc(d.error||"")})</div>`:""}</button>`;}
   return `<div class="branchhead"><div class="branchhead__name">Overview</div>${daynavHTML()}</div>
     <p class="lede">Each branch for the selected day — products scanned, units added, exceptions. Green means scanned recently, amber means stale. Tap a card to open it.</p>
@@ -814,6 +866,7 @@ function renderBranch(b){
       <div class="kpi kpi--age"><div class="kpi__label">Last scan</div><div class="kpi__value">${n?esc(agoShort(n)):"—"}</div></div>
       <div class="kpi kpi--exc ${exc.length?"hot":""}"><div class="kpi__label">Exceptions</div><div class="kpi__value">${fmt(exc.length)}</div></div></div>
     ${ps?provSumHTML(ps):""}
+    ${d.movements?"":piccoFilesHTML(piccoFiles(d))}
     ${toolbar({day:true,flow:true,prov:!!ps,view:true})}
     ${state.itemView==="cards"?cardsHTML(view,b.key,!d.movements):tableHTML(view,b.key,false,!d.movements)}
     ${mapNote(d)}`;
