@@ -236,6 +236,13 @@
   .linkbtn:hover{text-decoration:underline}
 
   .board{margin-bottom:24px}
+  .fboard{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:22px}
+  .fcard{border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:12px 14px}
+  .fcard__top{display:flex; align-items:center; gap:8px; margin-bottom:7px}
+  .fcard__name{font-weight:700; font-size:14.5px; flex:1; min-width:0}
+  .fcard__top .agetag{flex:none}
+  .fcard__meta{font-size:12.5px; color:var(--muted); line-height:1.55} .fcard__meta b{color:var(--ink); font-weight:700}
+  .src-live{color:var(--ok); font-weight:700} .src-demo{color:var(--warn); font-weight:700}
   .agetag{font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px; display:inline-block}
   .age--live{color:var(--ok); background:var(--ok-wash)}
   .age--stale{color:var(--warn); background:var(--warn-wash)}
@@ -293,6 +300,9 @@
     .seg--flow button{white-space:nowrap}
     /* product table: everything on one screen — image, product, movement+added, time */
     .tablescroll{overflow-x:visible}
+    .fboard{grid-template-columns:1fr}
+    .tablescroll--x{overflow-x:auto; -webkit-overflow-scrolling:touch}
+    .tablescroll--x table{table-layout:auto; width:auto; min-width:480px}
     table{min-width:0; width:100%; table-layout:fixed}
     thead th, tbody td{padding:9px 8px}
     td.media-cell{width:40px; padding:7px 0 7px 10px}
@@ -341,10 +351,10 @@ const CONFIG = {
     { key:"roundhay",   name:"Roundhay",    sheetId:"1XmZ8sl6T8cT-Iuwp1uB-eXths121GIW2zU9bDCpc-IQ" },
     { key:"city",       name:"City Centre", sheetId:"1n-Xb3Zowb7J-FQ9rjZrChCrSC7UFT3iscFGPnjfWxas" },
     { key:"chapeltown", name:"Chapeltown",  sheetId:"10o97Gmcoa41MglKmIQb8bkTnCyHb5Qqix9znu8WBDRg" },
-    { key:"warehouse",  name:"Warehouse",   sheetId:"1f9uvQSTJo9Rns6lniUJ0sZZIwZVIGQhpUCpAHSdC4vs",
-      // Warehouse shows REAL stock movements (in-stock -> reduced-to / delivered),
-      // read from the trackMovementsAll "Movements" tab of the warehouse stock sheet.
-      movements:{ sheetId:"18bK_YhUTleJH8cTfNP3BDyKy210zM9Sfwqlr4_Y5yCk", tab:"Movements" } }
+    { key:"warehouse",  name:"Warehouse",   sheetId:"1f9uvQSTJo9Rns6lniUJ0sZZIwZVIGQhpUCpAHSdC4vs", warehouse:true }
+      // Warehouse now reads its own PICCO sheet, exactly like the shop branches (live scans).
+      // A product whose count DROPS (net < 0) = stock that left the warehouse — this drives the
+      // "from warehouse" tags on the shops. A rise = a delivery in.
   ],
 
   // PRODUCT IMAGES: pulled from your shopify-images feed (barcode -> Shopify CDN
@@ -451,8 +461,11 @@ function normalise(rows){
   });
   return{headers,map,items};
 }
-function gvizUrl(b){ return b.url || `https://docs.google.com/spreadsheets/d/${b.sheetId}/gviz/tq?tqx=out:csv`; }
-function movementsUrl(m){ return m.url || `https://docs.google.com/spreadsheets/d/${m.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(m.tab||"Movements")}`; }
+// Google caches gviz responses server-side for several minutes; cache:"no-store" only covers the
+// browser. A unique query param each fetch changes the cache key so we always get fresh data.
+function bust(u){ return u+(u.includes("?")?"&":"?")+"_="+Date.now(); }
+function gvizUrl(b){ return bust(b.url || `https://docs.google.com/spreadsheets/d/${b.sheetId}/gviz/tq?tqx=out:csv`); }
+function movementsUrl(m){ return bust(m.url || `https://docs.google.com/spreadsheets/d/${m.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(m.tab||"Movements")}`); }
 
 /* dd/mm/yyyy [hh:mm:ss] -> yyyy-mm-dd hh:mm:ss (so dayKey/newest work). Leaves yyyy-… untouched. */
 function ukDate(s){const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(String(s||"").trim());
@@ -542,18 +555,16 @@ async function loadImages(){
 }
 
 async function loadBranch(b){
-  const useMv=!!b.movements;
   try{
-    const res=await fetch(useMv?movementsUrl(b.movements):gvizUrl(b),{cache:"no-store"});
+    const res=await fetch(gvizUrl(b),{cache:"no-store"});
     if(!res.ok)throw new Error("HTTP "+res.status);
     const text=await res.text();
-    if(/^\s*</.test(text)) throw new Error(useMv?"Movements tab not shared / wrong tab name":"not shared for link access");
-    const d=useMv?normaliseMovements(parseCSV(text)):normalise(parseCSV(text));
-    if(!d.items.length) throw new Error(useMv?"no movement rows found":"empty sheet");
-    return{demo:false,movements:useMv,checkedAt:new Date(),...d};
+    if(/^\s*</.test(text)) throw new Error("not shared for link access");
+    const d=normalise(parseCSV(text));
+    if(!d.items.length) throw new Error("empty sheet");
+    return{demo:false,warehouse:!!b.warehouse,checkedAt:new Date(),...d};
   }catch(err){
-    if(useMv)return{demo:true,movements:true,error:String(err.message||err),...normaliseMovements(demoMovementRows())};
-    return{demo:true, error:String(err.message||err), ...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};
+    return{demo:true, warehouse:!!b.warehouse, error:String(err.message||err), ...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};
   }
 }
 async function loadAll(){
@@ -655,8 +666,10 @@ function collapse(items){
     // only the part at/above 0 counts. e.g. -1 -> 4 is +4, not +5; 2 -> 6 is +4; 610 -> 500 is -110.
     const fz=v=>Math.max(0, v==null?0:v);
     const added=fz(to)-fz(from), value=grp.reduce((a,g)=>a+(g.value||0),0);
+    // TRUE net stock change. 'from' is stored as the NEGATED old count (the clearing leg),
+    // so old = -from and net = new - old = to + from. Negative = stock left; positive = arrived.
     out.push({ barcode:rep.barcode, ownCode:rep.ownCode, productId:rep.productId, description:rep.description, size:rep.size,
-      from, to, added, value, net:(to==null?0:to)-(from==null?0:from), scans:grp, count:grp.length, time:grp[grp.length-1].time,
+      from, to, added, value, net:(to==null?0:to)+(from==null?0:from), scans:grp, count:grp.length, time:grp[grp.length-1].time,
       isExc:grp.some(g=>g.isExc)||(to!=null&&to<0) });
   }
   out.sort((a,b)=>tval(b.time)-tval(a.time));
@@ -706,15 +719,24 @@ function toolbar(opts){const cards=state.itemView==="cards";
 function matchSearch(p){const q=state.search.trim().toLowerCase();if(!q)return true;return ((p.barcode||"")+" "+(p.description||"")).toLowerCase().includes(q);}
 function listFoot(cap,total,key){return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} products</span>${cap<total?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
 
-/* warehouse "scanned OUT" history: barcode -> [{day, qty}] of units that left the warehouse */
+/* warehouse "scanned OUT" history: barcode -> [{day, qty}] of units that LEFT the warehouse.
+   Derived from the warehouse's own PICCO sheet: per day, a product whose net count dropped
+   (net < 0) is stock that went out (to a shop). */
 function normBar(b){return String(b==null?"":b).trim().replace(/\.0$/,"");}
 function dayNum(dk){const m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(dk||""));return m?Math.round(Date.UTC(+m[1],+m[2]-1,+m[3])/864e5):null;}
 function warehouseOutMap(){
-  const wb=CONFIG.branches.find(b=>b.movements); if(!wb)return null;
+  const wb=CONFIG.branches.find(b=>b.warehouse); if(!wb)return null;
   const d=state.data[wb.key]; if(!d||!d.items)return null;
   if(d.demo)return {demo:true,by:{}};
   const by={};
-  for(const it of d.items){ if((it.qty||0)<0){ const bc=normBar(it.barcode), dk=dayKey(it.time); if(!bc||!dk)continue; (by[bc]=by[bc]||[]).push({day:dk,qty:-(it.qty||0)}); } }
+  const days={};
+  for(const it of d.items){const dk=dayKey(it.time); if(!dk)continue; (days[dk]=days[dk]||[]).push(it);}
+  for(const dk in days){
+    for(const p of collapse(days[dk])){
+      const net=(p.to||0)+(p.from||0);
+      if(net<0){const bc=normBar(p.barcode); if(!bc)continue; (by[bc]=by[bc]||[]).push({day:dk,qty:-net});}
+    }
+  }
   return {demo:false,by};
 }
 /* was the item in a negative / not-stock-controlled state? Only true on a genuine signal:
@@ -761,7 +783,7 @@ function provTag(p,wh){
    was topping up a negative item. Units = what the shop actually scanned in (matches the +N on each row). */
 function provStats(d){
   const wh=warehouseOutMap();
-  if(!wh||wh.demo||!d||!d.items||d.movements)return null;
+  if(!wh||wh.demo||!d||!d.items||d.warehouse)return null;
   const products=collapse(itemsForDay(d.items));
   const s={whItems:0,whUnits:0,topItems:0,topUnits:0,negItems:0,negUnits:0};
   for(const p of products){const c=classifyProv(p,wh); if(!c)continue; const u=Math.max(0,Math.round(p.added||0));
@@ -778,7 +800,7 @@ function applyProv(products){
 /* PICCO files: every finished PICCO writes a new Reference (file number) shared by all its rows.
    Group the selected day's rows by Reference, time each file by its latest row, and gap consecutive files. */
 function piccoFiles(d){
-  if(!d||!d.items||d.movements)return null;
+  if(!d||!d.items)return null;
   const items=itemsForDay(d.items).filter(it=>it.reference);
   if(!items.length)return null;
   const by={};
@@ -880,7 +902,7 @@ function renderOverview(){
   for(const b of CONFIG.branches){const d=state.data[b.key];
     if(!d){cards+=`<div class="bcard"><div class="bcard__name">${esc(b.name)}</div><p class="lede">Loading…</p></div>`;continue;}
     const dayItems=itemsForDay(d.items), products=collapse(dayItems), exc=products.filter(p=>p.isExc);
-    const units=d.movements?dayItems.reduce((a,i)=>a+(i.qty||0),0):products.reduce((a,p)=>a+(p.added||0),0), n=newest(d.items), f=freshness(n);
+    const units=products.reduce((a,p)=>a+(p.added||0),0), n=newest(d.items), f=freshness(n);
     const ps=provStats(d);
     const pf=piccoFiles(d);
     const ns=negStockStats(d);
@@ -890,7 +912,7 @@ function renderOverview(){
         ${freshBlock(d)}</div>
       <div class="bcard__kpis">
         <div class="bcard__kpi"><div class="l">Products</div><div class="v">${fmt(products.length)}</div></div>
-        <div class="bcard__kpi"><div class="l">${d.movements?"Net change":"Units added"}</div><div class="v">${fmt(Math.round(units))}</div></div>
+        <div class="bcard__kpi"><div class="l">Units added</div><div class="v">${fmt(Math.round(units))}</div></div>
         <div class="bcard__kpi exc ${exc.length?"hot":""}"><div class="l">Exceptions</div><div class="v">${fmt(exc.length)}</div></div></div>
       ${ps?`<div class="bcard__prov">
         <span><span class="provsum__dot prov--from"></span>From warehouse <b>${fmt(ps.whItems)}</b> item${ps.whItems===1?"":"s"} · <b>${fmt(ps.whUnits)}</b> units</span>
@@ -912,23 +934,23 @@ function renderBranch(b){
   const dayItems=itemsForDay(d.items);
   const products=collapse(dayItems);
   const exc=products.filter(p=>p.isExc);
-  const units=d.movements?dayItems.reduce((a,i)=>a+(i.qty||0),0):products.reduce((a,p)=>a+(p.added||0),0);
+  const units=products.reduce((a,p)=>a+(p.added||0),0);
   const n=newest(d.items),f=freshness(n);
-  const ps=d.movements?null:provStats(d);
-  let view=applyFlow(products); if(!d.movements)view=applyProv(view); view=view.filter(matchSearch);
+  const ps=d.warehouse?null:provStats(d);
+  let view=applyFlow(products); if(!d.warehouse)view=applyProv(view); view=view.filter(matchSearch);
   return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
       ${freshBlock(d)}</div>
-    ${d.movements?`<p class="lede">These are changes in the <b>Warehouse's own</b> on-hand count between stock snapshots. <b>From → To</b> is the level before and after. <b>Reduced</b> = stock <b>left</b> the warehouse — transferred out to a shop or written off (e.g. <span class="mv to-down"><span class="from">610</span><span class="arr">→</span><span class="to">500</span></span>); <b>Added</b> = stock <b>arrived</b> (a delivery in). The feed doesn't record <em>which shop</em> a transfer went to — use the <b>Trace</b> tab to follow a barcode into the branches.${d.dropped?` <span style="color:var(--muted)">${fmt(d.dropped)} phantom row${d.dropped===1?"":"s"} from an empty stock snapshot were hidden.</span>`:""}</p>`:""}
+    ${d.warehouse?`<p class="lede">The Warehouse's own PICCO scans. <b>From → To</b> is the old count vs the new count. A <b>drop</b> means stock <b>left</b> the warehouse — sent out to a shop (this is what powers the "from warehouse" tags on the branches); a <b>rise</b> is a <b>delivery in</b>. Use the <b>Trace</b> tab to follow a barcode into the branches.</p>`:""}
     ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Showing sample data — couldn't read the live sheet (${esc(d.error||"")}). Share it "anyone with the link — viewer", or we use an /api endpoint.</div>`:""}
     <div class="kpis">
       <div class="kpi"><div class="kpi__label">Products</div><div class="kpi__value">${fmt(products.length)}</div></div>
-      <div class="kpi"><div class="kpi__label">${d.movements?"Net change":"Units added"}</div><div class="kpi__value">${fmt(Math.round(units))}</div></div>
+      <div class="kpi"><div class="kpi__label">Units added</div><div class="kpi__value">${fmt(Math.round(units))}</div></div>
       <div class="kpi kpi--age"><div class="kpi__label">Last scan</div><div class="kpi__value">${n?esc(agoShort(n)):"—"}</div></div>
       <div class="kpi kpi--exc ${exc.length?"hot":""}"><div class="kpi__label">Exceptions</div><div class="kpi__value">${fmt(exc.length)}</div></div></div>
     ${ps?provSumHTML(ps):""}
-    ${d.movements?"":piccoFilesHTML(piccoFiles(d))}
+    ${piccoFilesHTML(piccoFiles(d))}
     ${toolbar({day:true,flow:true,prov:!!ps,view:true})}
-    ${state.itemView==="cards"?cardsHTML(view,b.key,!d.movements):tableHTML(view,b.key,false,!d.movements)}
+    ${state.itemView==="cards"?cardsHTML(view,b.key,!d.warehouse):tableHTML(view,b.key,false,!d.warehouse)}
     ${mapNote(d)}`;
 }
 function provSumHTML(s){
@@ -953,11 +975,11 @@ function renderExceptions(){
 function renderLog(){
   let board="";
   for(const b of CONFIG.branches){const d=state.data[b.key];
-    if(!d){board+=`<tr><td>${esc(b.name)}</td><td>—</td><td>—</td><td class="num">—</td><td class="num">—</td><td>—</td></tr>`;continue;}
+    if(!d){board+=`<div class="fcard"><div class="fcard__top"><span class="statusdot statusdot--none"></span><span class="fcard__name">${esc(b.name)}</span><span class="agetag age--none">—</span></div><div class="fcard__meta">Loading…</div></div>`;continue;}
     const n=newest(d.items),f=freshness(n);
-    board+=`<tr><td><span class="statusdot statusdot--${f.dot}"></span> ${esc(b.name)}</td><td class="time">${n?pad(n):"—"}</td>
-      <td><span class="agetag age--${f.cls}">${esc(f.label)}</span></td><td class="num">${fmt(d.items.length)}</td>
-      <td class="num">${fmt(branchExceptions(d).length)}</td><td>${d.demo?"sample":"live"}</td></tr>`;}
+    board+=`<div class="fcard"><div class="fcard__top"><span class="statusdot statusdot--${f.dot}"></span><span class="fcard__name">${esc(b.name)}</span><span class="agetag age--${f.cls}">${esc(f.label)}</span></div>
+      <div class="fcard__meta">Last scan <b>${n?esc(pad(n)):"—"}</b></div>
+      <div class="fcard__meta"><b>${fmt(d.items.length)}</b> lines · <b>${fmt(branchExceptions(d).length)}</b> exceptions · ${d.demo?'<span class="src-demo">sample</span>':'<span class="src-live">live</span>'}</div></div>`;}
   let logRows="";
   for(const e of state.log){let cells="";
     for(const b of CONFIG.branches){const r=e.branches[b.key];let cls="age--none",txt="—";
@@ -970,7 +992,7 @@ function renderLog(){
   const lastStr=last?`${z(last.getHours())}:${z(last.getMinutes())}:${z(last.getSeconds())}`:"—";
   const nextStr=(last&&CONFIG.refreshMinutes)?(()=>{const t=new Date(last.getTime()+CONFIG.refreshMinutes*6e4);return `${z(t.getHours())}:${z(t.getMinutes())}`;})():"—";
   const sched=`<p class="sectionlabel">What updates when</p>
-    <div class="tablecard"><div class="tablescroll"><table><thead><tr><th>Step</th><th>How often</th><th>What it does</th></tr></thead><tbody>
+    <div class="tablecard"><div class="tablescroll tablescroll--x"><table><thead><tr><th>Step</th><th>How often</th><th>What it does</th></tr></thead><tbody>
       <tr><td>Till export (each shop PC)</td><td>every 3 min</td><td>writes the latest scans to picco.csv</td></tr>
       <tr><td>Sheet import (Apps Script)</td><td>every 10 min</td><td>loads picco.csv into each branch's picco sheet</td></tr>
       <tr><td>Warehouse stock snapshot</td><td>~hourly (8×/day)</td><td>diffs warehouse stock → Movements (deliveries / removals)</td></tr>
@@ -981,9 +1003,9 @@ function renderLog(){
     <p class="lede">How long since each branch last scanned, and a running log of every refresh this session. If an age stops shrinking, that branch's export or importer has stalled. (Resets on reload — say the word for a permanent sheet-backed log.)</p>
     ${sched}
     <p class="sectionlabel">Freshness now</p>
-    <div class="tablecard board"><div class="tablescroll"><table><thead><tr><th>Branch</th><th>Last scan</th><th>Age</th><th class="num">Lines</th><th class="num">Exceptions</th><th>Source</th></tr></thead><tbody>${board}</tbody></table></div></div>
+    <div class="fboard">${board}</div>
     <p class="sectionlabel">Refresh log · ${fmt(state.log.length)} check${state.log.length===1?"":"s"}</p>
-    <div class="tablecard"><div class="tablescroll"><table><thead><tr><th>Checked at</th>${heads}</tr></thead><tbody>${logRows||`<tr><td colspan="${CONFIG.branches.length+1}" style="padding:16px;color:var(--muted)">No checks yet.</td></tr>`}</tbody></table></div></div>`;
+    <div class="tablecard"><div class="tablescroll tablescroll--x"><table><thead><tr><th>Checked at</th>${heads}</tr></thead><tbody>${logRows||`<tr><td colspan="${CONFIG.branches.length+1}" style="padding:16px;color:var(--muted)">No checks yet.</td></tr>`}</tbody></table></div></div>`;
 }
 
 /* ---- barcode trace across branches + warehouse ---- */
@@ -994,8 +1016,7 @@ function traceEvents(query){
     for(const it of d.items){
       const hay=((it.barcode||"")+" "+(it.description||"")).toLowerCase();
       if(!hay.includes(q))continue;
-      evs.push({key:b.key,branch:b.name,movements:!!d.movements,time:it.time,day:dayKey(it.time),
-        from:it.before,to:it.after,qty:it.qty,reason:it.reason,desc:it.description,size:it.size,barcode:it.barcode});
+      evs.push({key:b.key,branch:b.name,warehouse:!!d.warehouse,day:dayKey(it.time),it});
     }}
   return evs;
 }
@@ -1007,23 +1028,27 @@ function renderTrace(){
   if(!q)return head+`<div class="tablecard"><div class="state"><h3>Enter a barcode</h3><p>Type a barcode or product name above to trace it across the shops and warehouse.</p></div></div>`;
   const evs=traceEvents(q);
   if(!evs.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing found</h3><p>No activity for “${esc(q)}” in the loaded data (the feeds usually hold the last day or two).</p></div></div>`;
-  const rep=evs.find(e=>e.desc)||evs[0];
-  const prod=`<div class="traceprod">${mediaHTML({description:rep.desc,barcode:rep.barcode})}<div><div class="nm">${esc(rep.desc)||"—"}</div><div class="sub">${esc(rep.barcode||q)}</div></div></div>`;
+  const rep=(evs.find(e=>e.it.description)||evs[0]).it;
+  const prod=`<div class="traceprod">${mediaHTML({description:rep.description,barcode:rep.barcode})}<div><div class="nm">${esc(rep.description)||"—"}</div><div class="sub">${esc(rep.barcode||q)}</div></div></div>`;
   const days=[...new Set(evs.map(e=>e.day))].filter(Boolean).sort().reverse();
   let blocks="";
   for(const day of days){
     const de=evs.filter(e=>e.day===day);
+    const byKey={};
+    for(const e of de){(byKey[e.key]=byKey[e.key]||{name:e.branch,warehouse:e.warehouse,items:[]}).items.push(e.it);}
     let whOut=0, whIn=0; const byBranch=new Map();
-    for(const e of de){
-      if(e.movements){ if((e.qty||0)<0)whOut+=-(e.qty); else if((e.qty||0)>0)whIn+=(e.qty||0); }
-      else{ const o=byBranch.get(e.key)||{name:e.branch,inq:0,count:0,last:e.time}; o.inq+=(e.qty||0); o.count++; if(tval(e.time)>tval(o.last))o.last=e.time; byBranch.set(e.key,o); }
+    for(const key in byKey){
+      const g=byKey[key]; const prods=collapse(g.items);
+      let net=0,last=null; for(const p of prods){net+=(p.to||0)+(p.from||0); if(!last||tval(p.time)>tval(last))last=p.time;}
+      if(g.warehouse){ if(net<0)whOut+=-net; else whIn+=net; }
+      else byBranch.set(key,{name:g.name,inq:net,count:prods.length,last});
     }
-    const totalIn=[...byBranch.values()].reduce((a,o)=>a+o.inq,0);
+    const totalIn=[...byBranch.values()].reduce((a,o)=>a+Math.max(0,o.inq),0);
     let rows="";
     for(const o of byBranch.values()){
       const tag = whOut>0 ? `<span class="provtag prov--from">likely from warehouse</span>` : `<span class="provtag prov--store">in-store / supplier</span>`;
-      rows+=`<tr><td class="prod"><div class="nm">${esc(o.name)}</div><div class="sub">${fmt(o.count)} scan${o.count===1?"":"s"} · last ${esc(timeOnly(o.last))}</div></td>
-        <td><span class="add pos">scanned IN +${fmt(o.inq)}</span></td><td style="text-align:right">${tag}</td></tr>`;
+      rows+=`<tr><td class="prod"><div class="nm">${esc(o.name)}</div><div class="sub">${fmt(o.count)} product${o.count===1?"":"s"} · last ${esc(timeOnly(o.last))}</div></td>
+        <td><span class="add pos">scanned IN ${o.inq>=0?"+":""}${fmt(o.inq)}</span></td><td style="text-align:right">${tag}</td></tr>`;
     }
     if(whOut>0)rows+=`<tr><td class="prod"><div class="nm">Warehouse</div></td><td><span class="add neg">scanned OUT −${fmt(whOut)}</span></td><td style="text-align:right"><span class="provtag prov--out">dispatched</span></td></tr>`;
     if(whIn>0)rows+=`<tr><td class="prod"><div class="nm">Warehouse</div></td><td><span class="add pos">delivered IN +${fmt(whIn)}</span></td><td style="text-align:right"><span class="provtag prov--in">delivery</span></td></tr>`;
