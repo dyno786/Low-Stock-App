@@ -131,6 +131,15 @@
   .add{font-family:var(--mono); font-weight:600; font-variant-numeric:tabular-nums}
   .add.pos{color:var(--ok)} .add.neg{color:var(--bad)}
   .addtag{margin-left:10px; padding-left:10px; border-left:1px solid var(--line)}
+  .mvt{display:inline-flex; align-items:stretch}
+  .mvt__c{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0 15px; position:relative}
+  .mvt__c:first-child{padding-left:0}
+  .mvt__c+.mvt__c::before{content:""; position:absolute; left:0; top:4px; bottom:4px; width:1px; background:var(--line)}
+  .mvt__n{font-family:var(--mono); font-weight:600; font-variant-numeric:tabular-nums; font-size:15px; color:var(--ink); line-height:1.1}
+  .mvt__l{font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--faint); font-weight:600; white-space:nowrap}
+  .mvt__now{color:var(--brand-ink); font-size:17px}
+  .mvt__now--bad{color:var(--bad)}
+  .add.zero{color:var(--muted)}
   td.mv-cell .mv{display:inline-flex}
   .listtop{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--surface-2)}
   .listtop__val{font-size:13px; color:var(--muted)} .listtop__val b{color:var(--ink); font-family:var(--mono); font-size:14px; margin-left:4px}
@@ -643,10 +652,20 @@ function addNum(q){if(q==null)return "—";return `<span class="add ${q<0?"neg":
 function mvPair(from,to){const cls=(to!=null&&to<0)?"to-bad":((to!=null&&from!=null&&to>from)?"to-up":((to!=null&&from!=null&&to<from)?"to-down":""));
   return `<span class="mv ${cls}"><span class="from">${from==null?"·":from}</span><span class="arr">→</span><span class="to">${to==null?"·":to}</span></span>`;}
 /* The clearing leg of a PICCO pair stores the OLD count as a negative (e.g. old 2 → "-2"). For a normal
-   recount, show that as the real OLD count (positive) so the row reads "old → new". p.net is the TRUE
-   change (new - old). Genuine exceptions keep their raw values so the anomaly stays visible. */
+   recount, show that as the real OLD count (positive). p.net is the TRUE change (new - old).
+   Genuine exceptions keep their raw values so the anomaly stays visible. */
 function dispWas(p){ return (!p.isExc && p.from!=null && p.from<0) ? -p.from : p.from; }
-function mvCell(p){ return `${mvPair(dispWas(p),p.to)}<span class="addtag">${addNum(p.net)}</span>`; }
+/* Three labelled numbers: what it WAS (before the scan), what you ADJUSTED it by, and what's NOW on the shelf. */
+function mvTriple(p){
+  const was=dispWas(p), now=p.to, adj=(p.net==null?0:p.net);
+  const adjCls=adj<0?"neg":(adj>0?"pos":"zero");
+  return `<span class="mvt">`+
+    `<span class="mvt__c"><span class="mvt__n">${was==null?"·":fmt(was)}</span><span class="mvt__l">was</span></span>`+
+    `<span class="mvt__c"><span class="mvt__n add ${adjCls}">${adj>0?"+":""}${fmt(adj)}</span><span class="mvt__l">adjusted</span></span>`+
+    `<span class="mvt__c"><span class="mvt__n mvt__now ${(now!=null&&now<0)?"mvt__now--bad":""}">${now==null?"·":fmt(now)}</span><span class="mvt__l">on shelf</span></span>`+
+  `</span>`;
+}
+function mvCell(p){ return mvTriple(p); }
 
 /* ---- day handling ---- */
 function dayKey(t){const s=String(t||"");const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return m[1]+"-"+m[2]+"-"+m[3];
@@ -915,8 +934,7 @@ function piccoFilesHTML(pf){
     const over=f.gap!=null&&f.gap>pf.tgt;
     const lines=f.products.map(p=>`<div class="pfline ${p.isExc?"is-exc":""}">
         <span class="pfline__nm">${esc(p.description)||"—"}<small>${esc(p.barcode)||""}${p.size?" · "+esc(p.size):""}</small></span>
-        <span class="pfline__mv">${mvPair(dispWas(p),p.to)}</span>
-        <span class="pfline__add">${addNum(p.net)}</span></div>`).join("");
+        <span class="pfline__mv">${mvTriple(p)}</span></div>`).join("");
     return `<details class="pfile${over?" pfile--over":""}"><summary>
         <span class="pfile__ref">#${esc(f.ref)}</span>
         <span class="pfile__time">${esc(timeOnly(f.last))}</span>
@@ -943,8 +961,8 @@ function cardsHTML(products,key,showProv){
         <div class="icard__desc">${esc(p.description)||"—"}</div>
         <div class="icard__sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div>
         ${tag?`<div class="provrow">${tag}</div>`:""}
-        <div class="icard__mv">${mvPair(dispWas(p),p.to)}</div>
-        <div class="icard__foot"><div class="icard__qty">${addNum(p.net)}<small>change</small></div>
+        <div class="icard__mv">${mvTriple(p)}</div>
+        <div class="icard__foot">
           ${p.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</div>
       </div></div>`;}
   return html+`</div>`+listFoot(cap,products.length,key);
@@ -968,7 +986,7 @@ function tableHTML(products,key,withBranch,showProv){
   }
   const top=`<div class="listtop"><span class="listtop__val">Total value<b>${money(totalVal)}</b></span><span class="listtop__cnt">${fmt(products.length)} product${products.length===1?"":"s"}</span></div>`;
   return `<div class="tablecard">${top}<div class="tablescroll"><table>
-    <thead><tr>${withBranch?"<th>Branch</th>":""}<th class="media-cell"></th><th>Product</th><th class="mv-cell">From → To · Added</th><th class="time-cell">Time</th></tr></thead>
+    <thead><tr>${withBranch?"<th>Branch</th>":""}<th class="media-cell"></th><th>Product</th><th class="mv-cell">Was · Adjusted · On shelf</th><th class="time-cell">Time</th></tr></thead>
     <tbody>${rows}</tbody></table></div>${listFoot(cap,products.length,key)}</div>`;
 }
 function emptyList(){return `<div class="state"><h3>No products</h3><p>Nothing matches this day, flow or search.</p></div>`;}
@@ -1029,7 +1047,7 @@ function renderBranch(b){
   let view=applyFlow(products); if(!d.warehouse)view=applyProv(view); view=view.filter(matchSearch);
   return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
       ${freshBlock(d)}</div>
-    ${d.warehouse?`<p class="lede">The Warehouse's own PICCO scans. <b>From → To</b> is the old count vs the new count. A <b>drop</b> means stock <b>left</b> the warehouse — sent out to a shop (this is what powers the "from warehouse" tags on the branches); a <b>rise</b> is a <b>delivery in</b>. Use the <b>Trace</b> tab to follow a barcode into the branches.</p>`:""}
+    ${d.warehouse?`<p class="lede">The Warehouse's own PICCO scans. Each row shows what the count <b>was</b>, what it was <b>adjusted</b> by, and what's <b>on the shelf</b> now. A <b>drop</b> (negative adjust) means stock <b>left</b> the warehouse — sent out to a shop (this powers the "from warehouse" tags on the branches); a <b>rise</b> is a <b>delivery in</b>. Use the <b>Trace</b> tab to follow a barcode into the branches.</p>`:""}
     ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Showing sample data — couldn't read the live sheet (${esc(d.error||"")}). Share it "anyone with the link — viewer", or we use an /api endpoint.</div>`:""}
     <div class="kpis">
       <div class="kpi"><div class="kpi__label">Products</div><div class="kpi__value">${fmt(products.length)}</div></div>
