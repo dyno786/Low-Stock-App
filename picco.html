@@ -828,6 +828,7 @@ function renderReturns(){
   return head+`${toolbar({day:false,flow:false,view:false})}`+banner+blocks+
     `<p class="lede" style="margin-top:4px;color:var(--muted)">Note: the feed records <b>what</b> and <b>how much</b> was returned, but not <b>why</b> — there's no reason field in the PICCO data. Matching a shop's drop to a warehouse scan-in is an inference; tell me if you want the window (currently ${fmt(CONFIG.transferLookbackDays)} day${CONFIG.transferLookbackDays===1?"":"s"}) or the definition tightened.</p>`;
 }
+/* wasNegative(p): true only for a genuine negative-stock signal —
    the dashboard exception flag (stock or value ended negative) or a negative CurrentStock.
    NOTE: the "before" leg of a PICCO pair is always stored negative (it's the clearing leg),
    so it is NOT a negative-stock signal and must not be used here. */
