@@ -108,6 +108,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .zoomable{cursor:zoom-in}
 #lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
 #lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.brand-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.brand-caret{font-size:11px;color:var(--sub);width:12px;flex-shrink:0}
+.brand-name{font-weight:800;font-size:14px;color:var(--ink);flex:1;letter-spacing:.3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brand-meta{font-size:10px;color:var(--sub);font-family:monospace;flex-shrink:0}
+.brand-prog{font-size:10px;font-weight:700;font-family:monospace;color:var(--purpletxt);background:var(--purplebg);border-radius:10px;padding:2px 7px;flex-shrink:0}
+.brand-prog.done{color:var(--green);background:var(--greenbg)}
+.brand-body.collapsed{display:none}
+.wh-bulk{display:flex;gap:8px;padding:6px 11px 2px}
+.wh-bulk button{flex:1;background:var(--card2,#f5f5f5);border:1px solid var(--border);border-radius:8px;padding:6px;font-size:11px;font-weight:600;color:var(--ink);cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+.wh-tabs{display:flex;gap:6px;padding:8px 11px 2px}
+.wh-tab{flex:1;background:var(--card2,#f5f5f5);border:1px solid var(--border);border-radius:9px;padding:9px 6px;font-size:12px;font-weight:700;color:var(--sub);cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:6px;-webkit-tap-highlight-color:transparent}
+.wh-tab.active{background:var(--purple);color:#fff;border-color:var(--purple)}
+.wh-tab-n{font-size:10px;background:rgba(0,0,0,.12);border-radius:8px;padding:1px 6px;font-family:monospace}
+.wh-tab.active .wh-tab-n{background:rgba(255,255,255,.25)}
 
 /* PICK STRIP — horizontal 3 column */
 .pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
@@ -257,6 +271,17 @@ try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
 // editable warehouse send quantities: whQty[bc] = [n,n,n]; and top-up target (default 7)
 var whQty={};try{whQty=JSON.parse(localStorage.getItem('cc_wh_qty')||'{}');}catch(e){}
 var pickCounts=[0,0,0];
+var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_brandcollapsed')||'{}');}catch(e){}
+var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup')?v:'topup';}catch(e){return 'topup';}})();
+// brand is derived from the product name (no brand field in EPOS). Aliases merge split/multi-word brands.
+var BRAND_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME'};
+function brandOf(nm){
+  if(!nm)return 'OTHER';
+  var w=(''+nm).trim().toUpperCase().split(/\s+/);
+  var first=(w[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');
+  if(!first||/^[0-9]+$/.test(first))first=((w[1]||'OTHER').replace(/[^A-Z0-9&\/+-]/g,''))||'OTHER';
+  return BRAND_ALIASES[first]||first;
+}
 function loadTarget(){var v=parseInt(localStorage.getItem('cc_wh_target'));return (isNaN(v)||v<1)?7:v;}
 function saveTarget(v){try{localStorage.setItem('cc_wh_target',String(v));}catch(e){}}
 
@@ -448,9 +473,11 @@ function buildPickList(){
 function renderWH(){
   var el=document.getElementById('out');
   if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
-  var L=buildPickList(),all=L.dead.concat(L.normal);
+  var L=buildPickList(),allItems=L.dead.concat(L.normal);
+  var oosList=allItems.filter(function(it){return Math.min(it.bq[0],it.bq[1],it.bq[2])<=0;});  // a branch at 0 or below, WH has stock
+  var list=(whTab==='oos')?oosList:allItems;
   var tp=[0,0,0],dp=[0,0,0];
-  all.forEach(function(item){
+  list.forEach(function(item){
     var t=pkTx[item.bc]||[false,false,false];
     for(var b=0;b<3;b++){if(item.sp[b]>0){tp[b]++;if(t[b])dp[b]++;}}
   });
@@ -458,39 +485,78 @@ function renderWH(){
   var pct=totalCells>0?Math.round(doneCells/totalCells*100):0;
   document.getElementById('prog-fill').style.width=pct+'%';
   document.getElementById('prog-txt').textContent=pct+'%';
-  document.getElementById('prog-sub').textContent=doneCells+' of '+totalCells+' picks done · '+all.length+' products total';
+  document.getElementById('prog-sub').textContent=doneCells+' of '+totalCells+' picks done · '+list.length+' products';
   pickCounts=tp.slice();
   updateBranchCards();
   var T=loadTarget();
+  var tabBar='<div class="wh-tabs">'+
+    '<button class="wh-tab'+(whTab==='topup'?' active':'')+'" data-tab="topup">⬆ Top up <span class="wh-tab-n">'+allItems.length+'</span></button>'+
+    '<button class="wh-tab'+(whTab==='oos'?' active':'')+'" data-tab="oos">⚠ Out of stock <span class="wh-tab-n">'+oosList.length+'</span></button>'+
+  '</div>';
   var targetCtl='<div class="wh-target"><span class="wh-target-lbl">Top up each branch to</span>'+
     '<div class="wh-target-ctl"><button class="wh-tbtn" data-d="-1">−</button><span class="wh-tval">'+T+'</span><button class="wh-tbtn" data-d="1">+</button></div>'+
     '<span class="wh-target-note">Suggested send = target minus what the branch has. Tap −/+ on any box to adjust (you can\'t send more than the warehouse has).</span></div>';
-  var html=targetCtl;
-  if(L.dead.length){
-    html+='<div class="sec-hdr"><div class="sec-title" style="color:var(--redtxt)">☠ Dead stock — clear first</div>'+
-      '<div class="sec-sub">Not sold 90+ days across any branch. Split to branches or return to supplier.</div></div>';
-    html+=renderSection(L.dead,dp,tp);
+  var subTitle=(whTab==='oos')
+    ?'<div class="sec-hdr"><div class="sec-title" style="color:var(--redtxt)">⚠ Out of stock — by brand</div><div class="sec-sub">Only items a branch is out of (0 or below) that the warehouse can cover. Grouped by brand A–Z.</div></div>'
+    :'<div class="sec-hdr"><div class="sec-title" style="color:var(--purpletxt)">📦 Top up — by brand</div><div class="sec-sub">Every branch below target. Grouped by brand A–Z to match the shelves. ☠ flags dead stock.</div></div>';
+  var html=tabBar+targetCtl;
+  if(list.length){
+    html+=subTitle;
+    html+='<div class="wh-bulk"><button id="wh-expand">▾ Expand all</button><button id="wh-collapse">▸ Collapse all</button></div>';
+    html+=renderBrandGroups(list);
+    var grandOut=list.reduce(function(s,it){return s+it.sp[0]+it.sp[1]+it.sp[2];},0);
+    html+='<div class="wa-footer">'+
+      '<div class="wa-row"><span>Send '+(whTab==='oos'?'out-of-stock':'pick')+' list to branch managers</span><span>'+list.length+' products · '+grandOut+' pcs out</span></div>'+
+      '<button class="wa-btn wa-btn-purple" id="wa-btn">'+waSVG()+'Send '+(whTab==='oos'?'out-of-stock':'pick')+' list</button>'+
+    '</div>';
+  }else{
+    html+='<div class="empty">'+(whTab==='oos'?'No out-of-stock items the warehouse can cover right now ✓':'No warehouse picks needed right now<br><small>All branches are at their target stock levels</small>')+'</div>';
   }
-  if(L.normal.length){
-    html+='<div class="sec-hdr" style="'+(L.dead.length?'padding-top:16px':'')+'"><div class="sec-title" style="color:var(--purpletxt)">📦 Normal restock</div>'+
-      '<div class="sec-sub">Top up each branch to your target (default 7). Tap −/+ on any box to change how many to send.</div></div>';
-    html+=renderSection(L.normal,dp,tp);
-  }
-  if(!all.length)html=targetCtl+'<div class="empty">No warehouse picks needed right now<br><small>All branches are at their target stock levels</small></div>';
-  var grandOut=all.reduce(function(s,it){return s+it.sp[0]+it.sp[1]+it.sp[2];},0);
-  html+='<div class="wa-footer">'+
-    '<div class="wa-row"><span>Send pick list to all branch managers</span><span>'+all.length+' products · '+grandOut+' pcs out</span></div>'+
-    '<button class="wa-btn wa-btn-purple" id="wa-btn">'+waSVG()+'Send pick list</button>'+
-  '</div>';
   el.innerHTML=html;
+  el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});
   el.querySelectorAll('.wh-tbtn').forEach(function(b){b.addEventListener('click',function(){var v=loadTarget()+(+this.dataset.d);if(v<1)v=1;if(v>99)v=99;saveTarget(v);renderWH();});});
-  wireTicks(all);
-  document.getElementById('wa-btn').addEventListener('click',function(){sendWA(all);});
+  el.querySelectorAll('.brand-hdr').forEach(function(h){
+    h.addEventListener('click',function(){
+      var b=this.dataset.brand;brandCollapsed[b]=!brandCollapsed[b];
+      try{localStorage.setItem('cc_wh_brandcollapsed',JSON.stringify(brandCollapsed));}catch(e){}
+      var body=el.querySelector('.brand-body[data-brand="'+b+'"]');var car=this.querySelector('.brand-caret');
+      if(body)body.classList.toggle('collapsed',brandCollapsed[b]);
+      if(car)car.textContent=brandCollapsed[b]?'▸':'▾';
+    });
+  });
+  var eA=document.getElementById('wh-expand');if(eA)eA.addEventListener('click',function(){brandCollapsed={};try{localStorage.setItem('cc_wh_brandcollapsed','{}');}catch(e){}renderWH();});
+  var cA=document.getElementById('wh-collapse');if(cA)cA.addEventListener('click',function(){var brs={};el.querySelectorAll('.brand-hdr').forEach(function(h){brs[h.dataset.brand]=true;});brandCollapsed=brs;try{localStorage.setItem('cc_wh_brandcollapsed',JSON.stringify(brandCollapsed));}catch(e){}renderWH();});
+  wireTicks(list);
+  var wb=document.getElementById('wa-btn');if(wb)wb.addEventListener('click',function(){sendWA(list);});
 }
 
 function renderSection(items,dp,tp){
   var html='';
   items.slice().sort(function(a,b){return a.nm.localeCompare(b.nm);}).forEach(function(item){html+=mkRow(item);});
+  return html;
+}
+
+function renderBrandGroups(all){
+  var groups={};
+  all.forEach(function(it){var b=brandOf(it.nm);(groups[b]=groups[b]||[]).push(it);});
+  var brands=Object.keys(groups).sort(function(a,b){return a.localeCompare(b);});
+  var html='';
+  brands.forEach(function(b){
+    var items=groups[b].slice().sort(function(x,y){return x.nm.localeCompare(y.nm);});
+    var cells=0,done=0,pcs=0;
+    items.forEach(function(it){var t=pkTx[it.bc]||[false,false,false];for(var k=0;k<3;k++){if(it.sp[k]>0){cells++;pcs+=it.sp[k];if(t[k])done++;}}});
+    var coll=!!brandCollapsed[b], allDone=cells>0&&done===cells;
+    var key=b.replace(/"/g,'');
+    html+='<div class="brand-hdr" data-brand="'+key+'">'+
+      '<span class="brand-caret">'+(coll?'▸':'▾')+'</span>'+
+      '<span class="brand-name">'+b+'</span>'+
+      '<span class="brand-meta">'+items.length+' items · '+pcs+' pcs</span>'+
+      '<span class="brand-prog'+(allDone?' done':'')+'">'+done+'/'+cells+'</span>'+
+    '</div>'+
+    '<div class="brand-body'+(coll?' collapsed':'')+'" data-brand="'+key+'">';
+    items.forEach(function(it){html+=mkRow(it);});
+    html+='</div>';
+  });
   return html;
 }
 
@@ -555,6 +621,8 @@ function wireTicks(all){
     cells.forEach(function(c){if(!c.classList.contains('on'))allDone=false;});
     row.classList.toggle('all-done',allDone);
     var __bar=row.querySelector('.pk-rowbar-fill');if(__bar){var __dd=0;cells.forEach(function(c){if(c.classList.contains('on'))__dd++;});__bar.style.width=(cells.length>0?Math.round(__dd/cells.length*100):0)+'%';}
+    var __bd=row.closest('.brand-body');
+    if(__bd){var __h=__bd.previousElementSibling;var __bc=__bd.querySelectorAll('.pk-cell[data-take="1"]');var __bdone=__bd.querySelectorAll('.pk-cell[data-take="1"].on').length;var __p=__h&&__h.querySelector('.brand-prog');if(__p){__p.textContent=__bdone+'/'+__bc.length;__p.classList.toggle('done',__bc.length>0&&__bdone===__bc.length);}}
     var so=row.querySelector('.pk-scanout');
     if(so){so.classList.toggle('done',allDone);var sl=so.querySelector('.so-lbl');if(sl)sl.textContent=allDone?'✓ out':'scan out';}
   }
