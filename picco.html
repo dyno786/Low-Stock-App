@@ -139,6 +139,7 @@
   .mvt__l{font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--faint); font-weight:600; white-space:nowrap}
   .mvt__now{color:var(--brand-ink); font-size:17px}
   .mvt__now--bad{color:var(--bad)}
+  .mvt__stk{color:var(--ink); font-size:17px}
   .add.zero{color:var(--muted)}
   td.mv-cell .mv{display:inline-flex}
   .listtop{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--surface-2)}
@@ -655,14 +656,17 @@ function mvPair(from,to){const cls=(to!=null&&to<0)?"to-bad":((to!=null&&from!=n
    recount, show that as the real OLD count (positive). p.net is the TRUE change (new - old).
    Genuine exceptions keep their raw values so the anomaly stays visible. */
 function dispWas(p){ return (!p.isExc && p.from!=null && p.from<0) ? -p.from : p.from; }
+/* Live qty in stock = CurrentStock from the latest scan of this product (the EPOS on-hand at export time). */
+function inStock(p){ if(p.scans&&p.scans.length){const v=toNumber(p.scans[p.scans.length-1].stock); if(v!=null)return v;} return p.to; }
 /* Three labelled numbers: what it WAS (before the scan), what you ADJUSTED it by, and what's NOW on the shelf. */
 function mvTriple(p){
-  const was=dispWas(p), now=p.to, adj=(p.net==null?0:p.net);
+  const was=dispWas(p), now=p.to, adj=(p.net==null?0:p.net), stk=inStock(p);
   const adjCls=adj<0?"neg":(adj>0?"pos":"zero");
   return `<span class="mvt">`+
     `<span class="mvt__c"><span class="mvt__n">${was==null?"·":fmt(was)}</span><span class="mvt__l">was</span></span>`+
     `<span class="mvt__c"><span class="mvt__n add ${adjCls}">${adj>0?"+":""}${fmt(adj)}</span><span class="mvt__l">adjusted</span></span>`+
     `<span class="mvt__c"><span class="mvt__n mvt__now ${(now!=null&&now<0)?"mvt__now--bad":""}">${now==null?"·":fmt(now)}</span><span class="mvt__l">on shelf</span></span>`+
+    `<span class="mvt__c"><span class="mvt__n mvt__stk ${(stk!=null&&stk<0)?"mvt__now--bad":""}">${stk==null?"·":fmt(stk)}</span><span class="mvt__l">in stock</span></span>`+
   `</span>`;
 }
 function mvCell(p){ return mvTriple(p); }
@@ -986,7 +990,7 @@ function tableHTML(products,key,withBranch,showProv){
   }
   const top=`<div class="listtop"><span class="listtop__val">Total value<b>${money(totalVal)}</b></span><span class="listtop__cnt">${fmt(products.length)} product${products.length===1?"":"s"}</span></div>`;
   return `<div class="tablecard">${top}<div class="tablescroll"><table>
-    <thead><tr>${withBranch?"<th>Branch</th>":""}<th class="media-cell"></th><th>Product</th><th class="mv-cell">Was · Adjusted · On shelf</th><th class="time-cell">Time</th></tr></thead>
+    <thead><tr>${withBranch?"<th>Branch</th>":""}<th class="media-cell"></th><th>Product</th><th class="mv-cell">Was · Adjusted · On shelf · In stock</th><th class="time-cell">Time</th></tr></thead>
     <tbody>${rows}</tbody></table></div>${listFoot(cap,products.length,key)}</div>`;
 }
 function emptyList(){return `<div class="state"><h3>No products</h3><p>Nothing matches this day, flow or search.</p></div>`;}
