@@ -122,6 +122,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .wh-tab.active{background:var(--purple);color:#fff;border-color:var(--purple)}
 .wh-tab-n{font-size:10px;background:rgba(0,0,0,.12);border-radius:8px;padding:1px 6px;font-family:monospace}
 .wh-tab.active .wh-tab-n{background:rgba(255,255,255,.25)}
+.brand-loc{font-size:9px;font-weight:700;font-family:monospace;color:var(--purpletxt);background:var(--purplebg);border-radius:6px;padding:1px 6px;margin-right:2px;flex-shrink:0;white-space:nowrap}
+.map-wrap{padding:10px 11px 4px}
+.map-intro{font-size:12px;color:var(--sub);line-height:1.4;margin-bottom:10px;background:var(--s1,#fff);border:1px solid var(--border);border-radius:9px;padding:9px 11px}
+.map-sec{background:var(--s1,#fff);border:1px solid var(--border);border-radius:11px;padding:10px;margin-bottom:10px}
+.map-sec-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.map-sec-no{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--purple);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+.map-sec-name{flex:1;min-width:0;font-weight:700;font-size:14px;border:1px solid var(--border);border-radius:7px;padding:7px 9px;font-family:var(--font);color:var(--ink);background:var(--bg)}
+.map-row{border:1px dashed var(--border);border-radius:9px;padding:8px;margin-bottom:7px;background:var(--bg)}
+.map-row-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.map-row-name{flex:1;min-width:0;font-weight:600;font-size:13px;border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-family:var(--font);color:var(--ink);background:#fff}
+.map-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.map-chip{display:inline-flex;align-items:center;gap:5px;background:var(--purplebg);color:var(--purpletxt);border-radius:20px;padding:3px 5px 3px 10px;font-size:11px;font-weight:700}
+.map-chip button{border:none;background:rgba(0,0,0,.12);color:inherit;border-radius:50%;width:16px;height:16px;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+.map-addbrand{display:flex;gap:6px}
+.map-brand-in{flex:1;min-width:0;border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:12px;font-family:var(--font);color:var(--ink)}
+.map-addbrand button,.map-addrow,.map-addsec{background:var(--card2,#f5f5f5);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+.map-addrow{width:100%;margin-top:2px}
+.map-addsec{width:100%;background:var(--purple);color:#fff;border-color:var(--purple);padding:11px;font-size:13px;margin-bottom:14px}
+.map-del{background:none;border:none;color:#c0392b;font-weight:700;cursor:pointer;font-size:14px;flex-shrink:0;padding:4px}
+.map-del.sm{font-size:11px;color:var(--sub);font-weight:600}
 
 /* PICK STRIP — horizontal 3 column */
 .pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
@@ -272,7 +292,11 @@ try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
 var whQty={};try{whQty=JSON.parse(localStorage.getItem('cc_wh_qty')||'{}');}catch(e){}
 var pickCounts=[0,0,0];
 var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_brandcollapsed')||'{}');}catch(e){}
-var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup')?v:'topup';}catch(e){return 'topup';}})();
+var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup'||v==='map')?v:'topup';}catch(e){return 'topup';}})();
+var whMapData={sections:[]};try{whMapData=JSON.parse(localStorage.getItem('cc_wh_map')||'{"sections":[]}');if(!whMapData.sections)whMapData.sections=[];}catch(e){whMapData={sections:[]};}
+function saveMap(){try{localStorage.setItem('cc_wh_map',JSON.stringify(whMapData));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_map',whMapData);}
+function brandPosMap(){var m={};(whMapData.sections||[]).forEach(function(sec,si){(sec.rows||[]).forEach(function(row,ri){(row.brands||[]).forEach(function(b){var k=(''+b).toUpperCase();if(!(k in m))m[k]={s:si,r:ri,label:(sec.name||('S'+(si+1)))+' \u00b7 '+(row.name||('R'+(ri+1)))};});});});return m;}
+function whAllBrands(){var s={};(bd[3]||[]).forEach(function(p){if(p.bc&&p.nm)s[brandOf(p.nm)]=1;});return Object.keys(s).sort();}
 // brand is derived from the product name (no brand field in EPOS). Aliases merge split/multi-word brands.
 var BRAND_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME'};
 function brandOf(nm){
@@ -469,18 +493,26 @@ function buildPickList(){
   return{dead:dead,normal:normal};
 }
 
-// ── RENDER ─────────────────────────────────────────────────
+// ── RENDER ─────────────────────────
 function renderWH(){
   var el=document.getElementById('out');
   if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
   var L=buildPickList(),allItems=L.dead.concat(L.normal);
-  var oosList=allItems.filter(function(it){return Math.min(it.bq[0],it.bq[1],it.bq[2])<=0;});  // a branch at 0 or below, WH has stock
+  var oosList=allItems.filter(function(it){return Math.min(it.bq[0],it.bq[1],it.bq[2])<=0;});
+  var tabBar='<div class="wh-tabs">'+
+    '<button class="wh-tab'+(whTab==='topup'?' active':'')+'" data-tab="topup">⬆ Top up <span class="wh-tab-n">'+allItems.length+'</span></button>'+
+    '<button class="wh-tab'+(whTab==='oos'?' active':'')+'" data-tab="oos">⚠ Out of stock <span class="wh-tab-n">'+oosList.length+'</span></button>'+
+    '<button class="wh-tab'+(whTab==='map'?' active':'')+'" data-tab="map">🗺 Map</button>'+
+  '</div>';
+  function wireTabsBar(){el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});}
+  if(whTab==='map'){
+    el.innerHTML=tabBar+renderMapHTML();
+    wireTabsBar();wireMap(el);
+    return;
+  }
   var list=(whTab==='oos')?oosList:allItems;
   var tp=[0,0,0],dp=[0,0,0];
-  list.forEach(function(item){
-    var t=pkTx[item.bc]||[false,false,false];
-    for(var b=0;b<3;b++){if(item.sp[b]>0){tp[b]++;if(t[b])dp[b]++;}}
-  });
+  list.forEach(function(item){var t=pkTx[item.bc]||[false,false,false];for(var b=0;b<3;b++){if(item.sp[b]>0){tp[b]++;if(t[b])dp[b]++;}}});
   var totalCells=tp[0]+tp[1]+tp[2],doneCells=dp[0]+dp[1]+dp[2];
   var pct=totalCells>0?Math.round(doneCells/totalCells*100):0;
   document.getElementById('prog-fill').style.width=pct+'%';
@@ -489,16 +521,12 @@ function renderWH(){
   pickCounts=tp.slice();
   updateBranchCards();
   var T=loadTarget();
-  var tabBar='<div class="wh-tabs">'+
-    '<button class="wh-tab'+(whTab==='topup'?' active':'')+'" data-tab="topup">⬆ Top up <span class="wh-tab-n">'+allItems.length+'</span></button>'+
-    '<button class="wh-tab'+(whTab==='oos'?' active':'')+'" data-tab="oos">⚠ Out of stock <span class="wh-tab-n">'+oosList.length+'</span></button>'+
-  '</div>';
   var targetCtl='<div class="wh-target"><span class="wh-target-lbl">Top up each branch to</span>'+
     '<div class="wh-target-ctl"><button class="wh-tbtn" data-d="-1">−</button><span class="wh-tval">'+T+'</span><button class="wh-tbtn" data-d="1">+</button></div>'+
     '<span class="wh-target-note">Suggested send = target minus what the branch has. Tap −/+ on any box to adjust (you can\'t send more than the warehouse has).</span></div>';
   var subTitle=(whTab==='oos')
-    ?'<div class="sec-hdr"><div class="sec-title" style="color:var(--redtxt)">⚠ Out of stock — by brand</div><div class="sec-sub">Only items a branch is out of (0 or below) that the warehouse can cover. Grouped by brand A–Z.</div></div>'
-    :'<div class="sec-hdr"><div class="sec-title" style="color:var(--purpletxt)">📦 Top up — by brand</div><div class="sec-sub">Every branch below target. Grouped by brand A–Z to match the shelves. ☠ flags dead stock.</div></div>';
+    ?'<div class="sec-hdr"><div class="sec-title" style="color:var(--redtxt)">⚠ Out of stock — by brand</div><div class="sec-sub">Only items a branch is out of (0 or below) that the warehouse can cover. Ordered by your map.</div></div>'
+    :'<div class="sec-hdr"><div class="sec-title" style="color:var(--purpletxt)">📦 Top up — by brand</div><div class="sec-sub">Every branch below target. Ordered by your map (set it in the Map tab). ☠ flags dead stock.</div></div>';
   var html=tabBar+targetCtl;
   if(list.length){
     html+=subTitle;
@@ -513,7 +541,7 @@ function renderWH(){
     html+='<div class="empty">'+(whTab==='oos'?'No out-of-stock items the warehouse can cover right now ✓':'No warehouse picks needed right now<br><small>All branches are at their target stock levels</small>')+'</div>';
   }
   el.innerHTML=html;
-  el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});
+  wireTabsBar();
   el.querySelectorAll('.wh-tbtn').forEach(function(b){b.addEventListener('click',function(){var v=loadTarget()+(+this.dataset.d);if(v<1)v=1;if(v>99)v=99;saveTarget(v);renderWH();});});
   el.querySelectorAll('.brand-hdr').forEach(function(h){
     h.addEventListener('click',function(){
@@ -530,6 +558,45 @@ function renderWH(){
   var wb=document.getElementById('wa-btn');if(wb)wb.addEventListener('click',function(){sendWA(list);});
 }
 
+// ── WAREHOUSE MAP EDITOR ──
+function renderMapHTML(){
+  var brands=whAllBrands();
+  var dl='<datalist id="brand-list">'+brands.map(function(b){return '<option value="'+b.replace(/"/g,'')+'">';}).join('')+'</datalist>';
+  var h='<div class="map-wrap">'+dl+
+    '<div class="map-intro">Build your warehouse map: add <b>sections</b>, add <b>shelves/rows</b> (Top / Middle / Bottom…), and assign <b>brands</b> to each shelf. The <b>Top up</b> and <b>Out of stock</b> lists are then ordered to match — so you pick in walking order. Saved automatically.</div>';
+  (whMapData.sections||[]).forEach(function(sec,si){
+    h+='<div class="map-sec">'+
+      '<div class="map-sec-top"><span class="map-sec-no">'+(si+1)+'</span><input class="map-sec-name" data-s="'+si+'" value="'+(sec.name||'').replace(/"/g,'&quot;')+'" placeholder="Section name (e.g. Aisle 1)"><button class="map-del" data-act="delsec" data-s="'+si+'">✕</button></div>';
+    (sec.rows||[]).forEach(function(row,ri){
+      h+='<div class="map-row"><div class="map-row-top"><input class="map-row-name" data-s="'+si+'" data-r="'+ri+'" value="'+(row.name||'').replace(/"/g,'&quot;')+'" placeholder="Shelf (e.g. Top)"><button class="map-del sm" data-act="delrow" data-s="'+si+'" data-r="'+ri+'">remove</button></div><div class="map-chips">';
+      (row.brands||[]).forEach(function(b,bi){h+='<span class="map-chip">'+b+'<button data-act="delbrand" data-s="'+si+'" data-r="'+ri+'" data-b="'+bi+'">×</button></span>';});
+      h+='</div><div class="map-addbrand"><input class="map-brand-in" list="brand-list" data-s="'+si+'" data-r="'+ri+'" placeholder="type or pick a brand…"><button data-act="addbrand" data-s="'+si+'" data-r="'+ri+'">+ Add</button></div></div>';
+    });
+    h+='<button class="map-addrow" data-act="addrow" data-s="'+si+'">+ Add shelf / row</button></div>';
+  });
+  h+='<button class="map-addsec" data-act="addsec">+ Add section</button></div>';
+  return h;
+}
+function wireMap(el){
+  var wrap=el.querySelector('.map-wrap');if(!wrap)return;
+  wrap.querySelectorAll('.map-sec-name').forEach(function(inp){inp.addEventListener('input',function(){whMapData.sections[+this.dataset.s].name=this.value;saveMap();});});
+  wrap.querySelectorAll('.map-row-name').forEach(function(inp){inp.addEventListener('input',function(){whMapData.sections[+this.dataset.s].rows[+this.dataset.r].name=this.value;saveMap();});});
+  function addBrand(s,r,inp){var v=(inp.value||'').trim().toUpperCase();if(!v)return;var arr=whMapData.sections[s].rows[r].brands;if(arr.indexOf(v)<0)arr.push(v);saveMap();renderWH();}
+  wrap.querySelectorAll('.map-brand-in').forEach(function(inp){inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addBrand(+this.dataset.s,+this.dataset.r,this);}});});
+  wrap.querySelectorAll('[data-act]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var act=this.dataset.act,s=+this.dataset.s,r=+this.dataset.r,bi=+this.dataset.b;
+      if(act==='addsec'){whMapData.sections.push({name:'Section '+(whMapData.sections.length+1),rows:[]});}
+      else if(act==='delsec'){whMapData.sections.splice(s,1);}
+      else if(act==='addrow'){var rows=whMapData.sections[s].rows;var def=['Top','Middle','Bottom'][rows.length]||('Shelf '+(rows.length+1));rows.push({name:def,brands:[]});}
+      else if(act==='delrow'){whMapData.sections[s].rows.splice(r,1);}
+      else if(act==='addbrand'){var inp=wrap.querySelector('.map-brand-in[data-s="'+s+'"][data-r="'+r+'"]');if(inp){addBrand(s,r,inp);return;}}
+      else if(act==='delbrand'){whMapData.sections[s].rows[r].brands.splice(bi,1);}
+      saveMap();renderWH();
+    });
+  });
+}
+
 function renderSection(items,dp,tp){
   var html='';
   items.slice().sort(function(a,b){return a.nm.localeCompare(b.nm);}).forEach(function(item){html+=mkRow(item);});
@@ -539,7 +606,12 @@ function renderSection(items,dp,tp){
 function renderBrandGroups(all){
   var groups={};
   all.forEach(function(it){var b=brandOf(it.nm);(groups[b]=groups[b]||[]).push(it);});
-  var brands=Object.keys(groups).sort(function(a,b){return a.localeCompare(b);});
+  var pos=brandPosMap();
+  var brands=Object.keys(groups).sort(function(a,b){
+    var pa=pos[a],pb=pos[b];
+    if(pa&&pb){if(pa.s!==pb.s)return pa.s-pb.s;if(pa.r!==pb.r)return pa.r-pb.r;return a.localeCompare(b);}
+    if(pa)return -1;if(pb)return 1;return a.localeCompare(b);
+  });
   var html='';
   brands.forEach(function(b){
     var items=groups[b].slice().sort(function(x,y){return x.nm.localeCompare(y.nm);});
@@ -549,6 +621,7 @@ function renderBrandGroups(all){
     var key=b.replace(/"/g,'');
     html+='<div class="brand-hdr" data-brand="'+key+'">'+
       '<span class="brand-caret">'+(coll?'▸':'▾')+'</span>'+
+      (pos[b]?'<span class="brand-loc">'+pos[b].label+'</span>':'')+
       '<span class="brand-name">'+b+'</span>'+
       '<span class="brand-meta">'+items.length+' items · '+pcs+' pcs</span>'+
       '<span class="brand-prog'+(allDone?' done':'')+'">'+done+'/'+cells+'</span>'+
