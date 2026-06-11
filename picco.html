@@ -141,6 +141,16 @@
   .mvt__now--bad{color:var(--bad)}
   .mvt__stk{color:var(--ink); font-size:17px}
   .add.zero{color:var(--muted)}
+  .bc{display:inline-flex; align-items:center; gap:5px; cursor:pointer; border-radius:6px; padding:1px 6px; margin:-1px -2px;
+    user-select:none; -webkit-user-select:none; transition:background .12s, color .12s; vertical-align:baseline}
+  .bc__t{font-variant-numeric:tabular-nums}
+  .bc__i{flex:none; opacity:.4; transition:opacity .12s}
+  .bc:hover{background:var(--brand-wash,#E6F0F1); color:var(--brand-ink)}
+  .bc:hover .bc__i,.bc:focus-visible .bc__i{opacity:.85}
+  .bc:focus-visible{outline:2px solid var(--brand); outline-offset:1px}
+  .bc--done{background:var(--ok-wash,#E3F4E8); color:var(--ok,#1E7A46)}
+  .bc--done .bc__i{opacity:0; width:0}
+  .bc--done::after{content:"✓ copied"; font-size:11px; font-weight:700; white-space:nowrap}
   td.mv-cell .mv{display:inline-flex}
   .listtop{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--surface-2)}
   .listtop__val{font-size:13px; color:var(--muted)} .listtop__val b{color:var(--ink); font-family:var(--mono); font-size:14px; margin-left:4px}
@@ -363,10 +373,7 @@ const CONFIG = {
   // Requires each sheet shared "Anyone with the link — Viewer" for the browser
   // to read it. If you keep them private, we switch to a small /api endpoint.
   branches: [
-    { key:"roundhay",   name:"Roundhay",    sheetId:"1XmZ8sl6T8cT-Iuwp1uB-eXths121GIW2zU9bDCpc-IQ", stockSheetId:"1KUzqSI6UH4GBcm8YNLD1wKb7Q7yzmqjxUjkDC4WyWxY" },
-      // stockSheetId = the live "CC Stock - <branch>" sheet (Barcode + StockQty = bxp_instock on-hand NOW,
-      // refreshed ~every 30 min). Used for the "in stock" number, matched by barcode; this is the only
-      // figure that can differ from the scan and surface a "till showed 1 but system saved 2" gap.
+    { key:"roundhay",   name:"Roundhay",    sheetId:"1XmZ8sl6T8cT-Iuwp1uB-eXths121GIW2zU9bDCpc-IQ" },
     { key:"city",       name:"City Centre", sheetId:"1n-Xb3Zowb7J-FQ9rjZrChCrSC7UFT3iscFGPnjfWxas" },
     { key:"chapeltown", name:"Chapeltown",  sheetId:"10o97Gmcoa41MglKmIQb8bkTnCyHb5Qqix9znu8WBDRg" },
     { key:"warehouse",  name:"Warehouse",   sheetId:"1f9uvQSTJo9Rns6lniUJ0sZZIwZVIGQhpUCpAHSdC4vs", warehouse:true }
@@ -433,7 +440,7 @@ function demoRows(seed){
 }
 function pad(d){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
 
-const state={ active:"__overview", data:{}, search:"", filter:"all", flow:"all", prov:"all", itemView:"table", expanded:{}, showAll:{}, log:[], lastUpdated:null, day:null, days:[], liveStock:{}, images:{map:null,count:0,total:0,error:null,urlKey:null,keyKey:null} };
+const state={ active:"__overview", data:{}, search:"", filter:"all", flow:"all", prov:"all", itemView:"table", expanded:{}, showAll:{}, log:[], lastUpdated:null, day:null, days:[], images:{map:null,count:0,total:0,error:null,urlKey:null,keyKey:null} };
 
 /* CSV + gviz handling */
 function parseCSV(text){
@@ -594,40 +601,11 @@ async function loadBranch(b){
   }
   return{demo:true, warehouse:!!b.warehouse, error:String((lastErr&&lastErr.message)||lastErr), ...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};
 }
-/* CC Stock - <branch> sheet -> { barcode : live StockQty }. StockQty is bxp_instock, the EPOS
-   on-hand NOW (refreshed ~every 30 min), unlike the picco feed's CurrentStock which is frozen at
-   scan time. Reads the sheet's first tab and auto-detects the Barcode + StockQty columns. */
-async function loadLiveStock(b){
-  const out={map:null,count:0,error:null,checkedAt:new Date()};
-  if(!b.stockSheetId)return out;
-  try{
-    const url=bust(`https://docs.google.com/spreadsheets/d/${b.stockSheetId}/gviz/tq?tqx=out:csv`);
-    const res=await fetch(url,{cache:"no-store"});
-    if(!res.ok)throw new Error("HTTP "+res.status);
-    const text=await res.text();
-    if(/^\s*</.test(text))throw new Error("not shared for link access");
-    const rows=parseCSV(text); if(!rows.length)throw new Error("empty sheet");
-    const headers=rows[0].map(h=>cleanCell(h).trim());
-    const bcI=headers.findIndex(h=>/^barcode$/i.test(h));
-    let qI=headers.findIndex(h=>/^stockqty$/i.test(h));
-    if(qI<0)qI=headers.findIndex(h=>/instock|in.?stock|on.?hand|current.?stock|stock.?qty/i.test(h));
-    if(qI<0)qI=headers.findIndex(h=>/^qty$|quantity/i.test(h));
-    if(bcI<0||qI<0)throw new Error("no Barcode / StockQty columns");
-    const map={};
-    for(let i=1;i<rows.length;i++){const r=rows[i];
-      const bc=normBar(cleanCell(r[bcI])), q=toNumber(cleanCell(r[qI]));
-      if(bc&&q!=null)map[bc]=q;}
-    out.map=map; out.count=Object.keys(map).length;
-    return out;
-  }catch(err){out.error=String(err.message||err);return out;}
-}
 async function loadAll(){
   setRefreshing(true);
   const [imgs, ...results]=await Promise.all([loadImages(), ...CONFIG.branches.map(loadBranch)]);
   state.images=imgs;
-  CONFIG.branches.forEach((b,i)=>{state.data[b.key]=results[i]; const d=results[i]; if(d&&d.items)d.items.forEach(it=>it.branchKey=b.key);});
-  // live on-hand stock for any branch with a stock sheet (currently Roundhay), matched by barcode
-  await Promise.all(CONFIG.branches.filter(b=>b.stockSheetId).map(async b=>{ state.liveStock[b.key]=await loadLiveStock(b); }));
+  CONFIG.branches.forEach((b,i)=>state.data[b.key]=results[i]);
   buildDays(); resolveDay();
   state.lastUpdated=new Date(); logCheck(state.lastUpdated);
   setRefreshing(false);
@@ -688,15 +666,8 @@ function mvPair(from,to){const cls=(to!=null&&to<0)?"to-bad":((to!=null&&from!=n
    recount, show that as the real OLD count (positive). p.net is the TRUE change (new - old).
    Genuine exceptions keep their raw values so the anomaly stays visible. */
 function dispWas(p){ return (!p.isExc && p.from!=null && p.from<0) ? -p.from : p.from; }
-/* Qty in stock = genuinely LIVE on-hand (bxp_instock) from this branch's CC Stock sheet, matched by
-   barcode. This is the only figure that can differ from the scan and catch a "till showed 1 but
-   system saved 2" gap. Falls back to the scan's CurrentStock, then the recount, when no live match. */
-function inStock(p){
-  const ls=p.branchKey&&state.liveStock&&state.liveStock[p.branchKey];
-  if(ls&&ls.map){const v=ls.map[normBar(p.barcode)]; if(v!=null)return v;}
-  if(p.scans&&p.scans.length){const v=toNumber(p.scans[p.scans.length-1].stock); if(v!=null)return v;}
-  return p.to;
-}
+/* Live qty in stock = CurrentStock from the latest scan of this product (the EPOS on-hand at export time). */
+function inStock(p){ if(p.scans&&p.scans.length){const v=toNumber(p.scans[p.scans.length-1].stock); if(v!=null)return v;} return p.to; }
 /* Three labelled numbers: what it WAS (before the scan), what you ADJUSTED it by, and what's NOW on the shelf. */
 function mvTriple(p){
   const was=dispWas(p), now=p.to, adj=(p.net==null?0:p.net), stk=inStock(p);
@@ -710,13 +681,30 @@ function mvTriple(p){
 }
 function mvCell(p){ return mvTriple(p); }
 
+/* one-click-copy barcode chip (used everywhere a barcode is shown) */
+function bc(code){
+  code=(code==null?"":String(code)).trim();
+  if(!code) return "—";
+  return `<span class="bc" role="button" tabindex="0" data-bc="${esc(code)}" aria-label="Copy barcode ${esc(code)}" title="Click to copy">`+
+    `<span class="bc__t">${esc(code)}</span>`+
+    `<svg class="bc__i" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>`+
+  `</span>`;
+}
+function fallbackCopy(text){
+  try{const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.top="-1000px";ta.style.opacity="0";
+    document.body.appendChild(ta);ta.focus();ta.select();document.execCommand("copy");ta.remove();return true;}catch(e){return false;}
+}
+function copyBC(el){
+  const code=el&&el.dataset?el.dataset.bc:""; if(!code)return;
+  const done=()=>{el.classList.add("bc--done");el.setAttribute("title","Copied");setTimeout(()=>{el.classList.remove("bc--done");el.setAttribute("title","Click to copy");},1100);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(code).then(done).catch(()=>{if(fallbackCopy(code))done();});}
+  else if(fallbackCopy(code)){done();}
+}
+
 /* ---- day handling ---- */
 function dayKey(t){const s=String(t||"");const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return m[1]+"-"+m[2]+"-"+m[3];
   const d=new Date(s.replace(/-/g,"/"));if(!isNaN(d)){const z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate());}return "";}
-function todayKey(){const n=new Date(),z=x=>String(x).padStart(2,"0");return n.getFullYear()+"-"+z(n.getMonth()+1)+"-"+z(n.getDate());}
-function buildDays(){const set=new Set();for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)for(const it of d.items){const k=dayKey(it.time);if(k)set.add(k);}}
-  set.add(todayKey()); // always include today so the dashboard opens on today (even before the day's first scan); ‹ steps back to yesterday
-  state.days=[...set].sort();}
+function buildDays(){const set=new Set();for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)for(const it of d.items){const k=dayKey(it.time);if(k)set.add(k);}}state.days=[...set].sort();}
 function resolveDay(){if(!state.days.length){state.day=null;return;}if(!state.day||state.days.indexOf(state.day)<0)state.day=state.days[state.days.length-1];}
 function itemsForDay(items){if(!state.day)return items;return items.filter(it=>dayKey(it.time)===state.day);}
 function humanDay(dk){if(!dk)return "All dates";const [y,m,d]=dk.split("-").map(Number);const dt=new Date(y,m-1,d);
@@ -752,7 +740,7 @@ function collapse(items){
     const added=fz(to)-fz(from), value=grp.reduce((a,g)=>a+(g.value||0),0);
     // TRUE net stock change. 'from' is stored as the NEGATED old count (the clearing leg),
     // so old = -from and net = new - old = to + from. Negative = stock left; positive = arrived.
-    out.push({ barcode:rep.barcode, ownCode:rep.ownCode, productId:rep.productId, description:rep.description, size:rep.size, branchKey:rep.branchKey,
+    out.push({ barcode:rep.barcode, ownCode:rep.ownCode, productId:rep.productId, description:rep.description, size:rep.size,
       from, to, added, value, net:(to==null?0:to)+(from==null?0:from), scans:grp, count:grp.length, time:grp[grp.length-1].time,
       isExc:grp.some(g=>g.isExc)||(to!=null&&to<0) });
   }
@@ -878,7 +866,7 @@ function renderReturns(){
     const units=rs.reduce((a,r)=>a+r.returnedQty,0); grand+=units;
     const f=freshness(newest(d.items));
     const rows=rs.map(r=>`<tr>
-        <td class="prod">${mediaHTML({description:r.description,barcode:r.barcode})}<div><div class="nm">${esc(r.description)||"—"}</div><div class="sub">${esc(r.barcode||"")}${r.size?" · "+esc(r.size):""}</div></div></td>
+        <td class="prod">${mediaHTML({description:r.description,barcode:r.barcode})}<div><div class="nm">${esc(r.description)||"—"}</div><div class="sub">${bc(r.barcode)}${r.size?" · "+esc(r.size):""}</div></div></td>
         <td style="text-align:right"><span class="ret-out">−${fmt(r.returnedQty)}</span></td>
         <td style="text-align:right"><b>${r.shopFloorQty==null?"—":fmt(r.shopFloorQty)}</b><div class="sub">on floor</div></td>
         <td style="text-align:right">${money(r.value)}</td>
@@ -979,7 +967,7 @@ function piccoFilesHTML(pf){
   const blocks=pf.files.slice().reverse().map(f=>{
     const over=f.gap!=null&&f.gap>pf.tgt;
     const lines=f.products.map(p=>`<div class="pfline ${p.isExc?"is-exc":""}">
-        <span class="pfline__nm">${esc(p.description)||"—"}<small>${esc(p.barcode)||""}${p.size?" · "+esc(p.size):""}</small></span>
+        <span class="pfline__nm">${esc(p.description)||"—"}<small>${bc(p.barcode)}${p.size?" · "+esc(p.size):""}</small></span>
         <span class="pfline__mv">${mvTriple(p)}</span></div>`).join("");
     return `<details class="pfile${over?" pfile--over":""}"><summary>
         <span class="pfile__ref">#${esc(f.ref)}</span>
@@ -1005,7 +993,7 @@ function cardsHTML(products,key,showProv){
     html+=`<div class="icard ${p.isExc?"is-exc":""}">${mediaHTML(p)}
       <div class="icard__body">
         <div class="icard__desc">${esc(p.description)||"—"}</div>
-        <div class="icard__sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div>
+        <div class="icard__sub">${bc(p.barcode)}${p.size?" · "+esc(p.size):""}</div>
         ${tag?`<div class="provrow">${tag}</div>`:""}
         <div class="icard__mv">${mvTriple(p)}</div>
         <div class="icard__foot">
@@ -1023,7 +1011,7 @@ function tableHTML(products,key,withBranch,showProv){
     rows+=`<tr class="row ${p.isExc?"is-exc":""}" data-id="${id}">
       ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(p._branch)}</span></td>`:""}
       <td class="media-cell">${mediaHTML(p)}</td>
-      <td class="prod"><div class="nm">${esc(p.description)||"—"}</div><div class="sub">${esc(p.barcode)||"—"}${p.size?" · "+esc(p.size):""}</div>${tag?`<div class="provrow">${tag}</div>`:""}</td>
+      <td class="prod"><div class="nm">${esc(p.description)||"—"}</div><div class="sub">${bc(p.barcode)}${p.size?" · "+esc(p.size):""}</div>${tag?`<div class="provrow">${tag}</div>`:""}</td>
       <td class="mv-cell">${mvCell(p)}</td>
       <td class="time time-cell"><span class="ts">${timeOnly(p.time)}</span><span class="since">${p.time?agoShort(new Date(String(p.time).replace(/-/g,"/"))):""}</span></td></tr>`;
     if(open){const span=4+(withBranch?1:0);
@@ -1182,7 +1170,7 @@ function renderTrace(){
   const evs=traceEvents(q);
   if(!evs.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing found</h3><p>No activity for “${esc(q)}” in the loaded data (the feeds usually hold the last day or two).</p></div></div>`;
   const rep=(evs.find(e=>e.it.description)||evs[0]).it;
-  const prod=`<div class="traceprod">${mediaHTML({description:rep.description,barcode:rep.barcode})}<div><div class="nm">${esc(rep.description)||"—"}</div><div class="sub">${esc(rep.barcode||q)}</div></div></div>`;
+  const prod=`<div class="traceprod">${mediaHTML({description:rep.description,barcode:rep.barcode})}<div><div class="nm">${esc(rep.description)||"—"}</div><div class="sub">${bc(rep.barcode||q)}</div></div></div>`;
   const days=[...new Set(evs.map(e=>e.day))].filter(Boolean).sort().reverse();
   let blocks="";
   for(const day of days){
@@ -1251,6 +1239,10 @@ function wirePanel(){
     c.addEventListener("click",go);c.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});});
   document.querySelectorAll("tr.row").forEach(tr=>tr.addEventListener("click",()=>{const id=tr.dataset.id;state.expanded[id]=!state.expanded[id];renderPanel();}));
   document.querySelectorAll("[data-showall]").forEach(b=>b.addEventListener("click",()=>{state.showAll[b.dataset.showall]=true;renderPanel();}));
+  document.querySelectorAll(".bc").forEach(el=>{
+    el.addEventListener("click",e=>{e.stopPropagation();e.preventDefault();copyBC(el);});
+    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();e.stopPropagation();copyBC(el);}});
+  });
 }
 function renderUpdated(){const el=$("#updated");if(!state.lastUpdated){el.textContent="";return;}
   el.innerHTML=`Updated <b>${state.lastUpdated.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</b>${CONFIG.refreshMinutes?` · auto every ${CONFIG.refreshMinutes} min`:""}`;}
