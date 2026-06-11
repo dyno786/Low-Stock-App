@@ -66,6 +66,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .shop-bc{font-size:11px;color:var(--sub);font-family:monospace;margin-top:1px}
 .shop-add{flex-shrink:0;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12px;cursor:pointer}
 .shop-add:active{opacity:.7}
+.shop-mini{align-self:center;margin-left:auto;flex:0 0 auto;background:#16a34a;color:#fff;border:none;border-radius:7px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.shop-mini:active{opacity:.7}
 #shop-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;align-items:flex-end;justify-content:center}
 .sm-card{background:#fff;width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;display:flex;flex-direction:column}
 .sm-top{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;border-bottom:1px solid var(--bg);font-size:15px}
@@ -719,6 +721,7 @@ async function loadImgs(){
 
 // ── RENDER ─────────────────────────────────────────────────
 function renderView(){
+  shopEnsure();
   var isCollect=/^s[0-9]+$/.test(view);
   var isLow=view==='low';
   document.getElementById('day-filter').style.display=view==='oos'?'block':'none';
@@ -1293,6 +1296,42 @@ function shopBrandOf(bc,nm){
 function shopEscAttr(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function shopEsc(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 function destByBc(bc){var a=destData||[];for(var i=0;i<a.length;i++)if(a[i].bc===bc)return a[i];return null;}
+// ---- + Shopify button on low / negatives / overstock / W-H order / missing-images rows ----
+var __shopObs=null,__shopRaf=0;
+function shopEnsure(){
+  var out=document.getElementById('out'); if(!out)return;
+  if(!__shopObs){
+    __shopObs=new MutationObserver(function(){if(__shopRaf)return;__shopRaf=requestAnimationFrame(function(){__shopRaf=0;shopDecorate();});});
+    __shopObs.observe(out,{childList:true,subtree:true});
+  }
+  shopDecorate();
+}
+function shopDecorate(){
+  var out=document.getElementById('out'); if(!out)return;
+  if(['low','neg','over','whorder','imgs'].indexOf(view)<0)return;
+  var rows=out.querySelectorAll('.item-card,.neg-card,.over-card,.who-row,.img-row');
+  for(var i=0;i<rows.length;i++){
+    var row=rows[i];
+    if(row.querySelector('.shop-add'))continue;
+    var bc=row.getAttribute('data-bc');
+    if(!bc)continue;
+    if(typeof imgs!=='undefined'&&imgs[bc])continue;   // already online (has a photo) -> skip
+    var btn=document.createElement('button');
+    btn.className='shop-add shop-mini';
+    btn.setAttribute('data-bc',bc);
+    btn.textContent='+ Shopify';
+    row.appendChild(btn);
+  }
+}
+document.addEventListener('click',function(e){
+  var b=(e.target&&e.target.closest)?e.target.closest('.shop-add'):null;
+  if(!b)return;
+  e.preventDefault();e.stopPropagation();
+  var bc=b.getAttribute('data-bc');
+  var p=bc?destByBc(bc):null;
+  if(!p){var row=b.closest('.item-card,.neg-card,.over-card,.who-row,.img-row,.shop-row');var nmEl=row&&row.querySelector('.item-name,.neg-name,.over-name,.who-nm,.img-name,.shop-nm');p={bc:bc,nm:nmEl?(nmEl.textContent||'').trim():'',sz:'',pr:0,dp:'',qty:0};}
+  if(p)openShopModal(p);
+},true);
 function renderShopify(){
   var el=document.getElementById('out');
   if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
@@ -1335,7 +1374,6 @@ function renderShopify(){
   });
   el.innerHTML=html;
   el.querySelectorAll('.shop-subtabs .over-subtab').forEach(function(t){t.addEventListener('click',function(){shopCat=this.getAttribute('data-cat');renderShopify();});});
-  el.querySelectorAll('.shop-add').forEach(function(b){b.addEventListener('click',function(){var p=destByBc(this.getAttribute('data-bc'));if(p)openShopModal(p);});});
 }
 
 function shopColsHTML(q){
@@ -1879,7 +1917,7 @@ function renderImgs(){
         html+='<div class="card-list" style="margin:0 11px 7px;border-radius:var(--r)">';
         group.forEach(function(p){
           var hasImg=!!imgs[p.bc];
-          html+='<div class="img-row">'+
+          html+='<div class="img-row" data-bc="'+p.bc+'">'+
             '<div class="img-thumb'+(hasImg?' ok':'')+'">'+
               (hasImg?imgEl(p.bc,52):'📷')+
             '</div>'+
