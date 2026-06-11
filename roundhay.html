@@ -88,6 +88,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .sm-cancel{flex:0 0 auto;padding:11px 16px;border:1px solid #ddd;background:#fff;border-radius:9px;font-weight:600;cursor:pointer}
 .sm-go{flex:1;padding:11px;border:none;background:#16a34a;color:#fff;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px}
 .sm-go:disabled{opacity:.6}
+.sm-ai{width:100%;padding:11px;border:none;border-radius:9px;background:#6d28d9;color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+.sm-ai:disabled{opacity:.6}
+.sm-aihint{font-size:11px;color:var(--sub);margin:-4px 0 2px;text-align:center}
+.sm-body textarea{font-size:15px;border:1px solid #ddd;border-radius:8px;padding:9px 10px;color:#111;font-weight:400;text-transform:none;letter-spacing:0;font-family:inherit;resize:vertical;line-height:1.4}
 .shop-empty{padding:30px 16px;text-align:center;color:var(--sub);font-size:13px}
 .shop-subtabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .shop-subtabs .over-sub-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1324,11 +1328,16 @@ function openShopModal(p){
    '<div class="sm-card">'+
      '<div class="sm-top"><b>List on Shopify</b><button class="sm-x" id="sm-x">\u00D7</button></div>'+
      '<div class="sm-body">'+
+       '<button class="sm-ai" id="sm-ai">\u2728 Write with AI</button>'+
+       '<div class="sm-aihint" id="sm-aihint">Researches the product and fills title, description &amp; SEO.</div>'+
        '<label>Title<input id="sm-name" value="'+shopEscAttr(p.nm)+'"></label>'+
        '<div class="sm-ro">Barcode: '+p.bc+'</div>'+
        '<div class="sm-2"><label>Brand<input id="sm-brand" value="'+shopEscAttr(brand)+'" placeholder="brand"></label>'+
          '<label>Price \u00A3<input id="sm-price" type="number" step="0.01" inputmode="decimal" value="'+price+'"></label></div>'+
        '<label>Category<input id="sm-cat" value="'+shopEscAttr(cat)+'"></label>'+
+       '<label>Description<textarea id="sm-desc" rows="5" placeholder="product description"></textarea></label>'+
+       '<label>SEO title<input id="sm-seotitle" maxlength="70" placeholder="search engine title"></label>'+
+       '<label>SEO description<textarea id="sm-seodesc" rows="2" maxlength="320" placeholder="search engine description"></textarea></label>'+
        '<label>Photo (optional)<input id="sm-photo" type="file" accept="image/*" capture="environment"></label>'+
        '<div class="sm-collabel">Menu sections (collections)</div>'+
        '<input id="sm-colsearch" class="sm-colsearch" placeholder="search collections\u2026">'+
@@ -1342,6 +1351,7 @@ function openShopModal(p){
   document.getElementById('sm-cancel').onclick=closeShopModal;
   ov.onclick=function(e){if(e.target===ov)closeShopModal();};
   document.getElementById('sm-colsearch').addEventListener('input',function(){document.getElementById('sm-cols').innerHTML=shopColsHTML(this.value);});
+  document.getElementById('sm-ai').onclick=function(){enrichShop(p);};
   document.getElementById('sm-go').onclick=function(){submitShop(p);};
 }
 function closeShopModal(){var ov=document.getElementById('shop-modal');if(ov)ov.style.display='none';}
@@ -1349,9 +1359,12 @@ function shopVal(id){var e=document.getElementById(id);return e?(''+e.value).tri
 function submitShop(p){
   var st=document.getElementById('sm-status');
   var name=shopVal('sm-name'),brand=shopVal('sm-brand'),price=shopVal('sm-price'),cat=shopVal('sm-cat');
+  var descTxt=shopVal('sm-desc'),seoT=shopVal('sm-seotitle'),seoD=shopVal('sm-seodesc');
   if(!price){st.innerHTML='<span class="sm-err">Enter a price first.</span>';return;}
   var cols=[];document.querySelectorAll('#sm-cols input:checked').forEach(function(c){cols.push(c.value);});
   if(brand){shopBrandCache[p.bc]=brand.toUpperCase();try{localStorage.setItem('cc_shop_brand',JSON.stringify(shopBrandCache));}catch(e){}}
+  var descHtml='';
+  if(descTxt){descHtml=/</.test(descTxt)?descTxt:descTxt.split(/\n\n+/).map(function(x){return '<p>'+shopEsc(x.trim()).replace(/\n/g,'<br>')+'</p>';}).join('');}
   var go=document.getElementById('sm-go');go.disabled=true;
   var photo=document.getElementById('sm-photo').files[0];
   st.textContent=photo?'Processing photo\u2026':'Creating draft\u2026';
@@ -1362,7 +1375,7 @@ function submitShop(p){
   chain.then(function(imageUrl){
     st.textContent='Creating draft\u2026';
     return fetch('/api/shopify/create-product',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({barcode:p.bc,name:name,brand:brand,price:price,category:cat,collections:cols,imageUrl:imageUrl,status:'DRAFT'})})
+      body:JSON.stringify({barcode:p.bc,name:name,brand:brand,price:price,category:cat,collections:cols,imageUrl:imageUrl,status:'DRAFT',descriptionHtml:descHtml||undefined,seoTitle:seoT||undefined,seoDescription:seoD||undefined})})
       .then(function(r){return r.json();});
   }).then(function(j){
     go.disabled=false;
@@ -1372,6 +1385,26 @@ function submitShop(p){
     st.textContent='Unexpected response.';
   }).catch(function(e){go.disabled=false;st.innerHTML='<span class="sm-err">Failed: '+shopEsc(String(e))+'</span>';});
 }
+function enrichShop(p){
+  var btn=document.getElementById('sm-ai'),hint=document.getElementById('sm-aihint');
+  var name=shopVal('sm-name')||p.nm, brand=shopVal('sm-brand'), cat=shopVal('sm-cat')||p.dp;
+  var old=btn.textContent;btn.disabled=true;btn.textContent='\u2728 Researching\u2026';
+  if(hint)hint.textContent='Researching the product\u2026 this can take a few seconds.';
+  fetch('/api/shopify/enrich',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({barcode:p.bc,name:name,brand:brand,category:cat})})
+   .then(function(r){return r.json();})
+   .then(function(j){
+     btn.disabled=false;btn.textContent=old;
+     if(!j||j.error){if(hint)hint.innerHTML='<span class="sm-err">AI error: '+shopEsc((j&&j.error)||'failed')+'</span>';return;}
+     if(j.title)document.getElementById('sm-name').value=j.title;
+     if(j.descriptionHtml)document.getElementById('sm-desc').value=shopHtmlToText(j.descriptionHtml);
+     if(j.seoTitle)document.getElementById('sm-seotitle').value=j.seoTitle;
+     if(j.seoDescription)document.getElementById('sm-seodesc').value=j.seoDescription;
+     if(hint)hint.textContent='Done \u2014 review and edit, then List on Shopify.';
+   })
+   .catch(function(e){btn.disabled=false;btn.textContent=old;if(hint)hint.innerHTML='<span class="sm-err">AI failed: '+shopEsc(String(e))+'</span>';});
+}
+function shopHtmlToText(h){return (''+(h||'')).replace(/<\/p>\s*<p>/gi,'\n\n').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').trim();}
 function downscaleShop(file){
   return new Promise(function(res,rej){
     var img=new Image(),url=URL.createObjectURL(file);
