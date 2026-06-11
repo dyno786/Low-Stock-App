@@ -54,6 +54,41 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .who-ordl{font-size:8px;text-transform:uppercase;color:var(--sub);font-weight:700;letter-spacing:.5px}
 .who-tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;background:#fff}
 .who-row.ck .who-tick{background:#15803d;border-color:#15803d}
+/* + Shopify */
+.shop-head{padding:12px 14px 6px}
+.shop-title{font-size:16px;font-weight:800}
+.shop-sub{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.35}
+.shop-dp{padding:8px 14px;font-weight:800;font-size:12px;background:var(--bg);color:var(--sub);text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0}
+.shop-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bg)}
+.shop-imgw{width:44px;height:44px;flex-shrink:0;border-radius:7px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.shop-info{flex:1;min-width:0}
+.shop-nm{font-weight:700;font-size:13px;line-height:1.2}
+.shop-bc{font-size:11px;color:var(--sub);font-family:monospace;margin-top:1px}
+.shop-add{flex-shrink:0;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12px;cursor:pointer}
+.shop-add:active{opacity:.7}
+#shop-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;align-items:flex-end;justify-content:center}
+.sm-card{background:#fff;width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;display:flex;flex-direction:column}
+.sm-top{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;border-bottom:1px solid var(--bg);font-size:15px}
+.sm-x{border:none;background:none;font-size:24px;cursor:pointer;color:var(--sub);line-height:1}
+.sm-body{padding:13px 15px;display:flex;flex-direction:column;gap:10px}
+.sm-body label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.3px}
+.sm-body input{font-size:15px;border:1px solid #ddd;border-radius:8px;padding:9px 10px;color:#111;font-weight:400;text-transform:none;letter-spacing:0}
+.sm-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sm-ro{font-size:12px;color:var(--sub);font-family:monospace}
+.sm-collabel{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.3px}
+.sm-colsearch{font-size:14px;border:1px solid #ddd;border-radius:8px;padding:8px 10px}
+.sm-cols{max-height:170px;overflow:auto;border:1px solid var(--bg);border-radius:8px}
+.sm-col{display:flex;flex-direction:row;align-items:center;gap:8px;padding:7px 10px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:#111;border-bottom:1px solid var(--bg)}
+.sm-col input{width:auto}
+.sm-colsempty{padding:10px;font-size:12px;color:var(--sub)}
+.sm-status{font-size:13px;min-height:18px;line-height:1.4}
+.sm-status a{color:#16a34a;font-weight:700}
+.sm-err{color:#c0392b;font-weight:700}
+.sm-foot{display:flex;gap:8px;padding:12px 15px;border-top:1px solid var(--bg);position:sticky;bottom:0;background:#fff}
+.sm-cancel{flex:0 0 auto;padding:11px 16px;border:1px solid #ddd;background:#fff;border-radius:9px;font-weight:600;cursor:pointer}
+.sm-go{flex:1;padding:11px;border:none;background:#16a34a;color:#fff;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px}
+.sm-go:disabled{opacity:.6}
+.shop-empty{padding:30px 16px;text-align:center;color:var(--sub);font-size:13px}
 .sync-bar{display:flex;align-items:center;background:var(--greenbg);border-bottom:1px solid var(--border);padding:3px 10px;min-height:22px}
 .sync-txt{font-size:10px;color:var(--green);font-weight:600;flex:1}
 .sync-btn{font-size:9px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid var(--green);background:var(--greenbg);color:var(--green);cursor:pointer;font-family:var(--font)}
@@ -287,6 +322,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
   <div class="vtab" data-v="whorder">🚚 W/H Order</div>
+  <div class="vtab" data-v="shopify">🛍 + Shopify</div>
   <div class="vtab" data-v="imgs">📸 Images</div>
 </div>
 
@@ -688,6 +724,7 @@ function renderView(){
   else if(view==='oos')renderOOS();
   else if(view==='over')renderOverstock();
   else if(view==='whorder')renderWHOrder();
+  else if(view==='shopify')renderShopify();
   else renderImgs();
 }
 
@@ -1227,6 +1264,127 @@ function wireWHO(){
   el.querySelectorAll('.who-row').forEach(function(row){row.addEventListener('click',function(){var bc=this.dataset.bc;whoTx[bc]=!whoTx[bc];try{localStorage.setItem(WHO_TICK_KEY,JSON.stringify(whoTx));}catch(e){}if(typeof syncSave==='function')syncSave(WHO_TICK_KEY,whoTx);renderWHOrder();});});
 }
 
+/* ===== + SHOPIFY: list category items to the Shopify store ===== */
+var SHOP_DEPTS=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2','AFRO BEAUTY PRODUCTS 2','ACCESSORIES','ELECTRICAL','ELECTRICALS'];
+function shopDeptOK(dp){return SHOP_DEPTS.indexOf((''+(dp||'')).trim().toUpperCase())>=0;}
+var SHOP_COLLECTIONS=null;
+var shopBrandCache={};try{shopBrandCache=JSON.parse(localStorage.getItem('cc_shop_brand')||'{}');}catch(e){}
+function shopPrefetch(){
+  if(SHOP_COLLECTIONS===null){SHOP_COLLECTIONS=[];
+    fetch('/api/shopify/collections').then(function(r){return r.json();}).then(function(j){SHOP_COLLECTIONS=(j&&j.collections)||[];var s=document.getElementById('sm-cols');if(s)s.innerHTML=shopColsHTML('');}).catch(function(){});}
+  if(!window.__vmapTried){window.__vmapTried=1;
+    fetch('/api/vendors').then(function(r){return r.json();}).then(function(j){if(j&&!j.error)window.vmap=j;}).catch(function(){});}
+}
+function shopBrandOf(bc,nm){
+  if(shopBrandCache[bc])return shopBrandCache[bc];
+  if(window.vmap&&window.vmap[bc]){var v=(''+window.vmap[bc]).trim().toUpperCase().split(/\s+/)[0];if(v)return v;}
+  var w=(''+(nm||'')).trim().toUpperCase().split(/\s+/)[0];return w||'';
+}
+function shopEscAttr(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function shopEsc(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function destByBc(bc){var a=destData||[];for(var i=0;i<a.length;i++)if(a[i].bc===bc)return a[i];return null;}
+function renderShopify(){
+  var el=document.getElementById('out');
+  if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading\u2026</div>';return;}
+  shopPrefetch();
+  var items=(destData||[]).filter(function(p){return p.bc&&p.nm&&shopDeptOK(p.dp);});
+  items.sort(function(a,b){return (a.dp||'').localeCompare(b.dp||'')||a.nm.localeCompare(b.nm);});
+  setProg(items.length,0,items.length+' items in these categories');
+  var head='<div class="shop-head"><div class="shop-title">🛍 List to Shopify</div>'+
+    '<div class="shop-sub">Items in Afro Beauty, Afro Products 2, Accessories &amp; Electrical. Tap <b>+ Shopify</b> to create a draft listing.</div></div>';
+  if(!items.length){el.innerHTML=head+'<div class="shop-empty">No items in these categories right now.</div>';return;}
+  var curDp='',html=head;
+  items.forEach(function(p){
+    var dp=(p.dp||'').toUpperCase();
+    if(dp!==curDp){curDp=dp;html+='<div class="shop-dp">'+shopEsc(dp)+'</div>';}
+    html+='<div class="shop-row">'+
+      '<div class="shop-imgw">'+imgEl(p.bc,44)+'</div>'+
+      '<div class="shop-info"><div class="shop-nm">'+shopEsc(p.nm)+(p.sz?' \u00B7 '+shopEsc(p.sz):'')+'</div>'+
+        '<div class="shop-bc">'+p.bc+(p.pr>0?' \u00B7 \u00A3'+p.pr.toFixed(2):'')+'</div></div>'+
+      '<button class="shop-add" data-bc="'+p.bc+'">+ Shopify</button>'+
+    '</div>';
+  });
+  el.innerHTML=html;
+  el.querySelectorAll('.shop-add').forEach(function(b){b.addEventListener('click',function(){var p=destByBc(this.getAttribute('data-bc'));if(p)openShopModal(p);});});
+}
+function shopColsHTML(q){
+  if(!SHOP_COLLECTIONS||!SHOP_COLLECTIONS.length)return '<div class="sm-colsempty">Loading collections\u2026</div>';
+  q=(q||'').trim().toLowerCase();
+  var list=SHOP_COLLECTIONS.filter(function(t){return !q||t.toLowerCase().indexOf(q)>=0;}).slice(0,60);
+  if(!list.length)return '<div class="sm-colsempty">No match</div>';
+  return list.map(function(t){return '<label class="sm-col"><input type="checkbox" value="'+shopEscAttr(t)+'">'+shopEsc(t)+'</label>';}).join('');
+}
+function openShopModal(p){
+  var ov=document.getElementById('shop-modal');
+  if(!ov){ov=document.createElement('div');ov.id='shop-modal';document.body.appendChild(ov);}
+  var brand=shopBrandOf(p.bc,p.nm), price=(p.pr>0?p.pr.toFixed(2):''), cat=(p.dp||'');
+  ov.innerHTML=
+   '<div class="sm-card">'+
+     '<div class="sm-top"><b>List on Shopify</b><button class="sm-x" id="sm-x">\u00D7</button></div>'+
+     '<div class="sm-body">'+
+       '<label>Title<input id="sm-name" value="'+shopEscAttr(p.nm)+'"></label>'+
+       '<div class="sm-ro">Barcode: '+p.bc+'</div>'+
+       '<div class="sm-2"><label>Brand<input id="sm-brand" value="'+shopEscAttr(brand)+'" placeholder="brand"></label>'+
+         '<label>Price \u00A3<input id="sm-price" type="number" step="0.01" inputmode="decimal" value="'+price+'"></label></div>'+
+       '<label>Category<input id="sm-cat" value="'+shopEscAttr(cat)+'"></label>'+
+       '<label>Photo (optional)<input id="sm-photo" type="file" accept="image/*" capture="environment"></label>'+
+       '<div class="sm-collabel">Menu sections (collections)</div>'+
+       '<input id="sm-colsearch" class="sm-colsearch" placeholder="search collections\u2026">'+
+       '<div id="sm-cols" class="sm-cols">'+shopColsHTML('')+'</div>'+
+       '<div id="sm-status" class="sm-status"></div>'+
+     '</div>'+
+     '<div class="sm-foot"><button class="sm-cancel" id="sm-cancel">Cancel</button><button class="sm-go" id="sm-go">List on Shopify</button></div>'+
+   '</div>';
+  ov.style.display='flex';
+  document.getElementById('sm-x').onclick=closeShopModal;
+  document.getElementById('sm-cancel').onclick=closeShopModal;
+  ov.onclick=function(e){if(e.target===ov)closeShopModal();};
+  document.getElementById('sm-colsearch').addEventListener('input',function(){document.getElementById('sm-cols').innerHTML=shopColsHTML(this.value);});
+  document.getElementById('sm-go').onclick=function(){submitShop(p);};
+}
+function closeShopModal(){var ov=document.getElementById('shop-modal');if(ov)ov.style.display='none';}
+function shopVal(id){var e=document.getElementById(id);return e?(''+e.value).trim():'';}
+function submitShop(p){
+  var st=document.getElementById('sm-status');
+  var name=shopVal('sm-name'),brand=shopVal('sm-brand'),price=shopVal('sm-price'),cat=shopVal('sm-cat');
+  if(!price){st.innerHTML='<span class="sm-err">Enter a price first.</span>';return;}
+  var cols=[];document.querySelectorAll('#sm-cols input:checked').forEach(function(c){cols.push(c.value);});
+  if(brand){shopBrandCache[p.bc]=brand.toUpperCase();try{localStorage.setItem('cc_shop_brand',JSON.stringify(shopBrandCache));}catch(e){}}
+  var go=document.getElementById('sm-go');go.disabled=true;
+  var photo=document.getElementById('sm-photo').files[0];
+  st.textContent=photo?'Processing photo\u2026':'Creating draft\u2026';
+  var chain=photo?downscaleShop(photo).then(function(dataUrl){st.textContent='Uploading image\u2026';
+      return fetch('/api/shopify/upload-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl})})
+        .then(function(r){return r.json();}).then(function(j){return (j&&j.source)||null;});
+    }).catch(function(){return null;}):Promise.resolve(null);
+  chain.then(function(imageUrl){
+    st.textContent='Creating draft\u2026';
+    return fetch('/api/shopify/create-product',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({barcode:p.bc,name:name,brand:brand,price:price,category:cat,collections:cols,imageUrl:imageUrl,status:'DRAFT'})})
+      .then(function(r){return r.json();});
+  }).then(function(j){
+    go.disabled=false;
+    if(!j||j.error){st.innerHTML='<span class="sm-err">Error: '+shopEsc((j&&j.error)||'unknown')+'</span>';return;}
+    if(j.exists){st.innerHTML='Already on Shopify \u2713 <a href="'+shopEscAttr(j.productUrl)+'" target="_blank">open</a>';return;}
+    if(j.created){st.innerHTML='Done \u2705 Draft created. <a href="'+shopEscAttr(j.productUrl)+'" target="_blank">open in Shopify</a>'+(j.imageWarning?' <span class="sm-err">(add image manually)</span>':'');return;}
+    st.textContent='Unexpected response.';
+  }).catch(function(e){go.disabled=false;st.innerHTML='<span class="sm-err">Failed: '+shopEsc(String(e))+'</span>';});
+}
+function downscaleShop(file){
+  return new Promise(function(res,rej){
+    var img=new Image(),url=URL.createObjectURL(file);
+    img.onload=function(){
+      var max=1500,w=img.width,h=img.height;
+      if(w>max||h>max){if(w>=h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+      var c=document.createElement('canvas');c.width=w;c.height=h;
+      var cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      try{res(c.toDataURL('image/jpeg',0.8));}catch(err){rej(err);}
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('bad image'));};
+    img.src=url;
+  });
+}
 function renderNeg(){
   var el=document.getElementById('out');
   if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
@@ -1757,6 +1915,7 @@ document.getElementById('vtabs').addEventListener('click',function(e){
   else if(view==='oos'){oosActiveDepts=[];oosStockFilter='all';SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   else if(view==='over'){SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   else if(view==='whorder'){if(!srcLoaded[0])loadSrc(0);}
+  else if(view==='shopify'){shopPrefetch();}
   renderView();
 });
 document.getElementById('day-pills').addEventListener('click',function(e){
