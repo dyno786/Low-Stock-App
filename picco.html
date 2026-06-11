@@ -140,6 +140,12 @@
   .mvt__now{color:var(--brand-ink); font-size:17px}
   .mvt__now--bad{color:var(--bad)}
   .mvt__stk{color:var(--ink); font-size:17px}
+  .okpill{display:inline-block; font-size:11px; font-weight:600; color:var(--muted); background:var(--bg,#F1F3F4);
+    border:1px solid var(--line); border-radius:999px; padding:3px 10px; white-space:nowrap}
+  .adjpill{display:inline-block; font-family:var(--mono); font-weight:700; font-size:16px; line-height:1.15; border-radius:8px; padding:2px 10px}
+  .adjpill--pos{color:#0A7B3E; background:var(--ok-wash,#E3F4E8)}
+  .adjpill--neg{color:var(--bad); background:var(--bad-wash)}
+  .adjpill--zero{color:var(--muted); background:var(--bg,#F1F3F4)}
   .add.zero{color:var(--muted)}
   .bc{display:inline-flex; align-items:center; gap:5px; cursor:pointer; border-radius:6px; padding:1px 6px; margin:-1px -2px;
     user-select:none; -webkit-user-select:none; transition:background .12s, color .12s; vertical-align:baseline}
@@ -668,13 +674,20 @@ function mvPair(from,to){const cls=(to!=null&&to<0)?"to-bad":((to!=null&&from!=n
 function dispWas(p){ return (!p.isExc && p.from!=null && p.from<0) ? -p.from : p.from; }
 /* Live qty in stock = CurrentStock from the latest scan of this product (the EPOS on-hand at export time). */
 function inStock(p){ if(p.scans&&p.scans.length){const v=toNumber(p.scans[p.scans.length-1].stock); if(v!=null)return v;} return p.to; }
-/* Three labelled numbers: what it WAS (before the scan), what you ADJUSTED it by, and what's NOW on the shelf. */
+/* Numbers per scan. If nothing moved (net 0, not an exception) the middle reads "Stock correct";
+   any real adjustment shows as a bold coloured pill so it stands out from the confirmations. */
 function mvTriple(p){
   const was=dispWas(p), now=p.to, adj=(p.net==null?0:p.net), stk=inStock(p);
-  const adjCls=adj<0?"neg":(adj>0?"pos":"zero");
-  return `<span class="mvt">`+
+  let adjCell;
+  if(adj===0 && !p.isExc){
+    adjCell = `<span class="mvt__c"><span class="okpill">Stock correct</span></span>`;
+  } else {
+    const cls = adj<0?"adjpill--neg":(adj>0?"adjpill--pos":"adjpill--zero");
+    adjCell = `<span class="mvt__c"><span class="adjpill ${cls}">${adj>0?"+":""}${fmt(adj)}</span><span class="mvt__l">adjusted</span></span>`;
+  }
+  return `<span class="mvt${(adj!==0||p.isExc)?" mvt--changed":""}">`+
     `<span class="mvt__c"><span class="mvt__n">${was==null?"·":fmt(was)}</span><span class="mvt__l">was</span></span>`+
-    `<span class="mvt__c"><span class="mvt__n add ${adjCls}">${adj>0?"+":""}${fmt(adj)}</span><span class="mvt__l">adjusted</span></span>`+
+    adjCell+
     `<span class="mvt__c"><span class="mvt__n mvt__now ${(now!=null&&now<0)?"mvt__now--bad":""}">${now==null?"·":fmt(now)}</span><span class="mvt__l">on shelf</span></span>`+
     `<span class="mvt__c"><span class="mvt__n mvt__stk ${(stk!=null&&stk<0)?"mvt__now--bad":""}">${stk==null?"·":fmt(stk)}</span><span class="mvt__l">in stock</span></span>`+
   `</span>`;
