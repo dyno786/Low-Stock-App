@@ -20,10 +20,12 @@
 //   SHOPIFY_API_VERSION      optional, defaults to 2025-01
 
 const API_VERSION = process.env.SHOPIFY_API_VERSION || "2025-01";
+const STORE = (process.env.SHOPIFY_STORE_URL || process.env.SHOPIFY_STORE || "").replace(/^https?:\/\//, "").replace(/\/+$/, "");
+const TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN || process.env.SHOPIFY_TOKEN || process.env.SHOPIFY_ADMIN_TOKEN;
 
 async function shopifyGraphQL(query, variables) {
-  const store = process.env.SHOPIFY_STORE_URL;
-  const token = process.env.SHOPIFY_ADMIN_API_TOKEN;
+  const store = STORE;
+  const token = TOKEN;
   if (!store || !token) throw new Error("Missing SHOPIFY_STORE_URL or SHOPIFY_ADMIN_API_TOKEN");
   const res = await fetch(`https://${store}/admin/api/${API_VERSION}/graphql.json`, {
     method: "POST",
@@ -81,7 +83,7 @@ export default async function handler(req, res) {
       const idNum = hit.id.split("/").pop();
       return res.status(200).json({
         exists: true, productId: hit.id, title: hit.title,
-        productUrl: `https://${process.env.SHOPIFY_STORE_URL}/admin/products/${idNum}`,
+        productUrl: `https://${STORE}/admin/products/${idNum}`,
       });
     }
 
@@ -155,7 +157,7 @@ export default async function handler(req, res) {
     const idNum = product.id.split("/").pop();
     return res.status(200).json({
       created: true, productId: product.id, variantId, title: product.title,
-      productUrl: `https://${process.env.SHOPIFY_STORE_URL}/admin/products/${idNum}`,
+      productUrl: `https://${STORE}/admin/products/${idNum}`,
       imageWarning,
     });
   } catch (err) {
