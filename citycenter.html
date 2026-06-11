@@ -89,6 +89,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .sm-go{flex:1;padding:11px;border:none;background:#16a34a;color:#fff;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px}
 .sm-go:disabled{opacity:.6}
 .shop-empty{padding:30px 16px;text-align:center;color:var(--sub);font-size:13px}
+.shop-subtabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.shop-subtabs .over-sub-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sync-bar{display:flex;align-items:center;background:var(--greenbg);border-bottom:1px solid var(--border);padding:3px 10px;min-height:22px}
 .sync-txt{font-size:10px;color:var(--green);font-weight:600;flex:1}
 .sync-btn{font-size:9px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid var(--green);background:var(--greenbg);color:var(--green);cursor:pointer;font-family:var(--font)}
@@ -1267,6 +1269,10 @@ function wireWHO(){
 /* ===== + SHOPIFY: list category items to the Shopify store ===== */
 var SHOP_DEPTS=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2','AFRO BEAUTY PRODUCTS 2','ACCESSORIES','ELECTRICAL','ELECTRICALS'];
 function shopDeptOK(dp){return SHOP_DEPTS.indexOf((''+(dp||'')).trim().toUpperCase())>=0;}
+var SHOP_CATS=[{key:'AFRO BEAUTY PRODUCTS',short:'Afro Beauty',match:['AFRO BEAUTY PRODUCTS']},{key:'AFRO PRODUCTS 2',short:'Afro 2',match:['AFRO PRODUCTS 2','AFRO BEAUTY PRODUCTS 2']},{key:'ACCESSORIES',short:'Accessories',match:['ACCESSORIES']},{key:'ELECTRICAL',short:'Electrical',match:['ELECTRICAL','ELECTRICALS']}];
+var shopCat='ALL';
+function shopCatOf(dp){dp=(''+(dp||'')).trim().toUpperCase();for(var i=0;i<SHOP_CATS.length;i++){if(SHOP_CATS[i].match.indexOf(dp)>=0)return SHOP_CATS[i].key;}return null;}
+function catShort(k){for(var i=0;i<SHOP_CATS.length;i++){if(SHOP_CATS[i].key===k)return SHOP_CATS[i].short;}return k;}
 var SHOP_COLLECTIONS=null;
 var shopBrandCache={};try{shopBrandCache=JSON.parse(localStorage.getItem('cc_shop_brand')||'{}');}catch(e){}
 function shopPrefetch(){
@@ -1285,28 +1291,49 @@ function shopEsc(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</
 function destByBc(bc){var a=destData||[];for(var i=0;i<a.length;i++)if(a[i].bc===bc)return a[i];return null;}
 function renderShopify(){
   var el=document.getElementById('out');
-  if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading\u2026</div>';return;}
+  if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
   shopPrefetch();
-  var items=(destData||[]).filter(function(p){return p.bc&&p.nm&&shopDeptOK(p.dp);});
-  items.sort(function(a,b){return (a.dp||'').localeCompare(b.dp||'')||a.nm.localeCompare(b.nm);});
-  setProg(items.length,0,items.length+' items in these categories');
+  // make sure we know which barcodes already have a photo online before filtering
+  if(!Object.keys(shopifyData).length && !window.__shopImgsTried){
+    window.__shopImgsTried=1;
+    el.innerHTML='<div class="loading"><div class="spin"></div>Checking what\'s already online…</div>';
+    loadImgs().then(function(){renderShopify();});
+    return;
+  }
+  // in-stock items in the 4 categories that are NOT yet on the website (no Shopify image)
+  var all=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!imgs[p.bc];});
+  var counts={};SHOP_CATS.forEach(function(c){counts[c.key]=0;});
+  all.forEach(function(p){var k=shopCatOf(p.dp);if(k)counts[k]++;});
+  var present=SHOP_CATS.filter(function(c){return counts[c.key]>0;});
+  if(shopCat!=='ALL' && (counts[shopCat]===undefined||counts[shopCat]===0))shopCat='ALL';
   var head='<div class="shop-head"><div class="shop-title">🛍 List to Shopify</div>'+
-    '<div class="shop-sub">Items in Afro Beauty, Afro Products 2, Accessories &amp; Electrical. Tap <b>+ Shopify</b> to create a draft listing.</div></div>';
-  if(!items.length){el.innerHTML=head+'<div class="shop-empty">No items in these categories right now.</div>';return;}
-  var curDp='',html=head;
+    '<div class="shop-sub">'+all.length+' in-stock items not yet on the website. Pick a category, then tap <b>+ Shopify</b>.</div></div>';
+  if(!all.length){el.innerHTML=head+'<div class="shop-empty">Nothing to list — every in-stock item in these categories already has a photo online. 🎉</div>';setProg(1,0,'All listed');return;}
+  var tabs='<div class="over-subtabs shop-subtabs">';
+  tabs+='<div class="over-subtab'+(shopCat==='ALL'?' on':'')+'" data-cat="ALL"><div class="over-sub-name">All</div><div class="over-sub-cnt">'+all.length+'</div></div>';
+  present.forEach(function(c){
+    tabs+='<div class="over-subtab'+(shopCat===c.key?' on':'')+'" data-cat="'+c.key+'"><div class="over-sub-name">'+c.short+'</div><div class="over-sub-cnt">'+counts[c.key]+'</div></div>';
+  });
+  tabs+='</div>';
+  var items=all.filter(function(p){return shopCat==='ALL'||shopCatOf(p.dp)===shopCat;});
+  items.sort(function(a,b){return (shopCatOf(a.dp)||'').localeCompare(shopCatOf(b.dp)||'')||a.nm.localeCompare(b.nm);});
+  setProg(1,0,(shopCat==='ALL'?all.length+' items to list':counts[shopCat]+' in '+catShort(shopCat)));
+  var html=head+tabs,curK='';
   items.forEach(function(p){
-    var dp=(p.dp||'').toUpperCase();
-    if(dp!==curDp){curDp=dp;html+='<div class="shop-dp">'+shopEsc(dp)+'</div>';}
+    var k=shopCatOf(p.dp);
+    if(shopCat==='ALL' && k!==curK){curK=k;html+='<div class="shop-dp">'+shopEsc(catShort(k))+'</div>';}
     html+='<div class="shop-row">'+
       '<div class="shop-imgw">'+imgEl(p.bc,44)+'</div>'+
-      '<div class="shop-info"><div class="shop-nm">'+shopEsc(p.nm)+(p.sz?' \u00B7 '+shopEsc(p.sz):'')+'</div>'+
-        '<div class="shop-bc">'+p.bc+(p.pr>0?' \u00B7 \u00A3'+p.pr.toFixed(2):'')+'</div></div>'+
+      '<div class="shop-info"><div class="shop-nm">'+shopEsc(p.nm)+(p.sz?' · '+shopEsc(p.sz):'')+'</div>'+
+        '<div class="shop-bc">'+p.bc+(p.pr>0?' · £'+p.pr.toFixed(2):'')+'</div></div>'+
       '<button class="shop-add" data-bc="'+p.bc+'">+ Shopify</button>'+
     '</div>';
   });
   el.innerHTML=html;
+  el.querySelectorAll('.shop-subtabs .over-subtab').forEach(function(t){t.addEventListener('click',function(){shopCat=this.getAttribute('data-cat');renderShopify();});});
   el.querySelectorAll('.shop-add').forEach(function(b){b.addEventListener('click',function(){var p=destByBc(this.getAttribute('data-bc'));if(p)openShopModal(p);});});
 }
+
 function shopColsHTML(q){
   if(!SHOP_COLLECTIONS||!SHOP_COLLECTIONS.length)return '<div class="sm-colsempty">Loading collections\u2026</div>';
   q=(q||'').trim().toLowerCase();
