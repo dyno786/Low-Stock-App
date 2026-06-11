@@ -27,8 +27,8 @@ const STAGED_MUTATION = `mutation stagedUploadsCreate($input:[StagedUploadInput!
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ source: null, warning: 'POST only' }); return; }
 
-  const STORE = process.env.SHOPIFY_STORE_URL;
-  const TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN;
+  const STORE = (process.env.SHOPIFY_STORE_URL || process.env.SHOPIFY_STORE || "").replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN || process.env.SHOPIFY_TOKEN || process.env.SHOPIFY_ADMIN_TOKEN;
   if (!STORE || !TOKEN) { res.status(500).json({ source: null, warning: 'Missing Shopify env vars' }); return; }
 
   // --- read input image (base64 or data URL) ---

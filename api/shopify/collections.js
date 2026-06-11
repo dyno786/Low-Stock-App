@@ -7,8 +7,8 @@
 const API_VERSION = process.env.SHOPIFY_API_VERSION || '2025-01';
 
 export default async function handler(req, res) {
-  const store = process.env.SHOPIFY_STORE_URL;
-  const token = process.env.SHOPIFY_ADMIN_API_TOKEN;
+  const store = (process.env.SHOPIFY_STORE_URL || process.env.SHOPIFY_STORE || "").replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const token = process.env.SHOPIFY_ADMIN_API_TOKEN || process.env.SHOPIFY_TOKEN || process.env.SHOPIFY_ADMIN_TOKEN;
   if (!store || !token) { res.status(500).json({ error: 'Missing Shopify env vars' }); return; }
 
   const query = `query($cursor:String){ collections(first:250, after:$cursor){ edges{ node{ title } } pageInfo{ hasNextPage endCursor } } }`;
