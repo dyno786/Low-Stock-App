@@ -47,6 +47,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .who-img{width:46px;height:46px;flex-shrink:0;border-radius:7px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg)}
 .who-info{flex:1;min-width:0}
 .who-nm{font-weight:700;font-size:13px;line-height:1.2}
+.who-bc{font-size:11px;color:var(--sub);font-family:monospace;margin-top:1px;letter-spacing:.3px}
 .who-meta{font-size:11px;color:var(--sub);margin-top:2px;font-family:monospace}
 .who-ord{text-align:center;flex-shrink:0;min-width:42px}
 .who-ordn{font-size:21px;font-weight:800;color:#c0392b;font-family:monospace;line-height:1}
@@ -1205,7 +1206,7 @@ function renderWHOrder(){
       var ck=!!whoTx[r.bc];
       html+='<div class="who-row'+(ck?' ck':'')+'" data-bc="'+r.bc+'">'+
         '<div class="who-img">'+imgEl(r.bc,46)+'</div>'+
-        '<div class="who-info"><div class="who-nm">'+r.nm+(r.sz?' \u00b7 '+r.sz:'')+'</div>'+
+        '<div class="who-info"><div class="who-nm">'+r.nm+(r.sz?' \u00b7 '+r.sz:'')+'</div>'+'<div class="who-bc">'+r.bc+'</div>'+
           '<div class="who-meta">you have '+r.here+' \u00b7 W/H has '+r.wh+(r.pr>0?' \u00b7 \u00a3'+r.pr.toFixed(2):'')+'</div></div>'+
         '<div class="who-ord"><div class="who-ordn">'+r.order+'</div><div class="who-ordl">order</div></div>'+
         '<div class="who-tick">'+(ck?'\u2713':'')+'</div>'+
