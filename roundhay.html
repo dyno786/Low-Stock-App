@@ -1304,7 +1304,7 @@ function renderShopify(){
     html+='<div class="shop-row">'+
       '<div class="shop-imgw">'+imgEl(p.bc,44)+'</div>'+
       '<div class="shop-info"><div class="shop-nm">'+shopEsc(p.nm)+(p.sz?' · '+shopEsc(p.sz):'')+'</div>'+
-        '<div class="shop-bc">'+p.bc+(p.pr>0?' · £'+p.pr.toFixed(2):'')+'</div></div>'+
+        '<div class="shop-bc">'+p.bc+(p.pr>0?' · £'+p.pr.toFixed(2):'')+' · '+p.qty+' in stock</div></div>'+
       '<button class="shop-add" data-bc="'+p.bc+'">+ Shopify</button>'+
     '</div>';
   });
@@ -1328,10 +1328,10 @@ function openShopModal(p){
    '<div class="sm-card">'+
      '<div class="sm-top"><b>List on Shopify</b><button class="sm-x" id="sm-x">\u00D7</button></div>'+
      '<div class="sm-body">'+
-       '<button class="sm-ai" id="sm-ai">\u2728 Write with AI</button>'+
-       '<div class="sm-aihint" id="sm-aihint">Researches the product and fills title, description &amp; SEO.</div>'+
+       '<button class="sm-ai" id="sm-ai">\u2728 Rewrite with AI</button>'+
+       '<div class="sm-aihint" id="sm-aihint">AI is researching this product\u2026 edit anything below.</div>'+
        '<label>Title<input id="sm-name" value="'+shopEscAttr(p.nm)+'"></label>'+
-       '<div class="sm-ro">Barcode: '+p.bc+'</div>'+
+       '<div class="sm-ro">Barcode: '+p.bc+'  ·  In stock: '+p.qty+'</div>'+
        '<div class="sm-2"><label>Brand<input id="sm-brand" value="'+shopEscAttr(brand)+'" placeholder="brand"></label>'+
          '<label>Price \u00A3<input id="sm-price" type="number" step="0.01" inputmode="decimal" value="'+price+'"></label></div>'+
        '<label>Category<input id="sm-cat" value="'+shopEscAttr(cat)+'"></label>'+
@@ -1353,6 +1353,7 @@ function openShopModal(p){
   document.getElementById('sm-colsearch').addEventListener('input',function(){document.getElementById('sm-cols').innerHTML=shopColsHTML(this.value);});
   document.getElementById('sm-ai').onclick=function(){enrichShop(p);};
   document.getElementById('sm-go').onclick=function(){submitShop(p);};
+  enrichShop(p);
 }
 function closeShopModal(){var ov=document.getElementById('shop-modal');if(ov)ov.style.display='none';}
 function shopVal(id){var e=document.getElementById(id);return e?(''+e.value).trim():'';}
