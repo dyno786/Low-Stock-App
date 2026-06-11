@@ -1167,22 +1167,22 @@ function renderCollect(srcIdx){
 var WHO_BR={0:'Chapeltown',1:'City Centre',2:'Roundhay'}[DEST_ID]||'this branch';
 var WHO_TICK_KEY='cc_whord'+DEST_ID;
 var whoTx={};try{whoTx=JSON.parse(localStorage.getItem(WHO_TICK_KEY)||'{}');}catch(e){}
-function whoTarget(){var v=parseInt(localStorage.getItem('cc_whord_tgt'));return (isNaN(v)||v<1)?7:v;}
-function whoSaveTarget(v){try{localStorage.setItem('cc_whord_tgt',String(v));}catch(e){}}
+function whoMin(){var v=parseInt(localStorage.getItem('cc_whord_min'));return (isNaN(v)||v<0)?3:v;}
+function whoMax(){var v=parseInt(localStorage.getItem('cc_whord_max'));return (isNaN(v)||v<1)?7:v;}
 var WHO_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME','KERA':'KERACARE','AUNT':'AUNT JACKIES','JANET':'JANET COLLECTION'};
 function whoBrand(nm){if(!nm)return 'OTHER';var w=(''+nm).trim().toUpperCase().split(/\s+/);var f=(w[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');if(!f||/^[0-9]+$/.test(f))f=((w[1]||'OTHER').replace(/[^A-Z0-9&\/+-]/g,''))||'OTHER';return WHO_ALIASES[f]||f;}
 function renderWHOrder(){
   var el=document.getElementById('out');
   if(!destLoaded||!srcLoaded[0]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse\u2026</div>';return;}
-  var T=whoTarget();
+  var MN=whoMin(),MX=whoMax();
   var wh=srcData[0]||[];
   var destMap={};(destData||[]).forEach(function(p){if(p.bc)destMap[p.bc]=p;});
   var rows=[];
   wh.forEach(function(p){
     if(!p.bc||!p.nm||p.qty<=0)return;
     var here=(destMap[p.bc]?destMap[p.bc].qty:0);
-    if(here>=T)return;
-    var order=Math.min(T-here,p.qty);
+    if(here>MN)return;                 // reorder only when at/below the min
+    var order=Math.min(MX-here,p.qty);
     if(order<=0)return;
     rows.push({bc:p.bc,nm:p.nm,sz:p.sz||(destMap[p.bc]?destMap[p.bc].sz:''),here:here,wh:p.qty,order:order,pr:p.pr});
   });
@@ -1190,9 +1190,10 @@ function renderWHOrder(){
   var brands=Object.keys(groups).sort(function(a,b){return a.localeCompare(b);});
   var total=rows.length,done=rows.filter(function(r){return whoTx[r.bc];}).length;
   setProg(total,done,total?(done+' of '+total+' lines checked'):'Nothing to order');
-  var head='<div class="who-head"><div class="who-title">\U0001F69A Warehouse order \u2014 '+WHO_BR+'</div>'+
-    '<div class="who-sub">What this branch should receive from the warehouse. Tick each line as you check it off the delivery.</div>'+
-    '<div class="who-tgt"><span>Top up to</span><button class="who-tbtn" data-d="-1">\u2212</button><b id="who-tval">'+T+'</b><button class="who-tbtn" data-d="1">+</button></div></div>';
+  var head='<div class="who-head"><div class="who-title">🚚 Warehouse order \u2014 '+WHO_BR+'</div>'+
+    '<div class="who-sub">Only lines at or below the reorder point are listed, topped up to the max — no more 1-pc trips. Tick each as you check the delivery.</div>'+
+    '<div class="who-tgt"><span>Reorder when ≤</span><button class="who-tbtn" data-set="min" data-d="-1">−</button><b id="who-minv">'+MN+'</b><button class="who-tbtn" data-set="min" data-d="1">+</button>'+
+      '<span style="margin-left:12px">Top up to</span><button class="who-tbtn" data-set="max" data-d="-1">−</button><b id="who-maxv">'+MX+'</b><button class="who-tbtn" data-set="max" data-d="1">+</button></div></div>';
   if(!rows.length){el.innerHTML=head+'<div class="empty">Nothing needed from the warehouse right now \u2713</div>';wireWHO();return;}
   var totOrder=rows.reduce(function(s,r){return s+r.order;},0);
   var html=head+'<div class="who-summary">'+total+' lines \u00b7 '+totOrder+' pcs expected in</div>';
@@ -1216,7 +1217,12 @@ function renderWHOrder(){
 }
 function wireWHO(){
   var el=document.getElementById('out');
-  el.querySelectorAll('.who-tbtn').forEach(function(b){b.addEventListener('click',function(){var v=whoTarget()+(+this.dataset.d);if(v<1)v=1;if(v>99)v=99;whoSaveTarget(v);renderWHOrder();});});
+  el.querySelectorAll('.who-tbtn').forEach(function(b){b.addEventListener('click',function(){
+    var set=this.dataset.set,d=+this.dataset.d,mn=whoMin(),mx=whoMax();
+    if(set==='min'){mn+=d;if(mn<0)mn=0;if(mn>=mx)mn=mx-1;try{localStorage.setItem('cc_whord_min',String(mn));}catch(e){}}
+    else{mx+=d;if(mx>99)mx=99;if(mx<=mn)mx=mn+1;try{localStorage.setItem('cc_whord_max',String(mx));}catch(e){}}
+    renderWHOrder();
+  });});
   el.querySelectorAll('.who-row').forEach(function(row){row.addEventListener('click',function(){var bc=this.dataset.bc;whoTx[bc]=!whoTx[bc];try{localStorage.setItem(WHO_TICK_KEY,JSON.stringify(whoTx));}catch(e){}if(typeof syncSave==='function')syncSave(WHO_TICK_KEY,whoTx);renderWHOrder();});});
 }
 
