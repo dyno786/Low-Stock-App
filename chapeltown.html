@@ -32,6 +32,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .vtabs::-webkit-scrollbar{display:none}
 .vtab{flex-shrink:0;padding:11px 10px;font-size:11px;font-weight:700;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer;user-select:none;white-space:nowrap}
 .vtab.on{color:var(--red);border-bottom-color:var(--red)}
+.who-head{padding:12px 14px 6px}
+.who-title{font-size:16px;font-weight:800}
+.who-sub{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.35}
+.who-tgt{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;font-weight:600;color:var(--sub)}
+.who-tgt b{font-size:17px;font-family:monospace;min-width:20px;text-align:center;color:#111}
+.who-tbtn{width:26px;height:26px;border:1px solid var(--bg);background:var(--s1);border-radius:7px;font-size:15px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.who-summary{padding:4px 14px 8px;font-size:12px;color:var(--sub);font-weight:600}
+.who-brand{padding:8px 14px;font-weight:800;font-size:13px;background:var(--bg);display:flex;justify-content:space-between;align-items:center}
+.who-brand span{font-family:monospace;color:var(--sub);font-weight:700;font-size:11px}
+.who-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bg);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.who-row.ck{opacity:.6;background:#f0fdf4}
+.who-row.ck .who-nm{text-decoration:line-through}
+.who-img{width:46px;height:46px;flex-shrink:0;border-radius:7px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.who-info{flex:1;min-width:0}
+.who-nm{font-weight:700;font-size:13px;line-height:1.2}
+.who-meta{font-size:11px;color:var(--sub);margin-top:2px;font-family:monospace}
+.who-ord{text-align:center;flex-shrink:0;min-width:42px}
+.who-ordn{font-size:21px;font-weight:800;color:#c0392b;font-family:monospace;line-height:1}
+.who-ordl{font-size:8px;text-transform:uppercase;color:var(--sub);font-weight:700;letter-spacing:.5px}
+.who-tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;background:#fff}
+.who-row.ck .who-tick{background:#15803d;border-color:#15803d}
 .sync-bar{display:flex;align-items:center;background:var(--greenbg);border-bottom:1px solid var(--border);padding:3px 10px;min-height:22px}
 .sync-txt{font-size:10px;color:var(--green);font-weight:600;flex:1}
 .sync-btn{font-size:9px;font-weight:600;padding:2px 8px;border-radius:4px;border:1px solid var(--green);background:var(--greenbg);color:var(--green);cursor:pointer;font-family:var(--font)}
@@ -264,6 +285,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
+  <div class="vtab" data-v="whorder">🚚 W/H Order</div>
   <div class="vtab" data-v="imgs">📸 Images</div>
 </div>
 
@@ -664,6 +686,7 @@ function renderView(){
   else if(view==='neg')renderNeg();
   else if(view==='oos')renderOOS();
   else if(view==='over')renderOverstock();
+  else if(view==='whorder')renderWHOrder();
   else renderImgs();
 }
 
@@ -1139,6 +1162,64 @@ function renderCollect(srcIdx){
 }
 
 // ── NEGATIVES ──────────────────────────────────────────────
+
+// ── WAREHOUSE ORDER: what THIS branch needs from the warehouse (staff receiving check) ──
+var WHO_BR={0:'Chapeltown',1:'City Centre',2:'Roundhay'}[DEST_ID]||'this branch';
+var WHO_TICK_KEY='cc_whord'+DEST_ID;
+var whoTx={};try{whoTx=JSON.parse(localStorage.getItem(WHO_TICK_KEY)||'{}');}catch(e){}
+function whoTarget(){var v=parseInt(localStorage.getItem('cc_whord_tgt'));return (isNaN(v)||v<1)?7:v;}
+function whoSaveTarget(v){try{localStorage.setItem('cc_whord_tgt',String(v));}catch(e){}}
+var WHO_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME','KERA':'KERACARE','AUNT':'AUNT JACKIES','JANET':'JANET COLLECTION'};
+function whoBrand(nm){if(!nm)return 'OTHER';var w=(''+nm).trim().toUpperCase().split(/\s+/);var f=(w[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');if(!f||/^[0-9]+$/.test(f))f=((w[1]||'OTHER').replace(/[^A-Z0-9&\/+-]/g,''))||'OTHER';return WHO_ALIASES[f]||f;}
+function renderWHOrder(){
+  var el=document.getElementById('out');
+  if(!destLoaded||!srcLoaded[0]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse\u2026</div>';return;}
+  var T=whoTarget();
+  var wh=srcData[0]||[];
+  var destMap={};(destData||[]).forEach(function(p){if(p.bc)destMap[p.bc]=p;});
+  var rows=[];
+  wh.forEach(function(p){
+    if(!p.bc||!p.nm||p.qty<=0)return;
+    var here=(destMap[p.bc]?destMap[p.bc].qty:0);
+    if(here>=T)return;
+    var order=Math.min(T-here,p.qty);
+    if(order<=0)return;
+    rows.push({bc:p.bc,nm:p.nm,sz:p.sz||(destMap[p.bc]?destMap[p.bc].sz:''),here:here,wh:p.qty,order:order,pr:p.pr});
+  });
+  var groups={};rows.forEach(function(r){var b=whoBrand(r.nm);(groups[b]=groups[b]||[]).push(r);});
+  var brands=Object.keys(groups).sort(function(a,b){return a.localeCompare(b);});
+  var total=rows.length,done=rows.filter(function(r){return whoTx[r.bc];}).length;
+  setProg(total,done,total?(done+' of '+total+' lines checked'):'Nothing to order');
+  var head='<div class="who-head"><div class="who-title">\U0001F69A Warehouse order \u2014 '+WHO_BR+'</div>'+
+    '<div class="who-sub">What this branch should receive from the warehouse. Tick each line as you check it off the delivery.</div>'+
+    '<div class="who-tgt"><span>Top up to</span><button class="who-tbtn" data-d="-1">\u2212</button><b id="who-tval">'+T+'</b><button class="who-tbtn" data-d="1">+</button></div></div>';
+  if(!rows.length){el.innerHTML=head+'<div class="empty">Nothing needed from the warehouse right now \u2713</div>';wireWHO();return;}
+  var totOrder=rows.reduce(function(s,r){return s+r.order;},0);
+  var html=head+'<div class="who-summary">'+total+' lines \u00b7 '+totOrder+' pcs expected in</div>';
+  brands.forEach(function(b){
+    var items=groups[b].slice().sort(function(x,y){return x.nm.localeCompare(y.nm);});
+    var bdone=items.filter(function(r){return whoTx[r.bc];}).length;
+    html+='<div class="who-brand">'+b+' <span>'+bdone+'/'+items.length+'</span></div>';
+    items.forEach(function(r){
+      var ck=!!whoTx[r.bc];
+      html+='<div class="who-row'+(ck?' ck':'')+'" data-bc="'+r.bc+'">'+
+        '<div class="who-img">'+imgEl(r.bc,46)+'</div>'+
+        '<div class="who-info"><div class="who-nm">'+r.nm+(r.sz?' \u00b7 '+r.sz:'')+'</div>'+
+          '<div class="who-meta">you have '+r.here+' \u00b7 W/H has '+r.wh+(r.pr>0?' \u00b7 \u00a3'+r.pr.toFixed(2):'')+'</div></div>'+
+        '<div class="who-ord"><div class="who-ordn">'+r.order+'</div><div class="who-ordl">order</div></div>'+
+        '<div class="who-tick">'+(ck?'\u2713':'')+'</div>'+
+      '</div>';
+    });
+  });
+  el.innerHTML=html;
+  wireWHO();
+}
+function wireWHO(){
+  var el=document.getElementById('out');
+  el.querySelectorAll('.who-tbtn').forEach(function(b){b.addEventListener('click',function(){var v=whoTarget()+(+this.dataset.d);if(v<1)v=1;if(v>99)v=99;whoSaveTarget(v);renderWHOrder();});});
+  el.querySelectorAll('.who-row').forEach(function(row){row.addEventListener('click',function(){var bc=this.dataset.bc;whoTx[bc]=!whoTx[bc];try{localStorage.setItem(WHO_TICK_KEY,JSON.stringify(whoTx));}catch(e){}if(typeof syncSave==='function')syncSave(WHO_TICK_KEY,whoTx);renderWHOrder();});});
+}
+
 function renderNeg(){
   var el=document.getElementById('out');
   if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
@@ -1668,6 +1749,7 @@ document.getElementById('vtabs').addEventListener('click',function(e){
   else if(view==='low'){collectDept='ALL';if(!srcLoaded[lowSubIdx])loadSrc(lowSubIdx);}
   else if(view==='oos'){oosActiveDepts=[];oosStockFilter='all';SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
   else if(view==='over'){SOURCES.forEach(function(sc,i){if(!srcLoaded[i])loadSrc(i);});}
+  else if(view==='whorder'){if(!srcLoaded[0])loadSrc(0);}
   renderView();
 });
 document.getElementById('day-pills').addEventListener('click',function(e){
