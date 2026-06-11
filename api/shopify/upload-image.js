@@ -15,7 +15,7 @@
 
 import sharp from 'sharp';
 
-const API_VERSION = '2024-10';
+const API_VERSION = process.env.SHOPIFY_API_VERSION || '2025-01';
 
 const STAGED_MUTATION = `mutation stagedUploadsCreate($input:[StagedUploadInput!]!){
   stagedUploadsCreate(input:$input){
