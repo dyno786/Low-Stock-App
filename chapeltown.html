@@ -1225,6 +1225,8 @@ function whoMin(){var v=parseInt(localStorage.getItem('cc_whord_min'));return (i
 function whoMax(){var v=parseInt(localStorage.getItem('cc_whord_max'));return (isNaN(v)||v<1)?7:v;}
 var WHO_NS_KEY='cc_whns'+DEST_ID;
 var whoNS={};try{whoNS=JSON.parse(localStorage.getItem(WHO_NS_KEY)||'{}');}catch(e){}
+/* one-time: pull this branch's not-stocked list from the shared store, merge, and push it back up so the warehouse can see it (heals lists saved before the store allowed these keys) */
+(function(){if(typeof syncLoad!=='function')return;syncLoad(WHO_NS_KEY).then(function(srv){if(srv&&typeof srv==='object'){for(var k in srv){if(!whoNS[k])whoNS[k]=srv[k];}try{localStorage.setItem(WHO_NS_KEY,JSON.stringify(whoNS));}catch(e){}}if(Object.keys(whoNS).length&&typeof syncSave==='function')syncSave(WHO_NS_KEY,whoNS);}).catch(function(){});})();
 var whoShowNS=false;
 function whoSaveNS(){try{localStorage.setItem(WHO_NS_KEY,JSON.stringify(whoNS));}catch(e){}if(typeof syncSave==='function')syncSave(WHO_NS_KEY,whoNS);}
 function whoSetNS(bc,nm){whoNS[bc]={ts:Date.now(),nm:nm||''};whoSaveNS();}
