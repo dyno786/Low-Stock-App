@@ -6,7 +6,7 @@
 //   matches the exact vendor name for vendor-driven collections (_collections.js).
 // OpenAI (OPENAI_API_KEY). 1) Responses API w/ web search, 2) Chat Completions fallback. ENV: OPENAI_MODEL.
 
-import { attrOptionsText } from './_taxonomy.js';
+import { attrOptionsText, categoryFor, categoryOptionsText } from './_taxonomy.js';
 import { fetchCollectionMenu, collectionOptionsText, validCollectionTags, canonicalVendor } from './_collections.js';
 
 export const config = { maxDuration: 60 };
@@ -39,14 +39,18 @@ export default async function handler(req, res) {
     'You will also classify the product using FIXED lists: only ever use the exact attribute value labels and the ' +
     'exact collection tags provided, never invent new ones, and omit anything that does not clearly apply. If the ' +
     "product's brand matches one of the listed vendor names, return the brand with that exact spelling. " +
+    'You will also be given a short list of standard product categories; choose the single best fit so the ' +
+    'official attribute fields can be saved. ' +
     'Respond with ONLY a JSON object (no markdown fences) with keys: ' +
-    'title, brand, category, tags, attributes, collections, descriptionHtml, seoTitle, seoDescription.';
+    'title, brand, category, taxonomyCategory, tags, attributes, collections, descriptionHtml, seoTitle, seoDescription.';
 
   const ask =
     'Raw till name (may be truncated): ' + name + '\n' +
     'Brand (may be blank or partial): ' + (brand || '(unknown)') + '\n' +
     'Category hint: ' + (category || '(unknown)') + '\n' +
     'Barcode (use this to identify the exact product): ' + (barcode || '(none)') + '\n\n' +
+    'Standard product categories (choose the ONE that best fits):\n' +
+    categoryOptionsText() + '\n\n' +
     'Allowed attribute values (use the key on the left; pick ONLY from the exact labels listed):\n' +
     attrOptionsText() + '\n\n' +
     'Shop collection tags (place the product in the ones it belongs to, using the EXACT tag on the left):\n' +
@@ -58,6 +62,7 @@ export default async function handler(req, res) {
     '- title: the correct, full product name in Title Case (Brand + Product + Variant/Scent + Size if known), max ~70 chars. No barcode in the title.\n' +
     '- brand: the correct brand / manufacturer name in Title Case (use an exact vendor name from the list if it matches).\n' +
     '- category: a concise product type, e.g. "Hair Serum", "Body Spray", "Styling Gel", "Shampoo", "Hair Wax".\n' +
+    '- taxonomyCategory: the single best-matching label from the Standard product categories list above (exact text). Use empty string only if none fit.\n' +
     '- tags: an array of 6 to 12 short lowercase descriptive tags for search — product type, format, scent/variant, hair or skin type or concern, brand, size. No "#".\n' +
     '- attributes: an object whose keys are the attribute keys above and whose values are arrays of the EXACT labels that apply (1 to 4 each). Only include attributes you are confident about.\n' +
     '- collections: an array of the EXACT collection tags from the list above that this product belongs in (usually 2 to 6). Only use tags from that list; pick the genuinely relevant ones.\n' +
@@ -101,12 +106,23 @@ export default async function handler(req, res) {
   }
   function finalize(o) {
     const s = x => ('' + (x == null ? '' : x)).trim();
+    const catInfo = categoryFor(o.taxonomyCategory);
+    let attrs = cleanAttrs(o.attributes);
+    if (catInfo) {
+      // keep only attributes that are valid for the chosen taxonomy category
+      const allow = {}; catInfo.keys.forEach(k => allow[k] = 1);
+      const filtered = {}; Object.keys(attrs).forEach(k => { if (allow[k]) filtered[k] = attrs[k]; });
+      attrs = filtered;
+    } else {
+      attrs = {}; // no category -> attributes can't be saved, so don't return any
+    }
     const out = {
       title: s(o.title).slice(0, 120),
       brand: s(o.brand).slice(0, 80),
       category: s(o.category).slice(0, 60),
+      taxonomyCategory: catInfo ? catInfo.label : '',
       tags: cleanTags(o.tags),
-      attributes: cleanAttrs(o.attributes),
+      attributes: attrs,
       collections: validCollectionTags(o.collections, menu),
       descriptionHtml: s(o.descriptionHtml),
       seoTitle: s(o.seoTitle).slice(0, 70),
