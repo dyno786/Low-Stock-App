@@ -1307,6 +1307,7 @@ function shopBrandOf(bc,nm){
 function shopEscAttr(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function shopEsc(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 function destByBc(bc){var a=destData||[];for(var i=0;i<a.length;i++)if(a[i].bc===bc)return a[i];return null;}
+function priceByBc(bc){var S=[destData,srcData[0],srcData[1],srcData[2]];for(var s=0;s<S.length;s++){var a=S[s]||[];for(var i=0;i<a.length;i++){if(a[i].bc===bc&&a[i].pr>0)return a[i].pr;}}return 0;}
 // ---- + Shopify button on low / negatives / overstock / W-H order / missing-images rows ----
 var __shopObs=null,__shopRaf=0;
 function shopEnsure(){
@@ -1400,7 +1401,8 @@ function shopColsHTML(q){
 function openShopModal(p){
   var ov=document.getElementById('shop-modal');
   if(!ov){ov=document.createElement('div');ov.id='shop-modal';document.body.appendChild(ov);}
-  var brand=shopBrandOf(p.bc,p.nm), price=(p.pr>0?p.pr.toFixed(2):''), cat=(p.dp||'');
+  var ppr=(p.pr>0?p.pr:priceByBc(p.bc));
+  var brand=shopBrandOf(p.bc,p.nm), price=(ppr>0?ppr.toFixed(2):''), cat=(p.dp||'');
   ov.innerHTML=
    '<div class="sm-card">'+
      '<div class="sm-top"><b>List on Shopify</b><button class="sm-x" id="sm-x">\u00D7</button></div>'+
@@ -1455,7 +1457,7 @@ function submitShop(p){
   chain.then(function(imageUrl){
     st.textContent='Creating draft\u2026';
     return fetch('/api/shopify/create-product',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({barcode:p.bc,name:name,brand:brand,price:price,category:cat,collections:cols,imageUrl:imageUrl,status:'DRAFT',descriptionHtml:descHtml||undefined,seoTitle:seoT||undefined,seoDescription:seoD||undefined,tags:((window._shopAI&&window._shopAI.bc===p.bc)?window._shopAI.tags:undefined),attributes:((window._shopAI&&window._shopAI.bc===p.bc)?window._shopAI.attributes:undefined)})})
+      body:JSON.stringify({barcode:p.bc,name:name,brand:brand,price:price,category:cat,collections:cols,imageUrl:imageUrl,status:'DRAFT',descriptionHtml:descHtml||undefined,seoTitle:seoT||undefined,seoDescription:seoD||undefined,tags:((window._shopAI&&window._shopAI.bc===p.bc)?window._shopAI.tags:undefined),attributes:((window._shopAI&&window._shopAI.bc===p.bc)?window._shopAI.attributes:undefined),taxonomyCategory:((window._shopAI&&window._shopAI.bc===p.bc)?window._shopAI.taxonomyCategory:undefined)})})
       .then(function(r){return r.json();});
   }).then(function(j){
     go.disabled=false;
@@ -1479,7 +1481,7 @@ function enrichShop(p){
      if(j.title)document.getElementById('sm-name').value=j.title;
      if(j.brand)document.getElementById('sm-brand').value=j.brand;
      if(j.category&&document.getElementById('sm-cat'))document.getElementById('sm-cat').value=j.category;
-     window._shopAI={bc:p.bc,tags:(j.tags||[]),attributes:(j.attributes||{}),collections:(j.collections||[])};
+     window._shopAI={bc:p.bc,tags:(j.tags||[]),attributes:(j.attributes||{}),collections:(j.collections||[]),taxonomyCategory:(j.taxonomyCategory||'')};
      (function(){var sc=document.getElementById('sm-cols');if(sc){var q=document.getElementById('sm-colsearch');sc.innerHTML=shopColsHTML(q?q.value:'');}})();
      if(j.descriptionHtml)document.getElementById('sm-desc').value=shopHtmlToText(j.descriptionHtml);
      if(j.seoTitle)document.getElementById('sm-seotitle').value=j.seoTitle;
