@@ -19,6 +19,8 @@
 //   SHOPIFY_ADMIN_API_TOKEN  Admin API access token (scopes: read_products, write_products)
 //   SHOPIFY_API_VERSION      optional, defaults to 2025-01
 
+import { attrMetafields } from "./_taxonomy.js";
+
 const API_VERSION = process.env.SHOPIFY_API_VERSION || "2025-01";
 const STORE = (process.env.SHOPIFY_STORE_URL || process.env.SHOPIFY_STORE || "").replace(/^https?:\/\//, "").replace(/\/+$/, "");
 const TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN || process.env.SHOPIFY_TOKEN || process.env.SHOPIFY_ADMIN_TOKEN;
@@ -90,6 +92,7 @@ export default async function handler(req, res) {
     // 2) Build the listing the way the store expects.
     const title = buildTitle(brand, name);
     const tags = uniq([...tagsIn, ...collections, category, brand]); // collection names must match exactly
+    const metafields = attrMetafields(body.attributes); // Shopify standard attribute metafields (GIDs)
     const seoTitle = (body.seoTitle || title).slice(0, 70);
     const seoDescription = (
       body.seoDescription ||
@@ -103,6 +106,7 @@ export default async function handler(req, res) {
     };
     if (brand) createInput.vendor = brand;
     if (category) createInput.productType = category;
+    if (metafields.length) createInput.metafields = metafields;
 
     const created = await shopifyGraphQL(
       `mutation ($product: ProductCreateInput!) {
@@ -157,6 +161,7 @@ export default async function handler(req, res) {
     const idNum = product.id.split("/").pop();
     return res.status(200).json({
       created: true, productId: product.id, variantId, title: product.title,
+      attrCount: metafields.length, tagCount: tags.length,
       productUrl: `https://${STORE}/admin/products/${idNum}`,
       imageWarning,
     });
