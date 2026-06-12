@@ -54,6 +54,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .who-ordl{font-size:8px;text-transform:uppercase;color:var(--sub);font-weight:700;letter-spacing:.5px}
 .who-tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;background:#fff}
 .who-row.ck .who-tick{background:#15803d;border-color:#15803d}
+.who-ns{margin-top:4px;background:none;border:none;color:#dc2626;font-size:11px;font-weight:600;padding:2px 0;cursor:pointer;font-family:inherit;display:inline-block}
+.who-ns:active{opacity:.6}
+.who-nsbar{padding:8px 14px;font-size:12px;color:var(--sub);background:var(--bg);display:flex;align-items:center;gap:8px}
+.who-nsmanage,.who-nsrestock{background:#fff;border:1px solid #ddd;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer;color:var(--purple);font-family:inherit}
+.who-nslist{padding:2px 14px 10px;background:var(--bg)}
+.who-nsitem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #e5e7eb;font-size:13px}
+.who-nsitem span{flex:1;min-width:0;word-break:break-word}
 /* + Shopify */
 .shop-head{padding:12px 14px 6px}
 .shop-title{font-size:16px;font-weight:800}
@@ -1191,6 +1198,22 @@ var WHO_TICK_KEY='cc_whord'+DEST_ID;
 var whoTx={};try{whoTx=JSON.parse(localStorage.getItem(WHO_TICK_KEY)||'{}');}catch(e){}
 function whoMin(){var v=parseInt(localStorage.getItem('cc_whord_min'));return (isNaN(v)||v<0)?3:v;}
 function whoMax(){var v=parseInt(localStorage.getItem('cc_whord_max'));return (isNaN(v)||v<1)?7:v;}
+var WHO_NS_KEY='cc_whns'+DEST_ID;
+var whoNS={};try{whoNS=JSON.parse(localStorage.getItem(WHO_NS_KEY)||'{}');}catch(e){}
+var whoShowNS=false;
+function whoSaveNS(){try{localStorage.setItem(WHO_NS_KEY,JSON.stringify(whoNS));}catch(e){}if(typeof syncSave==='function')syncSave(WHO_NS_KEY,whoNS);}
+function whoSetNS(bc,nm){whoNS[bc]={ts:Date.now(),nm:nm||''};whoSaveNS();}
+function whoUnNS(bc){delete whoNS[bc];whoSaveNS();}
+function whoNSbarHTML(){
+  var keys=Object.keys(whoNS),n=keys.length;
+  if(!n && !whoShowNS)return '';
+  var bar='<div class="who-nsbar">\ud83d\udeab Not stocked here: '+n+(n?' \u00b7 <button class="who-nsmanage">'+(whoShowNS?'hide':'manage')+'</button>':'')+'</div>';
+  if(whoShowNS && n){
+    var items=keys.map(function(bc){return {bc:bc,nm:whoNS[bc].nm||bc};}).sort(function(a,b){return (a.nm||'').localeCompare(b.nm||'');});
+    bar+='<div class="who-nslist">'+items.map(function(x){return '<div class="who-nsitem"><span>'+(typeof shopEsc==='function'?shopEsc(x.nm):x.nm)+'</span><button class="who-nsrestock" data-bc="'+x.bc+'">re-stock</button></div>';}).join('')+'</div>';
+  }
+  return bar;
+}
 var WHO_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME','KERA':'KERACARE','AUNT':'AUNT JACKIES','JANET':'JANET COLLECTION'};
 function whoBrand(nm){if(!nm)return 'OTHER';var w=(''+nm).trim().toUpperCase().split(/\s+/);var f=(w[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');if(!f||/^[0-9]+$/.test(f))f=((w[1]||'OTHER').replace(/[^A-Z0-9&\/+-]/g,''))||'OTHER';return WHO_ALIASES[f]||f;}
 function renderWHOrder(){
@@ -1202,6 +1225,7 @@ function renderWHOrder(){
   var rows=[];
   wh.forEach(function(p){
     if(!p.bc||!p.nm||p.qty<=0)return;
+    if(whoNS[p.bc])return;            // marked "not stocked here"
     var here=(destMap[p.bc]?destMap[p.bc].qty:0);
     if(here>MN)return;                 // reorder only when at/below the min
     var order=Math.min(MX-here,p.qty);
@@ -1216,9 +1240,9 @@ function renderWHOrder(){
     '<div class="who-sub">Only lines at or below the reorder point are listed, topped up to the max — no more 1-pc trips. Tick each as you check the delivery.</div>'+
     '<div class="who-tgt"><span>Reorder when ≤</span><button class="who-tbtn" data-set="min" data-d="-1">−</button><b id="who-minv">'+MN+'</b><button class="who-tbtn" data-set="min" data-d="1">+</button>'+
       '<span style="margin-left:12px">Top up to</span><button class="who-tbtn" data-set="max" data-d="-1">−</button><b id="who-maxv">'+MX+'</b><button class="who-tbtn" data-set="max" data-d="1">+</button></div></div>';
-  if(!rows.length){el.innerHTML=head+'<div class="empty">Nothing needed from the warehouse right now \u2713</div>';wireWHO();return;}
+  if(!rows.length){el.innerHTML=head+whoNSbarHTML()+'<div class="empty">Nothing needed from the warehouse right now \u2713</div>';wireWHO();return;}
   var totOrder=rows.reduce(function(s,r){return s+r.order;},0);
-  var html=head+'<div class="who-summary">'+total+' lines \u00b7 '+totOrder+' pcs expected in</div>';
+  var html=head+whoNSbarHTML()+'<div class="who-summary">'+total+' lines \u00b7 '+totOrder+' pcs expected in</div>';
   brands.forEach(function(b){
     var items=groups[b].slice().sort(function(x,y){return x.nm.localeCompare(y.nm);});
     var bdone=items.filter(function(r){return whoTx[r.bc];}).length;
@@ -1228,7 +1252,7 @@ function renderWHOrder(){
       html+='<div class="who-row'+(ck?' ck':'')+'" data-bc="'+r.bc+'">'+
         '<div class="who-img">'+imgEl(r.bc,46)+'</div>'+
         '<div class="who-info"><div class="who-nm">'+r.nm+(r.sz?' \u00b7 '+r.sz:'')+'</div>'+'<div class="who-bc">'+r.bc+'</div>'+
-          '<div class="who-meta">you have '+r.here+' \u00b7 W/H has '+r.wh+(r.pr>0?' \u00b7 \u00a3'+r.pr.toFixed(2):'')+'</div></div>'+
+          '<div class="who-meta">you have '+r.here+' \u00b7 W/H has '+r.wh+(r.pr>0?' \u00b7 \u00a3'+r.pr.toFixed(2):'')+'</div>'+'<button class="who-ns" data-bc="'+r.bc+'">\u2715 not stocked here</button>'+'</div>'+
         '<div class="who-ord"><div class="who-ordn">'+r.order+'</div><div class="who-ordl">order</div></div>'+
         '<div class="who-tick">'+(ck?'\u2713':'')+'</div>'+
       '</div>';
@@ -1246,6 +1270,9 @@ function wireWHO(){
     renderWHOrder();
   });});
   el.querySelectorAll('.who-row').forEach(function(row){row.addEventListener('click',function(){var bc=this.dataset.bc;whoTx[bc]=!whoTx[bc];try{localStorage.setItem(WHO_TICK_KEY,JSON.stringify(whoTx));}catch(e){}if(typeof syncSave==='function')syncSave(WHO_TICK_KEY,whoTx);renderWHOrder();});});
+  el.querySelectorAll('.who-ns').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();var bc=this.dataset.bc;var row=this.closest('.who-row');var nm=row?((row.querySelector('.who-nm')||{}).textContent||''):'';whoSetNS(bc,nm);renderWHOrder();});});
+  el.querySelectorAll('.who-nsmanage').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();whoShowNS=!whoShowNS;renderWHOrder();});});
+  el.querySelectorAll('.who-nsrestock').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();whoUnNS(this.dataset.bc);renderWHOrder();});});
 }
 
 /* ===== + SHOPIFY: list category items to the Shopify store ===== */

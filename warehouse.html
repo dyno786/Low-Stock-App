@@ -145,6 +145,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 
 /* PICK STRIP — horizontal 3 column */
 .pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.pk-cell-ns{border-radius:9px;padding:8px 5px;border:2px dashed #e8a3a3;background:#fdf3f3;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.pk-cell-ns .pc-bl{font-size:11px;font-weight:700;color:#b91c1c}
+.pc-ns-x{font-size:20px;font-weight:800;color:#dc2626;line-height:1}
+.pc-ns-lbl{font-size:9px;color:#b91c1c;text-transform:uppercase;letter-spacing:.3px;font-weight:700}
 .pk-cell{border-radius:9px;padding:8px 5px;border:2px solid;text-align:center;cursor:pointer;user-select:none;position:relative;transition:background .1s,border .1s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .pk-cell-c{border-color:#fbd5aa;background:#fff8f0}
 .pk-cell-x{border-color:#a7f3c8;background:#f0fdf6}
@@ -283,6 +287,8 @@ var BR=[
   {id:'roundhay', name:'Roundhay',   short:'Roun',color:'#60a5fa',url:'/api/stock-data?branch=roundhay'},
   {id:'warehouse',name:'Warehouse',  short:'WH',  color:'#a78bfa',url:'/api/stock-data?branch=warehouse'},
 ];
+var VURL='/api/vendors'; // Vercel function: live barcode->vendor map straight from Shopify Admin API
+var vmap={};
 var IURL='/api/stock-data?branch=shopify-images'; // ShopifyImages tab — updated daily by Apps Script
 
 var bd=[null,null,null,null],bm=[{},{},{},{}],imgs={},shopifyData={},loaded=0;
@@ -290,16 +296,30 @@ var pkTx={};
 try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
 // editable warehouse send quantities: whQty[bc] = [n,n,n]; and top-up target (default 7)
 var whQty={};try{whQty=JSON.parse(localStorage.getItem('cc_wh_qty')||'{}');}catch(e){}
+var whNS={0:{},1:{},2:{}};
+function whNSat(bi,bc){return !!(whNS[bi]&&whNS[bi][bc]);}
+async function loadNS(){try{var r=await Promise.all([syncLoad('cc_whns0'),syncLoad('cc_whns1'),syncLoad('cc_whns2')]);whNS={0:r[0]||{},1:r[1]||{},2:r[2]||{}};}catch(e){}}
 var pickCounts=[0,0,0];
 var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_brandcollapsed')||'{}');}catch(e){}
 var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup'||v==='map')?v:'topup';}catch(e){return 'topup';}})();
 var whMapData={sections:[]};try{whMapData=JSON.parse(localStorage.getItem('cc_wh_map')||'{"sections":[]}');if(!whMapData.sections)whMapData.sections=[];}catch(e){whMapData={sections:[]};}
 function saveMap(){try{localStorage.setItem('cc_wh_map',JSON.stringify(whMapData));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_map',whMapData);}
 function brandPosMap(){var m={};(whMapData.sections||[]).forEach(function(sec,si){(sec.rows||[]).forEach(function(row,ri){(row.brands||[]).forEach(function(b){var k=(''+b).toUpperCase();if(!(k in m))m[k]={s:si,r:ri,label:(sec.name||('S'+(si+1)))+' \u00b7 '+(row.name||('R'+(ri+1)))};});});});return m;}
-function whAllBrands(){var s={};(bd[3]||[]).forEach(function(p){if(p.bc&&p.nm)s[brandOf(p.nm)]=1;});return Object.keys(s).sort();}
+function whAllBrands(){var s={};(bd[3]||[]).forEach(function(p){if(p.bc&&p.nm)s[brandOf(p.nm,p.bc)]=1;});return Object.keys(s).sort();}
 // brand is derived from the product name (no brand field in EPOS). Aliases merge split/multi-word brands.
-var BRAND_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME'};
-function brandOf(nm){
+var BRAND_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME','KERA':'KERACARE','KERACARE':'KERACARE','AUNT':'AUNT JACKIES','JANET':'JANET COLLECTION'};
+var VENDOR_SKIP={'':1,'CCHAIRANDBEAUTY':1,'CC HAIR AND BEAUTY':1,'CC HAIR & BEAUTY':1};
+// brand from a Shopify vendor string: first word (collapses "Redken Extreme"->REDKEN), then alias cleanup
+function vendorBrand(v){
+  if(!v)return '';
+  var V=(''+v).trim().toUpperCase();
+  if(VENDOR_SKIP[V])return '';
+  var first=(V.split(/\s+/)[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');
+  if(!first||/^[0-9]+$/.test(first))return '';
+  return BRAND_ALIASES[first]||first;
+}
+function brandOf(nm,bc){
+  if(bc&&vmap[bc]){var vb=vendorBrand(vmap[bc]);if(vb)return vb;}
   if(!nm)return 'OTHER';
   var w=(''+nm).trim().toUpperCase().split(/\s+/);
   var first=(w[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');
@@ -419,6 +439,22 @@ async function loadImgs(){
     try{localStorage.setItem('cc_shopify_imgs',JSON.stringify({ts:Date.now(),d:imgs,s:shopifyData}));}catch(e){}
   }catch(e){}
 }
+async function loadVendors(){
+  try{
+    var cached=localStorage.getItem('cc_shopify_vendors');
+    if(cached){var o=JSON.parse(cached);if(Date.now()-o.ts<60*60*1000){vmap=o.d||{};return;}}
+    var r=await fetch(VURL);var t=await r.text();var m={};var tr=t.trim();
+    if(tr.charAt(0)==='{'){                         // JSON {barcode:vendor} from /api/vendors
+      try{var obj=JSON.parse(tr);if(obj&&!obj.error){Object.keys(obj).forEach(function(bc){var v=(''+obj[bc]).trim();if(bc&&v)m[bc]=v;});}}catch(e){}
+    }else{                                          // CSV fallback (Barcode/Variant Barcode + Vendor)
+      Papa.parse(t,{header:true,skipEmptyLines:true}).data.forEach(function(row){
+        var bc=(row['Barcode']||row['Variant Barcode']||'').trim();if(!bc)return;
+        var v=(row['Vendor']||'').trim();if(v)m[bc]=v;
+      });
+    }
+    if(Object.keys(m).length){vmap=m;try{localStorage.setItem('cc_shopify_vendors',JSON.stringify({ts:Date.now(),d:vmap}));}catch(e){}if(loaded>=4)renderWH();}
+  }catch(e){}
+}
 async function loadBranch(i){
   try{
     var r=await fetch(BR[i].url);var t=await r.text();
@@ -472,6 +508,7 @@ function buildPickList(){
     var tgts=[T,T,T];
     var c=[getQty(0,p.bc),getQty(1,p.bc),getQty(2,p.bc)];
     var need=[Math.max(0,T-c[0]),Math.max(0,T-c[1]),Math.max(0,T-c[2])];
+    if(whNSat(0,p.bc))need[0]=0;if(whNSat(1,p.bc))need[1]=0;if(whNSat(2,p.bc))need[2]=0;
     if(need[0]+need[1]+need[2]<=0)return;
     var sp;
     if(whQty[p.bc]){
@@ -485,6 +522,7 @@ function buildPickList(){
       var rem=p.qty;sp=[0,0,0];
       needs.forEach(function(n){if(n.n>0&&rem>0){var g=Math.min(n.n,rem);sp[n.i]=g;rem-=g;}});
     }
+    if(whNSat(0,p.bc))sp[0]=0;if(whNSat(1,p.bc))sp[1]=0;if(whNSat(2,p.bc))sp[2]=0;
     var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,st:st,bq:c,sp:sp,tgts:tgts};
     if(st.type==='dead')dead.push(item);else normal.push(item);
   });
@@ -605,7 +643,7 @@ function renderSection(items,dp,tp){
 
 function renderBrandGroups(all){
   var groups={};
-  all.forEach(function(it){var b=brandOf(it.nm);(groups[b]=groups[b]||[]).push(it);});
+  all.forEach(function(it){var b=brandOf(it.nm,it.bc);(groups[b]=groups[b]||[]).push(it);});
   var pos=brandPosMap();
   var brands=Object.keys(groups).sort(function(a,b){
     var pa=pos[a],pb=pos[b];
@@ -660,6 +698,7 @@ function mkRow(item){
     '</div>'+
     '<div class="pk-strip">';
   for(var bi=0;bi<3;bi++){
+    if(whNSat(bi,item.bc)){html+='<div class="pk-cell-ns" data-bi="'+bi+'"><div class="pc-bl">'+BN[bi]+'</div><div class="pc-ns-x">✕</div><div class="pc-ns-lbl">not stocked</div></div>';continue;}
     var take=item.sp[bi],has=item.bq[bi],tgt=item.tgts[bi],ticked=!!(t[bi]);
     var badge=has<=0?'<div class="pc-badge pc-badge-out">OUT</div>':(has<tgt?'<div class="pc-badge pc-badge-low">LOW</div>':'');
     var hasLbl=has>=tgt?'has '+has+' ✓':'has '+has+' → '+tgt;
@@ -810,7 +849,7 @@ function waSVG(){return '<svg viewBox="0 0 24 24" fill="currentColor" style="wid
 document.getElementById('refresh-btn').addEventListener('click',function(){
   loaded=0;bd=[null,null,null,null];bm=[{},{},{},{}];
   document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Refreshing…</div>';
-  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();
+  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();loadVendors();loadNS().then(function(){if(typeof renderWH==='function')renderWH();});
 });
 document.getElementById('sync-btn').addEventListener('click',doSync);
 // tap any product image to enlarge
@@ -818,8 +857,9 @@ document.addEventListener('click',function(e){var z=e.target.closest&&e.target.c
 
 // ── START ──────────────────────────────────────────────────
 Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
-loadImgs();
+loadImgs();loadVendors();
 doSync();
+loadNS().then(function(){if(typeof renderWH==='function')renderWH();});
 
 // ── SYSTEM CHECK ─────────────────────────────────────────
 var SC_BRANCHES=[
