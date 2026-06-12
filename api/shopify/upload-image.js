@@ -72,7 +72,7 @@ export default async function handler(req, res) {
         }
       }
     } catch (e) { bgInfo = 'BG API call threw: ' + String((e && e.message) || e); }
-    console.error('[bg] removed=' + bgRemoved + ' :: ' + (bgInfo || 'ok'));
+    console.error('[bg] ' + (bgInfo || 'removed-ok') + ' (removed=' + bgRemoved + ')');
 
     // --- 2. sharp: 1000x1000 product image on a white background ---
     const processed = await sharp(cutout)
