@@ -1309,11 +1309,18 @@ var SHOP_CATS=[{key:'AFRO BEAUTY PRODUCTS',short:'Afro Beauty',match:['AFRO BEAU
 var shopCat='ALL';
 function shopCatOf(dp){dp=(''+(dp||'')).trim().toUpperCase();for(var i=0;i<SHOP_CATS.length;i++){if(SHOP_CATS[i].match.indexOf(dp)>=0)return SHOP_CATS[i].key;}return null;}
 function catShort(k){for(var i=0;i<SHOP_CATS.length;i++){if(SHOP_CATS[i].key===k)return SHOP_CATS[i].short;}return k;}
-var SHOP_COLLECTIONS=null;
+var SHOP_COLLECTIONS=null;var SHOP_COLS_LOADING=false;
+function shopColsEnsure(){
+  if(SHOP_COLLECTIONS&&SHOP_COLLECTIONS.length)return;
+  if(SHOP_COLS_LOADING)return;SHOP_COLS_LOADING=true;
+  fetch('/api/shopify/collections').then(function(r){return r.json();}).then(function(j){
+    SHOP_COLLECTIONS=(j&&j.collections)||[];SHOP_COLS_LOADING=false;
+    var s=document.getElementById('sm-cols');if(s){var q=document.getElementById('sm-colsearch');s.innerHTML=shopColsHTML(q?q.value:'');}
+  }).catch(function(){SHOP_COLS_LOADING=false;SHOP_COLLECTIONS=null;var s=document.getElementById('sm-cols');if(s)s.innerHTML='<div class="sm-colsempty">Couldn\u2019t load \u2014 reopen to retry</div>';});
+}
 var shopBrandCache={};try{shopBrandCache=JSON.parse(localStorage.getItem('cc_shop_brand')||'{}');}catch(e){}
 function shopPrefetch(){
-  if(SHOP_COLLECTIONS===null){SHOP_COLLECTIONS=[];
-    fetch('/api/shopify/collections').then(function(r){return r.json();}).then(function(j){SHOP_COLLECTIONS=(j&&j.collections)||[];var s=document.getElementById('sm-cols');if(s)s.innerHTML=shopColsHTML('');}).catch(function(){});}
+  shopColsEnsure();
   if(!window.__vmapTried){window.__vmapTried=1;
     fetch('/api/vendors').then(function(r){return r.json();}).then(function(j){if(j&&!j.error)window.vmap=j;}).catch(function(){});}
 }
@@ -1408,9 +1415,12 @@ function renderShopify(){
 function shopColsHTML(q){
   if(!SHOP_COLLECTIONS||!SHOP_COLLECTIONS.length)return '<div class="sm-colsempty">Loading collections\u2026</div>';
   q=(q||'').trim().toLowerCase();
-  var list=SHOP_COLLECTIONS.filter(function(t){return !q||t.toLowerCase().indexOf(q)>=0;}).slice(0,60);
+  var picks=(window._shopAI&&window._shopAI.collections)||[];var pl={};picks.forEach(function(t){pl[(''+t).toLowerCase()]=1;});
+  var list=SHOP_COLLECTIONS.filter(function(t){return !q||t.toLowerCase().indexOf(q)>=0;});
+  list.sort(function(a,b){return (pl[a.toLowerCase()]?0:1)-(pl[b.toLowerCase()]?0:1);});
+  list=list.slice(0,60);
   if(!list.length)return '<div class="sm-colsempty">No match</div>';
-  return list.map(function(t){return '<label class="sm-col"><input type="checkbox" value="'+shopEscAttr(t)+'">'+shopEsc(t)+'</label>';}).join('');
+  return list.map(function(t){var ck=pl[t.toLowerCase()]?' checked':'';return '<label class="sm-col"><input type="checkbox" value="'+shopEscAttr(t)+'"'+ck+'>'+shopEsc(t)+'</label>';}).join('');
 }
 function openShopModal(p){
   var ov=document.getElementById('shop-modal');
@@ -1439,6 +1449,7 @@ function openShopModal(p){
      '<div class="sm-foot"><button class="sm-cancel" id="sm-cancel">Cancel</button><button class="sm-go" id="sm-go">List on Shopify</button></div>'+
    '</div>';
   ov.style.display='flex';
+  shopColsEnsure();
   document.getElementById('sm-x').onclick=closeShopModal;
   document.getElementById('sm-cancel').onclick=closeShopModal;
   ov.onclick=function(e){if(e.target===ov)closeShopModal();};
@@ -1494,6 +1505,7 @@ function enrichShop(p){
      if(j.brand)document.getElementById('sm-brand').value=j.brand;
      if(j.category&&document.getElementById('sm-cat'))document.getElementById('sm-cat').value=j.category;
      window._shopAI={bc:p.bc,tags:(j.tags||[]),attributes:(j.attributes||{}),collections:(j.collections||[])};
+     (function(){var sc=document.getElementById('sm-cols');if(sc){var q=document.getElementById('sm-colsearch');sc.innerHTML=shopColsHTML(q?q.value:'');}})();
      if(j.descriptionHtml)document.getElementById('sm-desc').value=shopHtmlToText(j.descriptionHtml);
      if(j.seoTitle)document.getElementById('sm-seotitle').value=j.seoTitle;
      if(j.seoDescription)document.getElementById('sm-seodesc').value=j.seoDescription;
