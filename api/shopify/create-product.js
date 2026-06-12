@@ -93,11 +93,17 @@ export default async function handler(req, res) {
     const title = buildTitle(brand, name);
     const tags = uniq([...tagsIn, ...collections, category, brand]); // collection names must match exactly
     const metafields = attrMetafields(body.attributes); // Shopify standard attribute metafields (GIDs)
-    const seoTitle = (body.seoTitle || title).slice(0, 70);
-    const seoDescription = (
+    const SHOP_SUFFIX = " | CC Hair and Beauty Leeds";
+    const baseSeoTitle = (body.seoTitle || title).replace(/\s*\|\s*CC Hair.*$/i, "").trim();
+    const seoTitle = (baseSeoTitle.slice(0, Math.max(0, 70 - SHOP_SUFFIX.length)).trim() + SHOP_SUFFIX).slice(0, 70);
+    let seoDescription = (
       body.seoDescription ||
-      `${title}${category ? " — " + category : ""}. Available now at CC Hair & Beauty.`
-    ).slice(0, 320);
+      `${title}${category ? " — " + category : ""}.`
+    ).trim();
+    if (!/cc hair and beauty/i.test(seoDescription)) {
+      seoDescription = (seoDescription.replace(/\s+$/, "") + " | CC Hair and Beauty, Leeds.");
+    }
+    seoDescription = seoDescription.slice(0, 320);
     const descriptionHtml = body.descriptionHtml || `<p>${title}${category ? " — " + category : ""}.</p>`;
 
     const createInput = {
@@ -106,7 +112,8 @@ export default async function handler(req, res) {
     };
     if (brand) createInput.vendor = brand;
     if (category) createInput.productType = category;
-    if (metafields.length) createInput.metafields = metafields;
+    // NOTE: shopify.* attribute metafields are category-gated; setting them here would fail the whole
+    // create ("Owner subtype does not match..."). They are applied after create + category is set.
 
     const created = await shopifyGraphQL(
       `mutation ($product: ProductCreateInput!) {
