@@ -53,3 +53,32 @@ export function attrMetafields(chosen) {
 export function attrOptionsText() {
   return ATTRS.map(d => '- ' + d.key + ' (' + d.label + '): ' + Object.keys(d.values).join(', ')).join('\n');
 }
+
+// ── Taxonomy categories ───────────────────────────────────────────────────────
+// Shopify's standard attribute metafields are category-gated: a product must be
+// assigned a taxonomy category before its attributes are accepted. These three
+// categories cover the vast majority of CC's listable stock. `keys` are the
+// attributes that are actually valid for that category (verified against the
+// metafield-definition constraints), so we only ever write valid ones.
+export const TAXO_CATEGORIES = [
+  { label: 'Hair Care', gid: 'gid://shopify/TaxonomyCategory/hb-3-10',
+    hint: 'shampoo, conditioner, hair oil, leave-in, hair treatment/masque, hair lotion, hair food, braid spray, relaxer, hair serum, scalp care, moisturiser for hair',
+    keys: ['suitable-for-hair-type', 'hair-type', 'hair-care-finish', 'conditioner-effect'] },
+  { label: 'Hair Styling Products', gid: 'gid://shopify/TaxonomyCategory/hb-3-10-10',
+    hint: 'styling gel, edge control / edge tamer, hair wax, pomade, mousse, holding or finishing spray, curl custard, styling gum, setting lotion',
+    keys: ['hold-level', 'hair-care-finish', 'suitable-for-hair-type', 'hair-type', 'conditioner-effect'] },
+  { label: 'Skin Care', gid: 'gid://shopify/TaxonomyCategory/hb-3-2-9',
+    hint: 'body butter, body/hand/face lotion or cream, shea/cocoa butter, skin serum, body oil, petroleum jelly, soap, skin moisturiser',
+    keys: ['suitable-for-skin-type', 'product-form', 'cosmetic-function', 'skin-care-effect'] }
+];
+
+export function categoryFor(label) {
+  if (!label) return null;
+  const l = String(label).trim().toLowerCase();
+  for (const c of TAXO_CATEGORIES) if (c.label.toLowerCase() === l) return c;
+  return null;
+}
+
+export function categoryOptionsText() {
+  return TAXO_CATEGORIES.map(c => '- ' + c.label + ': ' + c.hint).join('\n');
+}
