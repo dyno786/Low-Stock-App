@@ -19,7 +19,7 @@
 //   SHOPIFY_ADMIN_API_TOKEN  Admin API access token (scopes: read_products, write_products)
 //   SHOPIFY_API_VERSION      optional, defaults to 2025-01
 
-import { attrMetafields } from "./_taxonomy.js";
+import { attrMetafields, categoryFor } from "./_taxonomy.js";
 
 const API_VERSION = process.env.SHOPIFY_API_VERSION || "2025-01";
 const STORE = (process.env.SHOPIFY_STORE_URL || process.env.SHOPIFY_STORE || "").replace(/^https?:\/\//, "").replace(/\/+$/, "");
@@ -112,8 +112,14 @@ export default async function handler(req, res) {
     };
     if (brand) createInput.vendor = brand;
     if (category) createInput.productType = category;
-    // NOTE: shopify.* attribute metafields are category-gated; setting them here would fail the whole
-    // create ("Owner subtype does not match..."). They are applied after create + category is set.
+    // Taxonomy category unlocks the official attribute fields: assign the category, then attach only
+    // the attributes that are valid for it (shopify.* fields are category-gated, so this is required).
+    const catInfo = categoryFor(body.taxonomyCategory);
+    if (catInfo) {
+      createInput.category = catInfo.gid;
+      const okMeta = metafields.filter(m => catInfo.keys.indexOf(m.key) >= 0);
+      if (okMeta.length) createInput.metafields = okMeta;
+    }
 
     const created = await shopifyGraphQL(
       `mutation ($product: ProductCreateInput!) {
