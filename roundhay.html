@@ -1430,6 +1430,7 @@ function submitShop(p){
   var descTxt=shopVal('sm-desc'),seoT=shopVal('sm-seotitle'),seoD=shopVal('sm-seodesc');
   if(!price){st.innerHTML='<span class="sm-err">Enter a price first.</span>';return;}
   var cols=[];document.querySelectorAll('#sm-cols input:checked').forEach(function(c){cols.push(c.value);});
+  if(window._shopAI&&window._shopAI.bc===p.bc&&window._shopAI.collections){window._shopAI.collections.forEach(function(t){if(cols.indexOf(t)<0)cols.push(t);});}
   if(brand){shopBrandCache[p.bc]=brand.toUpperCase();try{localStorage.setItem('cc_shop_brand',JSON.stringify(shopBrandCache));}catch(e){}}
   var descHtml='';
   if(descTxt){descHtml=/</.test(descTxt)?descTxt:descTxt.split(/\n\n+/).map(function(x){return '<p>'+shopEsc(x.trim()).replace(/\n/g,'<br>')+'</p>';}).join('');}
@@ -1443,7 +1444,7 @@ function submitShop(p){
   chain.then(function(imageUrl){
     st.textContent='Creating draft\u2026';
     return fetch('/api/shopify/create-product',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({barcode:p.bc,name:name,brand:brand,price:price,category:cat,collections:cols,imageUrl:imageUrl,status:'DRAFT',descriptionHtml:descHtml||undefined,seoTitle:seoT||undefined,seoDescription:seoD||undefined})})
+      body:JSON.stringify({barcode:p.bc,name:name,brand:brand,price:price,category:cat,collections:cols,imageUrl:imageUrl,status:'DRAFT',descriptionHtml:descHtml||undefined,seoTitle:seoT||undefined,seoDescription:seoD||undefined,tags:((window._shopAI&&window._shopAI.bc===p.bc)?window._shopAI.tags:undefined),attributes:((window._shopAI&&window._shopAI.bc===p.bc)?window._shopAI.attributes:undefined)})})
       .then(function(r){return r.json();});
   }).then(function(j){
     go.disabled=false;
@@ -1465,6 +1466,9 @@ function enrichShop(p){
      btn.disabled=false;btn.textContent=old;
      if(!j||j.error){if(hint)hint.innerHTML='<span class="sm-err">AI error: '+shopEsc((j&&j.error)||'failed')+'</span>';return;}
      if(j.title)document.getElementById('sm-name').value=j.title;
+     if(j.brand)document.getElementById('sm-brand').value=j.brand;
+     if(j.category&&document.getElementById('sm-cat'))document.getElementById('sm-cat').value=j.category;
+     window._shopAI={bc:p.bc,tags:(j.tags||[]),attributes:(j.attributes||{}),collections:(j.collections||[])};
      if(j.descriptionHtml)document.getElementById('sm-desc').value=shopHtmlToText(j.descriptionHtml);
      if(j.seoTitle)document.getElementById('sm-seotitle').value=j.seoTitle;
      if(j.seoDescription)document.getElementById('sm-seodesc').value=j.seoDescription;
