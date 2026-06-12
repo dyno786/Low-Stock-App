@@ -54,8 +54,7 @@ export default async function handler(req, res) {
         bgInfo = 'no BG_API_KEY env var found';
       } else {
         const fd = new FormData();
-        fd.append('image_file', new Blob([inputBuf]), 'photo.jpg');
-        fd.append('size', 'auto');
+        fd.append('image_file', new Blob([inputBuf], { type: 'image/jpeg' }), 'photo.jpg');
         const rb = await fetch(BG_URL, {
           method: 'POST',
           headers: { 'x-api-key': BG_KEY },
