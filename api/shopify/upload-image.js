@@ -46,10 +46,13 @@ export default async function handler(req, res) {
   try {
     // --- 1. background removal (poof.bg / removebgapi.com by default; fail-soft to original) ---
     let cutout = inputBuf;
+    let bgRemoved = false, bgInfo = '';
     try {
       const BG_KEY = process.env.BG_API_KEY || process.env.REMOVEBG_API_KEY;
       const BG_URL = process.env.BG_API_URL || 'https://api.poof.bg/v1/remove';
-      if (BG_KEY) {
+      if (!BG_KEY) {
+        bgInfo = 'no BG_API_KEY env var found';
+      } else {
         const fd = new FormData();
         fd.append('image_file', new Blob([inputBuf]), 'photo.jpg');
         fd.append('size', 'auto');
@@ -58,9 +61,18 @@ export default async function handler(req, res) {
           headers: { 'x-api-key': BG_KEY },
           body: fd
         });
-        if (rb.ok) cutout = Buffer.from(await rb.arrayBuffer());
+        if (rb.ok) {
+          const ct = rb.headers.get('content-type') || '';
+          const buf = Buffer.from(await rb.arrayBuffer());
+          if (/image\//i.test(ct) || buf.length > 3000) { cutout = buf; bgRemoved = true; }
+          else { let t=''; try { t = buf.toString('utf8').slice(0, 200); } catch (e) {} bgInfo = 'BG API returned 200 but not an image (content-type=' + ct + ', bytes=' + buf.length + '): ' + t; }
+        } else {
+          let t=''; try { t = (await rb.text()).slice(0, 200); } catch (e) {}
+          bgInfo = 'BG API HTTP ' + rb.status + ': ' + t;
+        }
       }
-    } catch (e) { /* keep original photo */ }
+    } catch (e) { bgInfo = 'BG API call threw: ' + String((e && e.message) || e); }
+    console.error('[bg] removed=' + bgRemoved + ' :: ' + (bgInfo || 'ok'));
 
     // --- 2. sharp: 1000x1000 product image on a white background ---
     const processed = await sharp(cutout)
@@ -93,7 +105,7 @@ export default async function handler(req, res) {
     }
 
     // resourceUrl is the value create-product passes as the media originalSource (imageUrl)
-    res.status(200).json({ source: tgt.resourceUrl });
+    res.status(200).json({ source: tgt.resourceUrl, bgRemoved: bgRemoved, bgWarning: bgRemoved ? null : bgInfo });
   } catch (e) {
     res.status(200).json({ source: null, warning: 'Image processing failed: ' + String((e && e.message) || e) });
   }
