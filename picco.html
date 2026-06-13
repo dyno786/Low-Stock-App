@@ -717,7 +717,10 @@ function copyBC(el){
 /* ---- day handling ---- */
 function dayKey(t){const s=String(t||"");const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return m[1]+"-"+m[2]+"-"+m[3];
   const d=new Date(s.replace(/-/g,"/"));if(!isNaN(d)){const z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate());}return "";}
-function buildDays(){const set=new Set();for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)for(const it of d.items){const k=dayKey(it.time);if(k)set.add(k);}}state.days=[...set].sort();}
+function todayKey(){const n=new Date(),z=x=>String(x).padStart(2,"0");return n.getFullYear()+"-"+z(n.getMonth()+1)+"-"+z(n.getDate());}
+function buildDays(){const set=new Set();for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)for(const it of d.items){const k=dayKey(it.time);if(k)set.add(k);}}
+  set.add(todayKey()); // always include today so the dashboard opens on today (even before the day's first scan); ‹ steps back to yesterday
+  state.days=[...set].sort();}
 function resolveDay(){if(!state.days.length){state.day=null;return;}if(!state.day||state.days.indexOf(state.day)<0)state.day=state.days[state.days.length-1];}
 function itemsForDay(items){if(!state.day)return items;return items.filter(it=>dayKey(it.time)===state.day);}
 function humanDay(dk){if(!dk)return "All dates";const [y,m,d]=dk.split("-").map(Number);const dt=new Date(y,m-1,d);
