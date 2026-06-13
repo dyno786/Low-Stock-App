@@ -307,6 +307,45 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .sc-issue{padding:6px 12px;font-size:10px;font-weight:600;border-bottom:0.5px solid var(--border)}
 .sc-issue.warn{background:var(--amberbg);color:var(--ambertxt)}
 .sc-issue.error{background:var(--redbg);color:var(--redtxt)}
+/* ── Warehouse Map tab ── */
+.wm-banner{background:var(--purplebg,#f3e8ff);color:var(--purpletxt,#5b21b6);border:1px solid #e9d5ff;border-radius:10px;padding:10px 12px;font-size:13px;margin:10px 0;line-height:1.4}
+.wm-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.wm-btn{border:1px solid var(--border,#e4e4e7);background:#fff;color:var(--ink,#18181b);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:600;cursor:pointer}
+.wm-btn.primary{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.wm-btn.danger{color:#b91c1c;border-color:#fecaca;background:#fef2f2}
+.wm-legend{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.wm-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;border:1px solid var(--border,#e4e4e7);background:#fff}
+.wm-dot{width:10px;height:10px;border-radius:50%}
+.wm-row{background:#fff;border:1px solid var(--border,#e4e4e7);border-radius:14px;padding:12px;margin-bottom:12px}
+.wm-rowname{font-size:16px;font-weight:800;color:#5b21b6;margin-bottom:10px}
+.wm-secs{display:flex;gap:10px;flex-wrap:wrap}
+.wm-sec{flex:1 1 140px;min-width:130px;border-radius:12px;padding:12px;border:1.5px solid #ddd;position:relative}
+.wm-nm{font-size:16px;font-weight:800;line-height:1.15}
+.wm-dep{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:6px}
+.wm-bay{font-size:12px;color:var(--sub,#71717a);margin-top:4px}
+.wm-edit{position:absolute;top:7px;right:8px;font-size:13px;opacity:.5;display:none}
+.wm.editing .wm-edit{display:block}
+.wm.editing .wm-sec{cursor:pointer}
+.wm-move{display:none;gap:6px;margin-top:10px}
+.wm.editing .wm-move{display:flex}
+.wm-mbtn{flex:1;border:1px solid var(--border,#e4e4e7);background:#fff;border-radius:8px;padding:5px;font-size:13px;font-weight:700;cursor:pointer}
+.wm-addsec{flex:1 1 130px;min-width:130px;border:1.5px dashed #ccc;border-radius:12px;padding:12px;display:none;align-items:center;justify-content:center;color:var(--sub,#71717a);font-weight:700;font-size:14px;cursor:pointer;background:#fafafa}
+.wm.editing .wm-addsec{display:flex}
+.wm-rowctl{display:none;gap:8px;margin-top:10px}
+.wm.editing .wm-rowctl{display:flex}
+.wm-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:flex-end;justify-content:center;z-index:60}
+.wm-ov.on{display:flex}
+.wm-sheet{background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px 24px}
+.wm-sheet h3{margin:2px 0 14px;font-size:17px}
+.wm-fld{margin-bottom:12px}
+.wm-fld label{display:block;font-size:12px;font-weight:700;color:var(--sub,#71717a);margin-bottom:5px;text-transform:uppercase}
+.wm-fld input,.wm-fld select{width:100%;border:1px solid var(--border,#e4e4e7);border-radius:10px;padding:11px;font-size:15px;background:#fff}
+.wm-sheetbtns{display:flex;gap:8px;margin-top:6px}
+.wm-sheetbtns .wm-btn{flex:1;text-align:center;padding:12px}
+#wm-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#18181b;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+#wm-toast.on{opacity:1}
+@media print{#vtabs,#prog-wrap,.wm-bar,.wm-banner,.wm-addsec,.wm-rowctl,.wm-move,.wm-edit{display:none!important}}
+
 </style>
 </head>
 <body>
@@ -339,6 +378,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="whorder">🚚 W/H Order</div>
   <div class="vtab" data-v="shopify">🛍 + Shopify</div>
   <div class="vtab" data-v="imgs">📸 Images</div>
+  <div class="vtab" data-v="map">🗺️ Map</div>
 </div>
 
 <div class="sync-bar">
@@ -706,6 +746,122 @@ async function loadImgs(){
 }
 
 // ── RENDER ─────────────────────────────────────────────────
+// ===== Warehouse Map tab (rows + brand sections; shared layout per device) =====
+var WM_DEPTS=[
+  {k:'cos',  label:'Cosmetics',          c:'#db2777', bg:'#fce7f3'},
+  {k:'afro', label:'Afro Beauty',        c:'#7c3aed', bg:'#f3e8ff'},
+  {k:'afro2',label:'Afro Products 2',    c:'#0d9488', bg:'#ccfbf1'},
+  {k:'hair', label:'Hair / Braids',      c:'#2563eb', bg:'#dbeafe'},
+  {k:'acc',  label:'Accessories (gen.)', c:'#d97706', bg:'#fef3c7'},
+  {k:'gen',  label:'General',            c:'#52525b', bg:'#f4f4f5'}
+];
+function wmDept(k){for(var i=0;i<WM_DEPTS.length;i++)if(WM_DEPTS[i].k===k)return WM_DEPTS[i];return WM_DEPTS[WM_DEPTS.length-1];}
+function wmDefaultMap(){return {rows:[
+  {label:'Row 1', sections:[{name:'Cosmetics A',dept:'cos',bay:''},{name:'Cosmetics B',dept:'cos',bay:''}]},
+  {label:'Row 2', sections:[{name:"Aunt Jackie's",dept:'afro',bay:''},{name:'African Pride',dept:'afro',bay:''},{name:'American Dream',dept:'afro',bay:''},{name:'Ampro',dept:'afro2',bay:''}]},
+  {label:'Row 3', sections:[{name:'Xpression',dept:'hair',bay:''},{name:'Kuknus',dept:'hair',bay:''},{name:'Cherish',dept:'hair',bay:''},{name:'Smart Braid',dept:'hair',bay:''}]},
+  {label:'Row 4', sections:[{name:'Accessories',dept:'acc',bay:''}]}
+]};}
+var WM_KEY='cc_wh_map_v1', wmEdit=false, wmCur={r:-1,s:-1}, wmMap=wmLoad();
+function wmLoad(){try{var r=localStorage.getItem(WM_KEY);if(r){var m=JSON.parse(r);if(m&&m.rows)return m;}}catch(e){}return wmDefaultMap();}
+function wmSave(){try{localStorage.setItem(WM_KEY,JSON.stringify(wmMap));}catch(e){}}
+function wmEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function wmToast(m){var t=document.getElementById('wm-toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('on');},1600);}
+function renderMap(){
+  var el=document.getElementById('out'); if(!el)return;
+  var pw=document.getElementById('prog-wrap'); if(pw)pw.style.display='none';
+  var df=document.getElementById('day-filter'); if(df)df.style.display='none';
+  var legend=WM_DEPTS.map(function(d){return '<span class="wm-chip"><span class="wm-dot" style="background:'+d.c+'"></span>'+d.label+'</span>';}).join('');
+  var rows=wmMap.rows.map(function(row,ri){
+    var secs=row.sections.map(function(s,si){
+      var d=wmDept(s.dept);
+      var mv='<div class="wm-move">'+
+        '<button class="wm-mbtn" data-act="left" data-r="'+ri+'" data-s="'+si+'">◀</button>'+
+        '<button class="wm-mbtn" data-act="rowdown" data-r="'+ri+'" data-s="'+si+'">▼ row</button>'+
+        '<button class="wm-mbtn" data-act="right" data-r="'+ri+'" data-s="'+si+'">▶</button></div>';
+      return '<div class="wm-sec" data-r="'+ri+'" data-s="'+si+'" style="background:'+d.bg+';border-color:'+d.c+'">'+
+        '<span class="wm-edit">✏️</span><div class="wm-nm">'+wmEsc(s.name||'—')+'</div>'+
+        '<div class="wm-dep" style="color:'+d.c+'">'+d.label+'</div>'+
+        (s.bay?'<div class="wm-bay">Bay '+wmEsc(s.bay)+'</div>':'')+mv+'</div>';
+    }).join('');
+    return '<div class="wm-row"><div class="wm-rowname">'+wmEsc(row.label)+'</div>'+
+      '<div class="wm-secs">'+secs+'<div class="wm-addsec" data-addsec="'+ri+'">＋ section</div></div>'+
+      '<div class="wm-rowctl"><button class="wm-btn" data-renrow="'+ri+'">Rename row</button>'+
+      '<button class="wm-btn danger" data-delrow="'+ri+'">Delete row</button></div></div>';
+  }).join('');
+  el.innerHTML='<div class="wm'+(wmEdit?' editing':'')+'">'+
+    '<div class="wm-banner">🗺️ Warehouse layout — find the brand, then collect from that row/bay and double-check the stock. '+(wmEdit?'Tap a section to rename, move (◀ ▶ / ▼ row) or delete.':'Tap <b>Edit</b> to change the layout.')+'</div>'+
+    '<div class="wm-bar"><button class="wm-btn primary" id="wm-edit-btn">'+(wmEdit?'Done':'✏️ Edit')+'</button>'+
+      '<button class="wm-btn" id="wm-print">🖨️ Print</button><button class="wm-btn" id="wm-share">📤 Share</button>'+
+      (wmEdit?'<button class="wm-btn" id="wm-addrow">＋ Row</button><button class="wm-btn danger" id="wm-reset" style="margin-left:auto">Reset</button>':'')+'</div>'+
+    '<div class="wm-legend">'+legend+'</div>'+rows+'</div>';
+}
+function wmOpen(ri,si){
+  wmCur={r:ri,s:si};var creating=(si<0);
+  var s=creating?{name:'',dept:'afro',bay:''}:wmMap.rows[ri].sections[si];
+  document.getElementById('wm-title').textContent=creating?'Add section':'Edit section';
+  document.getElementById('wm-fname').value=s.name||'';
+  document.getElementById('wm-fbay').value=s.bay||'';
+  document.getElementById('wm-fdept').innerHTML=WM_DEPTS.map(function(d){return '<option value="'+d.k+'"'+(d.k===s.dept?' selected':'')+'>'+d.label+'</option>';}).join('');
+  document.getElementById('wm-fdel').style.display=creating?'none':'block';
+  document.getElementById('wm-ov').classList.add('on');
+}
+function wmClose(){var o=document.getElementById('wm-ov');if(o)o.classList.remove('on');wmCur={r:-1,s:-1};}
+function wmMove(act,ri,si){
+  var secs=wmMap.rows[ri].sections;
+  if(act==='left'&&si>0){var x=secs.splice(si,1)[0];secs.splice(si-1,0,x);}
+  else if(act==='right'&&si<secs.length-1){var y=secs.splice(si,1)[0];secs.splice(si+1,0,y);}
+  else if(act==='rowdown'&&wmMap.rows.length>1){var to=(ri+1)%wmMap.rows.length;var z=secs.splice(si,1)[0];wmMap.rows[to].sections.push(z);}
+  wmSave();renderMap();
+}
+
+// delegated handlers (attached once on #out and #wm-ov)
+(function(){
+  function onceWire(){
+    var out=document.getElementById('out');
+    if(out && !out._wmWired){ out._wmWired=1;
+      out.addEventListener('click',function(e){
+        if(view!=='map')return;
+        var t=e.target;
+        if(t.closest('#wm-edit-btn')){wmEdit=!wmEdit;renderMap();return;}
+        if(t.closest('#wm-print')){window.print();return;}
+        if(t.closest('#wm-share')){wmShare();return;}
+        if(t.closest('#wm-addrow')){wmMap.rows.push({label:'Row '+(wmMap.rows.length+1),sections:[]});wmSave();renderMap();return;}
+        if(t.closest('#wm-reset')){if(confirm('Reset the map back to the example layout?')){wmMap=wmDefaultMap();wmSave();renderMap();wmToast('Reset');}return;}
+        var mv=t.closest('.wm-mbtn'); if(mv){e.stopPropagation();wmMove(mv.getAttribute('data-act'),+mv.getAttribute('data-r'),+mv.getAttribute('data-s'));return;}
+        var add=t.closest('[data-addsec]'); if(add){wmOpen(+add.getAttribute('data-addsec'),-1);return;}
+        var rr=t.closest('[data-renrow]'); if(rr){var ri=+rr.getAttribute('data-renrow');var v=prompt('Row name:',wmMap.rows[ri].label);if(v!=null){wmMap.rows[ri].label=v.trim()||wmMap.rows[ri].label;wmSave();renderMap();}return;}
+        var dr=t.closest('[data-delrow]'); if(dr){var di=+dr.getAttribute('data-delrow');if(!wmMap.rows[di].sections.length||confirm('Delete '+wmMap.rows[di].label+'?')){wmMap.rows.splice(di,1);wmSave();renderMap();}return;}
+        var sec=t.closest('.wm-sec'); if(sec&&wmEdit){wmOpen(+sec.getAttribute('data-r'),+sec.getAttribute('data-s'));return;}
+      });
+    }
+    var ov=document.getElementById('wm-ov');
+    if(ov && !ov._wmWired){ ov._wmWired=1;
+      ov.addEventListener('click',function(e){if(e.target===ov)wmClose();});
+      document.getElementById('wm-fcancel').addEventListener('click',wmClose);
+      document.getElementById('wm-fdel').addEventListener('click',function(){if(wmCur.s>=0){wmMap.rows[wmCur.r].sections.splice(wmCur.s,1);wmSave();renderMap();}wmClose();});
+      document.getElementById('wm-fsave').addEventListener('click',function(){
+        var nm=document.getElementById('wm-fname').value.trim();
+        var dp=document.getElementById('wm-fdept').value;
+        var by=document.getElementById('wm-fbay').value.trim();
+        if(!nm){wmToast('Enter a name');return;}
+        if(wmCur.s<0)wmMap.rows[wmCur.r].sections.push({name:nm,dept:dp,bay:by});
+        else wmMap.rows[wmCur.r].sections[wmCur.s]={name:nm,dept:dp,bay:by};
+        wmSave();renderMap();wmClose();
+      });
+    }
+  }
+  if(document.readyState!=='loading')onceWire();else document.addEventListener('DOMContentLoaded',onceWire);
+})();
+function wmShare(){
+  var txt='CC WAREHOUSE MAP\n\n'+wmMap.rows.map(function(r){
+    return r.label+':\n'+(r.sections.length?r.sections.map(function(s){return '  • '+s.name+(s.bay?' (Bay '+s.bay+')':'')+' — '+wmDept(s.dept).label;}).join('\n'):'  (empty)');
+  }).join('\n\n');
+  if(navigator.share){navigator.share({title:'CC Warehouse Map',text:txt}).catch(function(){});}
+  else if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){wmToast('Copied layout');},function(){wmToast('Copy failed');});}
+  else wmToast('Sharing not supported');
+}
+
 function renderView(){
   shopEnsure();
   var isCollect=/^s[0-9]+$/.test(view);
@@ -720,6 +876,7 @@ function renderView(){
   else if(view==='over')renderOverstock();
   else if(view==='whorder')renderWHOrder();
   else if(view==='shopify')renderShopify();
+  else if(view==='map')renderMap();
   else renderImgs();
   backfillVisibleImages();
 }
@@ -2379,5 +2536,20 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
     else{b.style.cssText+=';position:fixed;right:12px;bottom:12px;z-index:998';document.body.appendChild(b);}}
   if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',mount);}else{mount();}
 })();</script>
+<div class="wm-ov" id="wm-ov">
+  <div class="wm-sheet">
+    <h3 id="wm-title">Edit section</h3>
+    <div class="wm-fld"><label>Brand / section name</label><input id="wm-fname" placeholder="e.g. Aunt Jackie's"></div>
+    <div class="wm-fld"><label>Department</label><select id="wm-fdept"></select></div>
+    <div class="wm-fld"><label>Bay / shelf code (optional)</label><input id="wm-fbay" placeholder="e.g. A3"></div>
+    <div class="wm-sheetbtns">
+      <button class="wm-btn danger" id="wm-fdel">Delete</button>
+      <button class="wm-btn" id="wm-fcancel">Cancel</button>
+      <button class="wm-btn primary" id="wm-fsave">Save</button>
+    </div>
+  </div>
+</div>
+<div id="wm-toast"></div>
+
 </body>
 </html>
