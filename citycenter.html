@@ -742,6 +742,7 @@ function renderView(){
   else if(view==='whorder')renderWHOrder();
   else if(view==='shopify')renderShopify();
   else renderImgs();
+  backfillVisibleImages();
 }
 
 var BRANCH_TARGETS={'Chapeltown':7,'Roundhay':6};
@@ -1343,6 +1344,12 @@ var __existsTried={};     // bc -> 1 once queried (avoid refetch loops)
 function shopExistsConfirmed(bc){return !!(existsCheck[bc]&&existsCheck[bc].exists);}
 (function(){try{var c=JSON.parse(localStorage.getItem('cc_shop_exists')||'null');if(c&&Date.now()-c.ts<60*60*1000&&c.d){existsCheck=c.d;}}catch(e){}})();
 function __saveExists(){try{localStorage.setItem('cc_shop_exists',JSON.stringify({ts:Date.now(),d:existsCheck}));}catch(e){}}
+function backfillVisibleImages(){
+  var out=document.getElementById('out'); if(!out)return;
+  var need=[]; out.querySelectorAll('[data-bc]').forEach(function(r){var bc=r.getAttribute('data-bc'); if(bc&&!imgs[bc]&&!(bc in existsCheck)&&!__existsTried[bc])need.push(bc);});
+  if(!need.length)return;
+  verifyExists(need,function(changed){if(changed)renderView();});
+}
 function verifyExists(barcodes,done){
   var todo=[];(barcodes||[]).forEach(function(bc){if(bc&&!(bc in existsCheck)&&!__existsTried[bc]){__existsTried[bc]=1;todo.push(bc);}});
   if(!todo.length){if(done)done(false);return;}
@@ -1352,11 +1359,11 @@ function verifyExists(barcodes,done){
     fetch('/api/shopify/exists',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({barcodes:group})})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(j){
-        if(j&&j.results){Object.keys(j.results).forEach(function(bc){var info=j.results[bc]||{};existsCheck[bc]={exists:!!info.exists,hasImage:!!info.hasImage};if(info.exists){changed=true;if(!shopifyData[bc])shopifyData[bc]={on_shopify:true,has_image:!!info.hasImage,image_url:null};}});}
+        if(j&&j.results){Object.keys(j.results).forEach(function(bc){var info=j.results[bc]||{};existsCheck[bc]={exists:!!info.exists,hasImage:!!info.hasImage};if(info.exists){changed=true;if(!shopifyData[bc])shopifyData[bc]={on_shopify:true,has_image:!!info.hasImage,image_url:info.imageUrl||null};if(info.imageUrl&&!imgs[bc]){imgs[bc]=info.imageUrl;}}});}
         group.forEach(function(bc){if(!(bc in existsCheck))existsCheck[bc]={exists:false,hasImage:false};});
       })
       .catch(function(){})
-      .then(function(){if(--pending===0){__saveExists();if(done)done(changed);}});
+      .then(function(){if(--pending===0){__saveExists();try{localStorage.setItem('cc_shopify_imgs',JSON.stringify({ts:Date.now(),d:imgs,s:shopifyData}));}catch(e){}if(done)done(changed);}});
   });
 }
 
