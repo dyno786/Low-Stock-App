@@ -91,6 +91,7 @@ export default async function handler(req, res) {
           exists: true,
           status: p.status,                       // ACTIVE | DRAFT | ARCHIVED
           hasImage: !!(p.featuredImage && p.featuredImage.url),
+          imageUrl: (p.featuredImage && p.featuredImage.url) || null,
           title: p.title,
           productUrl: p.onlineStoreUrl || null,
           adminUrl: STORE ? `https://${STORE}/admin/products/${idNum}` : null,
