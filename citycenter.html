@@ -1334,6 +1334,32 @@ function shopEsc(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</
 function destByBc(bc){var a=destData||[];for(var i=0;i<a.length;i++)if(a[i].bc===bc)return a[i];return null;}
 function priceByBc(bc){var S=[destData,srcData[0],srcData[1],srcData[2]];for(var s=0;s<S.length;s++){var a=S[s]||[];for(var i=0;i<a.length;i++){if(a[i].bc===bc&&a[i].pr>0)return a[i].pr;}}return 0;}
 // ---- + Shopify button on low / negatives / overstock / W-H order / missing-images rows ----
+// ---- LIVE Shopify existence check ----
+// The daily image sheet can miss products that ARE already listed, which made the app
+// show a false "+ Shopify". This verifies barcodes straight from Shopify (api/shopify/exists)
+// and is fail-soft: if the endpoint is unavailable it silently leaves behaviour unchanged.
+var existsCheck={};       // bc -> {exists, hasImage}
+var __existsTried={};     // bc -> 1 once queried (avoid refetch loops)
+function shopExistsConfirmed(bc){return !!(existsCheck[bc]&&existsCheck[bc].exists);}
+(function(){try{var c=JSON.parse(localStorage.getItem('cc_shop_exists')||'null');if(c&&Date.now()-c.ts<60*60*1000&&c.d){existsCheck=c.d;}}catch(e){}})();
+function __saveExists(){try{localStorage.setItem('cc_shop_exists',JSON.stringify({ts:Date.now(),d:existsCheck}));}catch(e){}}
+function verifyExists(barcodes,done){
+  var todo=[];(barcodes||[]).forEach(function(bc){if(bc&&!(bc in existsCheck)&&!__existsTried[bc]){__existsTried[bc]=1;todo.push(bc);}});
+  if(!todo.length){if(done)done(false);return;}
+  var batches=[];for(var i=0;i<todo.length;i+=30)batches.push(todo.slice(i,i+30));
+  var changed=false,pending=batches.length;
+  batches.forEach(function(group){
+    fetch('/api/shopify/exists',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({barcodes:group})})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(j){
+        if(j&&j.results){Object.keys(j.results).forEach(function(bc){var info=j.results[bc]||{};existsCheck[bc]={exists:!!info.exists,hasImage:!!info.hasImage};if(info.exists){changed=true;if(!shopifyData[bc])shopifyData[bc]={on_shopify:true,has_image:!!info.hasImage,image_url:null};}});}
+        group.forEach(function(bc){if(!(bc in existsCheck))existsCheck[bc]={exists:false,hasImage:false};});
+      })
+      .catch(function(){})
+      .then(function(){if(--pending===0){__saveExists();if(done)done(changed);}});
+  });
+}
+
 var __shopObs=null,__shopRaf=0;
 function shopEnsure(){
   var out=document.getElementById('out'); if(!out)return;
@@ -1347,18 +1373,22 @@ function shopDecorate(){
   var out=document.getElementById('out'); if(!out)return;
   if(['low','neg','over','whorder','imgs'].indexOf(view)<0)return;
   var rows=out.querySelectorAll('.item-card,.neg-card,.over-card,.who-row,.img-row');
+  var vis=[];
   for(var i=0;i<rows.length;i++){
     var row=rows[i];
-    if(row.querySelector('.shop-add'))continue;
     var bc=row.getAttribute('data-bc');
     if(!bc)continue;
-    if(typeof imgs!=='undefined'&&imgs[bc])continue;   // already online (has a photo) -> skip
+    var existing=row.querySelector('.shop-add');
+    if((typeof imgs!=='undefined'&&imgs[bc])||shopExistsConfirmed(bc)){if(existing)existing.remove();continue;} // online (photo) or confirmed listed -> no button
+    if(!(bc in existsCheck))vis.push(bc);
+    if(existing)continue;
     var btn=document.createElement('button');
     btn.className='shop-add shop-mini';
     btn.setAttribute('data-bc',bc);
     btn.textContent='+ Shopify';
     row.appendChild(btn);
   }
+  if(vis.length)verifyExists(vis,function(changed){if(changed)shopDecorate();});
 }
 document.addEventListener('click',function(e){
   var b=(e.target&&e.target.closest)?e.target.closest('.shop-add'):null;
@@ -1381,7 +1411,7 @@ function renderShopify(){
     return;
   }
   // in-stock items in the 4 categories that are NOT yet on the website (no Shopify image)
-  var all=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!imgs[p.bc];});
+  var all=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!imgs[p.bc]&&!shopExistsConfirmed(p.bc);});
   var counts={};SHOP_CATS.forEach(function(c){counts[c.key]=0;});
   all.forEach(function(p){var k=shopCatOf(p.dp);if(k)counts[k]++;});
   var present=SHOP_CATS.filter(function(c){return counts[c.key]>0;});
@@ -1411,6 +1441,7 @@ function renderShopify(){
   });
   el.innerHTML=html;
   el.querySelectorAll('.shop-subtabs .over-subtab').forEach(function(t){t.addEventListener('click',function(){shopCat=this.getAttribute('data-cat');renderShopify();});});
+  verifyExists(all.map(function(p){return p.bc;}),function(changed){if(changed&&view==='shopify')renderShopify();});
 }
 
 function shopColsHTML(q){
