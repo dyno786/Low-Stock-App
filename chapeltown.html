@@ -778,11 +778,20 @@ var WM_DEPTS=[
 ];
 function wmDept(k){for(var i=0;i<WM_DEPTS.length;i++)if(WM_DEPTS[i].k===k)return WM_DEPTS[i];return WM_DEPTS[WM_DEPTS.length-1];}
 function wmDefaultMap(){return {rows:[
-  {label:'Row 1', sections:[{name:'Cosmetics A',dept:'cos',bay:''},{name:'Cosmetics B',dept:'cos',bay:''}]},
-  {label:'Row 2', sections:[{name:"Aunt Jackie's",dept:'afro',bay:''},{name:'African Pride',dept:'afro',bay:''},{name:'American Dream',dept:'afro',bay:''},{name:'Ampro',dept:'afro2',bay:''}]},
-  {label:'Row 3', sections:[{name:'Xpression',dept:'hair',bay:''},{name:'Kuknus',dept:'hair',bay:''},{name:'Cherish',dept:'hair',bay:''},{name:'Smart Braid',dept:'hair',bay:''}]},
-  {label:'Row 4', sections:[{name:'Accessories',dept:'acc',bay:''}]}
+  {label:'Row 1', sections:[{name:'Cosmetics A',dept:'cos',bay:'',kw:['LOREAL','MAJIREL','SCHW','WELLA','GARNI']},{name:'Cosmetics B',dept:'cos',bay:'',kw:['NICKA K','NK ','BF ','MASTER']}]},
+  {label:'Row 2', sections:[{name:"Aunt Jackie's",dept:'afro',bay:'',kw:['AJ','AUNT JACK']},{name:'African Pride',dept:'afro',bay:'',kw:['AFP','AFRICAN PRIDE']},{name:'American Dream',dept:'afro',bay:'',kw:['AMERICAN DREAM','AM DREAM']},{name:'Ampro',dept:'afro2',bay:'',kw:['AMPRO']}]},
+  {label:'Row 3', sections:[{name:'Xpression',dept:'hair',bay:'',kw:['XPRESSION','X-PRESSION','X PRESSION']},{name:'Kuknus',dept:'hair',bay:'',kw:['KUKNUS']},{name:'Cherish',dept:'hair',bay:'',kw:['CHERISH']},{name:'Smart Braid',dept:'hair',bay:'',kw:['SMART BRAID','SMART']}]},
+  {label:'Row 4', sections:[{name:'Accessories',dept:'acc',bay:'',kw:['ACC','BAND','CLIP','PIN','NET','CAP']}]}
 ]};}
+// ---- layout-order helpers (sort picking lists to follow the Map walk) ----
+var WM_DEFKW={"AUNT JACKIE'S":['AJ','AUNT JACK'],'AFRICAN PRIDE':['AFP','AFRICAN PRIDE'],'AMERICAN DREAM':['AMERICAN DREAM','AM DREAM'],'AMPRO':['AMPRO'],'XPRESSION':['XPRESSION','X-PRESSION'],'KUKNUS':['KUKNUS'],'CHERISH':['CHERISH'],'SMART BRAID':['SMART BRAID','SMART']};
+function wmKw(sec){if(sec&&sec.kw&&sec.kw.length)return sec.kw;var n=((sec&&sec.name)||'').toUpperCase().trim();if(WM_DEFKW[n])return WM_DEFKW[n];return n?[n.split(/\s+/)[0]]:[];}
+function wmFlat(){var out=[];((wmMap&&wmMap.rows)||[]).forEach(function(row){(row.sections||[]).forEach(function(s){out.push(s);});});return out;}
+function wmRank(text){var up=(''+(text||'')).toUpperCase();var f=wmFlat();for(var i=0;i<f.length;i++){var kws=wmKw(f[i]);for(var k=0;k<kws.length;k++){var kw=(''+kws[k]).toUpperCase().trim();if(kw&&up.indexOf(kw)>=0)return i;}}return 9999;}
+function wmLayoutOn(){try{return localStorage.getItem('cc_layout_order')!=='0';}catch(e){return true;}}
+function wmSetLayout(v){try{localStorage.setItem('cc_layout_order',v?'1':'0');}catch(e){}}
+function wmLayBar(){var on=wmLayoutOn();return '<div class="lay-toggle" style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:'+(on?'#f3e8ff':'#fff')+';border:1px solid '+(on?'#c4b5fd':'var(--border)')+';border-radius:10px;padding:9px 12px;margin:8px 10px;cursor:pointer;font-size:13px;font-weight:700;color:'+(on?'#5b21b6':'var(--sub)')+'"><span>\uD83D\uDDFA\uFE0F Layout order \u2014 follow the Map</span><span>'+(on?'ON':'OFF')+'</span></div>';}
+(function(){var o=document.getElementById('out');if(o&&!o._layWired){o._layWired=1;o.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.lay-toggle');if(!t)return;e.stopPropagation();wmSetLayout(!wmLayoutOn());if(typeof renderView==='function')renderView();});}})();
 var WM_KEY='cc_wh_map_v1', wmEdit=false, wmCur={r:-1,s:-1}, wmMap=wmLoad();
 function wmLoad(){try{var r=localStorage.getItem(WM_KEY);if(r){var m=JSON.parse(r);if(m&&m.rows)return m;}}catch(e){}return wmDefaultMap();}
 function wmSave(){try{localStorage.setItem(WM_KEY,JSON.stringify(wmMap));}catch(e){}}
@@ -823,6 +832,7 @@ function wmOpen(ri,si){
   document.getElementById('wm-title').textContent=creating?'Add section':'Edit section';
   document.getElementById('wm-fname').value=s.name||'';
   document.getElementById('wm-fbay').value=s.bay||'';
+  document.getElementById('wm-fkw').value=(s.kw&&s.kw.join)?s.kw.join(', '):'';
   document.getElementById('wm-fdept').innerHTML=WM_DEPTS.map(function(d){return '<option value="'+d.k+'"'+(d.k===s.dept?' selected':'')+'>'+d.label+'</option>';}).join('');
   document.getElementById('wm-fdel').style.display=creating?'none':'block';
   document.getElementById('wm-ov').classList.add('on');
@@ -865,9 +875,10 @@ function wmMove(act,ri,si){
         var nm=document.getElementById('wm-fname').value.trim();
         var dp=document.getElementById('wm-fdept').value;
         var by=document.getElementById('wm-fbay').value.trim();
+        var kw=document.getElementById('wm-fkw').value.split(',').map(function(x){return x.trim();}).filter(Boolean);
         if(!nm){wmToast('Enter a name');return;}
-        if(wmCur.s<0)wmMap.rows[wmCur.r].sections.push({name:nm,dept:dp,bay:by});
-        else wmMap.rows[wmCur.r].sections[wmCur.s]={name:nm,dept:dp,bay:by};
+        if(wmCur.s<0)wmMap.rows[wmCur.r].sections.push({name:nm,dept:dp,bay:by,kw:kw});
+        else wmMap.rows[wmCur.r].sections[wmCur.s]={name:nm,dept:dp,bay:by,kw:kw};
         wmSave();renderMap();wmClose();
       });
     }
@@ -990,6 +1001,7 @@ function renderOverstock(){
     el.innerHTML='<div class="loading"><div class="spin"></div>Loading branches…</div>';return;
   }
   var rows=computeOverstockRows();
+  if(rows&&rows.length&&wmLayoutOn())rows.sort(function(a,b){var ra=wmRank(a.nm),rb=wmRank(b.nm);return ra!==rb?ra-rb:(a.nm<b.nm?-1:1);});
   // ALWAYS render the settings panel + header, even when no overstock — so
   // the user can still adjust thresholds when nothing is showing.
   var __s=loadOverSettings();
@@ -1042,7 +1054,7 @@ function renderOverstock(){
   }
 
   // Header + sub-tab pills
-  var html=shellHeader;
+  var html=shellHeader+wmLayBar();
   html+='<div class="over-subtabs">';
   destBranches.forEach(function(b){
     var cnt=b.rows.length;
@@ -1418,7 +1430,7 @@ function renderWHOrder(){
     rows.push({bc:p.bc,nm:p.nm,sz:p.sz||(destMap[p.bc]?destMap[p.bc].sz:''),here:here,wh:p.qty,order:order,pr:p.pr});
   });
   var groups={};rows.forEach(function(r){var b=whoBrand(r.nm);(groups[b]=groups[b]||[]).push(r);});
-  var brands=Object.keys(groups).sort(function(a,b){return a.localeCompare(b);});
+  var brands=Object.keys(groups).sort(function(a,b){if(wmLayoutOn()){var ra=wmRank(a),rb=wmRank(b);if(ra!==rb)return ra-rb;}return a.localeCompare(b);});
   var total=rows.length,done=rows.filter(function(r){return whoTx[r.bc];}).length;
   setProg(total,done,total?(done+' of '+total+' lines checked'):'Nothing to order');
   var head='<div class="who-head"><div class="who-title">🚚 Warehouse order \u2014 '+WHO_BR+'</div>'+
@@ -1427,7 +1439,7 @@ function renderWHOrder(){
       '<span style="margin-left:12px">Top up to</span><button class="who-tbtn" data-set="max" data-d="-1">−</button><b id="who-maxv">'+MX+'</b><button class="who-tbtn" data-set="max" data-d="1">+</button></div></div>';
   if(!rows.length){el.innerHTML=head+whoNSbarHTML()+'<div class="empty">Nothing needed from the warehouse right now \u2713</div>';wireWHO();return;}
   var totOrder=rows.reduce(function(s,r){return s+r.order;},0);
-  var html=head+whoNSbarHTML()+'<div class="who-summary">'+total+' lines \u00b7 '+totOrder+' pcs expected in</div>';
+  var html=head+whoNSbarHTML()+'<div class="who-summary">'+total+' lines \u00b7 '+totOrder+' pcs expected in</div>'+wmLayBar();
   brands.forEach(function(b){
     var items=groups[b].slice().sort(function(x,y){return x.nm.localeCompare(y.nm);});
     var bdone=items.filter(function(r){return whoTx[r.bc];}).length;
@@ -1883,7 +1895,7 @@ function renderOOS(){
   });
 
   items.sort(function(a,b){
-    // Never-sold-here items always at the end (no day count to sort by)
+    if(wmLayoutOn()){var ra=wmRank(a.nm),rb=wmRank(b.nm);if(ra!==rb)return ra-rb;}
     if(a._neverSoldHere&&!b._neverSoldHere)return 1;
     if(!a._neverSoldHere&&b._neverSoldHere)return -1;
     if(a._neverSoldHere&&b._neverSoldHere)return a.nm<b.nm?-1:1;
@@ -1899,6 +1911,7 @@ function renderOOS(){
   var priorityInData=PRIORITY_OOS_DEPTS.filter(function(d){return !!allDepts[d];});
   var otherDepts=deptNames.filter(function(d){return PRIORITY_OOS_DEPTS.indexOf(d)<0;});
 
+  html+=wmLayBar();
   html+='<div style="background:var(--s1);border-bottom:1px solid var(--border);padding:8px 10px">';
   html+='<div style="font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Departments <span style="font-weight:400">(tap to toggle)</span></div>';
   html+='<div style="display:flex;gap:5px;flex-wrap:wrap">';
@@ -2567,6 +2580,7 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
     <div class="wm-fld"><label>Brand / section name</label><input id="wm-fname" placeholder="e.g. Aunt Jackie's"></div>
     <div class="wm-fld"><label>Department</label><select id="wm-fdept"></select></div>
     <div class="wm-fld"><label>Bay / shelf code (optional)</label><input id="wm-fbay" placeholder="e.g. A3"></div>
+    <div class="wm-fld"><label>Match keywords (comma-sep \u2014 powers layout order)</label><input id="wm-fkw" placeholder="e.g. AJ, Aunt Jack"></div>
     <div class="wm-sheetbtns">
       <button class="wm-btn danger" id="wm-fdel">Delete</button>
       <button class="wm-btn" id="wm-fcancel">Cancel</button>
