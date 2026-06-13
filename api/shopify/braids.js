@@ -47,7 +47,8 @@ const PRODUCTS_QUERY = `
   query ($q: String!, $after: String) {
     products(first: 50, query: $q, after: $after) {
       edges { node {
-        id title status
+        id title status tags
+        featuredImage { url(transform: {maxWidth: 300, maxHeight: 300}) }
         options { name values }
         variants(first: 100) { edges { node { barcode selectedOptions { name value } } } }
       } }
@@ -78,6 +79,53 @@ function valueFor(selectedOptions, name) {
   return so ? so.value : null;
 }
 
+// ---- product CATEGORY: one of these keys (drives the chip tabs on orders.html) ----
+//   prestretched | braid | afro | curly
+// Detection order, first hit wins:
+//   1) explicit override tag  ->  cat:prestretched | cat:braid | cat:afro | cat:curly
+//        (also accepts cat:pre-stretch / cat:bulk / cat:twist / cat:crochet)
+//   2) the store's existing descriptive tags (e.g. "Pre Stretched", "Afro Kinky", "crochet hair")
+//   3) keywords in the product title
+//   4) fallback -> braid
+const CATEGORIES = [
+  { key: "prestretched", label: "Pre-stretched" },
+  { key: "braid", label: "Braid / bulk" },
+  { key: "afro", label: "Afro & twist" },
+  { key: "curly", label: "Crochet / curly" },
+];
+
+// note: deliberately does NOT match a bare "twist" (too ambiguous — water-wave/passion
+// products are also "twists"); afro is matched by afro/kinky/spring/bomb/marley/locs.
+function catFromText(s) {
+  const t = String(s || "").toLowerCase();
+  if (/\bafro\b|kinky|marley|havana|\bspring(y|ie)?\b|\bbomb\b|faux\s*locs?|\blocs?\b/.test(t)) return "afro";
+  if (/crochet|water[\s-]*wave|water[\s-]*curl|deep[\s-]*curl|ocean[\s-]*wave|\bbounce\b|coily|aquatex|\bwavy\b|bohemian|\bpassion\b|goddess|\bcurl/.test(t)) return "curly";
+  if (/pre[\s-]*stretch/.test(t)) return "prestretched";
+  return null;
+}
+
+function overrideFromTags(tags) {
+  for (const raw of tags || []) {
+    const m = String(raw).toLowerCase().trim().match(/^cat:(.+)$/);
+    if (!m) continue;
+    const v = m[1].trim();
+    if (/^(pre[\s-]*stretch(ed)?)$/.test(v)) return "prestretched";
+    if (/^(braid|bulk)$/.test(v)) return "braid";
+    if (/^(afro|twist)$/.test(v)) return "afro";
+    if (/^(curly|crochet|curl)$/.test(v)) return "curly";
+  }
+  return null;
+}
+
+function detectCategory(p) {
+  const tags = p.tags || [];
+  const override = overrideFromTags(tags);
+  if (override) return override;
+  // style (afro/curly) wins over the pre-stretched *attribute*, so look at title+tags
+  // together in one pass — catFromText checks afro, then curly, then pre-stretched.
+  return catFromText(tags.join(" ") + " " + (p.title || "")) || "braid";
+}
+
 async function fetchSupplier(sup) {
   const q = `tag:'${sup.tag.replace(/'/g, "")}' AND tag:braids AND status:active`;
   const products = [];
@@ -99,6 +147,8 @@ async function fetchSupplier(sup) {
       products.push({
         id: String(p.id).split("/").pop(),
         title: p.title,
+        category: detectCategory(p),
+        image: (p.featuredImage && p.featuredImage.url) || null,
         colourOption: colourName,
         lengthOption: lengthName,
         variants,
@@ -116,7 +166,10 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "public, s-maxage=600, stale-while-revalidate=86400");
 
     if (!key) {
-      return res.status(200).json({ suppliers: SUPPLIERS.map((s) => ({ key: s.key, label: s.label, tag: s.tag })) });
+      return res.status(200).json({
+        suppliers: SUPPLIERS.map((s) => ({ key: s.key, label: s.label, tag: s.tag })),
+        categories: CATEGORIES,
+      });
     }
     const sup = SUPPLIERS.find((s) => s.key === key || s.tag.toLowerCase() === String(key).toLowerCase());
     if (!sup) return res.status(404).json({ error: "Unknown supplier: " + key, suppliers: SUPPLIERS.map((s) => s.key) });
