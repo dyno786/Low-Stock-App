@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CC Orders</title>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --green:#15803d;--greenbg:#f0fdf4;--amber:#b45309;--amberbg:#fffbeb;
+  --red:#cc0000;--redbg:#fff0f0;--purple:#6d28d9;--purplebg:#ede9fe;--purpletxt:#4c1d95;
+  --bg:#f0f0f0;--s1:#fff;--border:#e3e3e6;--ink:#111;--sub:#777;--r:12px;--wa:#25d366;
+  --wh:#7c3aed;--whbg:#f3effe;--rdh:#2563eb;--rdhbg:#eef4ff;--city:#15803d;--citybg:#f0fdf4;--chap:#ea580c;--chapbg:#fff4ec;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:188px}
+.hdr{background:var(--purple);padding:11px 14px}
+.hdr-top{display:flex;justify-content:space-between;align-items:center}
+.logo{width:30px;height:30px;background:#fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--purple)}
+.title{color:#fff;font-size:17px;font-weight:800;margin-left:9px}
+.demobadge{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.6px}
+/* brand tabs (scroll) */
+.btabs{display:flex;gap:7px;background:var(--s1);border-bottom:2px solid var(--bg);overflow-x:auto;scrollbar-width:none;padding:0 10px}
+.btabs::-webkit-scrollbar{display:none}
+.btab{flex:0 0 auto;padding:11px 12px;font-size:13px;font-weight:800;color:var(--sub);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.btab.on{color:var(--purple);border-bottom-color:var(--purple)}
+.btab.add{color:var(--purple);opacity:.7}
+/* scope picker */
+.scopewrap{background:var(--s1);border-bottom:1px solid var(--border);padding:8px 0 9px}
+.scopelbl{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--sub);padding:0 11px 6px}
+.scopes{display:flex;gap:6px;overflow-x:auto;padding:0 11px;scrollbar-width:none}
+.scopes::-webkit-scrollbar{display:none}
+.scope{flex:0 0 auto;border:1.5px solid var(--border);background:var(--s1);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:800;color:var(--sub);cursor:pointer;white-space:nowrap}
+.scope.on{background:var(--purple);border-color:var(--purple);color:#fff}
+.scope.wh.on{background:var(--wh);border-color:var(--wh)}
+.scope.combined.on{background:#111827;border-color:#111827}
+/* controls */
+.panel{background:var(--s1);border-bottom:1px solid var(--border);padding:9px 11px}
+.setrow{display:flex;gap:7px;align-items:stretch}
+.setbox{flex:1;border:1px solid var(--border);border-radius:9px;padding:5px 4px;text-align:center;background:#fafafb}
+.setbox .lbl{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--sub);margin-bottom:3px}
+.setctl{display:flex;align-items:center;justify-content:center;gap:3px}
+.setb{width:24px;height:24px;border:1px solid var(--border);background:#fff;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;line-height:1;color:var(--ink);display:flex;align-items:center;justify-content:center}
+.setb:active{background:var(--bg)}
+.setv{font-size:15px;font-weight:800;font-family:ui-monospace,monospace;min-width:22px;text-align:center}
+.unit-seg{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;height:24px;align-self:center}
+.unit-seg button{border:none;background:#fff;padding:0 8px;font-size:11px;font-weight:800;color:var(--sub);cursor:pointer;font-family:var(--font)}
+.unit-seg button.on{background:var(--purple);color:#fff}
+.hint{font-size:10px;margin-top:7px;line-height:1.4;background:var(--purplebg);color:var(--purpletxt);border-radius:7px;padding:6px 9px;font-weight:600}
+.subtabs{display:flex;gap:7px;padding:8px 11px 0}
+.subtab{flex:1;border:1.5px solid var(--border);background:var(--s1);border-radius:9px;padding:8px;font-size:12px;font-weight:800;color:var(--sub);cursor:pointer;text-align:center}
+.subtab.on{border-color:var(--purple);color:var(--purple);background:var(--purplebg)}
+.sumbar{display:flex;margin:9px 11px 0;border:1px solid #ddd6fe;border-radius:var(--r);overflow:hidden;background:linear-gradient(135deg,#ede9fe,#faf8ff)}
+.sumc{flex:1;padding:8px 6px;text-align:center;border-right:1px solid #e5defb}
+.sumc:last-child{border-right:none}
+.sumc .l{font-size:8.5px;text-transform:uppercase;letter-spacing:.4px;font-weight:800;color:var(--purpletxt)}
+.sumc .v{font-size:19px;font-weight:800;font-family:ui-monospace,monospace;line-height:1.1}
+.sumc .v.ord{color:var(--green)}.sumc .v.exc{color:var(--sub)}
+.prod{margin:9px 11px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.prod-h{padding:9px 11px;background:#fafafb;border-bottom:1px solid var(--border)}
+.prod-h-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.prod-nm{font-weight:800;font-size:12.5px;line-height:1.3}
+.prod-nm small{display:block;font-weight:600;color:var(--sub);font-size:10px;margin-top:2px}
+.exprod{flex:0 0 auto;background:none;border:1px solid #f0c8c8;color:#c0392b;font-size:10px;font-weight:800;padding:4px 7px;border-radius:7px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.exprod:active{background:var(--redbg)}
+.chead{display:grid;gap:2px;padding:5px 9px;font-size:8.5px;font-weight:800;text-transform:uppercase;color:var(--sub);background:#fff;border-bottom:1px solid var(--border)}
+.chead div{text-align:center}.chead .vh{text-align:left}
+.chead .wh{color:var(--wh)}.chead .rdh{color:var(--rdh)}.chead .city{color:var(--city)}.chead .chap{color:var(--chap)}
+.vrow{display:grid;gap:2px;padding:8px 9px;border-bottom:1px solid #f3f3f5;align-items:center}
+.vrow:last-child{border-bottom:none}
+.vrow.ord{background:#fcfdfc}
+.lenhdr{padding:6px 10px;background:#f6f3fe;border-bottom:1px solid var(--border);font-size:11px;font-weight:800;color:var(--purpletxt);display:flex;align-items:center;gap:7px}
+.lenhdr .pill{background:var(--purple);color:#fff;border-radius:6px;padding:2px 8px;font-size:11px}
+.lenhdr small{font-weight:600;color:var(--sub)}
+.notrack{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--amber);background:var(--amberbg);padding:1px 6px;border-radius:4px}
+.cell.na{color:#c9ccd2;font-weight:600;background:transparent!important}
+.vmeta{min-width:0}
+.vnm{font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px}
+.sw{width:16px;height:16px;border-radius:5px;border:1px solid rgba(0,0,0,.18);flex-shrink:0}
+.vbc{font-size:9.5px;color:var(--sub);font-family:ui-monospace,monospace;margin-top:1px}
+.exq{margin-top:3px;background:none;border:none;color:#c0392b;font-size:10px;font-weight:700;padding:1px 0;cursor:pointer;font-family:inherit}
+.exq:active{opacity:.6}
+.cell{text-align:center;font-size:13px;font-weight:700;font-family:ui-monospace,monospace;border-radius:5px;padding:3px 0}
+.cell.z{color:#c9ccd2;font-weight:600;background:transparent!important}
+.cell.wh{color:var(--wh);background:var(--whbg)}.cell.rdh{color:var(--rdh);background:var(--rdhbg)}
+.cell.city{color:var(--city);background:var(--citybg)}.cell.chap{color:var(--chap);background:var(--chapbg)}
+.cell.tot{color:var(--ink);background:var(--bg);font-weight:800}
+.cell.tot.low{color:var(--red);background:var(--redbg)}
+.stp{display:flex;align-items:center;justify-content:flex-end;gap:3px}
+.stpb{width:27px;height:30px;border:1px solid var(--border);background:#fff;border-radius:7px;font-size:17px;font-weight:700;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stpb.minus{color:var(--red)}.stpb.plus{color:var(--green)}
+.stpb:active{background:var(--bg)}
+.stpv{min-width:30px;text-align:center;line-height:1.05}
+.stpv .n{font-size:15px;font-weight:800;font-family:ui-monospace,monospace}
+.stpv .bx{font-size:8px;color:var(--sub);font-weight:700}
+.stpv.sugg .n{color:var(--green)}.stpv.edited .n{color:var(--purple)}.stpv.zero .n{color:#c9ccd2}
+.exrow{display:flex;align-items:center;gap:9px;padding:9px 11px;border-bottom:1px solid #f3f3f5}
+.exrow:last-child{border-bottom:none}
+.exrow .sw{width:18px;height:18px}
+.exrow.prodlvl{background:#fff7ed}
+.exinfo{flex:1;min-width:0}
+.exnm{font-weight:700;font-size:13px}
+.exbc{font-size:9.5px;color:var(--sub);font-family:ui-monospace,monospace}
+.extag{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--amber);background:var(--amberbg);padding:1px 5px;border-radius:4px;margin-left:5px}
+.exback{background:var(--greenbg);border:1px solid #bbf7d0;color:var(--green);border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+.exhdr{padding:10px 12px;font-size:11px;color:var(--sub);background:var(--bg);font-weight:600;line-height:1.4}
+.foot{position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--border);z-index:50;max-width:480px;margin:0 auto}
+.foot-tot{display:flex;align-items:center;padding:8px 14px 2px}
+.foot-tot .l{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;font-weight:800}
+.foot-tot .v{font-size:20px;font-weight:800;color:var(--purple);font-family:ui-monospace,monospace;line-height:1}
+.foot-tot .v small{font-size:11px;color:var(--sub);font-weight:600}
+.foot-btns{display:flex;gap:7px;padding:5px 12px 4px}
+.foot-btns.wa{padding:0 12px 12px}
+.fbtn{flex:1;border:none;border-radius:10px;padding:11px 6px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:var(--font)}
+.fbtn.pdf{background:#b91c1c;color:#fff}.fbtn.xls{background:#15803d;color:#fff}
+.fbtn.reset{background:var(--s1);color:var(--sub);border:1px solid var(--border);flex:0 0 auto;padding:11px 13px}
+.fbtn.waone{background:var(--wa);color:#fff;display:flex;align-items:center;justify-content:center;gap:5px}
+.fbtn:active{opacity:.85}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:196px;background:#111827;color:#fff;padding:9px 15px;border-radius:10px;font-size:12.5px;font-weight:600;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;text-align:center;max-width:90%}
+.toast.show{opacity:1}
+.empty{padding:40px 16px;text-align:center;color:var(--sub);font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="hdr-top">
+    <div style="display:flex;align-items:center"><div class="logo">CC</div><div class="title">Orders</div></div>
+    <span class="demobadge">demo data</span>
+  </div>
+</div>
+
+<div class="btabs" id="btabs"></div>
+
+<div class="scopewrap">
+  <div class="scopelbl">Order for…</div>
+  <div class="scopes" id="scopes"></div>
+</div>
+
+<div class="panel">
+  <div class="setrow">
+    <div class="setbox"><div class="lbl">Min in stock</div>
+      <div class="setctl"><button class="setb" data-set="min" data-d="-1">−</button><span class="setv" id="s-min">6</span><button class="setb" data-set="min" data-d="1">+</button></div></div>
+    <div class="setbox"><div class="lbl">Max in stock</div>
+      <div class="setctl"><button class="setb" data-set="max" data-d="-1">−</button><span class="setv" id="s-max">12</span><button class="setb" data-set="max" data-d="1">+</button></div></div>
+    <div class="setbox"><div class="lbl">Pcs / box</div>
+      <div class="setctl"><button class="setb" data-set="box" data-d="-1">−</button><span class="setv" id="s-box">1</span><button class="setb" data-set="box" data-d="1">+</button></div></div>
+    <div class="setbox"><div class="lbl">Order in</div>
+      <div class="unit-seg" id="unit-seg"><button data-u="pcs" class="on">Pcs</button><button data-u="box">Box</button></div></div>
+  </div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="subtabs" id="subtabs">
+  <div class="subtab on" data-t="order">📋 To order</div>
+  <div class="subtab" data-t="excluded">🚫 Excluded <span id="exc-n">0</span></div>
+</div>
+
+<div class="sumbar">
+  <div class="sumc"><div class="l" id="sum-l1">In-scope stock</div><div class="v" id="sum-stock">0</div></div>
+  <div class="sumc"><div class="l">To order</div><div class="v ord" id="sum-order">0</div></div>
+  <div class="sumc"><div class="l">Excluded</div><div class="v exc" id="sum-exc">0</div></div>
+</div>
+
+<div id="list"></div>
+
+<div class="foot">
+  <div class="foot-tot"><div style="flex:1"><div class="l">Total · <span id="f-brand">Xpression</span> · <span id="f-scope">Chapeltown</span></div>
+    <div class="v"><span id="f-units">0</span> <small>pcs · <span id="f-box">0</span> box · <span id="f-lines">0</span> lines</small></div></div></div>
+  <div class="foot-btns">
+    <button class="fbtn reset" id="b-reset">↺</button>
+    <button class="fbtn pdf" id="b-pdf">⬇ PDF</button>
+    <button class="fbtn xls" id="b-xls">⬇ Excel</button>
+  </div>
+  <div class="foot-btns wa">
+    <button class="fbtn waone" id="b-wapdf">📲 WhatsApp PDF</button>
+    <button class="fbtn waone" id="b-waxls">📲 WhatsApp Excel</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== BRANDS — each tab is driven by a Shopify VENDOR (or list of vendors) =====
+// In the live app, adding a brand = adding its vendor name(s) here. Tags also supported.
+var BRANDS=[
+  {k:'xpression',label:'Xpression',vendors:['Xpression','Outre Xpression - Lil Looks']},
+  {k:'cherish',  label:'Cherish',  vendors:['Cherish Pre Stretched']},
+  {k:'kuknus',   label:'Kuknus',   vendors:['Kuknus','Kuknus Braids']},
+  {k:'smart',    label:'Smart Braid',vendors:['Smart Braid']}
+];
+var DATA={
+  xpression:[
+    {nm:'Outre X-pression Lil Looks Passion Waterwave Feed Twist',active:true,lens:[
+      {len:'8\"',cols:[{c:'1',bc:''},{c:'1B',bc:''},{c:'2',bc:''},{c:'4',bc:''}]},
+      {len:'10\"',cols:[{c:'1',bc:'5056538302760'},{c:'1B',bc:'5056538302777'},{c:'2',bc:'5056538302784'},{c:'4',bc:'5056538302791'}]}
+    ]},
+    {nm:'X Pression Outre Lil Looks Pre Stretched Braid 3x 32"',active:true,cols:[
+      {c:'Candy',bc:'5056538309561'},{c:'Mermaid',bc:'5056538309578'},{c:'Fairy Dust',bc:'5056538309585'}]},
+    {nm:'Xpression Ultra Braid 82" 165g — 3 for £9',active:true,cols:[
+      {c:'1',bc:'881836180162'},{c:'1B',bc:'881836180247'},{c:'2',bc:'881836180377'},{c:'4',bc:'881836180469'},
+      {c:'27',bc:'881836180384'},{c:'30',bc:'881836180407'},{c:'350',bc:'881836180445'},{c:'99J',bc:'881836180520'},
+      {c:'BG',bc:'881836180537'},{c:'1B/30',bc:'881836180285'},{c:'Purple',bc:'881836180551'},{c:'Green',bc:'881836218926'}]},
+    {nm:'Xpression Ultra Braid Pre-Stretched 46" 160g',active:true,cols:[
+      {c:'1',bc:'881836242112'},{c:'1B',bc:'881836242129'},{c:'2',bc:'881836242136'},{c:'4',bc:'881836242174'},
+      {c:'27',bc:'881836242143'},{c:'30',bc:'881836242150'},{c:'613',bc:'881836242198'},{c:'T1B/Purple',bc:'881836242334'}]}
+  ],
+  cherish:[
+    {nm:'Cherish Pre Stretched 6x Mega Pack Braiding Hair 46"',active:true,cols:[
+      {c:'1B',bc:'5055675640599'},{c:'280',bc:'5055675644641'}]}
+  ],
+  kuknus:[
+    {nm:'Kuknus Pre Stretched Spetra Ez Braid Professional 2x 20"',active:true,cols:[
+      {c:'1 - Jet Black',bc:'636655679270'},{c:'1B - Off Black',bc:'6909192110013'},{c:'T1B/30',bc:'636655681297'},
+      {c:'T1B/33',bc:'636655681280'},{c:'T1B/613',bc:'636655684939'},{c:'T1B/Green',bc:'636655683055'}]},
+    {nm:'Kuknus Collection Brazilian Bulk',active:true,cols:[
+      {c:'T1B/BUR',bc:'8501020390413'}]}
+  ],
+  smart:[
+    {nm:'Smart Braid Pre-Stretched 2X PACK 26”',active:true,cols:[
+      {c:'1',bc:'732133851050'},{c:'1B',bc:'732133851067'},{c:'2',bc:'732133851074'},{c:'4',bc:'754003325003'},
+      {c:'27',bc:'754003325010'},{c:'30',bc:'754003325027'},{c:'613',bc:'754003325034'},{c:'900',bc:'754003325041'},
+      {c:'T1B/27',bc:'754003325133'},{c:'T1B/30',bc:'732133851128'},{c:'Blue',bc:'754003325072'},{c:'Purple',bc:'754003325089'},
+      {c:'Lilac',bc:'754003325119'},{c:'Periwinkle',bc:'754003325102'}]},
+    {nm:'Smart Braid Professional Pre-stretched 3X 16" Value Pack',active:true,cols:[
+      {c:'1',bc:'616612949905'},{c:'1B',bc:'616612949912'},{c:'2',bc:'616612949929'},{c:'4',bc:'616612949936'},
+      {c:'27',bc:'616612950642'},{c:'30',bc:'616612950659'},{c:'613',bc:'766679718751'},{c:'T1B/27',bc:'616612949943'}]}
+  ]
+};
+function brandOf(k){return BRANDS.filter(function(b){return b.k===k;})[0];}
+var LOCM={wh:{lbl:'WH',cls:'wh'},ch:{lbl:'Chap',cls:'chap'},ci:{lbl:'City',cls:'city'},rd:{lbl:'Rdh',cls:'rdh'}};
+var SCOPES=[
+  {k:'ch',lbl:'Chapeltown',locs:['ch'],excl:true},{k:'rd',lbl:'Roundhay',locs:['rd'],excl:true},
+  {k:'ci',lbl:'City Centre',locs:['ci'],excl:true},{k:'wh',lbl:'Warehouse',locs:['wh'],excl:true,cls:'wh'},
+  {k:'all',lbl:'Combined',locs:['wh','ch','ci','rd'],excl:false,cls:'combined'},
+  {k:'ch_wh',lbl:'Chap + WH',locs:['ch','wh'],excl:true},{k:'rd_wh',lbl:'Rdh + WH',locs:['rd','wh'],excl:true},
+  {k:'ci_wh',lbl:'City + WH',locs:['ci','wh'],excl:true}];
+function scopeOf(k){return SCOPES.filter(function(s){return s.k===k;})[0];}
+
+var SW={'1':'#0f0f0f','1B':'#241d1a','2':'#3a281c','4':'#6a4a2e','27':'#cf9a4f','30':'#9c4a23','33':'#7c2f1d','350':'#c2461d',
+'60':'#e7dcb8','613':'#ead79a','900':'#141414','99J':'#5b1730','BG':'#6b1636','280':'#8a5a34','BUR':'#5e1330','BURGUNDY':'#5e1330',
+'PURPLE':'#7b3da7','LILAC':'#caa7e1','PERIWINKLE':'#8aa0e0','SILVER':'#c8ccd0','GREEN':'#2f9e57','BLUE':'#3a6ad6','L-BLUE':'#7fb4e6',
+'L-RED':'#d65a4a','RED':'#c0291f','PINK':'#e87aa6','VPINK':'#e84a8a','CANDY':'#ef6aa8','MERMAID':'#1fa4a4','FAIRY DUST':'#caa7e1'};
+function swCss(code){var raw=String(code).toUpperCase().trim().replace(/\s+/g,' ').split(' - ')[0];
+  raw=raw.replace(/^T(?=[0-9A-Z])/,'');
+  var parts=raw.split('/').map(function(p){return p.trim().replace(/\.+$/,'');});
+  var cols=[];parts.forEach(function(p){if(SW[p])cols.push(SW[p]);});if(!cols.length)cols=['#cbd5e1'];
+  return cols.length===1?'background:'+cols[0]:'background:linear-gradient(135deg,'+cols[0]+' 0 50%,'+cols[1]+' 50% 100%)';}
+
+function seed(bc){var s=2166136261;bc=String(bc||'x');for(var i=0;i<bc.length;i++){s^=bc.charCodeAt(i);s=Math.imul(s,16777619);}return s>>>0;}
+function pk(s,m,n){var x=Math.sin(s*m)*10000;x=x-Math.floor(x);return Math.floor(x*(n+1));}
+function stockFor(bc){var s=seed(bc);return {wh:pk(s,1.7,14),ch:pk(s,2.9,8),ci:pk(s,4.1,8),rd:pk(s,5.3,7)};}
+
+var BRAND='xpression', SCOPE='ch', UNIT='pcs', TAB='order';
+var MIN=6, MAX=12, BOX=1;
+var edited={};        // (scope|bc) -> pcs
+var exCol={};         // scope -> { bc:{c,nm} }
+var exProd={};        // scope -> { 'brand#idx':{nm} }
+
+function activeProds(){return DATA[BRAND].filter(function(p){return p.active!==false;});}
+function vid(pi,len,v){return v.bc?v.bc:('NB'+pi+String(len||'').replace(/\\W/g,'')+String(v.c).replace(/\\W/g,''));}
+function prodGroups(p){return p.lens?p.lens:[{len:null,cols:p.cols}];}
+function eachVar(p,pi,cb){prodGroups(p).forEach(function(g){g.cols.forEach(function(v){cb(v,g.len,vid(pi,g.len,v));});});}
+function prodKey(i){return BRAND+'#'+i;}
+function prodExcluded(i){var s=scopeOf(SCOPE);return s.excl&&exProd[SCOPE]&&exProd[SCOPE][prodKey(i)];}
+function colExcluded(bc){var s=scopeOf(SCOPE);return s.excl&&exCol[SCOPE]&&exCol[SCOPE][bc];}
+function excCount(){return (exProd[SCOPE]?Object.keys(exProd[SCOPE]).length:0)+(exCol[SCOPE]?Object.keys(exCol[SCOPE]).length:0);}
+
+function roundBox(p){return BOX<=1?p:Math.ceil(p/BOX)*BOX;}
+function scopeStock(bc){var st=stockFor(bc),s=scopeOf(SCOPE),t=0;s.locs.forEach(function(k){t+=st[k];});return t;}
+function autoOrder(bc){var pool=scopeStock(bc);return pool<=MIN?roundBox(MAX-pool):0;}
+function getOrder(bc){var key=SCOPE+'|'+bc;return (key in edited)?edited[key]:autoOrder(bc);}
+function boxesOf(p){return BOX>1?Math.ceil(p/BOX):p;}
+function gridStyle(){var s=scopeOf(SCOPE);var cols='minmax(0,1.4fr) '+s.locs.map(function(){return '34px';}).join(' ');
+  if(s.locs.length>1)cols+=' 38px';cols+=' 96px';return 'grid-template-columns:'+cols;}
+
+function render(){
+  var s=scopeOf(SCOPE);
+  document.getElementById('f-brand').textContent=brandOf(BRAND).label;
+  document.getElementById('f-scope').textContent=s.lbl;
+  document.getElementById('s-min').textContent=MIN;document.getElementById('s-max').textContent=MAX;document.getElementById('s-box').textContent=BOX;
+  document.getElementById('sum-l1').textContent=(s.locs.length>1?'In-scope stock':s.lbl+' stock');
+  // brand tabs
+  document.getElementById('btabs').innerHTML=BRANDS.map(function(b){return '<div class="btab'+(BRAND===b.k?' on':'')+'" data-b="'+b.k+'">'+b.label+'</div>';}).join('')+'<div class="btab add" data-add="1">＋ Add brand</div>';
+  document.querySelectorAll('#btabs .btab').forEach(function(t){t.addEventListener('click',function(){
+    if(this.getAttribute('data-add')){toast('In the live app: add a brand by its Shopify vendor name (e.g. “Smart Braid”). Tags also work.');return;}
+    BRAND=this.getAttribute('data-b');TAB='order';document.querySelectorAll('.subtab').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-t')==='order');});render();});});
+  // scope pills
+  document.getElementById('scopes').innerHTML=SCOPES.map(function(x){return '<div class="scope'+(x.cls?' '+x.cls:'')+(SCOPE===x.k?' on':'')+'" data-k="'+x.k+'">'+x.lbl+'</div>';}).join('');
+  document.querySelectorAll('#scopes .scope').forEach(function(p){p.addEventListener('click',function(){SCOPE=this.getAttribute('data-k');TAB='order';
+    document.querySelectorAll('.subtab').forEach(function(t){t.classList.toggle('on',t.getAttribute('data-t')==='order');});render();});});
+  document.getElementById('exc-n').textContent=excCount();
+  var subtabs=document.getElementById('subtabs');subtabs.style.display=s.excl?'flex':'none';if(!s.excl)TAB='order';
+  var unitTxt=BOX>1?(', boxes of '+BOX):'';
+  document.getElementById('hint').innerHTML='Ordering for <b>'+s.lbl+'</b> — hold <b>'+MIN+'–'+MAX+'</b>'+unitTxt+'. When stock here ≤ '+MIN+', top up to '+MAX+'.'+(s.excl?' Use <b>✕ not stocked here</b> (colour) or <b>✕ product</b> to drop what this branch doesn’t carry.':'');
+
+  var list=document.getElementById('list');
+  if(TAB==='excluded'){renderExcluded(list,s);recalc();return;}
+
+  var gs=gridStyle();var html='';
+  activeProds().forEach(function(p,pi){
+    if(prodExcluded(pi))return;
+    var groups=prodGroups(p).map(function(g){return {len:g.len,cols:g.cols.filter(function(v){return !colExcluded(vid(pi,g.len,v));})};}).filter(function(g){return g.cols.length;});
+    if(!groups.length)return;
+    var totalCols=0,exCount=0,untracked=0;
+    prodGroups(p).forEach(function(g){g.cols.forEach(function(v){totalCols++;if(colExcluded(vid(pi,g.len,v)))exCount++;if(!v.bc)untracked++;});});
+    var sub=(totalCols-exCount)+' colours';if(p.lens)sub=p.lens.length+' lengths · '+sub;if(exCount)sub+=' · '+exCount+' excluded';if(untracked)sub+=' · '+untracked+' no barcode';
+    html+='<div class="prod"><div class="prod-h"><div class="prod-h-row"><div class="prod-nm">'+esc(p.nm)+'<small>'+sub+'</small></div>'+
+      (s.excl?'<button class="exprod" data-pi="'+pi+'">✕ product</button>':'')+'</div></div>';
+    html+='<div class="chead" style="'+gs+'"><div class="vh">Variant</div>'+
+      s.locs.map(function(k){return '<div class="'+LOCM[k].cls+'">'+LOCM[k].lbl+'</div>';}).join('')+
+      (s.locs.length>1?'<div>Tot</div>':'')+'<div style="text-align:right;padding-right:4px">Order</div></div>';
+    groups.forEach(function(g){
+      if(g.len)html+='<div class="lenhdr"><span class="pill">'+esc(g.len)+'</span><small>'+g.cols.length+' colours</small></div>';
+      g.cols.forEach(function(v){
+        var id=vid(pi,g.len,v);
+        if(!v.bc){ // untracked — no barcode, can't read EPOS stock
+          html+='<div class="vrow" style="'+gs+'"><div class="vmeta"><div class="vnm"><span class="sw" style="'+swCss(v.c)+'"></span>'+esc(v.c)+'</div><div class="vbc">no barcode</div>'+
+            (s.excl?'<button class="exq" data-id="'+id+'" data-c="'+esc((g.len?g.len+' ':'')+v.c)+'" data-nm="'+esc(p.nm)+'">✕ not stocked here</button>':'')+'</div>'+
+            s.locs.map(function(k){return '<div class="cell na">—</div>';}).join('')+
+            (s.locs.length>1?'<div class="cell na">—</div>':'')+
+            '<div class="stp"><span class="notrack">no barcode</span></div></div>';
+          return;
+        }
+        var st=stockFor(v.bc),pool=scopeStock(v.bc),ord=getOrder(v.bc);
+        var cls=ord>0?((SCOPE+'|'+v.bc in edited)?'edited':'sugg'):'zero';
+        html+='<div class="vrow'+(ord>0?' ord':'')+'" data-bc="'+v.bc+'" style="'+gs+'">'+
+          '<div class="vmeta"><div class="vnm"><span class="sw" style="'+swCss(v.c)+'"></span>'+esc(v.c)+'</div><div class="vbc">'+v.bc+'</div>'+
+            (s.excl?'<button class="exq" data-id="'+id+'" data-c="'+esc((g.len?g.len+' ':'')+v.c)+'" data-nm="'+esc(p.nm)+'">✕ not stocked here</button>':'')+'</div>'+
+          s.locs.map(function(k){return '<div class="cell '+LOCM[k].cls+(st[k]?'':' z')+'">'+st[k]+'</div>';}).join('')+
+          (s.locs.length>1?'<div class="cell tot'+(pool<=MIN?' low':'')+'">'+pool+'</div>':'')+
+          '<div class="stp"><button class="stpb minus" data-bc="'+v.bc+'">−</button>'+
+            '<span class="stpv '+cls+'" id="v_'+v.bc+'"><span class="n">'+ord+'</span>'+(BOX>1?'<span class="bx">'+boxesOf(ord)+' box</span>':'')+'</span>'+
+            '<button class="stpb plus" data-bc="'+v.bc+'">+</button></div></div>';
+      });
+    });
+    html+='</div>';
+  });
+  if(!html)html='<div class="empty">Nothing to order for <b>'+s.lbl+'</b> at these settings.</div>';
+  list.innerHTML=html;
+  list.querySelectorAll('.stpb').forEach(function(b){b.addEventListener('click',function(){
+    var bc=this.getAttribute('data-bc'),step=(UNIT==='box'&&BOX>1)?BOX:1,d=this.classList.contains('plus')?step:-step;
+    var nv=Math.max(0,getOrder(bc)+d);edited[SCOPE+'|'+bc]=nv;
+    var sp=document.getElementById('v_'+bc);
+    if(sp){sp.className='stpv '+(nv>0?'edited':'zero');sp.innerHTML='<span class="n">'+nv+'</span>'+(BOX>1?'<span class="bx">'+boxesOf(nv)+' box</span>':'');
+      var row=sp.closest('.vrow');if(row)row.classList.toggle('ord',nv>0);}recalc();});});
+  list.querySelectorAll('.exq').forEach(function(b){b.addEventListener('click',function(){
+    var id=this.getAttribute('data-id');if(!exCol[SCOPE])exCol[SCOPE]={};exCol[SCOPE][id]={c:this.getAttribute('data-c'),nm:this.getAttribute('data-nm')};
+    delete edited[SCOPE+'|'+id];render();toast('Colour excluded for '+scopeOf(SCOPE).lbl);});});
+  list.querySelectorAll('.exprod').forEach(function(b){b.addEventListener('click',function(){
+    var pi=this.getAttribute('data-pi');if(!exProd[SCOPE])exProd[SCOPE]={};exProd[SCOPE][prodKey(parseInt(pi))]={nm:activeProds()[pi].nm};
+    render();toast('Whole product excluded for '+scopeOf(SCOPE).lbl);});});
+  recalc();
+}
+
+function renderExcluded(list,s){
+  var ps=exProd[SCOPE]||{}, cs=exCol[SCOPE]||{};
+  var pk=Object.keys(ps), ck=Object.keys(cs);
+  var html='<div class="exhdr">🚫 Excluded from <b>'+s.lbl+'</b> orders. Whole products and single colours this branch doesn’t carry. Tap re-stock to add back.</div>';
+  if(!pk.length&&!ck.length){html+='<div class="empty">Nothing excluded for '+s.lbl+' yet.<br><small>On the order list use “✕ not stocked here” (colour) or “✕ product” (whole product).</small></div>';list.innerHTML=html;return;}
+  pk.forEach(function(key){html+='<div class="exrow prodlvl"><span class="sw" style="background:#fdba74"></span>'+
+    '<div class="exinfo"><div class="exnm">'+esc(ps[key].nm)+'<span class="extag">whole product</span></div><div class="exbc">all colours</div></div>'+
+    '<button class="exback" data-pk="'+esc(key)+'">↩ re-stock</button></div>';});
+  ck.forEach(function(bc){html+='<div class="exrow"><span class="sw" style="'+swCss(cs[bc].c)+'"></span>'+
+    '<div class="exinfo"><div class="exnm">'+esc(cs[bc].c)+' <span style="color:var(--sub);font-weight:600">· '+esc(cs[bc].nm)+'</span></div><div class="exbc">'+bc+'</div></div>'+
+    '<button class="exback" data-bc="'+bc+'">↩ re-stock</button></div>';});
+  list.innerHTML=html;
+  list.querySelectorAll('.exback').forEach(function(b){b.addEventListener('click',function(){
+    if(this.getAttribute('data-pk')){delete exProd[SCOPE][this.getAttribute('data-pk')];}
+    else{delete exCol[SCOPE][this.getAttribute('data-bc')];}render();toast('Back in '+scopeOf(SCOPE).lbl+' order');});});
+}
+
+function recalc(){
+  var pcs=0,lines=0,stock=0;
+  activeProds().forEach(function(p,pi){if(prodExcluded(pi))return;eachVar(p,pi,function(v,len,id){
+    if(colExcluded(id))return;if(!v.bc)return;stock+=scopeStock(v.bc);var o=getOrder(v.bc);if(o>0){pcs+=o;lines++;}});});
+  document.getElementById('sum-stock').textContent=stock;document.getElementById('sum-order').textContent=pcs;
+  document.getElementById('sum-exc').textContent=excCount();document.getElementById('exc-n').textContent=excCount();
+  document.getElementById('f-units').textContent=pcs;document.getElementById('f-box').textContent=boxesOf(pcs);document.getElementById('f-lines').textContent=lines;
+}
+
+function esc(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function toast(m){var t=document.getElementById('toast');t.innerHTML=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2200);}
+
+// ---- build export rows (current scope, skips excluded) ----
+function exportRows(){var s=scopeOf(SCOPE),rows=[];activeProds().forEach(function(p,pi){if(prodExcluded(pi))return;eachVar(p,pi,function(v,len,id){
+  if(colExcluded(id))return;if(!v.bc)return;var st=stockFor(v.bc),o=getOrder(v.bc);
+  var r={product:p.nm,colour:(len?len+' · ':'')+v.c,barcode:v.bc,order:o,boxes:boxesOf(o)};s.locs.forEach(function(k){r[k]=st[k];});r.total=scopeStock(v.bc);rows.push(r);});});return rows;}
+function stamp(){var d=new Date();return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
+function fileBase(){return 'CC-'+BRAND+'-'+SCOPE+'-'+new Date().toISOString().slice(0,10);}
+function caption(){var rows=exportRows(),pcs=rows.reduce(function(a,b){return a+b.order;},0),lines=rows.filter(function(r){return r.order>0;}).length;
+  return 'CC '+brandOf(BRAND).label+' · '+scopeOf(SCOPE).lbl+' order — '+pcs+' pcs'+(BOX>1?(' ('+Math.ceil(pcs/BOX)+' boxes)'):'')+' across '+lines+' colours · '+stamp()+' (demo data)';}
+
+function buildPDF(){
+  var s=scopeOf(SCOPE),doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'}),rows=exportRows();
+  var totPcs=rows.reduce(function(a,b){return a+b.order;},0);
+  doc.setFontSize(15);doc.setTextColor(76,29,149);doc.text('CC Hair & Beauty — '+brandOf(BRAND).label+' · '+s.lbl,14,15);
+  doc.setFontSize(8.5);doc.setTextColor(120);
+  doc.text(stamp()+'   ·   hold '+MIN+'–'+MAX+(BOX>1?(', box of '+BOX):'')+'   ·   '+excCount()+' excluded   ·   (demo data)',14,21);
+  var head=['Product','Colour'].concat(s.locs.map(function(k){return LOCM[k].lbl;}));if(s.locs.length>1)head.push('Tot');head.push('ORDER'+(BOX>1?' (box)':''));
+  var body=rows.map(function(r){var a=[r.product,r.colour].concat(s.locs.map(function(k){return r[k];}));if(s.locs.length>1)a.push(r.total);a.push(r.order+(BOX>1?(' ('+r.boxes+')'):''));return a;});
+  var lastCol=head.length-1,cstyle={0:{cellWidth:58},1:{cellWidth:22}};cstyle[lastCol]={halign:'center',fontStyle:'bold',fillColor:[240,253,244],textColor:[21,128,61]};
+  for(var i=2;i<lastCol;i++)cstyle[i]={halign:'center'};
+  doc.autoTable({startY:26,head:[head],body:body,styles:{fontSize:7.5,cellPadding:1.5},headStyles:{fillColor:[109,40,217],textColor:255,halign:'center',fontSize:7.5},columnStyles:cstyle});
+  var fy=doc.lastAutoTable.finalY||40;doc.setFontSize(11);doc.setTextColor(21,128,61);
+  doc.text('Total to order: '+totPcs+' pcs'+(BOX>1?(' ('+Math.ceil(totPcs/BOX)+' boxes)'):'')+' across '+rows.filter(function(r){return r.order>0;}).length+' colours',14,fy+8);
+  return doc;
+}
+function buildWB(){
+  var s=scopeOf(SCOPE),rows=exportRows();
+  var head=['Product','Colour','Barcode'].concat(s.locs.map(function(k){return LOCM[k].lbl;}));if(s.locs.length>1)head.push('Total');head.push('TO ORDER (pcs)');if(BOX>1)head.push('Boxes');
+  var aoa=[head];rows.forEach(function(r){var a=[r.product,r.colour,r.barcode].concat(s.locs.map(function(k){return r[k];}));if(s.locs.length>1)a.push(r.total);a.push(r.order);if(BOX>1)a.push(r.boxes);aoa.push(a);});
+  aoa.push([]);var tot=new Array(head.length).fill('');tot[head.length-(BOX>1?2:1)-1]='TOTAL';tot[head.length-(BOX>1?2:1)]=rows.reduce(function(a,b){return a+b.order;},0);if(BOX>1)tot[head.length-1]=rows.reduce(function(a,b){return a+b.boxes;},0);aoa.push(tot);
+  var ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map(function(h,i){return {wch:i===0?44:i===1?12:i===2?15:12};});
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,(brandOf(BRAND).label+' '+s.lbl).slice(0,31));return wb;
+}
+
+// ---- download ----
+function downloadPDF(){try{buildPDF().save(fileBase()+'.pdf');toast('PDF downloaded');}catch(e){toast('PDF failed: '+e.message);}}
+function downloadXLS(){try{XLSX.writeFile(buildWB(),fileBase()+'.xlsx');toast('Excel downloaded');}catch(e){toast('Excel failed: '+e.message);}}
+
+// ---- share to WhatsApp (native share sheet → pick WhatsApp; attaches the real file) ----
+async function shareFile(blob,filename,mime,text){
+  var file=new File([blob],filename,{type:mime});
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:text});toast('Shared ✓');return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  // fallback (desktop / unsupported): download the file + open WhatsApp with the caption
+  try{var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},4000);}catch(e2){}
+  window.open('https://wa.me/?text='+encodeURIComponent(text+' — file downloaded, attach it in WhatsApp 📎'),'_blank');
+}
+function waPDF(){try{var blob=buildPDF().output('blob');shareFile(blob,fileBase()+'.pdf','application/pdf',caption());}catch(e){toast('PDF failed: '+e.message);}}
+function waXLS(){try{var arr=XLSX.write(buildWB(),{type:'array',bookType:'xlsx'});var blob=new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});shareFile(blob,fileBase()+'.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',caption());}catch(e){toast('Excel failed: '+e.message);}}
+
+// ---- wire ----
+document.getElementById('subtabs').addEventListener('click',function(e){var t=e.target.closest('.subtab');if(!t)return;
+  TAB=t.getAttribute('data-t');document.querySelectorAll('.subtab').forEach(function(x){x.classList.toggle('on',x===t);});render();});
+document.getElementById('unit-seg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+  UNIT=b.getAttribute('data-u');document.querySelectorAll('#unit-seg button').forEach(function(x){x.classList.toggle('on',x===b);});});
+document.querySelector('.setrow').addEventListener('click',function(e){var b=e.target.closest('.setb');if(!b)return;
+  var k=b.getAttribute('data-set'),d=parseInt(b.getAttribute('data-d'));
+  if(k==='min'){MIN=Math.max(0,MIN+d);if(MIN>=MAX)MAX=MIN+1;}else if(k==='max'){MAX=Math.max(1,MAX+d);if(MAX<=MIN)MIN=Math.max(0,MAX-1);}else if(k==='box'){BOX=Math.max(1,BOX+d);}
+  edited={};render();});
+document.getElementById('b-reset').addEventListener('click',function(){var p={};Object.keys(edited).forEach(function(key){if(key.indexOf(SCOPE+'|')!==0)p[key]=edited[key];});edited=p;render();toast('Recalculated from min/max');});
+document.getElementById('b-pdf').addEventListener('click',downloadPDF);
+document.getElementById('b-xls').addEventListener('click',downloadXLS);
+document.getElementById('b-wapdf').addEventListener('click',waPDF);
+document.getElementById('b-waxls').addEventListener('click',waXLS);
+
+render();
+</script>
+</body>
+</html>
