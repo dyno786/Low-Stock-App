@@ -145,8 +145,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .cattag{display:inline-block;font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--purpletxt);background:var(--purplebg);padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle}
 .prod-body{display:none}
 .prod.open .prod-body{display:block}
-.ckcell{display:flex;align-items:center;justify-content:center}
-.tick{width:19px;height:19px;accent-color:var(--green);cursor:pointer;margin:0}
+.ptick{width:21px;height:21px;accent-color:var(--green);cursor:pointer;flex:0 0 auto;margin:0}
+img.thumb{cursor:zoom-in}
+.imgview{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:zoom-out}
+.imgview.show{display:flex}
+.imgview img{max-width:100%;max-height:82%;border-radius:10px;background:#fff}
+.imgview-cap{color:#fff;font-size:12.5px;font-weight:700;margin-top:12px;text-align:center;max-width:90%}
 </style>
 </head>
 <body>
@@ -210,6 +214,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="imgview" id="imgview"><img id="imgview-img" src="" alt=""><div class="imgview-cap" id="imgview-cap"></div></div>
 
 <script>
 
@@ -289,7 +294,7 @@ var edited={};        // (scope|bc) -> pcs
 var exCol={};         // scope -> { bc:{c,nm} }
 var exProd={};        // scope -> { 'brand#idx':{nm} }
 var openProd={};      // (brand#idx) -> true/false  (collapse override; default open)
-var picked={};        // (scope|bc) -> true/false   (tick override; default = low-stock suggestion)
+var picked={};        // (scope|brand#idx) -> true/false  (product tick override; default = has low-stock colour)
 
 // category tabs — replaced by the server's list when live; mirrors braids.js detection for sample mode
 var CATS=[{k:'all',lbl:'All'},{k:'prestretched',lbl:'Pre-stretched'},{k:'braid',lbl:'Braid / bulk'},{k:'afro',lbl:'Afro & twist'},{k:'curly',lbl:'Crochet / curly'}];
@@ -315,14 +320,21 @@ function scopeStock(bc){var st=stockFor(bc),s=scopeOf(SCOPE),t=0;s.locs.forEach(
 function autoOrder(bc){var pool=scopeStock(bc);return pool<=MIN?roundBox(MAX-pool):0;}
 function getOrder(bc){var key=SCOPE+'|'+bc;return (key in edited)?edited[key]:autoOrder(bc);}
 function boxesOf(p){return BOX>1?Math.ceil(p/BOX):p;}
-function gridStyle(){var s=scopeOf(SCOPE);var cols='26px minmax(0,1.3fr) '+s.locs.map(function(){return '34px';}).join(' ');
-  if(s.locs.length>1)cols+=' 38px';cols+=' 92px';return 'grid-template-columns:'+cols;}
+function gridStyle(){var s=scopeOf(SCOPE);var cols='minmax(0,1.4fr) '+s.locs.map(function(){return '34px';}).join(' ');
+  if(s.locs.length>1)cols+=' 38px';cols+=' 96px';return 'grid-template-columns:'+cols;}
 function catLabel(k){for(var i=0;i<CATS.length;i++)if(CATS[i].k===k)return CATS[i].lbl;return k;}
-// a colour is in the order only if its tick is on; default tick = the min/max suggestion (low stock)
-function isPicked(bc){var k=SCOPE+'|'+bc;return (k in picked)?picked[k]:(autoOrder(bc)>0);}
-function countedOrder(bc){return isPicked(bc)?getOrder(bc):0;}
-function prodOrderPcs(p,pi){var n=0;eachVar(p,pi,function(v,len,id){if(!v.bc||colExcluded(id))return;n+=countedOrder(v.bc);});return n;}
-function prodIsOpen(pi){var k=prodKey(pi);return (k in openProd)?openProd[k]:true;}
+// a PRODUCT is in the order only if its tick is on; default tick = product has any low-stock colour
+function prodHasSuggestion(p,pi){var any=false;eachVar(p,pi,function(v,len,id){if(any||!v.bc||colExcluded(id))return;if(autoOrder(v.bc)>0)any=true;});return any;}
+function isProdPicked(pi,p){var k=SCOPE+'|'+prodKey(pi);return (k in picked)?picked[k]:prodHasSuggestion(p,pi);}
+function prodOrderPcs(p,pi){if(!isProdPicked(pi,p))return 0;var n=0;eachVar(p,pi,function(v,len,id){if(!v.bc||colExcluded(id))return;n+=getOrder(v.bc);});return n;}
+function prodIsOpen(pi){var k=prodKey(pi);return (k in openProd)?openProd[k]:false;}   // colours closed by default
+function fullImg(u){return u?u.replace(/_(\d+)x(\d+)(?=\.(?:jpg|jpeg|png|webp|gif)\b)/i,''):u;}
+function openImg(url,nm){var v=document.getElementById('imgview');if(!v)return;document.getElementById('imgview-img').src=url||'';document.getElementById('imgview-cap').textContent=nm||'';v.classList.add('show');}
+function refreshCardHeader(card,pi){var p=activeProds()[pi];if(!card||!p)return;var pPick=isProdPicked(pi,p),oc=prodOrderPcs(p,pi);
+  card.classList.toggle('picked',pPick);var cb=card.querySelector('.ptick');if(cb)cb.checked=pPick;
+  var x=card.querySelector('.prod-x');if(!x)return;var pill=x.querySelector('.ordpill');
+  if(oc>0){if(!pill){pill=document.createElement('span');pill.className='ordpill';x.insertBefore(pill,x.firstChild);}pill.textContent=oc+' to order';}
+  else if(pill){pill.parentNode.removeChild(pill);}}
 
 function render(){
   var s=scopeOf(SCOPE);
@@ -349,7 +361,7 @@ function render(){
   document.getElementById('exc-n').textContent=excCount();
   var subtabs=document.getElementById('subtabs');subtabs.style.display=s.excl?'flex':'none';if(!s.excl)TAB='order';
   var unitTxt=BOX>1?(', boxes of '+BOX):'';
-  document.getElementById('hint').innerHTML='Ordering for <b>'+s.lbl+'</b> — colours at/under <b>'+MIN+'</b> are pre-ticked (top up to '+MAX+unitTxt+'). <b>Tick</b> what to order, untick the rest — only ticked colours are ordered.'+(s.excl?' Use <b>✕ not stocked here</b> / <b>✕</b> to drop what this branch doesn’t carry.':'');
+  document.getElementById('hint').innerHTML='Ordering for <b>'+s.lbl+'</b> — products with a colour at/under <b>'+MIN+'</b> are pre-ticked (top up to '+MAX+unitTxt+'). <b>Tick a product</b> to order it; tap a card to open its colours, tap the photo to enlarge. Only ticked products are ordered.'+(s.excl?' Use <b>✕ not stocked here</b> / <b>✕</b> to drop what this branch doesn’t carry.':'');
 
   var list=document.getElementById('list');
   if(LIVE && !loadedBrands[BRAND]){list.innerHTML='<div class="empty">Loading '+(brandOf(BRAND)?brandOf(BRAND).label:'')+' from Shopify…</div>';recalc();return;}
@@ -363,15 +375,15 @@ function render(){
     var totalCols=0,exCount=0,untracked=0;
     prodGroups(p).forEach(function(g){g.cols.forEach(function(v){totalCols++;if(colExcluded(vid(pi,g.len,v)))exCount++;if(!v.bc)untracked++;});});
     var sub=(totalCols-exCount)+' colours';if(p.lens)sub=p.lens.length+' lengths · '+sub;if(exCount)sub+=' · '+exCount+' excluded';if(untracked)sub+=' · '+untracked+' no barcode';
-    var oc=prodOrderPcs(p,pi);var open=prodIsOpen(pi);anyVisible=true;if(!open)anyClosed=true;
-    var thumb=p.image?'<img class="thumb" loading="lazy" src="'+esc(p.image)+'" alt="">':'<div class="thumb ph">🧴</div>';
+    var oc=prodOrderPcs(p,pi);var open=prodIsOpen(pi);var pPick=isProdPicked(pi,p);anyVisible=true;if(!open)anyClosed=true;
+    var thumb=p.image?'<img class="thumb" loading="lazy" src="'+esc(p.image)+'" data-full="'+esc(fullImg(p.image))+'" data-nm="'+esc(p.nm)+'" alt="">':'<div class="thumb ph">🧴</div>';
     var catTag=(CAT==='all')?'<span class="cattag">'+esc(catLabel(catOf(p)))+'</span>':'';
-    html+='<div class="prod'+(open?' open':'')+'" data-pi="'+pi+'"><div class="prod-h"><div class="prod-h-row">'+
-      '<div class="prod-h-main">'+thumb+'<div class="prod-nm">'+esc(p.nm)+catTag+'<small>'+sub+'</small></div></div>'+
+    html+='<div class="prod'+(open?' open':'')+(pPick?' picked':'')+'" data-pi="'+pi+'"><div class="prod-h"><div class="prod-h-row">'+
+      '<div class="prod-h-main"><input type="checkbox" class="ptick"'+(pPick?' checked':'')+'>'+thumb+'<div class="prod-nm">'+esc(p.nm)+catTag+'<small>'+sub+'</small></div></div>'+
       '<div class="prod-x">'+(oc>0?'<span class="ordpill">'+oc+' to order</span>':'')+
         (s.excl?'<button class="exprod" data-pi="'+pi+'">✕</button>':'')+'<span class="chev">▶</span></div>'+
       '</div></div><div class="prod-body">';
-    html+='<div class="chead" style="'+gs+'"><div></div><div class="vh">Variant</div>'+
+    html+='<div class="chead" style="'+gs+'"><div class="vh">Variant</div>'+
       s.locs.map(function(k){return '<div class="'+LOCM[k].cls+'">'+LOCM[k].lbl+'</div>';}).join('')+
       (s.locs.length>1?'<div>Tot</div>':'')+'<div style="text-align:right;padding-right:4px">Order</div></div>';
     groups.forEach(function(g){
@@ -379,17 +391,16 @@ function render(){
       g.cols.forEach(function(v){
         var id=vid(pi,g.len,v);
         if(!v.bc){ // untracked — no barcode, can't read EPOS stock
-          html+='<div class="vrow" style="'+gs+'"><div class="ckcell"></div><div class="vmeta"><div class="vnm"><span class="sw" style="'+swCss(v.c)+'"></span>'+esc(v.c)+'</div><div class="vbc">no barcode</div>'+
+          html+='<div class="vrow" style="'+gs+'"><div class="vmeta"><div class="vnm"><span class="sw" style="'+swCss(v.c)+'"></span>'+esc(v.c)+'</div><div class="vbc">no barcode</div>'+
             (s.excl?'<button class="exq" data-id="'+id+'" data-c="'+esc((g.len?g.len+' ':'')+v.c)+'" data-nm="'+esc(p.nm)+'">✕ not stocked here</button>':'')+'</div>'+
             s.locs.map(function(k){return '<div class="cell na">—</div>';}).join('')+
             (s.locs.length>1?'<div class="cell na">—</div>':'')+
             '<div class="stp"><span class="notrack">no barcode</span></div></div>';
           return;
         }
-        var st=stockFor(v.bc),pool=scopeStock(v.bc),ord=getOrder(v.bc),pk=isPicked(v.bc);
-        var cls=pk?((SCOPE+'|'+v.bc in edited)?'edited':'sugg'):'zero';
-        html+='<div class="vrow'+(pk?' ord':'')+'" data-bc="'+v.bc+'" style="'+gs+'">'+
-          '<div class="ckcell"><input type="checkbox" class="tick" data-bc="'+v.bc+'"'+(pk?' checked':'')+'></div>'+
+        var st=stockFor(v.bc),pool=scopeStock(v.bc),ord=getOrder(v.bc),on=pPick&&ord>0;
+        var cls=on?((SCOPE+'|'+v.bc in edited)?'edited':'sugg'):'zero';
+        html+='<div class="vrow'+(on?' ord':'')+'" data-bc="'+v.bc+'" style="'+gs+'">'+
           '<div class="vmeta"><div class="vnm"><span class="sw" style="'+swCss(v.c)+'"></span>'+esc(v.c)+'</div><div class="vbc">'+v.bc+'</div>'+
             (s.excl?'<button class="exq" data-id="'+id+'" data-c="'+esc((g.len?g.len+' ':'')+v.c)+'" data-nm="'+esc(p.nm)+'">✕ not stocked here</button>':'')+'</div>'+
           s.locs.map(function(k){return '<div class="cell '+LOCM[k].cls+(st[k]?'':' z')+'">'+st[k]+'</div>';}).join('')+
@@ -405,23 +416,25 @@ function render(){
   list.innerHTML=html;
   document.getElementById('expall').textContent=(anyVisible&&!anyClosed)?'Collapse all':'Expand all';
   list.querySelectorAll('.prod-h').forEach(function(h){h.addEventListener('click',function(e){
-    if(e.target.closest('.exprod'))return;
+    if(e.target.closest('.exprod')||e.target.closest('.ptick')||e.target.closest('img.thumb'))return;
     var card=this.closest('.prod'),pi=parseInt(card.getAttribute('data-pi')),nowOpen=!card.classList.contains('open');
     openProd[prodKey(pi)]=nowOpen;card.classList.toggle('open',nowOpen);
     document.getElementById('expall').textContent=list.querySelector('.prod:not(.open)')?'Expand all':'Collapse all';});});
+  list.querySelectorAll('.ptick').forEach(function(c){
+    c.addEventListener('click',function(e){e.stopPropagation();});
+    c.addEventListener('change',function(){var card=this.closest('.prod'),pi=parseInt(card.getAttribute('data-pi'));
+      picked[SCOPE+'|'+prodKey(pi)]=this.checked;render();});});
+  list.querySelectorAll('img.thumb').forEach(function(t){t.addEventListener('click',function(e){e.stopPropagation();
+    var f=this.getAttribute('data-full');if(f)openImg(f,this.getAttribute('data-nm'));});});
   list.querySelectorAll('.stpb').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();
     var bc=this.getAttribute('data-bc'),step=(UNIT==='box'&&BOX>1)?BOX:1,d=this.classList.contains('plus')?step:-step;
     var nv=Math.max(0,getOrder(bc)+d);edited[SCOPE+'|'+bc]=nv;
-    if(nv>0)picked[SCOPE+'|'+bc]=true;   // changing the qty up means you want it
-    var pk=isPicked(bc),sp=document.getElementById('v_'+bc);
-    if(sp){sp.className='stpv '+(pk?(nv>0?'edited':'sugg'):'zero');sp.innerHTML='<span class="n">'+nv+'</span>'+(BOX>1?'<span class="bx">'+boxesOf(nv)+' box</span>':'');
-      var row=sp.closest('.vrow');if(row){row.classList.toggle('ord',pk);var cb=row.querySelector('.tick');if(cb)cb.checked=pk;}}recalc();});});
-  list.querySelectorAll('.tick').forEach(function(c){c.addEventListener('change',function(e){e.stopPropagation();
-    var bc=this.getAttribute('data-bc'),on=this.checked;picked[SCOPE+'|'+bc]=on;
-    if(on&&getOrder(bc)<=0)edited[SCOPE+'|'+bc]=(BOX>1?BOX:1);   // ticking a well-stocked colour orders at least one
-    var sp=document.getElementById('v_'+bc),ord=getOrder(bc);
-    if(sp){sp.className='stpv '+(on?(SCOPE+'|'+bc in edited?'edited':'sugg'):'zero');sp.innerHTML='<span class="n">'+ord+'</span>'+(BOX>1?'<span class="bx">'+boxesOf(ord)+' box</span>':'');
-      var row=sp.closest('.vrow');if(row)row.classList.toggle('ord',on);}recalc();});});
+    var card=this.closest('.prod'),pi=card?parseInt(card.getAttribute('data-pi')):-1;
+    if(nv>0&&pi>=0)picked[SCOPE+'|'+prodKey(pi)]=true;   // bumping a qty up means you want this product
+    var pPick=pi>=0?isProdPicked(pi,activeProds()[pi]):true,on=pPick&&nv>0,sp=document.getElementById('v_'+bc);
+    if(sp){sp.className='stpv '+(on?'edited':'zero');sp.innerHTML='<span class="n">'+nv+'</span>'+(BOX>1?'<span class="bx">'+boxesOf(nv)+' box</span>':'');
+      var row=sp.closest('.vrow');if(row)row.classList.toggle('ord',on);}
+    if(card&&pi>=0)refreshCardHeader(card,pi);recalc();});});
   list.querySelectorAll('.exq').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();
     var id=this.getAttribute('data-id');if(!exCol[SCOPE])exCol[SCOPE]={};exCol[SCOPE][id]={c:this.getAttribute('data-c'),nm:this.getAttribute('data-nm')};
     delete edited[SCOPE+'|'+id];render();toast('Colour excluded for '+scopeOf(SCOPE).lbl);});});
@@ -450,8 +463,8 @@ function renderExcluded(list,s){
 
 function recalc(){
   var pcs=0,lines=0,stock=0;
-  activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p))return;eachVar(p,pi,function(v,len,id){
-    if(colExcluded(id))return;if(!v.bc)return;stock+=scopeStock(v.bc);var o=countedOrder(v.bc);if(o>0){pcs+=o;lines++;}});});
+  activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p))return;var pPick=isProdPicked(pi,p);eachVar(p,pi,function(v,len,id){
+    if(colExcluded(id))return;if(!v.bc)return;stock+=scopeStock(v.bc);var o=pPick?getOrder(v.bc):0;if(o>0){pcs+=o;lines++;}});});
   document.getElementById('sum-stock').textContent=stock;document.getElementById('sum-order').textContent=pcs;
   document.getElementById('sum-exc').textContent=excCount();document.getElementById('exc-n').textContent=excCount();
   document.getElementById('f-units').textContent=pcs;document.getElementById('f-box').textContent=boxesOf(pcs);document.getElementById('f-lines').textContent=lines;
@@ -460,9 +473,9 @@ function recalc(){
 function esc(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 function toast(m){var t=document.getElementById('toast');t.innerHTML=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},2200);}
 
-// ---- build export rows = only the TICKED colours (current scope/category, skips excluded) ----
-function exportRows(){var s=scopeOf(SCOPE),rows=[];activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p))return;eachVar(p,pi,function(v,len,id){
-  if(colExcluded(id))return;if(!v.bc)return;if(!isPicked(v.bc))return;var st=stockFor(v.bc),o=getOrder(v.bc);
+// ---- build export rows = colours being ordered in TICKED products (current scope/category) ----
+function exportRows(){var s=scopeOf(SCOPE),rows=[];activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p)||!isProdPicked(pi,p))return;eachVar(p,pi,function(v,len,id){
+  if(colExcluded(id))return;if(!v.bc)return;var o=getOrder(v.bc);if(o<=0)return;var st=stockFor(v.bc);
   var r={product:p.nm,colour:(len?len+' · ':'')+v.c,barcode:v.bc,order:o,boxes:boxesOf(o)};s.locs.forEach(function(k){r[k]=st[k];});r.total=scopeStock(v.bc);rows.push(r);});});return rows;}
 function stamp(){var d=new Date();return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
 function fileBase(){return 'CC-'+BRAND+(CAT==='all'?'':'-'+CAT)+'-'+SCOPE+'-'+new Date().toISOString().slice(0,10);}
@@ -531,6 +544,7 @@ document.getElementById('expall').addEventListener('click',function(){
   var expand=this.textContent.indexOf('Expand')===0;
   activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p))return;openProd[prodKey(pi)]=expand;});
   render();});
+document.getElementById('imgview').addEventListener('click',function(){this.classList.remove('show');document.getElementById('imgview-img').src='';});
 
 // ===== LIVE DATA LAYER (fetches real brands + branch stock; falls back to the embedded
 //        sample when opened off-server so it still previews) =====
