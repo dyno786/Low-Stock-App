@@ -126,8 +126,7 @@ function detectCategory(p) {
   return catFromText(tags.join(" ") + " " + (p.title || "")) || "braid";
 }
 
-async function fetchSupplier(sup) {
-  const q = `tag:'${sup.tag.replace(/'/g, "")}' AND tag:braids AND status:active`;
+async function fetchByQuery(q) {
   const products = [];
   let after = null, guard = 0;
   do {
@@ -159,6 +158,11 @@ async function fetchSupplier(sup) {
   return products;
 }
 
+const cleanTag = (t) => String(t).replace(/'/g, "").trim();
+async function fetchSupplier(sup) {
+  return fetchByQuery(`tag:'${cleanTag(sup.tag)}' AND tag:braids AND status:active`);
+}
+
 export default async function handler(req, res) {
   try {
     const key = (req.query && (req.query.supplier || req.query.brand)) || "";
@@ -171,6 +175,18 @@ export default async function handler(req, res) {
         categories: CATEGORIES,
       });
     }
+
+    // page-added supplier: ?tag=BrandName  (or comma-separated, e.g. ?tag=BrandName,braids)
+    const tagParam = req.query && req.query.tag;
+    if (tagParam) {
+      const tags = String(tagParam).split(",").map(cleanTag).filter(Boolean).slice(0, 5);
+      if (!tags.length) return res.status(400).json({ error: "No tag provided" });
+      const q = tags.map((t) => `tag:'${t}'`).join(" AND ") + " AND status:active";
+      const products = await fetchByQuery(q);
+      const label = (req.query.label && String(req.query.label)) || tags[0];
+      return res.status(200).json({ key: "tag:" + tags.join("+"), label, tag: tags.join(","), products });
+    }
+
     const sup = SUPPLIERS.find((s) => s.key === key || s.tag.toLowerCase() === String(key).toLowerCase());
     if (!sup) return res.status(404).json({ error: "Unknown supplier: " + key, suppliers: SUPPLIERS.map((s) => s.key) });
 
