@@ -125,6 +125,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 /* category chips */
 .catwrap{background:var(--s1);border-bottom:1px solid var(--border);padding:8px 0 9px}
 .cattop{display:flex;align-items:center;justify-content:space-between;padding:0 11px 6px}
+.cattop-btns{display:flex;gap:14px}
 .catlbl{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--sub)}
 .expall{background:none;border:none;color:var(--purple);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;padding:0}
 .cats{display:flex;gap:6px;overflow-x:auto;padding:0 11px;scrollbar-width:none}
@@ -142,6 +143,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .chev{font-size:12px;color:var(--sub);transition:transform .15s;flex-shrink:0}
 .prod.open .chev{transform:rotate(90deg)}
 .ordpill{background:var(--greenbg);color:var(--green);border:1px solid #bbf7d0;border-radius:999px;font-size:10px;font-weight:800;padding:2px 8px;white-space:nowrap}
+.lowpill{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:999px;font-size:10px;font-weight:800;padding:2px 8px;white-space:nowrap}
 .cattag{display:inline-block;font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--purpletxt);background:var(--purplebg);padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle}
 .prod-body{display:none}
 .prod.open .prod-body{display:block}
@@ -164,7 +166,7 @@ img.thumb{cursor:zoom-in}
 <div class="btabs" id="btabs"></div>
 
 <div class="catwrap">
-  <div class="cattop"><div class="catlbl">Type</div><button class="expall" id="expall">Expand all</button></div>
+  <div class="cattop"><div class="catlbl">Type</div><div class="cattop-btns"><button class="expall" id="tickall">Tick all</button><button class="expall" id="expall">Expand all</button></div></div>
   <div class="cats" id="cats"></div>
 </div>
 
@@ -323,9 +325,9 @@ function boxesOf(p){return BOX>1?Math.ceil(p/BOX):p;}
 function gridStyle(){var s=scopeOf(SCOPE);var cols='minmax(0,1.4fr) '+s.locs.map(function(){return '34px';}).join(' ');
   if(s.locs.length>1)cols+=' 38px';cols+=' 96px';return 'grid-template-columns:'+cols;}
 function catLabel(k){for(var i=0;i<CATS.length;i++)if(CATS[i].k===k)return CATS[i].lbl;return k;}
-// a PRODUCT is in the order only if its tick is on; default tick = product has any low-stock colour
-function prodHasSuggestion(p,pi){var any=false;eachVar(p,pi,function(v,len,id){if(any||!v.bc||colExcluded(id))return;if(autoOrder(v.bc)>0)any=true;});return any;}
-function isProdPicked(pi,p){var k=SCOPE+'|'+prodKey(pi);return (k in picked)?picked[k]:prodHasSuggestion(p,pi);}
+// a PRODUCT is in the order only if its tick is on; default = UNticked (you tick what you want / Tick all)
+function prodSuggestPcs(p,pi){var n=0;eachVar(p,pi,function(v,len,id){if(!v.bc||colExcluded(id))return;n+=autoOrder(v.bc);});return n;}
+function isProdPicked(pi,p){var k=SCOPE+'|'+prodKey(pi);return (k in picked)?picked[k]:false;}
 function prodOrderPcs(p,pi){if(!isProdPicked(pi,p))return 0;var n=0;eachVar(p,pi,function(v,len,id){if(!v.bc||colExcluded(id))return;n+=getOrder(v.bc);});return n;}
 function prodIsOpen(pi){var k=prodKey(pi);return (k in openProd)?openProd[k]:false;}   // colours closed by default
 function fullImg(u){return u?u.replace(/_(\d+)x(\d+)(?=\.(?:jpg|jpeg|png|webp|gif)\b)/i,''):u;}
@@ -361,13 +363,13 @@ function render(){
   document.getElementById('exc-n').textContent=excCount();
   var subtabs=document.getElementById('subtabs');subtabs.style.display=s.excl?'flex':'none';if(!s.excl)TAB='order';
   var unitTxt=BOX>1?(', boxes of '+BOX):'';
-  document.getElementById('hint').innerHTML='Ordering for <b>'+s.lbl+'</b> — products with a colour at/under <b>'+MIN+'</b> are pre-ticked (top up to '+MAX+unitTxt+'). <b>Tick a product</b> to order it; tap a card to open its colours, tap the photo to enlarge. Only ticked products are ordered.'+(s.excl?' Use <b>✕ not stocked here</b> / <b>✕</b> to drop what this branch doesn’t carry.':'');
+  document.getElementById('hint').innerHTML='Ordering for <b>'+s.lbl+'</b> — suggestion tops up to <b>'+MAX+'</b> when stock ≤ '+MIN+unitTxt+'. Amber <b>“low”</b> = needs reordering. <b>Tick the products</b> you want (or <b>Tick all</b>); tap a card for its colours, tap a photo to enlarge. Only ticked products are ordered.'+(s.excl?' Use <b>✕ not stocked here</b> / <b>✕</b> to drop what this branch doesn’t carry.':'');
 
   var list=document.getElementById('list');
   if(LIVE && !loadedBrands[BRAND]){list.innerHTML='<div class="empty">Loading '+(brandOf(BRAND)?brandOf(BRAND).label:'')+' from Shopify…</div>';recalc();return;}
   if(TAB==='excluded'){renderExcluded(list,s);recalc();return;}
 
-  var gs=gridStyle();var html='';var anyVisible=false,anyClosed=false;
+  var gs=gridStyle();var html='';var anyVisible=false,anyClosed=false,anyUnpicked=false;
   activeProds().forEach(function(p,pi){
     if(prodExcluded(pi)||!inCat(p))return;
     var groups=prodGroups(p).map(function(g){return {len:g.len,cols:g.cols.filter(function(v){return !colExcluded(vid(pi,g.len,v));})};}).filter(function(g){return g.cols.length;});
@@ -375,12 +377,13 @@ function render(){
     var totalCols=0,exCount=0,untracked=0;
     prodGroups(p).forEach(function(g){g.cols.forEach(function(v){totalCols++;if(colExcluded(vid(pi,g.len,v)))exCount++;if(!v.bc)untracked++;});});
     var sub=(totalCols-exCount)+' colours';if(p.lens)sub=p.lens.length+' lengths · '+sub;if(exCount)sub+=' · '+exCount+' excluded';if(untracked)sub+=' · '+untracked+' no barcode';
-    var oc=prodOrderPcs(p,pi);var open=prodIsOpen(pi);var pPick=isProdPicked(pi,p);anyVisible=true;if(!open)anyClosed=true;
+    var oc=prodOrderPcs(p,pi);var open=prodIsOpen(pi);var pPick=isProdPicked(pi,p);var sg=prodSuggestPcs(p,pi);anyVisible=true;if(!open)anyClosed=true;if(!pPick)anyUnpicked=true;
     var thumb=p.image?'<img class="thumb" loading="lazy" src="'+esc(p.image)+'" data-full="'+esc(fullImg(p.image))+'" data-nm="'+esc(p.nm)+'" alt="">':'<div class="thumb ph">🧴</div>';
     var catTag=(CAT==='all')?'<span class="cattag">'+esc(catLabel(catOf(p)))+'</span>':'';
+    var badge=oc>0?'<span class="ordpill">'+oc+' to order</span>':(sg>0?'<span class="lowpill">'+sg+' low</span>':'');
     html+='<div class="prod'+(open?' open':'')+(pPick?' picked':'')+'" data-pi="'+pi+'"><div class="prod-h"><div class="prod-h-row">'+
       '<div class="prod-h-main"><input type="checkbox" class="ptick"'+(pPick?' checked':'')+'>'+thumb+'<div class="prod-nm">'+esc(p.nm)+catTag+'<small>'+sub+'</small></div></div>'+
-      '<div class="prod-x">'+(oc>0?'<span class="ordpill">'+oc+' to order</span>':'')+
+      '<div class="prod-x">'+badge+
         (s.excl?'<button class="exprod" data-pi="'+pi+'">✕</button>':'')+'<span class="chev">▶</span></div>'+
       '</div></div><div class="prod-body">';
     html+='<div class="chead" style="'+gs+'"><div class="vh">Variant</div>'+
@@ -415,6 +418,7 @@ function render(){
   if(!html)html='<div class="empty">'+(CAT==='all'?'Nothing to show for <b>'+brandOf(BRAND).label+'</b>.':'No <b>'+esc(catLabel(CAT))+'</b> products in '+esc(brandOf(BRAND).label)+'.')+'</div>';
   list.innerHTML=html;
   document.getElementById('expall').textContent=(anyVisible&&!anyClosed)?'Collapse all':'Expand all';
+  document.getElementById('tickall').textContent=(anyVisible&&!anyUnpicked)?'Untick all':'Tick all';
   list.querySelectorAll('.prod-h').forEach(function(h){h.addEventListener('click',function(e){
     if(e.target.closest('.exprod')||e.target.closest('.ptick')||e.target.closest('img.thumb'))return;
     var card=this.closest('.prod'),pi=parseInt(card.getAttribute('data-pi')),nowOpen=!card.classList.contains('open');
@@ -482,27 +486,40 @@ function fileBase(){return 'CC-'+BRAND+(CAT==='all'?'':'-'+CAT)+'-'+SCOPE+'-'+ne
 function caption(){var rows=exportRows(),pcs=rows.reduce(function(a,b){return a+b.order;},0),lines=rows.filter(function(r){return r.order>0;}).length;
   return 'CC '+brandOf(BRAND).label+(CAT==='all'?'':' '+catLabel(CAT))+' · '+scopeOf(SCOPE).lbl+' order — '+pcs+' pcs'+(BOX>1?(' ('+Math.ceil(pcs/BOX)+' boxes)'):'')+' across '+lines+' colours · '+stamp()+(LIVE?'':' (demo data)');}
 
+function groupRows(rows){var g=[];rows.forEach(function(r){var last=g[g.length-1];if(last&&last.product===r.product)last.rows.push(r);else g.push({product:r.product,rows:[r]});});return g;}
 function buildPDF(){
   var s=scopeOf(SCOPE),doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'}),rows=exportRows();
-  var totPcs=rows.reduce(function(a,b){return a+b.order;},0);
-  doc.setFontSize(15);doc.setTextColor(76,29,149);doc.text('CC Hair & Beauty — '+brandOf(BRAND).label+' · '+s.lbl,14,15);
+  var totPcs=rows.reduce(function(a,b){return a+b.order;},0),groups=groupRows(rows);
+  doc.setFontSize(15);doc.setTextColor(76,29,149);doc.text('CC Hair & Beauty — '+brandOf(BRAND).label+(CAT==='all'?'':' · '+catLabel(CAT))+' · '+s.lbl,14,15);
   doc.setFontSize(8.5);doc.setTextColor(120);
-  doc.text(stamp()+'   ·   hold '+MIN+'–'+MAX+(BOX>1?(', box of '+BOX):'')+'   ·   '+excCount()+' excluded   ·   (demo data)',14,21);
+  doc.text(stamp()+'   ·   hold '+MIN+'–'+MAX+(BOX>1?(', box of '+BOX):'')+'   ·   '+excCount()+' excluded'+(LIVE?'':'   ·   (demo data)'),14,21);
   var head=['Product','Colour'].concat(s.locs.map(function(k){return LOCM[k].lbl;}));if(s.locs.length>1)head.push('Tot');head.push('ORDER'+(BOX>1?' (box)':''));
-  var body=rows.map(function(r){var a=[r.product,r.colour].concat(s.locs.map(function(k){return r[k];}));if(s.locs.length>1)a.push(r.total);a.push(r.order+(BOX>1?(' ('+r.boxes+')'):''));return a;});
-  var lastCol=head.length-1,cstyle={0:{cellWidth:58},1:{cellWidth:22}};cstyle[lastCol]={halign:'center',fontStyle:'bold',fillColor:[240,253,244],textColor:[21,128,61]};
-  for(var i=2;i<lastCol;i++)cstyle[i]={halign:'center'};
-  doc.autoTable({startY:26,head:[head],body:body,styles:{fontSize:7.5,cellPadding:1.5},headStyles:{fillColor:[109,40,217],textColor:255,halign:'center',fontSize:7.5},columnStyles:cstyle});
+  var body=[];groups.forEach(function(grp){grp.rows.forEach(function(r,idx){
+    var line=[];
+    if(idx===0)line.push({content:grp.product,rowSpan:grp.rows.length,styles:{halign:'left',valign:'middle',fontStyle:'bold'}});
+    line.push(r.colour);s.locs.forEach(function(k){line.push(r[k]);});if(s.locs.length>1)line.push(r.total);
+    line.push(r.order+(BOX>1?(' ('+r.boxes+')'):''));body.push(line);
+  });});
+  var lastCol=head.length-1,cstyle={0:{halign:'left',valign:'middle',cellWidth:56,fontStyle:'bold'},1:{cellWidth:24}};
+  cstyle[lastCol]={halign:'center',valign:'middle',fontStyle:'bold',fillColor:[240,253,244],textColor:[21,128,61]};
+  doc.autoTable({startY:26,head:[head],body:body,
+    styles:{fontSize:7.5,cellPadding:1.6,halign:'center',valign:'middle',lineWidth:0.1,lineColor:[226,222,238]},
+    headStyles:{fillColor:[109,40,217],textColor:255,halign:'center',valign:'middle',fontSize:7.5},
+    columnStyles:cstyle});
   var fy=doc.lastAutoTable.finalY||40;doc.setFontSize(11);doc.setTextColor(21,128,61);
-  doc.text('Total to order: '+totPcs+' pcs'+(BOX>1?(' ('+Math.ceil(totPcs/BOX)+' boxes)'):'')+' across '+rows.filter(function(r){return r.order>0;}).length+' colours',14,fy+8);
+  doc.text('Total to order: '+totPcs+' pcs'+(BOX>1?(' ('+Math.ceil(totPcs/BOX)+' boxes)'):'')+' · '+rows.length+' colours · '+groups.length+' products',14,fy+8);
   return doc;
 }
 function buildWB(){
-  var s=scopeOf(SCOPE),rows=exportRows();
+  var s=scopeOf(SCOPE),rows=exportRows(),groups=groupRows(rows);
   var head=['Product','Colour','Barcode'].concat(s.locs.map(function(k){return LOCM[k].lbl;}));if(s.locs.length>1)head.push('Total');head.push('TO ORDER (pcs)');if(BOX>1)head.push('Boxes');
-  var aoa=[head];rows.forEach(function(r){var a=[r.product,r.colour,r.barcode].concat(s.locs.map(function(k){return r[k];}));if(s.locs.length>1)a.push(r.total);a.push(r.order);if(BOX>1)a.push(r.boxes);aoa.push(a);});
+  var aoa=[head],merges=[],r=1;
+  groups.forEach(function(grp){var start=r;
+    grp.rows.forEach(function(row,idx){var a=[idx===0?grp.product:'',row.colour,row.barcode].concat(s.locs.map(function(k){return row[k];}));if(s.locs.length>1)a.push(row.total);a.push(row.order);if(BOX>1)a.push(row.boxes);aoa.push(a);r++;});
+    if(grp.rows.length>1)merges.push({s:{r:start,c:0},e:{r:r-1,c:0}});
+  });
   aoa.push([]);var tot=new Array(head.length).fill('');tot[head.length-(BOX>1?2:1)-1]='TOTAL';tot[head.length-(BOX>1?2:1)]=rows.reduce(function(a,b){return a+b.order;},0);if(BOX>1)tot[head.length-1]=rows.reduce(function(a,b){return a+b.boxes;},0);aoa.push(tot);
-  var ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map(function(h,i){return {wch:i===0?44:i===1?12:i===2?15:12};});
+  var ws=XLSX.utils.aoa_to_sheet(aoa);ws['!merges']=merges;ws['!cols']=head.map(function(h,i){return {wch:i===0?44:i===1?14:i===2?15:11};});
   var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,(brandOf(BRAND).label+' '+s.lbl).slice(0,31));return wb;
 }
 
@@ -543,6 +560,10 @@ document.getElementById('b-waxls').addEventListener('click',waXLS);
 document.getElementById('expall').addEventListener('click',function(){
   var expand=this.textContent.indexOf('Expand')===0;
   activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p))return;openProd[prodKey(pi)]=expand;});
+  render();});
+document.getElementById('tickall').addEventListener('click',function(){
+  var want=this.textContent.indexOf('Tick')===0;   // button says "Tick all" -> tick; "Untick all" -> untick
+  activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p))return;picked[SCOPE+'|'+prodKey(pi)]=want;});
   render();});
 document.getElementById('imgview').addEventListener('click',function(){this.classList.remove('show');document.getElementById('imgview-img').src='';});
 
