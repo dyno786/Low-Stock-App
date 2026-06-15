@@ -171,6 +171,8 @@ img.thumb{cursor:zoom-in}
 .sup-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--border);font-size:13px}
 .sup-row b{font-weight:800;color:var(--ink)}
 .sup-row small{color:var(--sub);font-weight:600}
+.sup-row-btns{display:flex;gap:6px;flex:0 0 auto}
+.sup-edit{border:1px solid var(--border);background:var(--s1);color:var(--purple);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer}
 .sup-del{border:1px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;flex:0 0 auto}
 </style>
 </head>
@@ -602,10 +604,10 @@ document.getElementById('tickall').addEventListener('click',function(){
   activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p))return;picked[SCOPE+'|'+prodKey(pi)]=want;});
   render();});
 document.getElementById('imgview').addEventListener('click',function(){this.classList.remove('show');document.getElementById('imgview-img').src='';});
-document.getElementById('sup-save').addEventListener('click',addSup);
+document.getElementById('sup-save').addEventListener('click',saveSup);
 document.getElementById('sup-cancel').addEventListener('click',closeAddSup);
 document.getElementById('addsup').addEventListener('click',closeAddSup);
-document.getElementById('sup-tag').addEventListener('keydown',function(e){if(e.key==='Enter')addSup();});
+document.getElementById('sup-tag').addEventListener('keydown',function(e){if(e.key==='Enter')saveSup();});
 
 // ===== LIVE DATA LAYER (fetches real brands + branch stock; falls back to the embedded
 //        sample when opened off-server so it still previews) =====
@@ -644,25 +646,42 @@ function ensureBrand(key,cb){
     .then(function(j){DATA[key]=(j.products||[]).map(toDemoProduct);loadedBrands[key]=1;if(cb)cb();})
     .catch(function(){loadedBrands[key]=1;DATA[key]=DATA[key]||[];if(cb)cb();});
 }
-function openAddSup(){document.getElementById('sup-name').value='';document.getElementById('sup-tag').value='';renderSupList();document.getElementById('addsup').classList.add('show');setTimeout(function(){document.getElementById('sup-name').focus();},60);}
+var editingSup=null;
+function supMode(editKey){editingSup=editKey||null;
+  document.getElementById('sup-save').textContent=editingSup?'Save changes':'Add supplier';
+  document.getElementById('sup-cancel').textContent=editingSup?'Cancel edit':'Cancel';}
+function openAddSup(){var n=document.getElementById('sup-name');n.value='';document.getElementById('sup-tag').value='';supMode(null);renderSupList();document.getElementById('addsup').classList.add('show');setTimeout(function(){n.focus();},60);}
 function closeAddSup(){document.getElementById('addsup').classList.remove('show');}
+function editSup(k){var c=customBrands.filter(function(x){return x.k===k;})[0];if(!c)return;
+  document.getElementById('sup-name').value=c.label;document.getElementById('sup-tag').value=c.tag;supMode(k);
+  document.getElementById('sup-name').focus();}
 function renderSupList(){var el=document.getElementById('sup-list');if(!customBrands.length){el.innerHTML='';return;}
-  el.innerHTML='<div class="modal-l" style="margin-top:4px">Your added suppliers</div>'+customBrands.map(function(c){return '<div class="sup-row"><div><b>'+esc(c.label)+'</b> <small>· '+esc(c.tag)+'</small></div><button class="sup-del" data-k="'+esc(c.k)+'">Remove</button></div>';}).join('');
+  el.innerHTML='<div class="modal-l" style="margin-top:4px">Your added suppliers</div>'+customBrands.map(function(c){return '<div class="sup-row"><div><b>'+esc(c.label)+'</b> <small>· '+esc(c.tag)+'</small></div><div class="sup-row-btns"><button class="sup-edit" data-k="'+esc(c.k)+'">Edit</button><button class="sup-del" data-k="'+esc(c.k)+'">Remove</button></div></div>';}).join('');
+  el.querySelectorAll('.sup-edit').forEach(function(b){b.addEventListener('click',function(){editSup(this.getAttribute('data-k'));});});
   el.querySelectorAll('.sup-del').forEach(function(b){b.addEventListener('click',function(){removeSup(this.getAttribute('data-k'));});});}
-function addSup(){var name=document.getElementById('sup-name').value.trim(),tag=document.getElementById('sup-tag').value.trim();
+function saveSup(){var name=document.getElementById('sup-name').value.trim(),tag=document.getElementById('sup-tag').value.trim();
   if(!name){toast('Enter a supplier name');return;}
   if(!tag)tag=name;
-  var base=name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,''),k='cust_'+(base||('s'+Date.now()));
-  if(BRANDS.some(function(b){return b.k===k;})){toast('That supplier already exists');return;}
-  customBrands.push({k:k,label:name,tag:tag});saveCustom();
-  BRANDS.push({k:k,label:name,tag:tag,custom:true});
-  closeAddSup();BRAND=k;TAB='order';CAT='all';
+  if(editingSup){ // edit existing: keep the same key, refresh products with the new tag
+    var c=customBrands.filter(function(x){return x.k===editingSup;})[0],b=brandOf(editingSup);
+    if(c){c.label=name;c.tag=tag;}if(b){b.label=name;b.tag=tag;}saveCustom();
+    delete DATA[editingSup];delete loadedBrands[editingSup];
+    var k=editingSup;closeAddSup();BRAND=k;TAB='order';CAT='all';
+    document.querySelectorAll('.subtab').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-t')==='order');});
+    ensureBrand(k,function(){render();toast('Updated “'+name+'”');});return;
+  }
+  var base=name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,''),nk='cust_'+(base||('s'+Date.now()));
+  if(BRANDS.some(function(b){return b.k===nk;})){toast('That supplier already exists');return;}
+  customBrands.push({k:nk,label:name,tag:tag});saveCustom();
+  BRANDS.push({k:nk,label:name,tag:tag,custom:true});
+  closeAddSup();BRAND=nk;TAB='order';CAT='all';
   document.querySelectorAll('.subtab').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-t')==='order');});
-  if(LIVE){ensureBrand(k,function(){render();toast('Added “'+name+'”');});}
-  else{DATA[k]=DATA[k]||[];render();toast('Added “'+name+'” — loads live on the site');}
+  if(LIVE){ensureBrand(nk,function(){render();toast('Added “'+name+'”');});}
+  else{DATA[nk]=DATA[nk]||[];render();toast('Added “'+name+'” — loads live on the site');}
 }
 function removeSup(k){customBrands=customBrands.filter(function(c){return c.k!==k;});saveCustom();
   BRANDS=BRANDS.filter(function(b){return b.k!==k;});delete DATA[k];delete loadedBrands[k];
+  if(editingSup===k)supMode(null);
   if(BRAND===k)BRAND=BRANDS[0]?BRANDS[0].k:'';
   renderSupList();ensureBrand(BRAND,function(){render();});toast('Removed');}
 function init(){
