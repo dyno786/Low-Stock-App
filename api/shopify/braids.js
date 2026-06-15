@@ -169,14 +169,8 @@ export default async function handler(req, res) {
     // cache at the edge for 10 min; serve stale while revalidating
     res.setHeader("Cache-Control", "public, s-maxage=600, stale-while-revalidate=86400");
 
-    if (!key) {
-      return res.status(200).json({
-        suppliers: SUPPLIERS.map((s) => ({ key: s.key, label: s.label, tag: s.tag })),
-        categories: CATEGORIES,
-      });
-    }
-
     // page-added supplier: ?tag=BrandName  (or comma-separated, e.g. ?tag=BrandName,braids)
+    // checked first, since a tag request has no supplier/brand key
     const tagParam = req.query && req.query.tag;
     if (tagParam) {
       const tags = String(tagParam).split(",").map(cleanTag).filter(Boolean).slice(0, 5);
@@ -187,8 +181,16 @@ export default async function handler(req, res) {
       return res.status(200).json({ key: "tag:" + tags.join("+"), label, tag: tags.join(","), products });
     }
 
+    if (!key) {
+      return res.status(200).json({
+        suppliers: SUPPLIERS.map((s) => ({ key: s.key, label: s.label, tag: s.tag })),
+        categories: CATEGORIES,
+      });
+    }
+
     const sup = SUPPLIERS.find((s) => s.key === key || s.tag.toLowerCase() === String(key).toLowerCase());
     if (!sup) return res.status(404).json({ error: "Unknown supplier: " + key, suppliers: SUPPLIERS.map((s) => s.key) });
+
 
     const products = await fetchSupplier(sup);
     return res.status(200).json({ key: sup.key, label: sup.label, tag: sup.tag, products });
