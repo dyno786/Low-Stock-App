@@ -153,6 +153,25 @@ img.thumb{cursor:zoom-in}
 .imgview.show{display:flex}
 .imgview img{max-width:100%;max-height:82%;border-radius:10px;background:#fff}
 .imgview-cap{color:#fff;font-size:12.5px;font-weight:700;margin-top:12px;text-align:center;max-width:90%}
+.btab.cust{position:relative}
+.btab.cust::after{content:'';position:absolute;top:6px;right:5px;width:5px;height:5px;border-radius:50%;background:var(--purple)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:210;display:none;align-items:flex-end;justify-content:center}
+.modal.show{display:flex}
+.modal-card{background:#fff;width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+.modal-h{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:12px}
+.modal-l{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--sub);margin:8px 0 4px}
+.modal-in{width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit;color:var(--ink);background:var(--s1)}
+.modal-in:focus{outline:none;border-color:var(--purple)}
+.modal-hint{font-size:11px;color:var(--sub);line-height:1.5;margin-top:9px}
+.modal-btns{display:flex;gap:9px;margin-top:14px}
+.modal-cancel{flex:1;border:1.5px solid var(--border);background:var(--s1);color:var(--sub);border-radius:10px;padding:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer}
+.modal-add{flex:2;border:none;background:var(--purple);color:#fff;border-radius:10px;padding:12px;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer}
+.modal-list{margin-top:14px}
+.modal-list:empty{display:none}
+.sup-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--border);font-size:13px}
+.sup-row b{font-weight:800;color:var(--ink)}
+.sup-row small{color:var(--sub);font-weight:600}
+.sup-del{border:1px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;flex:0 0 auto}
 </style>
 </head>
 <body>
@@ -217,6 +236,18 @@ img.thumb{cursor:zoom-in}
 </div>
 <div class="toast" id="toast"></div>
 <div class="imgview" id="imgview"><img id="imgview-img" src="" alt=""><div class="imgview-cap" id="imgview-cap"></div></div>
+<div class="modal" id="addsup">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-h">Add a supplier</div>
+    <label class="modal-l">Supplier name</label>
+    <input class="modal-in" id="sup-name" type="text" placeholder="e.g. Darling" autocomplete="off">
+    <label class="modal-l">Shopify tag(s)</label>
+    <input class="modal-in" id="sup-tag" type="text" placeholder="e.g. Darling, braids" autocomplete="off">
+    <div class="modal-hint">Products tagged with these in Shopify will load here (comma = match all). Tag them, then add the supplier here — no code change needed.</div>
+    <div class="modal-btns"><button class="modal-cancel" id="sup-cancel">Cancel</button><button class="modal-add" id="sup-save">Add supplier</button></div>
+    <div class="modal-list" id="sup-list"></div>
+  </div>
+</div>
 
 <script>
 
@@ -228,6 +259,11 @@ var BRANDS=[
   {k:'kuknus',   label:'Kuknus',   vendors:['Kuknus','Kuknus Braids']},
   {k:'smart',    label:'Smart Braid',vendors:['Smart Braid']}
 ];
+// suppliers added by the user on the page (tag-based). Persisted on the live site; session-only if storage is blocked.
+var customBrands=[];
+function loadCustom(){try{var s=localStorage.getItem('cc_custom_sup');customBrands=s?JSON.parse(s):[];}catch(e){customBrands=[];}}
+function saveCustom(){try{localStorage.setItem('cc_custom_sup',JSON.stringify(customBrands));}catch(e){}}
+function applyCustomBrands(){customBrands.forEach(function(c){if(!BRANDS.some(function(b){return b.k===c.k;}))BRANDS.push({k:c.k,label:c.label,tag:c.tag,custom:true});});}
 var DATA={
   xpression:[
     {nm:'Outre X-pression Lil Looks Passion Waterwave Feed Twist',active:true,lens:[
@@ -345,9 +381,9 @@ function render(){
   document.getElementById('s-min').textContent=MIN;document.getElementById('s-max').textContent=MAX;document.getElementById('s-box').textContent=BOX;
   document.getElementById('sum-l1').textContent=(s.locs.length>1?'In-scope stock':s.lbl+' stock');
   // brand tabs
-  document.getElementById('btabs').innerHTML=BRANDS.map(function(b){return '<div class="btab'+(BRAND===b.k?' on':'')+'" data-b="'+b.k+'">'+b.label+'</div>';}).join('')+'<div class="btab add" data-add="1">＋ Add brand</div>';
+  document.getElementById('btabs').innerHTML=BRANDS.map(function(b){return '<div class="btab'+(BRAND===b.k?' on':'')+(b.custom?' cust':'')+'" data-b="'+b.k+'">'+esc(b.label)+'</div>';}).join('')+'<div class="btab add" data-add="1">＋ Add brand</div>';
   document.querySelectorAll('#btabs .btab').forEach(function(t){t.addEventListener('click',function(){
-    if(this.getAttribute('data-add')){toast('Add a brand by tagging its products “<Supplier>” + “braids” in Shopify, then add it to SUPPLIERS in /api/shopify/braids.js.');return;}
+    if(this.getAttribute('data-add')){openAddSup();return;}
     BRAND=this.getAttribute('data-b');TAB='order';CAT='all';document.querySelectorAll('.subtab').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-t')==='order');});ensureBrand(BRAND,function(){render();});});});
   // scope pills
   document.getElementById('scopes').innerHTML=SCOPES.map(function(x){return '<div class="scope'+(x.cls?' '+x.cls:'')+(SCOPE===x.k?' on':'')+'" data-k="'+x.k+'">'+x.lbl+'</div>';}).join('');
@@ -566,6 +602,10 @@ document.getElementById('tickall').addEventListener('click',function(){
   activeProds().forEach(function(p,pi){if(prodExcluded(pi)||!inCat(p))return;picked[SCOPE+'|'+prodKey(pi)]=want;});
   render();});
 document.getElementById('imgview').addEventListener('click',function(){this.classList.remove('show');document.getElementById('imgview-img').src='';});
+document.getElementById('sup-save').addEventListener('click',addSup);
+document.getElementById('sup-cancel').addEventListener('click',closeAddSup);
+document.getElementById('addsup').addEventListener('click',closeAddSup);
+document.getElementById('sup-tag').addEventListener('keydown',function(e){if(e.key==='Enter')addSup();});
 
 // ===== LIVE DATA LAYER (fetches real brands + branch stock; falls back to the embedded
 //        sample when opened off-server so it still previews) =====
@@ -598,15 +638,39 @@ function loadSuppliers(cb){
 }
 function ensureBrand(key,cb){
   if(!LIVE||loadedBrands[key]){if(cb)cb();return;}
-  fetch('/api/shopify/braids?supplier='+encodeURIComponent(key)).then(function(r){return r.ok?r.json():Promise.reject();})
+  var b=brandOf(key);
+  var url=(b&&b.custom)?('/api/shopify/braids?tag='+encodeURIComponent(b.tag)+'&label='+encodeURIComponent(b.label)):('/api/shopify/braids?supplier='+encodeURIComponent(key));
+  fetch(url).then(function(r){return r.ok?r.json():Promise.reject();})
     .then(function(j){DATA[key]=(j.products||[]).map(toDemoProduct);loadedBrands[key]=1;if(cb)cb();})
     .catch(function(){loadedBrands[key]=1;DATA[key]=DATA[key]||[];if(cb)cb();});
 }
+function openAddSup(){document.getElementById('sup-name').value='';document.getElementById('sup-tag').value='';renderSupList();document.getElementById('addsup').classList.add('show');setTimeout(function(){document.getElementById('sup-name').focus();},60);}
+function closeAddSup(){document.getElementById('addsup').classList.remove('show');}
+function renderSupList(){var el=document.getElementById('sup-list');if(!customBrands.length){el.innerHTML='';return;}
+  el.innerHTML='<div class="modal-l" style="margin-top:4px">Your added suppliers</div>'+customBrands.map(function(c){return '<div class="sup-row"><div><b>'+esc(c.label)+'</b> <small>· '+esc(c.tag)+'</small></div><button class="sup-del" data-k="'+esc(c.k)+'">Remove</button></div>';}).join('');
+  el.querySelectorAll('.sup-del').forEach(function(b){b.addEventListener('click',function(){removeSup(this.getAttribute('data-k'));});});}
+function addSup(){var name=document.getElementById('sup-name').value.trim(),tag=document.getElementById('sup-tag').value.trim();
+  if(!name){toast('Enter a supplier name');return;}
+  if(!tag)tag=name;
+  var base=name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,''),k='cust_'+(base||('s'+Date.now()));
+  if(BRANDS.some(function(b){return b.k===k;})){toast('That supplier already exists');return;}
+  customBrands.push({k:k,label:name,tag:tag});saveCustom();
+  BRANDS.push({k:k,label:name,tag:tag,custom:true});
+  closeAddSup();BRAND=k;TAB='order';CAT='all';
+  document.querySelectorAll('.subtab').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-t')==='order');});
+  if(LIVE){ensureBrand(k,function(){render();toast('Added “'+name+'”');});}
+  else{DATA[k]=DATA[k]||[];render();toast('Added “'+name+'” — loads live on the site');}
+}
+function removeSup(k){customBrands=customBrands.filter(function(c){return c.k!==k;});saveCustom();
+  BRANDS=BRANDS.filter(function(b){return b.k!==k;});delete DATA[k];delete loadedBrands[k];
+  if(BRAND===k)BRAND=BRANDS[0]?BRANDS[0].k:'';
+  renderSupList();ensureBrand(BRAND,function(){render();});toast('Removed');}
 function init(){
+  loadCustom();applyCustomBrands();
   render(); // immediate paint with sample
   loadSuppliers(function(sups,cats){
     if(!sups){return;} // stay in sample mode (e.g. previewing off-server)
-    BRANDS=sups.map(function(s){return {k:s.key,label:s.label};});
+    BRANDS=sups.map(function(s){return {k:s.key,label:s.label};});applyCustomBrands();
     if(cats&&cats.length)CATS=[{k:'all',lbl:'All'}].concat(cats.map(function(c){return {k:c.key,lbl:c.label};}));
     LIVE=true; DATA={}; loadedBrands={}; edited={}; exCol={}; exProd={}; openProd={}; picked={}; CAT='all';
     if(!BRANDS.some(function(b){return b.k===BRAND;}))BRAND=BRANDS[0].k;
