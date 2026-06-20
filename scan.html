@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Warehouse Scan — CC Hair &amp; Beauty</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{--purple:#7c3aed;--purpletxt:#5b21b6;--purplebg:#f3e8ff;--bg:#f4f4f5;--card:#fff;--ink:#18181b;--sub:#6b7280;--border:#e5e7eb;--green:#15803d;--greenbg:#dcfce7;--amber:#b45309;--amberbg:#fef3c7;--red:#cc0000}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0e0e11;color:var(--ink);display:flex;justify-content:center}
+.app{width:100%;max-width:460px;min-height:100%;background:var(--bg);display:flex;flex-direction:column}
+header{background:var(--purple);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+header .t{font-size:17px;font-weight:800}
+header .gear{background:rgba(255,255,255,.18);border:0;color:#fff;width:34px;height:34px;border-radius:9px;font-size:17px}
+.seg{display:flex;margin:12px;background:#e9e9ee;border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;padding:10px;border-radius:9px;font-size:14px;font-weight:700;color:var(--sub)}
+.seg button.on{background:#fff;color:var(--purpletxt);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.scanArea{margin:0 12px}
+.camwrap{position:relative;background:#000;border-radius:16px;overflow:hidden;aspect-ratio:4/3}
+#reader{width:100%;height:100%}
+#reader video{object-fit:cover!important;width:100%!important;height:100%!important}
+.camwrap .box{position:absolute;inset:0;margin:auto;width:72%;height:42%;border:3px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 0 0 2000px rgba(0,0,0,.32);pointer-events:none}
+.camstart{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;color:#fff;text-align:center;padding:0 26px}
+.camstart .ico{font-size:42px}
+.btn{border:0;border-radius:12px;padding:13px 20px;font-size:16px;font-weight:800}
+.btn.purple{background:var(--purple);color:#fff}
+.btn.block{display:block;width:100%}
+.btpanel{background:#fff;border:2px dashed #d6bcfa;border-radius:16px;padding:22px 16px;text-align:center}
+.btpanel .ico{font-size:38px}
+.btpanel .big{font-size:18px;font-weight:800;margin-top:6px}
+.btpanel .sub{font-size:13px;color:var(--sub);margin-top:4px;line-height:1.4}
+#btInput{margin-top:14px;width:100%;border:1px solid var(--border);border-radius:10px;padding:13px;font-size:18px;text-align:center;letter-spacing:1px}
+.result{margin:12px;background:var(--card);border-radius:18px;box-shadow:0 6px 22px rgba(0,0,0,.09);overflow:hidden;display:none}
+.result.show{display:block}
+.rtop{display:flex;gap:12px;padding:14px}
+.rimg{width:88px;height:88px;border-radius:12px;background:#f1f1f4;flex-shrink:0;object-fit:contain;border:1px solid var(--border)}
+.rimg.ph{display:flex;align-items:center;justify-content:center;color:#bbb;font-size:24px}
+.rmeta{flex:1;min-width:0}
+.rname{font-size:16px;font-weight:800;line-height:1.2}
+.rbc{font-size:12px;color:var(--sub);margin-top:3px}
+.rwh{font-size:12px;font-weight:700;color:var(--purpletxt);margin-top:6px;background:var(--purplebg);display:inline-block;padding:3px 8px;border-radius:999px}
+.alloc{padding:0 14px 8px}
+.arow{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:11px;margin-bottom:7px;background:#faf7ff;border:1px solid #efeafd}
+.arow.send{background:var(--purplebg);border-color:#e3d3fb}
+.arow.zero{opacity:.45;background:#fafafa;border-color:#f0f0f0}
+.arow .br{font-size:15px;font-weight:700}
+.arow .qty{font-size:22px;font-weight:900;color:var(--purpletxt);min-width:40px;text-align:right}
+.keep{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:11px;background:#eef2f7;border:1px dashed #cdd7e3}
+.keep .br{font-size:14px;font-weight:700;color:#334155}.keep .qty{font-size:20px;font-weight:900;color:#334155}
+.okbox{margin:0 14px 12px;background:var(--greenbg);border:1px solid #bbf7d0;border-radius:12px;padding:15px;text-align:center}
+.okbox .big{font-size:17px;font-weight:800;color:var(--green)}
+.okbox .sub{font-size:13px;color:#166534;margin-top:3px}
+.note{margin:0 14px 12px;background:var(--amberbg);border:1px solid #fde68a;border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--amber);line-height:1.4}
+.cd{height:5px;background:#eee}
+.cd .fill{height:100%;background:var(--purple);width:100%}
+.ractions{display:flex;gap:8px;padding:12px 14px}
+.ractions .btn{flex:1}
+.btn.light{background:#f0f0f3;color:var(--ink)}
+.manual{margin:12px;background:#fff;border-radius:14px;padding:12px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.manual .lab{font-size:11px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.manual .row{display:flex;gap:8px}
+.manual input{flex:1;border:1px solid var(--border);border-radius:10px;padding:12px;font-size:16px}
+.manual .go{background:var(--ink);color:#fff;border:0;border-radius:10px;padding:0 18px;font-weight:800}
+.status{font-size:12px;color:#9ca3af;text-align:center;padding:6px 12px 18px}
+.status .err{color:var(--red);font-weight:700}
+.status a{color:var(--purpletxt);font-weight:700;text-decoration:underline}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:30}
+.ov.on{display:flex}
+.sheet{background:#fff;width:100%;max-width:460px;border-radius:18px 18px 0 0;padding:18px 16px 26px}
+.sheet h3{margin:0 0 14px;font-size:17px}
+.frow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.frow:last-of-type{border-bottom:0}
+.frow label{font-size:15px;font-weight:600}
+.frow .sub{font-size:12px;color:var(--sub)}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:#fff;font-size:20px;font-weight:800}
+.stepper .val{min-width:46px;text-align:center;font-size:17px;font-weight:800}
+.toggle{width:50px;height:30px;border-radius:999px;border:0;background:#d4d4d8;position:relative}
+.toggle.on{background:var(--purple)}
+.toggle .k{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}
+.toggle.on .k{left:23px}
+.sheet .done{margin-top:16px}
+@media (prefers-reduced-motion:reduce){.cd .fill{transition:none!important}.toggle .k{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <span class="t">📦 Warehouse Scan</span>
+    <button class="gear" id="gear" aria-label="Settings">⚙️</button>
+  </header>
+
+  <div class="seg">
+    <button id="mCam" class="on">📷 Camera</button>
+    <button id="mBt">⌨️ Bluetooth</button>
+  </div>
+
+  <div class="scanArea">
+    <div class="camwrap" id="camArea">
+      <div id="reader"></div>
+      <div class="box"></div>
+      <div class="camstart" id="camstart">
+        <div class="ico">📷</div>
+        <div style="font-weight:700">Scan a product to see where it goes</div>
+        <button class="btn purple" id="startCam">Start camera</button>
+      </div>
+    </div>
+    <div class="btpanel" id="btArea" style="display:none">
+      <div class="ico">⌨️</div>
+      <div class="big">Ready to scan</div>
+      <div class="sub">Pull the trigger on your Bluetooth/USB scanner. The keyboard hides automatically when a scanner is connected.</div>
+      <input id="btInput" inputmode="numeric" placeholder="Barcode appears here" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="result" id="result">
+    <div class="cd"><div class="fill" id="cdfill"></div></div>
+    <div id="rbody"></div>
+    <div class="ractions">
+      <button class="btn light" id="againBtn">Scan next ›</button>
+    </div>
+  </div>
+
+  <div class="manual">
+    <div class="lab">Type a barcode</div>
+    <div class="row">
+      <input id="bcInput" inputmode="numeric" placeholder="Barcode number" autocomplete="off">
+      <button class="go" id="goBtn">Go</button>
+    </div>
+  </div>
+
+  <div class="status" id="status">Loading live stock…</div>
+</div>
+
+<div class="ov" id="ov">
+  <div class="sheet">
+    <h3>Settings</h3>
+    <div class="frow">
+      <div><label>Hold result on screen</label><div class="sub">Seconds before it clears for the next scan</div></div>
+      <div class="stepper"><button id="secMinus">−</button><span class="val" id="secVal">10s</span><button id="secPlus">+</button></div>
+    </div>
+    <div class="frow">
+      <div><label>Beep on scan</label><div class="sub">Sound when a product is read</div></div>
+      <button class="toggle on" id="beepTog"><span class="k"></span></button>
+    </div>
+    <div class="frow">
+      <div><label>Reload stock</label><div class="sub" id="loadInfo">—</div></div>
+      <button class="btn light" id="reloadBtn" style="padding:9px 14px">Reload</button>
+    </div>
+    <button class="btn purple block done" id="closeSet">Done</button>
+  </div>
+</div>
+
+<script>
+// ---------- config ----------
+var WH='warehouse';
+var BRANCHES=[{key:'roundhay',label:'Roundhay'},{key:'city',label:'City Centre'},{key:'chapy',label:'Chapeltown'}];
+var prod={}, normIndex={}, loaded=false, usingSample=false;
+var imgCache={}, titleCache={};
+try{imgCache=JSON.parse(localStorage.getItem('cc_scan_imgs')||'{}');}catch(e){}
+var secs=parseInt(localStorage.getItem('cc_scan_secs')||'10',10)||10;
+var beepOn=localStorage.getItem('cc_scan_beep')!=='0';
+var mode=localStorage.getItem('cc_scan_mode')||'cam';
+
+// ---------- offline sample (used only if live feeds can't load) ----------
+function loadSample(){
+  usingSample=true;
+  var S={
+   "34285634124":{name:"Aunt Jackie's Curl La La Gel 12oz",dept:"AFRO BEAUTY PRODUCTS",wh:18,br:{roundhay:{stock:1,min:3,max:8},city:{stock:4,min:3,max:8},chapy:{stock:0,min:2,max:6}}},
+   "802535585935":{name:"African Pride Olive Oil & Tea Tree Gel 18oz",dept:"AFRO BEAUTY PRODUCTS",wh:24,br:{roundhay:{stock:0,min:4,max:10},city:{stock:6,min:4,max:10},chapy:{stock:2,min:3,max:8}}},
+   "5099999000014":{name:"Ampro Pro Styl Protein Gel (Blue)",dept:"AFRO PRODUCTS 2",wh:12,br:{roundhay:{stock:0,min:2,max:6},city:{stock:0,min:2,max:6},chapy:{stock:0,min:2,max:6}}},
+   "5060999000021":{name:"Xpression Pre-Stretched Braid 1B",dept:"HUMAN HAIR",wh:40,br:{roundhay:{stock:10,min:4,max:12},city:{stock:8,min:4,max:12},chapy:{stock:11,min:4,max:12}}}
+  };
+  prod=S; Object.keys(S).forEach(function(bc){normIndex[bc.replace(/^0+/,'')]=bc;});
+  loaded=true;
+}
+
+// ---------- CSV ----------
+function parseCSV(text){
+  var rows=[],row=[],cur='',q=false;
+  for(var i=0;i<text.length;i++){var c=text[i];
+    if(q){ if(c=='"'){ if(text[i+1]=='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else { if(c=='"')q=true; else if(c==','){row.push(cur);cur='';} else if(c=='\n'){row.push(cur);rows.push(row);row=[];cur='';} else if(c!='\r')cur+=c; }
+  }
+  if(cur.length||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+function ingest(key,text){
+  var rows=parseCSV(text); if(rows.length<2)return 0;
+  var h={}; rows[0].forEach(function(n,i){h[(''+n).trim().toLowerCase()]=i;});
+  var bi=h['barcode'],ni=h['productname'],si=h['stockqty'],mi=h['minstock'],xi=h['maxstock'],di=h['department'];
+  if(bi==null)return 0; var n=0;
+  for(var r=1;r<rows.length;r++){var row=rows[r]; if(!row||row.length<=bi)continue;
+    var bc=(''+(row[bi]||'')).trim(); if(!bc)continue;
+    var rec=prod[bc]||(prod[bc]={name:'',dept:'',wh:0,br:{}});
+    var nm=ni!=null?(''+(row[ni]||'')).trim():''; var dp=di!=null?(''+(row[di]||'')).trim():'';
+    var st=si!=null?(parseInt(row[si],10)||0):0, mn=mi!=null?(parseInt(row[mi],10)||0):0, mx=xi!=null?(parseInt(row[xi],10)||0):0;
+    if(key===WH){rec.wh=st; if(nm)rec.name=nm; if(dp)rec.dept=dp;}
+    else {rec.br[key]={stock:st,min:mn,max:mx}; if(!rec.name&&nm)rec.name=nm; if(!rec.dept&&dp)rec.dept=dp;}
+    normIndex[bc.replace(/^0+/,'')]=bc; n++;
+  }
+  return n;
+}
+function feedURL(key){return '/api/stock-data?branch='+key;}
+function fetchFeed(key){
+  return fetch(feedURL(key)).then(function(r){if(!r.ok)throw new Error(r.status);return r.text();})
+    .then(function(t){t=t.trim(); if(t[0]==='{'){try{var j=JSON.parse(t); t=j.text||j.data||'';}catch(e){}} return ingest(key,t);});
+}
+function loadAll(){
+  prod={};normIndex={};loaded=false;usingSample=false;
+  setStatus('Loading live stock…');
+  var keys=[WH].concat(BRANCHES.map(function(b){return b.key;}));
+  return Promise.all(keys.map(function(k){return fetchFeed(k).catch(function(){return -1;});}))
+    .then(function(res){
+      var okWH=res[0]>0;
+      if(!okWH && Object.keys(prod).length===0){ loadSample(); setStatus('⚠ Using sample stock (couldn’t reach live feeds). <a href="#" id="retry">Retry</a>',true); wireRetry(); return; }
+      loaded=true;
+      var count=Object.keys(prod).length;
+      var info='Live stock · '+count.toLocaleString()+' products';
+      if(res.some(function(x){return x<0;})) info+=' (some branches didn’t load)';
+      setStatus(info);
+      var li=document.getElementById('loadInfo'); if(li)li.textContent=info;
+    });
+}
+function wireRetry(){var a=document.getElementById('retry');if(a)a.addEventListener('click',function(e){e.preventDefault();loadAll();});}
+function setStatus(html,isErr){var s=document.getElementById('status');s.innerHTML=isErr?('<span class="err">'+html+'</span>'):html;}
+
+// ---------- lookup + allocate ----------
+function lookup(raw){
+  var bc=(''+raw).trim(); if(!bc)return null;
+  if(prod[bc])return {bc:bc,p:prod[bc]};
+  var n=bc.replace(/^0+/,''); if(normIndex[n]&&prod[normIndex[n]])return {bc:normIndex[n],p:prod[normIndex[n]]};
+  return null;
+}
+function allocate(p){
+  var needs=BRANCHES.map(function(b){var x=p.br[b.key]||{stock:0,min:0,max:0};var need=(x.max>0&&x.stock<x.min)?(x.max-x.stock):0;return {label:b.label,need:need};});
+  var hasLevels=BRANCHES.some(function(b){var x=p.br[b.key];return x&&x.max>0;});
+  var order=needs.map(function(_,i){return i;}).sort(function(a,b){return needs[b].need-needs[a].need;});
+  var rem=p.wh||0,give={};
+  order.forEach(function(i){var g=Math.max(0,Math.min(needs[i].need,rem));give[i]=g;rem-=g;});
+  var send=needs.map(function(n,i){return {label:n.label,qty:give[i]||0};});
+  var total=send.reduce(function(a,b){return a+b.qty;},0);
+  var short=needs.reduce(function(a,b){return a+b.need;},0)-total;
+  return {send:send,keep:rem,total:total,short:short,hasLevels:hasLevels};
+}
+
+// ---------- image ----------
+function fetchImage(bc){
+  if(imgCache[bc]!==undefined)return Promise.resolve(imgCache[bc]);
+  return fetch('/api/shopify/exists?barcodes='+encodeURIComponent(bc)).then(function(r){return r.json();})
+    .then(function(j){var res=j&&j.results&&j.results[bc];var url=(res&&res.imageUrl)||null;imgCache[bc]=url;if(res&&res.title)titleCache[bc]=res.title;
+      try{localStorage.setItem('cc_scan_imgs',JSON.stringify(imgCache));}catch(e){} return url;})
+    .catch(function(){imgCache[bc]=null;return null;});
+}
+
+// ---------- render ----------
+function esc(t){return (''+(t==null?'':t)).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function beep(){if(!beepOn)return;try{var c=new (window.AudioContext||window.webkitAudioContext)();var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=880;g.gain.value=.12;o.start();setTimeout(function(){o.stop();c.close();},110);}catch(e){}}
+
+var holdTimer=null;
+function showResult(bc,p){
+  beep(); if(navigator.vibrate)navigator.vibrate(50);
+  var a=allocate(p);
+  var name=p.name||titleCache[bc]||'Unknown product';
+  var html='<div class="rtop"><div class="rimg ph" id="rimg">🖼️</div><div class="rmeta">'+
+    '<div class="rname">'+esc(name)+'</div><div class="rbc">'+esc(bc)+(p.dept?' · '+esc(p.dept):'')+'</div>'+
+    '<span class="rwh">'+(p.wh||0)+' in warehouse</span></div></div>';
+  if(!a.hasLevels){
+    html+='<div class="note">No min/max levels set for this product, so there’s nothing to allocate. Set levels in the branch app to enable auto top-up.</div>';
+  } else if(a.total===0){
+    html+='<div class="okbox"><div class="big">✅ No action needed</div><div class="sub">All branches are stocked — keep all '+(p.wh||0)+' in the warehouse.</div></div>';
+  } else {
+    html+='<div class="alloc">';
+    a.send.forEach(function(s){html+='<div class="arow '+(s.qty>0?'send':'zero')+'"><span class="br">→ '+esc(s.label)+'</span><span class="qty">'+s.qty+'</span></div>';});
+    html+='<div class="keep"><span class="br">🏠 Keep in Warehouse</span><span class="qty">'+a.keep+'</span></div></div>';
+    if(a.short>0)html+='<div class="note">Not enough in the warehouse to fully top up — '+a.short+' more needed. Sent to the neediest branches first.</div>';
+  }
+  document.getElementById('rbody').innerHTML=html;
+  document.getElementById('result').classList.add('show');
+  // image
+  fetchImage(bc).then(function(url){var el=document.getElementById('rimg');if(!el)return;if(url){el.outerHTML='<img class="rimg" id="rimg" src="'+esc(url)+'" alt="">';}});
+  armHold();
+}
+function showNotFound(bc){
+  document.getElementById('rbody').innerHTML='<div class="rtop"><div class="rimg ph">❓</div><div class="rmeta"><div class="rname">Not found</div><div class="rbc">'+esc(bc)+'</div></div></div>'+
+    '<div class="note">This barcode isn’t in the current stock. Check it scanned correctly, or reload stock from settings.</div>';
+  document.getElementById('result').classList.add('show');
+  armHold();
+}
+function armHold(){
+  clearTimeout(holdTimer);
+  var fill=document.getElementById('cdfill');
+  fill.style.transition='none';fill.style.width='100%';
+  void fill.offsetWidth;
+  fill.style.transition='width '+secs+'s linear';fill.style.width='0%';
+  holdTimer=setTimeout(resetReady,secs*1000);
+}
+function resetReady(){clearTimeout(holdTimer);document.getElementById('result').classList.remove('show');refocusBT();}
+
+// ---------- scan entry ----------
+var last={bc:'',t:0};
+function handleScan(raw){
+  if(!loaded){setStatus('Still loading stock — try again in a moment…');return;}
+  var bc=(''+raw).trim(); if(!bc)return;
+  var now=Date.now(); if(bc===last.bc&&now-last.t<2500)return; last={bc:bc,t:now};
+  var f=lookup(bc);
+  if(f)showResult(f.bc,f.p); else showNotFound(bc);
+}
+
+// ---------- camera ----------
+var scanner=null,scanning=false;
+function startCam(){
+  if(typeof Html5Qrcode==='undefined'){document.getElementById('camstart').innerHTML='<div class="sub" style="color:#fff">Camera library didn’t load. Use Bluetooth or type a barcode.</div>';return;}
+  document.getElementById('camstart').style.display='none';
+  var fmts=[Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39];
+  scanner=new Html5Qrcode("reader",{formatsToSupport:fmts,verbose:false});
+  scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:270,height:160}},
+    function(txt){handleScan(txt);},function(){})
+    .then(function(){scanning=true;})
+    .catch(function(){document.getElementById('camstart').style.display='flex';document.getElementById('camstart').innerHTML='<div class="ico">🚫</div><div class="sub" style="color:#fff;padding:0 20px">Couldn’t open the camera. Allow camera access in Safari, or use Bluetooth / type a barcode below.</div>';});
+}
+function stopCam(){if(scanner&&scanning){scanning=false;scanner.stop().then(function(){scanner.clear();}).catch(function(){});}}
+
+// ---------- bluetooth/wedge input ----------
+function refocusBT(){if(mode==='bt'){var i=document.getElementById('btInput');if(i)setTimeout(function(){i.focus();},50);}}
+document.getElementById('btInput').addEventListener('keydown',function(e){if(e.key==='Enter'){var v=this.value;this.value='';handleScan(v);}});
+document.getElementById('btInput').addEventListener('blur',function(){refocusBT();});
+
+// ---------- mode switch ----------
+function setMode(m){
+  mode=m;localStorage.setItem('cc_scan_mode',m);
+  document.getElementById('mCam').classList.toggle('on',m==='cam');
+  document.getElementById('mBt').classList.toggle('on',m==='bt');
+  document.getElementById('camArea').style.display=m==='cam'?'block':'none';
+  document.getElementById('btArea').style.display=m==='bt'?'block':'none';
+  if(m==='bt'){stopCam();refocusBT();} 
+}
+document.getElementById('mCam').addEventListener('click',function(){setMode('cam');});
+document.getElementById('mBt').addEventListener('click',function(){setMode('bt');});
+document.getElementById('startCam').addEventListener('click',startCam);
+
+// ---------- manual + actions ----------
+document.getElementById('goBtn').addEventListener('click',function(){var v=document.getElementById('bcInput').value;document.getElementById('bcInput').value='';if(v)handleScan(v);});
+document.getElementById('bcInput').addEventListener('keydown',function(e){if(e.key==='Enter'){var v=this.value;this.value='';if(v)handleScan(v);}});
+document.getElementById('againBtn').addEventListener('click',resetReady);
+
+// ---------- settings ----------
+function renderSecs(){document.getElementById('secVal').textContent=secs+'s';}
+document.getElementById('gear').addEventListener('click',function(){document.getElementById('ov').classList.add('on');});
+document.getElementById('closeSet').addEventListener('click',function(){document.getElementById('ov').classList.remove('on');});
+document.getElementById('ov').addEventListener('click',function(e){if(e.target===this)this.classList.remove('on');});
+document.getElementById('secMinus').addEventListener('click',function(){secs=Math.max(2,secs-1);localStorage.setItem('cc_scan_secs',secs);renderSecs();});
+document.getElementById('secPlus').addEventListener('click',function(){secs=Math.min(60,secs+1);localStorage.setItem('cc_scan_secs',secs);renderSecs();});
+document.getElementById('beepTog').addEventListener('click',function(){beepOn=!beepOn;this.classList.toggle('on',beepOn);localStorage.setItem('cc_scan_beep',beepOn?'1':'0');});
+document.getElementById('reloadBtn').addEventListener('click',function(){loadAll();});
+
+// ---------- init ----------
+renderSecs();
+document.getElementById('beepTog').classList.toggle('on',beepOn);
+setMode(mode);
+loadAll();
+</script>
+</body>
+</html>
