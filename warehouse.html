@@ -167,6 +167,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .map-shelf-top{display:flex;align-items:center;gap:7px;margin-bottom:6px}
 .map-shelf-no{flex-shrink:0;width:20px;height:20px;border-radius:5px;background:var(--purplebg);color:var(--purpletxt);font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center}
 .map-shelf-addr{flex:1;font-size:11px;font-weight:700;font-family:monospace;color:var(--sub)}
+.map-caret{flex-shrink:0;background:none;border:none;color:var(--purpletxt);font-size:13px;cursor:pointer;padding:0;width:22px;height:26px;-webkit-tap-highlight-color:transparent}
+.map-caret.sm{height:22px;width:18px;font-size:11px;color:var(--sub)}
+.map-tools{display:flex;justify-content:flex-end;margin-bottom:8px}
+.map-tool-btn{background:#fff;border:1px solid var(--border);border-radius:7px;padding:6px 11px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+.map-sum{font-size:11px;color:var(--sub);font-weight:600;padding:2px 2px 0}
+.map-sum.sm{font-size:10px;padding:0 2px}
+.map-sec.col,.map-gond.col{padding-bottom:8px}
 
 /* PICK STRIP — horizontal 3 column */
 .pk-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
@@ -666,23 +673,35 @@ function renderMapHTML(){
       '<input class="map-qa-num" id="map-qa-shelf" type="number" min="0" max="20" value="4">'+
       '<button class="map-qa-btn" data-act="addrowquick">+ Row</button>'+
     '</div>';
-  if(!(whMapData.rows||[]).length){h+='<div class="map-empty">No rows yet. Add your first row above (e.g. A, 5 gondolas, 4 shelves).</div>';}
-  (whMapData.rows||[]).forEach(function(row,ri){
-    h+='<div class="map-sec"><div class="map-sec-top">'+
+  var rowsArr=whMapData.rows||[];
+  if(!rowsArr.length){h+='<div class="map-empty">No rows yet. Add your first row above (e.g. A, 5 gondolas, 4 shelves).</div>';}
+  if(rowsArr.length){var anyOpen=rowsArr.some(function(r){return !r.c;});h+='<div class="map-tools"><button class="map-tool-btn" data-act="collapseall">'+(anyOpen?'⊟ Collapse all':'⊞ Expand all')+'</button></div>';}
+  rowsArr.forEach(function(row,ri){
+    var gons=row.gondolas||[],rcol=!!row.c,rShelves=0,rBrands=0;
+    gons.forEach(function(g){var sh=g.shelves||[];rShelves+=sh.length;sh.forEach(function(s){rBrands+=(s.brands||[]).length;});});
+    h+='<div class="map-sec'+(rcol?' col':'')+'"><div class="map-sec-top">'+
+      '<button class="map-caret" data-act="rowtog" data-r="'+ri+'">'+(rcol?'▸':'▾')+'</button>'+
       '<span class="map-sec-no">'+((row.name||'')||(ri+1))+'</span>'+
       '<input class="map-sec-name" data-r="'+ri+'" value="'+(row.name||'').replace(/"/g,'&quot;')+'" placeholder="Row name">'+
       '<button class="map-mv" data-act="rowup" data-r="'+ri+'">↑</button>'+
       '<button class="map-mv" data-act="rowdown" data-r="'+ri+'">↓</button>'+
       '<button class="map-del" data-act="delrow" data-r="'+ri+'">✕</button></div>';
-    (row.gondolas||[]).forEach(function(g,gi){
-      var bay=((row.name||('R'+(ri+1))))+(gi+1);
-      h+='<div class="map-gond"><div class="map-gond-top">'+
+    if(rcol){
+      h+='<div class="map-sum">'+gons.length+' gondola'+(gons.length===1?'':'s')+' · '+rShelves+' shelves · '+rBrands+' brand'+(rBrands===1?'':'s')+'</div></div>';
+      return;
+    }
+    gons.forEach(function(g,gi){
+      var bay=((row.name||('R'+(ri+1))))+(gi+1),shs=g.shelves||[],gcol=!!g.c,gBrands=0;
+      shs.forEach(function(s){gBrands+=(s.brands||[]).length;});
+      h+='<div class="map-gond'+(gcol?' col':'')+'"><div class="map-gond-top">'+
+        '<button class="map-caret sm" data-act="gtog" data-r="'+ri+'" data-g="'+gi+'">'+(gcol?'▸':'▾')+'</button>'+
         '<span class="map-gond-tag">'+bay+'</span><span class="map-gond-lbl">Gondola '+(gi+1)+'</span>'+
         '<span class="map-gspace"></span>'+
         '<button class="map-mv sm" data-act="gup" data-r="'+ri+'" data-g="'+gi+'">↑</button>'+
         '<button class="map-mv sm" data-act="gdown" data-r="'+ri+'" data-g="'+gi+'">↓</button>'+
         '<button class="map-del sm" data-act="delgond" data-r="'+ri+'" data-g="'+gi+'">remove</button></div>';
-      (g.shelves||[]).forEach(function(sh,si){
+      if(gcol){h+='<div class="map-sum sm">'+shs.length+' shelves · '+gBrands+' brand'+(gBrands===1?'':'s')+'</div></div>';return;}
+      shs.forEach(function(sh,si){
         h+='<div class="map-shelf"><div class="map-shelf-top"><span class="map-shelf-no">'+(si+1)+'</span>'+
           '<span class="map-shelf-addr">'+bay+'-'+(si+1)+'</span>'+
           '<button class="map-del sm" data-act="delshelf" data-r="'+ri+'" data-g="'+gi+'" data-sh="'+si+'">✕</button></div><div class="map-chips">';
@@ -725,6 +744,9 @@ function wireMap(el){
       else if(act==='addshelf'){R[r].gondolas[g].shelves.push({brands:[]});}
       else if(act==='delshelf'){R[r].gondolas[g].shelves.splice(sh,1);}
       else if(act==='addbrand'){var inp=wrap.querySelector('.map-brand-in[data-r="'+r+'"][data-g="'+g+'"][data-sh="'+sh+'"]');if(inp){addBrand(r,g,sh,inp);return;}}
+      else if(act==='rowtog'){R[r].c=!R[r].c;}
+      else if(act==='gtog'){R[r].gondolas[g].c=!R[r].gondolas[g].c;}
+      else if(act==='collapseall'){var open=R.some(function(x){return !x.c;});R.forEach(function(x){x.c=open;});}
       else if(act==='delbrand'){R[r].gondolas[g].shelves[sh].brands.splice(bi,1);}
       saveMap();renderWH();
     });
