@@ -125,6 +125,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .brand-loc{font-size:9px;font-weight:700;font-family:monospace;color:var(--purpletxt);background:var(--purplebg);border-radius:6px;padding:1px 6px;margin-right:2px;flex-shrink:0;white-space:nowrap}
 .map-wrap{padding:10px 11px 4px}
 .map-intro{font-size:12px;color:var(--sub);line-height:1.4;margin-bottom:10px;background:var(--s1,#fff);border:1px solid var(--border);border-radius:9px;padding:9px 11px}
+.map-cov{font-size:11px;color:var(--sub);background:var(--purplebg);border-radius:8px;padding:7px 10px;margin-bottom:12px;line-height:1.4}
+.map-cov b{color:var(--purpletxt)}
+.map-cov.bad{background:#fde8e8;color:#a01919}
+.map-cov.bad b{color:#a01919}
 .map-sec{background:var(--s1,#fff);border:1px solid var(--border);border-radius:11px;padding:10px;margin-bottom:10px}
 .map-sec-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .map-sec-no{flex-shrink:0;min-width:24px;height:24px;padding:0 8px;border-radius:12px;background:var(--purple);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;white-space:nowrap}
@@ -337,9 +341,9 @@ function vendorBrand(v){
   if(!v)return '';
   var V=(''+v).trim().toUpperCase();
   if(VENDOR_SKIP[V])return '';
-  var first=(V.split(/\s+/)[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');
-  if(!first||/^[0-9]+$/.test(first))return '';
-  return BRAND_ALIASES[first]||first;
+  V=V.replace(/\s+/g,' ').replace(/[^A-Z0-9&\/+\- ]/g,'').trim();
+  if(!V||/^[0-9]+$/.test(V))return '';
+  return BRAND_ALIASES[V]||V;
 }
 function brandOf(nm,bc){
   if(bc&&vmap[bc]){var vb=vendorBrand(vmap[bc]);if(vb)return vb;}
@@ -647,11 +651,14 @@ function renderWH(){
 }
 
 // ── WAREHOUSE MAP EDITOR ──
+function mapBrandCoverage(){var t=0,v=0;(bd[3]||[]).forEach(function(p){if(!p.bc||!p.nm)return;t++;if(vmap[p.bc]&&vendorBrand(vmap[p.bc]))v++;});return {total:t,vendor:v,name:t-v};}
 function renderMapHTML(){
   var brands=whAllBrands();
+  var cov=mapBrandCoverage();
   var dl='<datalist id="brand-list">'+brands.map(function(b){return '<option value="'+b.replace(/"/g,'')+'">';}).join('')+'</datalist>';
   var h='<div class="map-wrap">'+dl+
     '<div class="map-intro">Add a <b>row</b> (name + how many gondolas + shelves), then drop <b>brands</b> onto each shelf. Address reads <b>Row Gondola-Shelf</b> — e.g. <b>A1-3</b>. Top-to-bottom order here is the walking order, and the Top up / Out of stock lists follow it. Saved automatically.</div>'+
+    '<div class="map-cov'+(cov.vendor===0?' bad':'')+'"><b>Shopify vendors:</b> '+cov.vendor+'/'+cov.total+' products matched'+(cov.name?' · '+cov.name+' grouped by name (no vendor)':'')+(cov.vendor===0?' — ⚠ no vendor data loaded; check /api/vendors env vars':'')+'</div>'+
     '<div class="map-qa-lbl"><span>Row name</span><span>Gondolas</span><span>Shelves</span><span></span></div>'+
     '<div class="map-qa">'+
       '<input class="map-qa-name" id="map-qa-name" placeholder="A" maxlength="8">'+
