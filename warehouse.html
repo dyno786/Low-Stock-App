@@ -338,6 +338,7 @@ var whMapData=(function(){var d={rows:[]};try{d=JSON.parse(localStorage.getItem(
   if(d&&d.sections&&!d.rows){var nr=[];d.sections.forEach(function(sec){var shv=(sec.rows||[]).map(function(r){return {brands:(r.brands||[]).slice()};});if(!shv.length)shv=[{brands:[]}];nr.push({name:sec.name||'',gondolas:[{shelves:shv}]});});d={rows:nr};try{localStorage.setItem('cc_wh_map',JSON.stringify(d));}catch(e){}}
   if(!d.rows)d.rows=[];return d;})();
 function saveMap(){try{localStorage.setItem('cc_wh_map',JSON.stringify(whMapData));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_map',whMapData);}
+async function loadMap(){try{if(typeof syncLoad!=='function')return;var d=await syncLoad('cc_wh_map');if(d&&Array.isArray(d.rows)){whMapData=d;try{localStorage.setItem('cc_wh_map',JSON.stringify(d));}catch(e){}}}catch(e){}}
 function brandPosMap(){var m={};(whMapData.rows||[]).forEach(function(row,ri){(row.gondolas||[]).forEach(function(g,gi){var bay=(row.name||('R'+(ri+1)))+(gi+1);(g.shelves||[]).forEach(function(sh,si){var ord=ri*1000000+gi*1000+si;var label=bay+'-'+(si+1);(sh.brands||[]).forEach(function(b){var k=(''+b).toUpperCase();if(!(k in m))m[k]={ord:ord,label:label};});});});});return m;}
 function whAllBrands(){var s={};(bd[3]||[]).forEach(function(p){if(p.bc&&p.nm)s[brandOf(p.nm,p.bc)]=1;});return Object.keys(s).sort();}
 // brand is derived from the product name (no brand field in EPOS). Aliases merge split/multi-word brands.
@@ -967,7 +968,7 @@ function waSVG(){return '<svg viewBox="0 0 24 24" fill="currentColor" style="wid
 document.getElementById('refresh-btn').addEventListener('click',function(){
   loaded=0;bd=[null,null,null,null];bm=[{},{},{},{}];
   document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Refreshing…</div>';
-  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();loadVendors();loadNS().then(function(){if(typeof renderWH==='function')renderWH();});
+  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();loadVendors();loadNS().then(function(){if(typeof renderWH==='function')renderWH();});loadMap().then(function(){if(typeof renderWH==='function')renderWH();});
 });
 document.getElementById('sync-btn').addEventListener('click',doSync);
 // tap any product image to enlarge
@@ -978,6 +979,7 @@ Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
 loadImgs();loadVendors();
 doSync();
 loadNS().then(function(){if(typeof renderWH==='function')renderWH();});
+loadMap().then(function(){if(typeof renderWH==='function')renderWH();});
 
 // ── SYSTEM CHECK ─────────────────────────────────────────
 var SC_BRANCHES=[
