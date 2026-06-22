@@ -192,6 +192,18 @@
   .negbanner{display:flex; align-items:center; gap:9px; padding:11px 15px; margin:0 0 16px; border-radius:12px; font-size:13.5px; background:var(--bad-wash); color:var(--bad); border:1px solid #F3C9C3} .negbanner b{font-weight:700}
   .negbanner--ok{background:var(--ok-wash); color:var(--ok); border-color:#BFE6CF}
   .negbanner__dot{width:9px; height:9px; border-radius:50%; background:currentColor; flex:none}
+  .feedbanner{display:flex; align-items:flex-start; gap:9px; padding:11px 15px; margin:0 0 12px; border-radius:12px; font-size:13.5px; font-weight:600; background:var(--bad-wash); color:var(--bad); border:1px solid #F3C9C3} .feedbanner b{font-weight:800}
+  .feedbanner--ok{background:var(--ok-wash); color:var(--ok); border-color:#BFE6CF}
+  .feedbanner__dot{width:9px; height:9px; border-radius:50%; background:currentColor; flex:none; margin-top:4px}
+  .settings{display:flex; flex-direction:column; gap:18px; max-width:560px}
+  .setrow{display:flex; flex-direction:column; gap:6px}
+  .setrow__l{font-size:14px; font-weight:600; color:var(--ink)}
+  .setrow__c{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--muted)}
+  .setinput{font:inherit; font-weight:600; width:90px; padding:8px 10px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface); color:var(--ink)}
+  .setinput:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-wash)}
+  .setrow__h{font-size:12.5px; color:var(--muted)}
+  .setactions{display:flex; align-items:center; gap:12px; margin-top:4px}
+  .setmsg{font-size:13px; color:var(--ok); font-weight:600}
   .ret-out{color:var(--bad); font-weight:700; font-variant-numeric:tabular-nums}
   .retbranch{margin-bottom:22px}
   .retbranch__head{display:flex; align-items:center; gap:9px; margin:2px 2px 10px; flex-wrap:wrap}
@@ -407,6 +419,8 @@ const CONFIG = {
   isException: (r) => (r.after!=null && r.after<0) || (r.value!=null && r.value<0),
 
   staleAfterMinutes: 60,
+  frozenAfterHours: 3,    // DEFAULT: flag a feed "frozen" after this many hours with no new scan. Editable live in the Settings tab.
+  emptyBelowRows: 50,     // DEFAULT: a branch sheet with fewer rows than this is flagged "empty" (an import likely wiped it). Editable in Settings.
   refreshMinutes: 5,
   maxRows: 400,
   maxCards: 120,
@@ -782,6 +796,7 @@ function renderTabs(){
   html+=`<button class="tab tab--exc" role="tab" aria-selected="${state.active==="__exc"}" data-key="__exc"><span>Exceptions</span><span class="tab__count ${exc>0?"hot":""}">${fmt(exc)}</span></button>`;
   html+=`<button class="tab" role="tab" aria-selected="${state.active==="__trace"}" data-key="__trace">Trace</button>`;
   html+=`<button class="tab" role="tab" aria-selected="${state.active==="__log"}" data-key="__log">Update log</button>`;
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__settings"}" data-key="__settings">Settings</button>`;
   tabs.innerHTML=html;
   tabs.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{state.active=t.dataset.key;state.search="";state.filter="all";state.prov="all";renderTabs();renderPanel();}));
 }
@@ -1053,6 +1068,66 @@ function mapNote(d){
   return `<details class="mapnote"><summary>Column mapping &amp; image match</summary><div class="mapnote__body">${rows}${imgLine}</div></details>`;
 }
 
+/* Feed health: catches the failures we kept hitting by hand — a branch whose export/import
+   froze (no new scans), whose sheet got wiped (near-empty), or whose sheet won't read at all.
+   Reuses the same newest-scan signal the cards already show, just makes it loud and aggregated. */
+/* Editable settings, persisted per-device in localStorage (this is a real deployed site, so
+   localStorage is fine here). Falls back to the CONFIG defaults when unset. */
+function loadSettings(){ try{ return JSON.parse(localStorage.getItem("picco.settings")||"{}")||{}; }catch(e){ return {}; } }
+function getSetting(k,def){ const v=loadSettings()[k]; const n=+v; return (v==null||v===""||isNaN(n))?def:n; }
+function saveSetting(k,v){ const s=loadSettings(); s[k]=v; try{localStorage.setItem("picco.settings",JSON.stringify(s));}catch(e){} }
+
+function feedHealth(){
+  const out=[];
+  const frozenMin=getSetting("frozenAfterHours",CONFIG.frozenAfterHours)*60;
+  const emptyBelow=getSetting("emptyBelowRows",CONFIG.emptyBelowRows);
+  for(const b of CONFIG.branches){
+    const d=state.data[b.key];
+    if(!d) continue;                                   // still loading — not an error
+    if(d.demo){ out.push({name:b.name, kind:"unreadable", detail:d.error||""}); continue; }
+    const items=d.items||[];
+    if(items.length < emptyBelow){ out.push({name:b.name, kind:"empty"}); continue; }
+    const n=newest(items);
+    const ageMin = n ? Math.round((Date.now()-n.getTime())/60000) : Infinity;
+    if(ageMin > frozenMin){ out.push({name:b.name, kind:"frozen", since:n, ageMin}); }
+  }
+  return out;
+}
+function stamp(d){
+  if(!d) return "—";
+  const days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], z=x=>String(x).padStart(2,"0");
+  return days[d.getDay()]+" "+d.getDate()+" "+mon[d.getMonth()]+" "+z(d.getHours())+":"+z(d.getMinutes());
+}
+function feedHealthBanner(){
+  const bad=feedHealth();
+  if(!bad.length) return `<div class="feedbanner feedbanner--ok"><span class="feedbanner__dot"></span><span>All branch feeds are fresh — a new scan landed within ${getSetting("frozenAfterHours",CONFIG.frozenAfterHours)}h on every branch.</span></div>`;
+  const parts=bad.map(h=>{
+    if(h.kind==="unreadable") return `<b>${esc(h.name)}</b> — feed won't load${h.detail?` (${esc(h.detail)})`:""}`;
+    if(h.kind==="empty")      return `<b>${esc(h.name)}</b> — feed empty, an import may have wiped it`;
+    if(h.kind==="frozen")     return `<b>${esc(h.name)}</b> — frozen, no new scan for ${ago(h.ageMin)} (since ${esc(stamp(h.since))})`;
+    return `<b>${esc(h.name)}</b>`;
+  });
+  return `<div class="feedbanner feedbanner--bad"><span class="feedbanner__dot"></span><span><b>Feed problem on ${bad.length} branch${bad.length===1?"":"es"}.</b> ${parts.join(" · ")}. Check that branch's export → CSV → import.</span></div>`;
+}
+function renderSettings(){
+  const fh=getSetting("frozenAfterHours",CONFIG.frozenAfterHours);
+  const eb=getSetting("emptyBelowRows",CONFIG.emptyBelowRows);
+  return `<div class="branchhead"><div class="branchhead__name">Settings</div></div>
+    <p class="lede">Tune how the dashboard flags a broken feed. Saved on this device.</p>
+    <div class="settings">
+      <div class="setrow">
+        <div class="setrow__l">Flag a feed as <b>stale</b> after</div>
+        <div class="setrow__c"><input id="set-frozen" class="setinput" type="number" min="1" max="72" step="1" value="${fh}"><span>hours</span></div>
+        <div class="setrow__h">No new scan within this window turns the Overview banner red. Try 3–6.</div>
+      </div>
+      <div class="setrow">
+        <div class="setrow__l">Treat a sheet as <b>empty</b> below</div>
+        <div class="setrow__c"><input id="set-empty" class="setinput" type="number" min="1" max="2000" step="1" value="${eb}"><span>rows</span></div>
+        <div class="setrow__h">Catches a wiped sheet — a healthy branch has thousands of rows.</div>
+      </div>
+      <div class="setactions"><button id="set-save" class="btn" type="button">Save settings</button><span id="set-msg" class="setmsg"></span></div>
+    </div>`;
+}
 function renderOverview(){
   let cards="";
   const negTotal={count:0,units:0};
@@ -1082,6 +1157,7 @@ function renderOverview(){
     : `<div class="negbanner negbanner--ok"><span class="negbanner__dot"></span>No negative stock on this day — every item recounts to zero or above.</div>`;
   return `<div class="branchhead"><div class="branchhead__name">Overview</div>${daynavHTML()}</div>
     <p class="lede">Each branch for the selected day — products scanned, units added, exceptions. Green means scanned recently, amber means stale. Tap a card to open it.</p>
+    ${feedHealthBanner()}
     ${negBanner}
     <div class="overview">${cards}</div>`;
 }
@@ -1229,6 +1305,7 @@ function renderPanel(){
     else if(state.active==="__trace")html=renderTrace();
     else if(state.active==="__returns")html=renderReturns();
     else if(state.active==="__log")html=renderLog();
+    else if(state.active==="__settings")html=renderSettings();
     else html=renderBranch(CONFIG.branches.find(x=>x.key===state.active));
   }catch(err){
     console.error("renderPanel error:",err);
@@ -1258,6 +1335,13 @@ function wirePanel(){
   document.querySelectorAll(".bc").forEach(el=>{
     el.addEventListener("click",e=>{e.stopPropagation();e.preventDefault();copyBC(el);});
     el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();e.stopPropagation();copyBC(el);}});
+  });
+  const sf=$("#set-save");
+  if(sf)sf.addEventListener("click",()=>{
+    const fh=Math.max(1,Math.min(72, parseInt(($("#set-frozen")||{}).value,10)||CONFIG.frozenAfterHours));
+    const eb=Math.max(1,Math.min(2000, parseInt(($("#set-empty")||{}).value,10)||CONFIG.emptyBelowRows));
+    saveSetting("frozenAfterHours",fh); saveSetting("emptyBelowRows",eb);
+    const m=$("#set-msg"); if(m)m.textContent=`Saved — feeds now flagged after ${fh}h.`;
   });
 }
 function renderUpdated(){const el=$("#updated");if(!state.lastUpdated){el.textContent="";return;}
