@@ -375,6 +375,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
+  <div class="vtab" data-v="disc">🚫 Discontinued</div>
   <div class="vtab" data-v="whorder">🚚 W/H Order</div>
   <div class="vtab" data-v="shopify">🛍 + Shopify</div>
   <div class="vtab" data-v="imgs">📸 Images</div>
@@ -885,6 +886,7 @@ function renderView(){
   else if(view==='neg')renderNeg();
   else if(view==='oos')renderOOS();
   else if(view==='over')renderOverstock();
+  else if(view==='disc')renderDisc();
   else if(view==='whorder')renderWHOrder();
   else if(view==='shopify')renderShopify();
   else if(view==='map')renderMap();
@@ -911,6 +913,33 @@ function saveOverSetting(k,v){
   try{localStorage.setItem('cc_over_'+k,String(v));}catch(e){}
 }
 
+// ===== Discontinued (Roundhay only \u2014 not shared with other branches) =====
+var DISC_KEY='cc_discontinued';
+var disc={}; try{disc=JSON.parse(localStorage.getItem(DISC_KEY)||'{}')||{};}catch(e){disc={};}
+function isDisc(bc){return !!(disc&&disc[bc]);}
+function setDisc(bc,nm,on){if(!bc)return;if(on){disc[bc]={nm:nm||'',t:Date.now()};}else{delete disc[bc];}try{localStorage.setItem(DISC_KEY,JSON.stringify(disc));}catch(e){}if(typeof syncSave==='function'){try{syncSave(DISC_KEY,disc);}catch(e){}}}
+function renderDisc(){
+  var el=document.getElementById('out'); if(!el)return;
+  var pw=document.getElementById('prog-wrap'); if(pw)pw.style.display='none';
+  var df=document.getElementById('day-filter'); if(df)df.style.display='none';
+  var head='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">\uD83D\uDEAB Discontinued \u2014 not to share</div><div class="src-rule" style="color:var(--sub)">Kept at Roundhay only. Hidden from the Overstock list so they\u2019re never sent to other branches.</div></div></div>';
+  var keys=Object.keys(disc||{});
+  if(!keys.length){el.innerHTML=head+'<div class="empty" style="margin-top:8px">No discontinued items yet. On the Overstock tab, tap \u201c\uD83D\uDEAB Discontinued \u2014 don\u2019t send\u201d on any item to move it here.</div>';return;}
+  keys.sort(function(a,b){return ((disc[a].nm||'')<(disc[b].nm||''))?-1:1;});
+  var html=head+'<div style="font-size:12px;color:var(--sub);margin:0 2px 8px">'+keys.length+' item'+(keys.length>1?'s':'')+' held at Roundhay</div><div class="card-list">';
+  keys.forEach(function(bc){
+    var nm=(disc[bc].nm||'')||bc;
+    html+='<div class="over-card" data-bc="'+bc+'">'+
+      '<div class="over-img">'+(typeof imgEl==='function'?imgEl(bc,46):'')+'</div>'+
+      '<div class="over-body"><div class="over-name">'+nm+'</div><div class="over-bc item-bc">'+bc+'</div>'+
+      '<div class="over-tags"><span class="itag" style="background:#fee2e2;color:#b91c1c">Not shared</span></div></div>'+
+      '<div class="over-right"><button class="disc-restore" data-bc="'+bc+'" style="border:1px solid var(--border);background:#fff;border-radius:9px;padding:8px 11px;font-weight:700;font-size:12px;cursor:pointer">\u21A9 Restore</button></div>'+
+      '</div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+  el.querySelectorAll('.disc-restore').forEach(function(b){b.addEventListener('click',function(){setDisc(this.dataset.bc,'',false);renderDisc();});});
+}
 function computeOverstockRows(){
   var settings=loadOverSettings();
   function mapFor(idx){
@@ -933,6 +962,7 @@ function computeOverstockRows(){
     // Department filter: only AFRO BEAUTY PRODUCTS and AFRO PRODUCTS 2
     var dept=(p.dp||'').toUpperCase();
     if(dept!=='AFRO BEAUTY PRODUCTS'&&dept!=='AFRO PRODUCTS 2')return;
+    if(isDisc(p.bc))return;            // discontinued — never offer to transfer out
     if(p.qty<settings.min)return;                   // overstock rule
     var extra=p.qty-settings.buffer;
     if(extra<=0)return;
@@ -1093,6 +1123,7 @@ function renderOverstock(){
               '<span class="over-send">send '+a.send+'</span>'+
               '<span class="over-bqty">('+qtyTag+')</span></div>'+
           '</div>'+
+          '<div class="over-disc-row" style="margin-top:8px"><button class="disc-btn" data-bc="'+r.bc+'" style="border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">\uD83D\uDEAB Discontinued \u2014 don\u2019t send</button></div>'+
         '</div>'+
         '<div class="over-right">'+
           '<div class="over-qty">'+a.send+'</div>'+
@@ -1127,6 +1158,9 @@ function renderOverstock(){
       setProg(tot,dn,dn+' of '+tot+' packed');
       if(nowDone&&typeof tmrPick==='function')tmrPick();
     });
+  });
+  el.querySelectorAll('.disc-btn').forEach(function(btn){
+    btn.addEventListener('click',function(e){e.stopPropagation();var bc=this.dataset.bc;var card=this.closest('.over-card');var nm=card&&card.querySelector('.over-name')?card.querySelector('.over-name').textContent:'';setDisc(bc,nm,true);renderOverstock();});
   });
 }
 
