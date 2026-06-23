@@ -124,6 +124,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .wh-tab.active .wh-tab-n{background:rgba(255,255,255,.25)}
 .brand-loc{font-size:9px;font-weight:700;font-family:monospace;color:var(--purpletxt);background:var(--purplebg);border-radius:6px;padding:1px 6px;margin-right:2px;flex-shrink:0;white-space:nowrap}
 .brand-loc.loc-e{color:#b45309;background:#fef3c7}
+.brand-loc.loc-tag{color:#0e7490;background:#cffafe}
+.map-tagrules{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px;background:#fff}
+.map-tr-head{font-size:13px;font-weight:700;margin-bottom:6px}
+.map-tr-cov{font-size:11px;color:var(--sub);margin-bottom:8px;line-height:1.4}
+.map-tr-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.map-tr-tag{font-weight:700;background:#cffafe;color:#0e7490;border-radius:6px;padding:2px 8px;font-family:monospace;font-size:12px}
+.map-tr-arrow{color:var(--sub)}
+.map-tr-to{font-weight:700;color:var(--purpletxt)}
+.map-tr-row .map-del{margin-left:auto}
+.map-tr-empty{font-size:12px;color:var(--sub);padding:6px 0}
+.map-tr-add{display:flex;gap:6px;margin-top:8px}
+.map-tr-in{flex:1;min-width:0;border:1px solid var(--border);border-radius:7px;padding:8px 9px;font-size:13px;font-family:var(--font);color:var(--ink);background:#fff}
 .map-wrap{padding:10px 11px 4px}
 .map-intro{font-size:12px;color:var(--sub);line-height:1.4;margin-bottom:10px;background:var(--s1,#fff);border:1px solid var(--border);border-radius:9px;padding:9px 11px}
 .map-cov{font-size:11px;color:var(--sub);background:var(--purplebg);border-radius:8px;padding:7px 10px;margin-bottom:12px;line-height:1.4}
@@ -346,6 +358,11 @@ var BR=[
 ];
 var VURL='/api/vendors'; // Vercel function: live barcode->vendor map straight from Shopify Admin API
 var vmap={};
+var TGURL='/api/tags';var tmap={};
+async function loadTags(){try{var cached=localStorage.getItem('cc_shopify_tags');if(cached){var o=JSON.parse(cached);if(Date.now()-o.ts<60*60*1000){tmap=o.d||{};return;}}var r=await fetch(TGURL);var t=await r.text();var tr=t.trim();var m={};if(tr.charAt(0)==='{'){try{var obj=JSON.parse(tr);if(obj&&!obj.error){Object.keys(obj).forEach(function(bc){var arr=obj[bc];if(bc&&Array.isArray(arr)){var u=arr.map(function(x){return(''+x).trim().toUpperCase();}).filter(Boolean);if(u.length)m[bc]=u;}});}}catch(e){}}if(Object.keys(m).length){tmap=m;try{localStorage.setItem('cc_shopify_tags',JSON.stringify({ts:Date.now(),d:tmap}));}catch(e){}if(loaded>=4)renderWH();}}catch(e){}}
+function allTags(){var s={};Object.keys(tmap).forEach(function(bc){(tmap[bc]||[]).forEach(function(t){s[t]=1;});});return Object.keys(s).sort();}
+function rowOrd(name){var rs=whMapData.rows||[];var u=(''+name).toUpperCase();for(var i=0;i<rs.length;i++){if((''+(rs[i].name||'')).toUpperCase()===u)return i*1000000;}return 800000000;}
+function tagRuleFor(bc){var its=tmap[bc];if(!its||!its.length)return null;var rules=whMapData.tagRules||[];for(var i=0;i<rules.length;i++){if(its.indexOf((''+rules[i].tag).toUpperCase())>=0)return rules[i];}return null;}
 var IURL='/api/stock-data?branch=shopify-images'; // ShopifyImages tab — updated daily by Apps Script
 
 var bd=[null,null,null,null],bm=[{},{},{},{}],imgs={},shopifyData={},loaded=0;
@@ -755,6 +772,13 @@ function renderMapHTML(){
     });
     h+='<button class="map-addrow" data-act="addgond" data-r="'+ri+'">+ Add gondola</button></div>';
   });
+  var trules=whMapData.tagRules||[],tcount=Object.keys(tmap).length;
+  h+='<div class="map-tagrules"><div class="map-tr-head">🏷 Tag → row rules</div>'+
+     '<div class="map-tr-cov">'+(tcount?(tcount+' products carry Shopify tags · tagged items route to the row below, overriding their vendor shelf'):'No Shopify tags loaded yet — tag products in Shopify (e.g. “oversize”) and they’ll appear here')+'</div>';
+  if(trules.length){trules.forEach(function(rl,i){h+='<div class="map-tr-row"><span class="map-tr-tag">'+(rl.tag||'')+'</span><span class="map-tr-arrow">→</span><span class="map-tr-to">Row '+(rl.row||'')+'</span><button class="map-del sm" data-act="deltagrule" data-i="'+i+'">✕</button></div>';});}
+  else{h+='<div class="map-tr-empty">No rules yet. Add one below — e.g. tag <b>oversize</b> → row <b>E</b>.</div>';}
+  h+='<div class="map-tr-add"><input class="map-tr-in" id="map-tr-tag" list="tag-list" placeholder="tag (e.g. oversize)" autocomplete="off"><input class="map-tr-in" id="map-tr-row" placeholder="row (e.g. E)" maxlength="12" autocomplete="off"><button class="map-qa-btn" data-act="addtagrule">+ Rule</button></div>'+
+     '<datalist id="tag-list">'+allTags().map(function(t){return '<option value="'+t.replace(/"/g,'')+'">';}).join('')+'</datalist></div>';
   h+='<div class="bp-modal" id="bp-modal"><div class="bp-card">'+
      '<div class="bp-head"><b id="bp-title">Add brands</b><button class="bp-x" data-act="bpclose">✕</button></div>'+
      '<input class="bp-search" id="bp-search" placeholder="Filter brands… (e.g. cantu)" autocomplete="off">'+
@@ -824,6 +848,8 @@ function wireMap(el){
       else if(act==='mapexport'){var data=JSON.stringify(whMapData,null,2);var blob=new Blob([data],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='warehouse-map-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);return;}
       else if(act==='mapimport'){var fi=document.getElementById('map-file');if(fi)fi.click();return;}
       else if(act==='mapsave'){if(mapPend){clearTimeout(mapPend);mapPend=null;}pushMap(true);return;}
+      else if(act==='addtagrule'){var tg=(document.getElementById('map-tr-tag').value||'').trim().toUpperCase();var rw=(document.getElementById('map-tr-row').value||'').trim();if(!tg){alert('Enter a tag');return;}if(!rw){alert('Enter a row (e.g. E)');return;}if(!whMapData.tagRules)whMapData.tagRules=[];whMapData.tagRules.push({tag:tg,row:rw});saveMap();renderWH();return;}
+      else if(act==='deltagrule'){var ix=+this.dataset.i;if(whMapData.tagRules)whMapData.tagRules.splice(ix,1);saveMap();renderWH();return;}
       saveMap();renderWH();
     });
   });
@@ -836,25 +862,29 @@ function renderSection(items,dp,tp){
 }
 
 function renderBrandGroups(all){
-  var groups={};
-  all.forEach(function(it){var b=brandOf(it.nm,it.bc);(groups[b]=groups[b]||[]).push(it);});
   var pos=brandPosMap();
-  var brands=Object.keys(groups).sort(function(a,b){
-    var pa=pos[a],pb=pos[b];
-    if(pa&&pb){if(pa.ord!==pb.ord)return pa.ord-pb.ord;return a.localeCompare(b);}
-    if(pa)return -1;if(pb)return 1;return a.localeCompare(b);
+  var groups={},meta={};
+  all.forEach(function(it){
+    var rule=tagRuleFor(it.bc),name,ord,label,isTag=false;
+    if(rule){name=(''+rule.tag).toUpperCase();ord=rowOrd(rule.row);label=rule.row;isTag=true;}
+    else{var b=brandOf(it.nm,it.bc);var p=pos[b];name=b;ord=p?p.ord:900000000;label=p?p.label:'E';}
+    (groups[name]=groups[name]||[]).push(it);
+    if(!meta[name])meta[name]={ord:ord,label:label,isTag:isTag};
   });
+  var brands=Object.keys(groups).sort(function(a,b){var ma=meta[a],mb=meta[b];if(ma.ord!==mb.ord)return ma.ord-mb.ord;return a.localeCompare(b);});
   var html='';
   brands.forEach(function(b){
+    var m=meta[b];
     var items=groups[b].slice().sort(function(x,y){return x.nm.localeCompare(y.nm);});
     var cells=0,done=0,pcs=0;
     items.forEach(function(it){var t=pkTx[it.bc]||[false,false,false];for(var k=0;k<3;k++){if(it.sp[k]>0){cells++;pcs+=it.sp[k];if(t[k])done++;}}});
     var coll=!!brandCollapsed[b], allDone=cells>0&&done===cells;
     var key=b.replace(/"/g,'');
+    var locCls=m.isTag?' loc-tag':(m.label==='E'?' loc-e':'');
     html+='<div class="brand-hdr" data-brand="'+key+'">'+
       '<span class="brand-caret">'+(coll?'▸':'▾')+'</span>'+
-      '<span class="brand-loc'+(pos[b]?'':' loc-e')+'">'+(pos[b]?pos[b].label:'E')+'</span>'+
-      '<span class="brand-name">'+b+'</span>'+
+      '<span class="brand-loc'+locCls+'">'+m.label+'</span>'+
+      '<span class="brand-name">'+(m.isTag?'🏷 ':'')+b+'</span>'+
       '<span class="brand-meta">'+items.length+' items · '+pcs+' pcs</span>'+
       '<span class="brand-prog'+(allDone?' done':'')+'">'+done+'/'+cells+'</span>'+
     '</div>'+
@@ -1043,7 +1073,7 @@ function waSVG(){return '<svg viewBox="0 0 24 24" fill="currentColor" style="wid
 document.getElementById('refresh-btn').addEventListener('click',function(){
   loaded=0;bd=[null,null,null,null];bm=[{},{},{},{}];
   document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Refreshing…</div>';
-  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();loadVendors();loadNS().then(function(){if(typeof renderWH==='function')renderWH();});loadMap().then(function(){if(typeof renderWH==='function')renderWH();});
+  Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);loadImgs();loadVendors();loadTags();loadNS().then(function(){if(typeof renderWH==='function')renderWH();});loadMap().then(function(){if(typeof renderWH==='function')renderWH();});
 });
 document.getElementById('sync-btn').addEventListener('click',doSync);
 // tap any product image to enlarge
@@ -1051,7 +1081,7 @@ document.addEventListener('click',function(e){var z=e.target.closest&&e.target.c
 
 // ── START ──────────────────────────────────────────────────
 Promise.all([loadBranch(0),loadBranch(1),loadBranch(2),loadBranch(3)]);
-loadImgs();loadVendors();
+loadImgs();loadVendors();loadTags();
 doSync();
 loadNS().then(function(){if(typeof renderWH==='function')renderWH();});
 loadMap().then(function(){if(typeof renderWH==='function')renderWH();});
