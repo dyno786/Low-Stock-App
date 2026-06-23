@@ -159,6 +159,7 @@ async function fetchByQuery(q) {
 }
 
 const cleanTag = (t) => String(t).replace(/'/g, "").trim();
+const cleanVendor = (v) => String(v).replace(/["\\]/g, "").trim();
 async function fetchSupplier(sup) {
   return fetchByQuery(`tag:'${cleanTag(sup.tag)}' AND tag:braids AND status:active`);
 }
@@ -169,16 +170,33 @@ export default async function handler(req, res) {
     // cache at the edge for 10 min; serve stale while revalidating
     res.setHeader("Cache-Control", "public, s-maxage=600, stale-while-revalidate=86400");
 
-    // page-added supplier: ?tag=BrandName  (or comma-separated, e.g. ?tag=BrandName,braids)
-    // checked first, since a tag request has no supplier/brand key
+    // list the store's Shopify vendors (for the Add-brand picker): ?list=vendors
+    if (req.query && req.query.list === "vendors") {
+      const data = await shopifyGraphQL(`{ productVendors(first: 1000) { edges { node } } }`, {});
+      const vendors = (((data && data.productVendors) || {}).edges || []).map((e) => e.node).filter(Boolean);
+      return res.status(200).json({ vendors });
+    }
+
+    // page-added supplier by tag(s) and/or Shopify vendor(s):
+    //   ?tag=BrandName,braids      -> tag:'BrandName' AND tag:'braids'
+    //   ?vendor=Wella Koleston,Loreal  -> (vendor:"Wella Koleston" OR vendor:"Loreal")
+    //   both -> ANDed together. Checked before the empty-key suppliers list.
     const tagParam = req.query && req.query.tag;
-    if (tagParam) {
-      const tags = String(tagParam).split(",").map(cleanTag).filter(Boolean).slice(0, 5);
-      if (!tags.length) return res.status(400).json({ error: "No tag provided" });
-      const q = tags.map((t) => `tag:'${t}'`).join(" AND ") + " AND status:active";
+    const vendorParam = req.query && req.query.vendor;
+    if (tagParam || vendorParam) {
+      const clauses = [];
+      if (vendorParam) {
+        const vs = String(vendorParam).split(",").map(cleanVendor).filter(Boolean).slice(0, 25);
+        if (vs.length) clauses.push("(" + vs.map((v) => `vendor:"${v}"`).join(" OR ") + ")");
+      }
+      if (tagParam) {
+        String(tagParam).split(",").map(cleanTag).filter(Boolean).slice(0, 5).forEach((t) => clauses.push(`tag:'${t}'`));
+      }
+      if (!clauses.length) return res.status(400).json({ error: "No tag or vendor provided" });
+      const q = clauses.join(" AND ") + " AND status:active";
       const products = await fetchByQuery(q);
-      const label = (req.query.label && String(req.query.label)) || tags[0];
-      return res.status(200).json({ key: "tag:" + tags.join("+"), label, tag: tags.join(","), products });
+      const label = (req.query.label && String(req.query.label)) || (vendorParam ? String(vendorParam) : String(tagParam));
+      return res.status(200).json({ key: "q", label, products });
     }
 
     if (!key) {
