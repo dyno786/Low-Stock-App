@@ -142,6 +142,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .ov-info{flex:1;min-width:0}
 .ov-name{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ov-meta{font-size:11px;color:var(--sub);margin-top:2px}
+.ov-bc{font-size:11px;color:var(--sub);font-family:monospace;margin-top:1px;user-select:all}
 .ov-ctl{flex-shrink:0;display:flex;align-items:center;gap:6px}
 .ov-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--green);background:var(--greenbg);color:var(--greentxt);font-size:18px;font-weight:700;cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
 .ov-val{min-width:28px;text-align:center;font-weight:800;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -696,6 +697,7 @@ function renderOverstock(items){
     html+='<div class="ov-row" data-bc="'+it.bc+'" data-max="'+it.qty+'">'+
       '<div class="ov-img">'+imgEl(it.bc,44)+'</div>'+
       '<div class="ov-info"><div class="ov-name">'+it.nm+(it.sz?' · '+it.sz:'')+'</div>'+
+        '<div class="ov-bc">'+it.bc+'</div>'+
         '<div class="ov-meta">stock <b style="color:var(--greentxt)">'+it.qty+'</b> · '+sold+(it.prc?' · £'+it.prc.toFixed(2):'')+'</div></div>'+
       '<div class="ov-ctl"><span class="ov-off">offer</span><button class="ov-btn" data-d="-1">−</button><span class="ov-val">'+off+'</span><button class="ov-btn" data-d="1">+</button></div>'+
     '</div>';
