@@ -995,12 +995,78 @@ function computeOverstockRows(){
   return rows;
 }
 
+// ===== Shared discontinued list (cc_discontinued via /api/ticks) — read on every device =====
+var __discCentral={}, __discTried=false;
+function discIs(bc){ if(__discCentral&&__discCentral[bc])return true; if(typeof disc!=='undefined'&&disc&&disc[bc])return true; return false; }
+function ensureDisc(){
+  if(__discTried)return;__discTried=true;
+  if(typeof syncLoad!=='function')return;
+  syncLoad('cc_discontinued').then(function(v){
+    if(!v)return; if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){return;}}
+    if(v&&typeof v==='object'){__discCentral=v;
+      if(typeof disc!=='undefined'&&disc){Object.keys(v).forEach(function(bc){if(!disc[bc])disc[bc]=v[bc];});}
+      if(typeof view!=='undefined'&&typeof renderView==='function')renderView();}
+  }).catch(function(){});
+}
+// ===== Overstock fulfil card: % of receiving branches' need this branch can cover from spare =====
+function computeFulfil(){
+  if(!destLoaded||!srcLoaded[0]||!srcLoaded[1]||!srcLoaded[2])return null;
+  var s=loadOverSettings();
+  var b1=SOURCES[1], b2=SOURCES[2];
+  var wh={};(srcData[0]||[]).forEach(function(p){if(p.bc)wh[p.bc]=p;});
+  var m1={},m2={};(srcData[1]||[]).forEach(function(p){if(p.bc)m1[p.bc]=p;});(srcData[2]||[]).forEach(function(p){if(p.bc)m2[p.bc]=p;});
+  var t1=BRANCH_TARGETS[b1.name]||7, t2=BRANCH_TARGETS[b2.name]||7;
+  var per={};per[b1.short]={name:b1.name,color:b1.color,need:0,fill:0};per[b2.short]={name:b2.name,color:b2.color,need:0,fill:0};
+  var totalNeed=0,totalFill=0,items=[];
+  (destData||[]).forEach(function(p){
+    if(!p.bc)return;
+    if(discIs(p.bc))return;                              // discontinued — never send
+    if(wh[p.bc]&&wh[p.bc].qty>0)return;                  // warehouse already has it — branch pulls from WH
+    var dept=(p.dp||'').toUpperCase();
+    if(dept!=='AFRO BEAUTY PRODUCTS'&&dept!=='AFRO PRODUCTS 2')return;
+    var spare=(p.qty>=s.min)?Math.max(0,p.qty-s.buffer):0;
+    var q1=m1[p.bc]?m1[p.bc].qty:null, q2=m2[p.bc]?m2[p.bc].qty:null;
+    var n1=(q1!=null&&q1<=s.destThresh)?Math.max(0,t1-q1):0;
+    var n2=(q2!=null&&q2<=s.destThresh)?Math.max(0,t2-q2):0;
+    var need=n1+n2;if(need<=0)return;
+    per[b1.short].need+=n1;per[b2.short].need+=n2;totalNeed+=need;
+    if(spare<=0)return;
+    var slots=[{k:b1.short,need:n1},{k:b2.short,need:n2}].sort(function(a,b){return b.need-a.need;});
+    var rem=spare,give={};give[b1.short]=0;give[b2.short]=0;
+    slots.forEach(function(sl){var g=Math.max(0,Math.min(sl.need,rem));rem-=g;give[sl.k]=g;});
+    per[b1.short].fill+=give[b1.short];per[b2.short].fill+=give[b2.short];
+    var f=give[b1.short]+give[b2.short];totalFill+=f;
+    if(f>0)items.push({bc:p.bc,nm:p.nm,fill:f});
+  });
+  return {pct:totalNeed>0?Math.round(totalFill/totalNeed*100):0,totalNeed:totalNeed,totalFill:totalFill,per:per,b1:b1,b2:b2,items:items};
+}
+function fulfilCardHTML(){
+  ensureDisc();
+  var f=computeFulfil();if(!f)return '';
+  function bar(p){var pct=p.need>0?Math.round(p.fill/p.need*100):0;var w=Math.max(3,Math.min(100,pct));
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 14px">'+
+      '<span style="width:11px;height:11px;border-radius:50%;background:'+p.color+';flex:none"></span>'+
+      '<span style="font-weight:700;font-size:14px;min-width:92px">'+p.name+'</span>'+
+      '<span style="flex:1;height:9px;background:#eee;border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:'+w+'%;background:'+p.color+'"></span></span>'+
+      '<span style="font-weight:800;font-size:14px;min-width:40px;text-align:right">'+pct+'%</span>'+
+      '<span style="color:var(--sub);font-size:13px;min-width:52px;text-align:right">'+p.fill+'/'+p.need+'</span></div>';
+  }
+  return '<div style="border:1px solid #e9d5ff;border-radius:14px;overflow:hidden;margin:8px 10px;background:#fff">'+
+    '<div style="background:#f3e8ff;padding:13px 16px;display:flex;align-items:baseline;gap:11px">'+
+      '<span style="font-size:30px;font-weight:900;color:#5b21b6;line-height:1">'+f.pct+'%</span>'+
+      '<span style="font-size:13px;color:#5b21b6;font-weight:600;line-height:1.3">of the other branches\u2019 needs you can cover from your spare (excludes anything the warehouse already has, and discontinued lines)</span></div>'+
+    bar(f.per[f.b1.short])+bar(f.per[f.b2.short])+
+    '<div style="border-top:1px solid #f0f0f0;padding:8px 14px;font-size:12px;color:var(--sub);display:flex;justify-content:space-between">'+
+      '<span>'+f.totalFill+' of '+f.totalNeed+' units coverable</span><span>'+f.items.length+' item'+(f.items.length===1?'':'s')+' you can send</span></div></div>';
+}
+
 function renderOverstock(){
   var el=document.getElementById('out');
   if(!destLoaded||!srcLoaded[0]||!srcLoaded[1]||!srcLoaded[2]){
     el.innerHTML='<div class="loading"><div class="spin"></div>Loading branches…</div>';return;
   }
   var rows=computeOverstockRows();
+  if(rows&&rows.length)rows=rows.filter(function(r){return !discIs(r.bc);});
   if(rows&&rows.length&&wmLayoutOn())rows.sort(function(a,b){var ra=wmRank(a.nm),rb=wmRank(b.nm);return ra!==rb?ra-rb:(a.nm<b.nm?-1:1);});
   // ALWAYS render the settings panel + header, even when no overstock — so
   // the user can still adjust thresholds when nothing is showing.
@@ -1054,7 +1120,7 @@ function renderOverstock(){
   }
 
   // Header + sub-tab pills
-  var html=shellHeader+wmLayBar();
+  var html=shellHeader+fulfilCardHTML()+wmLayBar();
   html+='<div class="over-subtabs">';
   destBranches.forEach(function(b){
     var cnt=b.rows.length;
@@ -1413,6 +1479,54 @@ function whoNSbarHTML(){
 }
 var WHO_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME','KERA':'KERACARE','AUNT':'AUNT JACKIES','JANET':'JANET COLLECTION'};
 function whoBrand(nm){if(!nm)return 'OTHER';var w=(''+nm).trim().toUpperCase().split(/\s+/);var f=(w[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');if(!f||/^[0-9]+$/.test(f))f=((w[1]||'OTHER').replace(/[^A-Z0-9&\/+-]/g,''))||'OTHER';return WHO_ALIASES[f]||f;}
+// ===== Central warehouse map (cc_wh_map) — read-only; drives W/H Order order =====
+var whMapData={rows:[],tagRules:[]}, __whMapTried=false, __whTagsTried=false, __whVenTried=false;
+function ensureWHMap(){
+  if(__whMapTried)return;__whMapTried=true;
+  fetch('/api/ticks?key=cc_wh_map',{}).then(function(r){return r.json();}).then(function(d){
+    var v=d&&d.data;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){return;}}
+    if(v&&Array.isArray(v.rows)){whMapData=v;if(typeof view!=='undefined'&&view==='whorder'&&typeof renderWHOrder==='function')renderWHOrder();}
+  }).catch(function(){});
+}
+function ensureWHTags(){
+  if(__whTagsTried)return;__whTagsTried=true;
+  fetch('/api/tags').then(function(r){return r.json();}).then(function(j){
+    if(j&&!j.error){var m={};Object.keys(j).forEach(function(bc){var a=j[bc];if(Array.isArray(a)){var u=a.map(function(x){return(''+x).trim().toUpperCase();}).filter(Boolean);if(u.length)m[bc]=u;}});window.tmap=m;if(typeof view!=='undefined'&&view==='whorder')renderWHOrder();}
+  }).catch(function(){});
+}
+function ensureVendors2(){
+  if(window.vmap||__whVenTried)return;__whVenTried=true;
+  fetch('/api/vendors').then(function(r){return r.json();}).then(function(j){if(j&&!j.error){window.vmap=j;if(typeof view!=='undefined'&&view==='whorder')renderWHOrder();}}).catch(function(){});
+}
+var BRAND_ALIASES2={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME','KERA':'KERACARE','KERACARE':'KERACARE','AUNT':'AUNT JACKIES','JANET':'JANET COLLECTION'};
+var VENDOR_SKIP2={'':1,'CCHAIRANDBEAUTY':1,'CC HAIR AND BEAUTY':1,'CC HAIR & BEAUTY':1};
+function vendorBrand2(v){
+  if(!v)return '';
+  var V=(''+v).trim().toUpperCase();
+  if(VENDOR_SKIP2[V])return '';
+  V=V.replace(/\s+/g,' ').replace(/[^A-Z0-9&\/+\- ]/g,'').trim();
+  if(!V||/^[0-9]+$/.test(V))return '';
+  return BRAND_ALIASES2[V]||V;
+}
+function brandOf2(nm,bc){
+  if(bc&&window.vmap&&window.vmap[bc]){var vb=vendorBrand2(window.vmap[bc]);if(vb)return vb;}
+  if(!nm)return 'OTHER';
+  var w=(''+nm).trim().toUpperCase().split(/\s+/);
+  var first=(w[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');
+  if(!first||/^[0-9]+$/.test(first))first=((w[1]||'OTHER').replace(/[^A-Z0-9&\/+-]/g,''))||'OTHER';
+  return BRAND_ALIASES2[first]||first;
+}
+function brandPosMap2(){var m={};(whMapData.rows||[]).forEach(function(row,ri){(row.gondolas||[]).forEach(function(g,gi){var bay=(row.name||('R'+(ri+1)))+(gi+1);(g.shelves||[]).forEach(function(sh,si){var ord=ri*1000000+gi*1000+si;var label=bay+'-'+(si+1);(sh.brands||[]).forEach(function(b){var k=(''+b).toUpperCase();if(!(k in m))m[k]={ord:ord,label:label};});});});});return m;}
+function rowOrd2(name){var rs=whMapData.rows||[];var u=(''+name).toUpperCase();for(var i=0;i<rs.length;i++){if((''+(rs[i].name||'')).toUpperCase()===u)return i*1000000;}return 800000000;}
+function tagRuleFor2(bc){var its=window.tmap&&window.tmap[bc];if(!its||!its.length)return null;var rules=whMapData.tagRules||[];for(var i=0;i<rules.length;i++){if(its.indexOf((''+rules[i].tag).toUpperCase())>=0)return rules[i];}return null;}
+function whResolve(r,pos){
+  var rule=tagRuleFor2(r.bc);
+  if(rule)return {name:(''+rule.tag).toUpperCase(),ord:rowOrd2(rule.row),label:(''+rule.row).toUpperCase()};
+  var b=brandOf2(r.nm,r.bc),p=pos[b];
+  if(p)return {name:b,ord:p.ord,label:p.label};
+  return {name:b||'OTHER',ord:900000000,label:'E'};
+}
+
 function renderWHOrder(){
   var el=document.getElementById('out');
   if(!destLoaded||!srcLoaded[0]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse\u2026</div>';return;}
@@ -1422,15 +1536,17 @@ function renderWHOrder(){
   var rows=[];
   wh.forEach(function(p){
     if(!p.bc||!p.nm||p.qty<=0)return;
-    if(whoNS[p.bc])return;            // marked "not stocked here"
+    if(whoNS[p.bc])return;
+    if(discIs(p.bc))return;            // marked "not stocked here"
     var here=(destMap[p.bc]?destMap[p.bc].qty:0);
     if(here>MN)return;                 // reorder only when at/below the min
     var order=Math.min(MX-here,p.qty);
     if(order<=0)return;
     rows.push({bc:p.bc,nm:p.nm,sz:p.sz||(destMap[p.bc]?destMap[p.bc].sz:''),here:here,wh:p.qty,order:order,pr:p.pr});
   });
-  var groups={};rows.forEach(function(r){var b=whoBrand(r.nm);(groups[b]=groups[b]||[]).push(r);});
-  var brands=Object.keys(groups).sort(function(a,b){if(wmLayoutOn()){var ra=wmRank(a),rb=wmRank(b);if(ra!==rb)return ra-rb;}return a.localeCompare(b);});
+  var __pos=brandPosMap2();ensureWHMap();ensureWHTags();ensureVendors2();ensureDisc();
+  var groups={},__gord={};rows.forEach(function(r){var R=whResolve(r,__pos);r._grp=R.name;r._ord=R.ord;r._loc=R.label;(groups[r._grp]=groups[r._grp]||[]).push(r);if(__gord[r._grp]==null||r._ord<__gord[r._grp])__gord[r._grp]=r._ord;});
+  var brands=Object.keys(groups).sort(function(a,b){var d=(__gord[a]||0)-(__gord[b]||0);if(d)return d;return a.localeCompare(b);});
   var total=rows.length,done=rows.filter(function(r){return whoTx[r.bc];}).length;
   setProg(total,done,total?(done+' of '+total+' lines checked'):'Nothing to order');
   var head='<div class="who-head"><div class="who-title">🚚 Warehouse order \u2014 '+WHO_BR+'</div>'+
@@ -1448,7 +1564,7 @@ function renderWHOrder(){
       var ck=!!whoTx[r.bc];
       html+='<div class="who-row'+(ck?' ck':'')+'" data-bc="'+r.bc+'">'+
         '<div class="who-img">'+imgEl(r.bc,46)+'</div>'+
-        '<div class="who-info"><div class="who-nm">'+r.nm+(r.sz?' \u00b7 '+r.sz:'')+'</div>'+'<div class="who-bc">'+r.bc+'</div>'+
+        '<div class="who-info"><div class="who-nm">'+r.nm+(r.sz?' \u00b7 '+r.sz:'')+'</div>'+'<div class="who-bc">'+r.bc+(r._loc?' \u00b7 \uD83D\uDCCD '+r._loc:'')+'</div>'+
           '<div class="who-meta">you have '+r.here+' \u00b7 W/H has '+r.wh+(r.pr>0?' \u00b7 \u00a3'+r.pr.toFixed(2):'')+'</div>'+'<button class="who-ns" data-bc="'+r.bc+'">\u2715 not stocked here</button>'+'</div>'+
         '<div class="who-ord"><div class="who-ordn">'+r.order+'</div><div class="who-ordl">order</div></div>'+
         '<div class="who-tick">'+(ck?'\u2713':'')+'</div>'+
