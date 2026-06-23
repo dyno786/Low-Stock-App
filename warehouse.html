@@ -141,6 +141,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .map-chip button{border:none;background:rgba(0,0,0,.12);color:inherit;border-radius:50%;width:16px;height:16px;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
 .map-addbrand{display:flex;gap:6px}
 .map-pick{flex-shrink:0;white-space:nowrap}
+.map-io{display:flex;gap:8px;margin-bottom:8px}
+.map-io-btn{flex:1;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+.map-io-btn.save{flex:1.4;background:var(--purple);border-color:var(--purple);color:#fff}
+.map-status{font-size:11px;font-weight:600;color:var(--sub);margin-bottom:12px;min-height:14px}
+.map-status.ok{color:var(--green,#059669)}
+.map-status.warn{color:#b45309}
+.map-status.err{color:var(--danger,#dc2626)}
 .bp-modal{position:fixed;inset:0;background:rgba(15,15,30,.45);display:none;align-items:flex-end;justify-content:center;z-index:1000}
 .bp-modal.open{display:flex}
 .bp-card{background:#fff;width:100%;max-width:460px;max-height:82vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;box-shadow:0 -6px 24px rgba(0,0,0,.18)}
@@ -354,8 +361,22 @@ var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='o
 var whMapData=(function(){var d={rows:[]};try{d=JSON.parse(localStorage.getItem('cc_wh_map')||'{"rows":[]}');}catch(e){d={rows:[]};}
   if(d&&d.sections&&!d.rows){var nr=[];d.sections.forEach(function(sec){var shv=(sec.rows||[]).map(function(r){return {brands:(r.brands||[]).slice()};});if(!shv.length)shv=[{brands:[]}];nr.push({name:sec.name||'',gondolas:[{shelves:shv}]});});d={rows:nr};try{localStorage.setItem('cc_wh_map',JSON.stringify(d));}catch(e){}}
   if(!d.rows)d.rows=[];return d;})();
-function saveMap(){try{localStorage.setItem('cc_wh_map',JSON.stringify(whMapData));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_map',whMapData);}
-async function loadMap(){try{if(typeof syncLoad!=='function')return;var d=await syncLoad('cc_wh_map');if(typeof d==='string'){try{d=JSON.parse(d);}catch(e){return;}}if(d&&Array.isArray(d.rows)){whMapData=d;try{localStorage.setItem('cc_wh_map',JSON.stringify(d));}catch(e){}}}catch(e){}}
+var mapDirty=false,mapSavedAt=0,mapPend=null;
+try{mapDirty=localStorage.getItem('cc_wh_map_dirty')==='1';mapSavedAt=+localStorage.getItem('cc_wh_map_savedat')||0;}catch(e){}
+function mapCounts(){var nr=(whMapData.rows||[]).length,nb=0;(whMapData.rows||[]).forEach(function(r){(r.gondolas||[]).forEach(function(g){(g.shelves||[]).forEach(function(s){nb+=(s.brands||[]).length;});});});return{rows:nr,brands:nb};}
+function fmtClock(t){var d=new Date(t);function p(n){return('0'+n).slice(-2);}return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());}
+function updateMapStatus(msg,cls){var el=document.getElementById('map-status');if(!el)return;if(msg){el.textContent=msg;el.className='map-status '+(cls||'');return;}var c=mapCounts();if(mapDirty){el.textContent='⚠ Unsynced changes on this device — tap “Save & sync”';el.className='map-status warn';}else if(mapSavedAt){el.textContent='✓ Synced '+fmtClock(mapSavedAt)+' · '+c.rows+' rows, '+c.brands+' brands';el.className='map-status ok';}else{el.textContent=c.rows+' rows, '+c.brands+' brands';el.className='map-status';}}
+function saveMap(){try{localStorage.setItem('cc_wh_map',JSON.stringify(whMapData));}catch(e){}mapDirty=true;try{localStorage.setItem('cc_wh_map_dirty','1');}catch(e){}updateMapStatus();if(mapPend)clearTimeout(mapPend);mapPend=setTimeout(function(){mapPend=null;pushMap(false);},700);}
+async function pushMap(explicit){
+  if(explicit)updateMapStatus('Saving…','');
+  try{
+    var r=await fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_wh_map',value:whMapData})});
+    var d=null;try{d=await r.json();}catch(e){}
+    if(r.ok&&(!d||!d.error)){syncOk=true;mapDirty=false;mapSavedAt=Date.now();try{localStorage.removeItem('cc_wh_map_dirty');localStorage.setItem('cc_wh_map_savedat',String(mapSavedAt));}catch(e){}updateMapStatus();return true;}
+    updateMapStatus('✗ Not synced ('+((d&&d.error)||('HTTP '+r.status))+') — saved on this device only. Tap to retry.','err');return false;
+  }catch(e){updateMapStatus('✗ Not synced (no connection) — saved on this device only. Tap to retry.','err');return false;}
+}
+async function loadMap(){try{if(typeof syncLoad!=='function')return;if(mapDirty){pushMap(false);return;}var d=await syncLoad('cc_wh_map');if(typeof d==='string'){try{d=JSON.parse(d);}catch(e){return;}}if(d&&Array.isArray(d.rows)){whMapData=d;try{localStorage.setItem('cc_wh_map',JSON.stringify(d));}catch(e){}}}catch(e){}}
 function brandPosMap(){var m={};(whMapData.rows||[]).forEach(function(row,ri){(row.gondolas||[]).forEach(function(g,gi){var bay=(row.name||('R'+(ri+1)))+(gi+1);(g.shelves||[]).forEach(function(sh,si){var ord=ri*1000000+gi*1000+si;var label=bay+'-'+(si+1);(sh.brands||[]).forEach(function(b){var k=(''+b).toUpperCase();if(!(k in m))m[k]={ord:ord,label:label};});});});});return m;}
 function whAllBrands(){var s={};(bd[3]||[]).forEach(function(p){if(p.bc&&p.nm)s[brandOf(p.nm,p.bc)]=1;});return Object.keys(s).sort();}
 // brand is derived from the product name (no brand field in EPOS). Aliases merge split/multi-word brands.
@@ -411,7 +432,7 @@ function fmt(ms){var s=Math.floor((ms||0)/1000),m=Math.floor(s/60),h=Math.floor(
 // ── SYNC ───────────────────────────────────────────────────
 var syncOk=true,syncPend=null;
 async function syncLoad(k){
-  try{var r=await fetch('/api/ticks?key='+k,{signal:AbortSignal.timeout(3000)});var d=await r.json();if(d.fallback){syncOk=false;return null;}return d.data||null;}
+  try{var r=await fetch('/api/ticks?key='+k,{signal:AbortSignal.timeout(3000)});var d=await r.json();if(d.fallback){syncOk=false;return null;}var v=d.data;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){}}return v||null;}
   catch(e){syncOk=false;return null;}
 }
 function syncSave(k,v){
@@ -428,6 +449,7 @@ async function doSync(){
   var shared=await syncLoad('cc_pk_ticks');
   if(shared){Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
   try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
+  await loadMap();
   setSyncTxt(syncOk?'✓ Synced':'Offline — local only');
   if(loaded>=4)renderWH();
 }
@@ -690,7 +712,9 @@ function renderMapHTML(){
       '<input class="map-qa-num" id="map-qa-gond" type="number" min="1" max="40" value="3">'+
       '<input class="map-qa-num" id="map-qa-shelf" type="number" min="0" max="20" value="4">'+
       '<button class="map-qa-btn" data-act="addrowquick">+ Row</button>'+
-    '</div>';
+    '</div>'+
+    '<div class="map-io"><button class="map-io-btn save" data-act="mapsave">✓ Save &amp; sync</button><button class="map-io-btn" data-act="mapexport">⬇ Export</button><button class="map-io-btn" data-act="mapimport">⬆ Import</button><input type="file" id="map-file" accept="application/json,.json" style="display:none"></div>'+
+    '<div class="map-status" id="map-status"></div>';
   var rowsArr=whMapData.rows||[];
   if(!rowsArr.length){h+='<div class="map-empty">No rows yet. Add your first row above (e.g. A, 5 gondolas, 4 shelves).</div>';}
   if(rowsArr.length){var anyOpen=rowsArr.some(function(r){return !r.c;});h+='<div class="map-tools"><button class="map-tool-btn" data-act="collapseall">'+(anyOpen?'⊟ Collapse all':'⊞ Expand all')+'</button></div>';}
@@ -763,6 +787,9 @@ function wireMap(el){
   if(bpSearch)bpSearch.addEventListener('input',bpRender);
   if(bpAllChk)bpAllChk.addEventListener('change',function(){var list=bpShown();if(this.checked)list.forEach(function(b){bpSel[b]=1;});else list.forEach(function(b){delete bpSel[b];});bpRender();});
   if(modal)modal.addEventListener('click',function(e){if(e.target===modal)bpClose();});
+  var mapFile=document.getElementById('map-file');
+  if(mapFile)mapFile.addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){try{var p=JSON.parse(rd.result);if(!p||!Array.isArray(p.rows))throw 0;if(!confirm('Replace the current map with the imported file?')){return;}whMapData=p;saveMap();renderWH();}catch(err){alert('That file is not a valid map backup.');}};rd.readAsText(f);e.target.value='';});
+  updateMapStatus();
   wrap.querySelectorAll('[data-act]').forEach(function(b){
     b.addEventListener('click',function(){
       var act=this.dataset.act,r=+this.dataset.r,g=+this.dataset.g,sh=+this.dataset.sh,bi=+this.dataset.b;
@@ -793,6 +820,9 @@ function wireMap(el){
       else if(act==='pick'){bpOpen(r,g,sh);return;}
       else if(act==='bpclose'){bpClose();return;}
       else if(act==='bpadd'){if(bpTarget){var arr=R[bpTarget.r].gondolas[bpTarget.g].shelves[bpTarget.sh].brands;Object.keys(bpSel).forEach(function(x){if(arr.indexOf(x)<0)arr.push(x);});}bpClose();saveMap();renderWH();return;}
+      else if(act==='mapexport'){var data=JSON.stringify(whMapData,null,2);var blob=new Blob([data],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='warehouse-map-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);return;}
+      else if(act==='mapimport'){var fi=document.getElementById('map-file');if(fi)fi.click();return;}
+      else if(act==='mapsave'){if(mapPend){clearTimeout(mapPend);mapPend=null;}pushMap(true);return;}
       saveMap();renderWH();
     });
   });
