@@ -129,6 +129,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .wh-tab.active[data-tab="over"]{background:var(--green);border-color:var(--green)}
 .wh-tab.active[data-tab="map"]{background:var(--blue);border-color:var(--blue)}
 .ov-sum{font-size:12px;font-weight:700;color:var(--greentxt);background:var(--greenbg);border:1px solid var(--green);border-radius:9px;padding:8px 11px;margin:0 11px 10px}
+.ov-ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 11px 4px}
+.ov-thresh{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink)}
+.ov-tbtn{width:30px;height:30px;border-radius:8px;border:1px solid var(--green);background:var(--greenbg);color:var(--greentxt);font-size:17px;font-weight:700;cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+.ov-tval{min-width:34px;text-align:center;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+.ov-slow{margin-left:auto;border:1.5px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:8px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+.ov-slow.on{background:var(--green);color:#fff;border-color:var(--green)}
+.ov-off{font-size:9px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;margin-right:1px}
 .ov-list{padding:0 11px 14px}
 .ov-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
 .ov-img{flex-shrink:0;width:44px;height:44px;border-radius:8px;overflow:hidden;background:var(--bg)}
@@ -396,6 +403,9 @@ var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_
 var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup'||v==='map'||v==='over')?v:'topup';}catch(e){return 'topup';}})();
 var offers={};try{offers=JSON.parse(localStorage.getItem('cc_wh_offers')||'{}');}catch(e){offers={};}
 function saveOffers(){try{localStorage.setItem('cc_wh_offers',JSON.stringify(offers));}catch(e){}}
+var ovMin=50,ovSlow=false;
+try{var _ovm=parseInt(localStorage.getItem('cc_wh_ov_min'));if(!isNaN(_ovm)&&_ovm>0)ovMin=_ovm;ovSlow=localStorage.getItem('cc_wh_ov_slow')==='1';}catch(e){}
+function daysSince(s){if(!s||s==='Never')return 9999;var m=(''+s).split('/');if(m.length!==3)return 9999;var d=new Date(+m[2],(+m[1])-1,+m[0]);if(isNaN(d.getTime()))return 9999;return Math.max(0,Math.round((Date.now()-d.getTime())/86400000));}
 var whMapData=(function(){var d={rows:[]};try{d=JSON.parse(localStorage.getItem('cc_wh_map')||'{"rows":[]}');}catch(e){d={rows:[]};}
   if(d&&d.sections&&!d.rows){var nr=[];d.sections.forEach(function(sec){var shv=(sec.rows||[]).map(function(r){return {brands:(r.brands||[]).slice()};});if(!shv.length)shv=[{brands:[]}];nr.push({name:sec.name||'',gondolas:[{shelves:shv}]});});d={rows:nr};try{localStorage.setItem('cc_wh_map',JSON.stringify(d));}catch(e){}}
   if(!d.rows)d.rows=[];return d;})();
@@ -672,22 +682,29 @@ function backfillVisibleImages(){
   verifyExists(need,function(changed){if(changed&&typeof renderWH==='function')renderWH();});
 }
 function renderOverstock(items){
-  if(!items.length)return '<div class="empty">No overstocked items right now ✓<br><small>Nothing in the warehouse is above its Max Stock level.</small></div>';
-  var totalSurplus=items.reduce(function(s,it){return s+it.surplus;},0);
-  var html='<div class="sec-hdr"><div class="sec-title" style="color:var(--greentxt)">🏷 Overstock — place offers</div><div class="sec-sub">Warehouse stock above Max Stock. Use −/+ to set how many to put on offer. Sorted by biggest surplus.</div></div>';
-  html+='<div class="ov-sum">'+items.length+' overstocked items · '+totalSurplus+' surplus units</div><div class="ov-list">';
+  var ctrls='<div class="ov-ctrls">'+
+    '<div class="ov-thresh">In stock ≥ <button class="ov-tbtn" data-ov="dec">−</button><span class="ov-tval">'+ovMin+'</span><button class="ov-tbtn" data-ov="inc">+</button></div>'+
+    '<button class="ov-slow'+(ovSlow?' on':'')+'" data-ov="slow">🐌 Slow movers only</button>'+
+  '</div>';
+  var head='<div class="sec-hdr"><div class="sec-title" style="color:var(--greentxt)">🏷 Overstock — place offers</div><div class="sec-sub">Warehouse items with plenty of stock'+(ovSlow?' that haven\u2019t sold in 90+ days':'')+'. Use −/+ to set how many to put on offer. Most stock first.</div></div>';
+  if(!items.length)return ctrls+head+'<div class="empty">No items at this level ✓<br><small>Lower the “in stock ≥” number'+(ovSlow?' or turn off slow-movers':'')+' to see more.</small></div>';
+  var totalUnits=items.reduce(function(s,it){return s+it.qty;},0);
+  var html=ctrls+head+'<div class="ov-sum">'+items.length+' items · '+totalUnits+' units in stock</div><div class="ov-list">';
   items.forEach(function(it){
-    var off=(it.bc in offers)?offers[it.bc]:it.surplus;
+    var off=(it.bc in offers)?offers[it.bc]:0;
+    var sold=it.days>=9999?'never sold':it.days+'d since sale';
     html+='<div class="ov-row" data-bc="'+it.bc+'" data-max="'+it.qty+'">'+
       '<div class="ov-img">'+imgEl(it.bc,44)+'</div>'+
       '<div class="ov-info"><div class="ov-name">'+it.nm+(it.sz?' · '+it.sz:'')+'</div>'+
-        '<div class="ov-meta">stock <b>'+it.qty+'</b> · max '+it.mx+' · surplus <b style="color:var(--greentxt)">'+it.surplus+'</b>'+(it.prc?' · £'+it.prc.toFixed(2):'')+'</div></div>'+
-      '<div class="ov-ctl"><button class="ov-btn" data-d="-1">−</button><span class="ov-val">'+off+'</span><button class="ov-btn" data-d="1">+</button></div>'+
+        '<div class="ov-meta">stock <b style="color:var(--greentxt)">'+it.qty+'</b> · '+sold+(it.prc?' · £'+it.prc.toFixed(2):'')+'</div></div>'+
+      '<div class="ov-ctl"><span class="ov-off">offer</span><button class="ov-btn" data-d="-1">−</button><span class="ov-val">'+off+'</span><button class="ov-btn" data-d="1">+</button></div>'+
     '</div>';
   });
   return html+'</div>';
 }
 function wireOverstock(el){
+  el.querySelectorAll('.ov-tbtn').forEach(function(b){b.addEventListener('click',function(){ovMin=Math.max(1,ovMin+(this.dataset.ov==='inc'?5:-5));try{localStorage.setItem('cc_wh_ov_min',String(ovMin));}catch(e){}renderWH();});});
+  var slow=el.querySelector('.ov-slow');if(slow)slow.addEventListener('click',function(){ovSlow=!ovSlow;try{localStorage.setItem('cc_wh_ov_slow',ovSlow?'1':'0');}catch(e){}renderWH();});
   el.querySelectorAll('.ov-row').forEach(function(row){
     var bc=row.dataset.bc,maxq=parseInt(row.dataset.max,10)||9999,valEl=row.querySelector('.ov-val');
     row.querySelectorAll('.ov-btn').forEach(function(b){
@@ -704,7 +721,7 @@ function renderWH(){
   if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
   var L=buildPickList(),allItems=L.dead.concat(L.normal);
   var oosList=allItems.filter(function(it){return Math.min(it.bq[0],it.bq[1],it.bq[2])<=0;});
-  var overList=(bd[3]||[]).filter(function(p){return p.mx>0&&p.qty>p.mx;}).map(function(p){return {bc:p.bc,nm:p.nm,sz:p.sz,prc:p.prc,qty:p.qty,mx:p.mx,surplus:p.qty-p.mx};}).sort(function(a,b){return b.surplus-a.surplus;});
+  var overList=(bd[3]||[]).filter(function(p){return p.qty>=ovMin&&(!ovSlow||daysSince(p.ls)>=90);}).map(function(p){return {bc:p.bc,nm:p.nm,sz:p.sz,prc:p.prc,qty:p.qty,days:daysSince(p.ls)};}).sort(function(a,b){return b.qty-a.qty;});
   var tabBar='<div class="wh-tabs">'+
     '<button class="wh-tab'+(whTab==='topup'?' active':'')+'" data-tab="topup">⬆ Top up <span class="wh-tab-n">'+allItems.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='oos'?' active':'')+'" data-tab="oos">⚠ Out of stock <span class="wh-tab-n">'+oosList.length+'</span></button>'+
