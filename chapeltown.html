@@ -371,7 +371,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 </div>
 
 <div class="vtabs" id="vtabs">
-  <div class="vtab on" data-v="low">📦 Missing &amp; Low Stock</div>
+  <div class="vtab on" data-v="home">🏠 Home</div>
+  <div class="vtab" data-v="low">📦 Missing &amp; Low Stock</div>
   <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
@@ -467,7 +468,7 @@ function daysOOS(bc){
   if(!oosDates[bc])return null;
   return Math.floor((Date.now()-oosDates[bc])/86400000);
 }
-var view='low',oosFilt='all',imgFilter='missing',imgDeptTab='priority';
+var view='home',oosFilt='all',imgFilter='missing',imgDeptTab='priority';
 var oosActiveDepts=[],oosStockFilter='all';
 var collectDept='ALL'; // department filter for collect tabs
 var ticks={},negTx={};
@@ -1564,7 +1565,7 @@ var draftSet={},__draftsTried=false;
 function isDraftBc(bc){return !!(draftSet&&draftSet[bc]);}
 function shopDraftInfo(bc){return (draftSet&&draftSet[bc])||null;}
 function loadDrafts(cb){if(__draftsTried){if(cb)cb(false);return;}__draftsTried=true;fetch('/api/shopify/drafts').then(function(r){return r.ok?r.json():null;}).then(function(j){var d=j&&j.drafts;if(d&&typeof d==='object'){draftSet=d;if(cb)cb(true);else if(typeof renderView==='function')renderView();}else if(cb)cb(false);}).catch(function(){if(cb)cb(false);});}
-function shopDraftSection(items){var rows=items.map(function(p){var e=shopDraftInfo(p.bc)||{};return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid #fde68a"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+shopEsc(p.nm)+'</div><div style="font-size:11px;color:var(--sub)">'+p.bc+' \u00b7 '+p.qty+' in stock</div></div><a href="'+shopEscAttr(e.admin||'#')+'" target="_blank" style="font-size:12px;font-weight:800;padding:6px 11px;border-radius:9px;background:#d97706;color:#fff;text-decoration:none;white-space:nowrap">Activate \u203a</a></div>';}).join('');return '<div style="border:1px solid #fde68a;border-radius:12px;background:#fffbeb;margin:10px 0;overflow:hidden"><div style="padding:10px 12px;font-weight:800;color:#92400e;font-size:13px">\u26a0 '+items.length+' item'+(items.length===1?'':'s')+' on Shopify as DRAFT \u2014 activate to publish</div>'+rows+'</div>';}
+function shopDraftSection(items){var byDp={},order=[];items.forEach(function(p){var d=(p.dp||'Other');if(!byDp[d]){byDp[d]=[];order.push(d);}byDp[d].push(p);});order.sort(function(a,b){return a.localeCompare(b);});var body=order.map(function(d){var rows=byDp[d].map(function(p){var e=shopDraftInfo(p.bc)||{};return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid #fde68a"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+shopEsc(p.nm)+'</div><div style="font-size:11px;color:var(--sub)">'+p.bc+' \u00b7 '+p.qty+' in stock</div></div><a href="'+shopEscAttr(e.admin||'#')+'" target="_blank" style="font-size:12px;font-weight:800;padding:6px 11px;border-radius:9px;background:#d97706;color:#fff;text-decoration:none;white-space:nowrap">Activate \u203a</a></div>';}).join('');return '<div style="padding:6px 12px;font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.3px;background:#fdf2d6;border-top:1px solid #fde68a">'+shopEsc(d)+' \u00b7 '+byDp[d].length+'</div>'+rows;}).join('');return '<div style="border:1px solid #fde68a;border-radius:12px;background:#fffbeb;margin:10px 0;overflow:hidden"><div style="padding:10px 12px;font-weight:800;color:#92400e;font-size:13px">\u26a0 '+items.length+' item'+(items.length===1?'':'s')+' on Shopify as DRAFT \u2014 activate to publish</div>'+body+'</div>';}
 (function(){try{localStorage.removeItem('cc_shop_exists');}catch(e){}})();
 function __saveExists(){try{localStorage.setItem('cc_shop_exists',JSON.stringify({ts:Date.now(),d:existsCheck}));}catch(e){}}
 function backfillVisibleImages(){
@@ -2650,5 +2651,130 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
 </div>
 <div id="wm-toast"></div>
 
+<script>
+/* ===== Branch Home / daily ops dashboard (additive) ===== */
+(function(){
+ if(window.__homeInstalled)return; window.__homeInstalled=1;
+ var HB=(typeof DEST_ID!=='undefined')?(DEST_ID===2?'roundhay':DEST_ID===1?'city':'chapel'):'city';
+ var BNAME={roundhay:'Roundhay',city:'City Centre',chapel:'Chapeltown'}[HB];
+ var STN={
+  roundhay:[{i:'📦',l:'Online Dispatch',c:1,t:['Shopify orders pick & pack','Activate drafts / add new','Product photos','Postage & dispatch']},
+            {i:'🧾',l:'Till',t:['Serve customers','Returns']},
+            {i:'🧍',l:'Shop floor + stock',t:['Fix negatives','Place W/H order','Overstock transfers','Mark discontinued']},
+            {i:'🔁',l:'Stock support',f:1,t:['Image backlog','Negatives backlog']},
+            {i:'☕',l:'Floor / breaks cover',f:1,t:['Cover breaks','Restock floor']}],
+  chapel:[{i:'🛒',l:'Warehouse picking (all 3 stores)',c:1,t:['Pick & pack branch top-ups (map order)','Warehouse OOS → PICCO reorder','Dispatch totes']},
+          {i:'🧾',l:'Till',t:['Serve customers','Returns']},
+          {i:'🧍',l:'Shop floor + stock',t:['Fix negatives','Place W/H order','Overstock transfers']},
+          {i:'📥',l:'Goods-in / picking support',f:1,t:['Book in deliveries','Help picking']},
+          {i:'☕',l:'Floor / breaks cover',f:1,t:['Cover breaks','Second floor']}],
+  city:[{i:'🧾',l:'Till',c:1,t:['Serve customers','Returns']},
+        {i:'🧍',l:'Shop floor + stock',t:['Fix negatives','Place W/H order','Overstock transfers']},
+        {i:'🔁',l:'Stock / online support',t:['Image backlog','+ Shopify new lines','Activate drafts']},
+        {i:'🧾',l:'Second till / online',f:1,t:['Second till at peak','Online support']},
+        {i:'☕',l:'Floor / breaks cover',f:1,t:['Cover breaks','Restock floor']}]
+ };
+ function dayKey(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+ function ckKey(){return 'cc_home_'+(typeof DEST_ID!=='undefined'?DEST_ID:'x')+'_'+dayKey();}
+ function getCk(){try{return JSON.parse(localStorage.getItem(ckKey())||'null');}catch(e){return null;}}
+ function setCk(o){try{localStorage.setItem(ckKey(),JSON.stringify(o));}catch(e){}}
+ function defPick(){var d=new Date();var doy=Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);return doy%2===0?'full':'urgent';}
+
+ window.homeStart=function(){
+   var n=parseInt(document.getElementById('hm-cnt').value)||0;
+   if(n<1){alert('Enter how many staff are in today.');return;}
+   var mgr=document.getElementById('hm-mgr').checked;
+   var pk=document.getElementById('hm-pick'); var pick=pk?pk.value:defPick();
+   setCk({count:n,mgr:mgr,pick:pick}); renderHome();
+ };
+ window.homeEdit=function(){var c=getCk()||{};c.__edit=1;setCk(c);renderHome();};
+ window.goView=function(v){var t=document.querySelector('.vtab[data-v="'+v+'"]');if(t)t.click();};
+ window.homeSetPhone=function(){var p=prompt('Manager WhatsApp number (international, e.g. 447700900123):',localStorage.getItem('cc_mgr_phone')||'');if(p!=null){localStorage.setItem('cc_mgr_phone',(''+p).replace(/[^0-9]/g,''));renderHome();}};
+
+ function allocate(n,mgr){
+   var st=STN[HB]||STN.city, core=st.filter(function(s){return !s.f;}), flex=st.filter(function(s){return s.f;});
+   var workers=Math.max(0,n-(mgr?1:0)), rows=[],used=0,last=null;
+   core.forEach(function(s){ if(used<workers){used++;var r={who:'Staff '+used,s:s,also:[]};rows.push(r);last=r;}
+     else { if(s.c){rows.push({who:'⚠ needs cover',s:s,crit:1});} else if(last){last.also.push(s);} else {rows.push({who:'⚠ needs cover',s:s});} } });
+   var fi=0; while(used<workers&&fi<flex.length){used++;rows.push({who:'Staff '+used,s:flex[fi]});fi++;}
+   var gap=rows.filter(function(r){return r.crit;})[0];
+   return {rows:rows,mgr:mgr,pool:workers-used,covers:gap?gap.s.l:null};
+ }
+ function counts(){
+   var d=(typeof destData!=='undefined'&&destData)?destData:[];
+   return {
+     neg:d.filter(function(p){return p.qty<0;}).length,
+     oos:d.filter(function(p){return p.qty<=0&&p.ls&&p.ls!=='Never';}).length,
+     img:d.filter(function(p){return p.qty>0&&['SYNTHETIC HAIR','HUMAN HAIR'].indexOf(p.dp)>=0&&typeof imgs!=='undefined'&&!imgs[p.bc];}).length,
+     drafts:(typeof isDraftBc==='function')?d.filter(function(p){return p.qty>0&&isDraftBc(p.bc);}).length:null,
+     disc:(typeof disc!=='undefined'&&disc)?Object.keys(disc).length:null
+   };
+ }
+ function card(icon,label,v,val,color){
+   return '<button onclick="goView(\''+v+'\')" style="text-align:left;border:1px solid var(--border);border-radius:14px;background:#fff;padding:13px;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-height:86px">'
+     +'<div style="font-size:22px">'+icon+'</div>'
+     +'<div style="font-weight:700;font-size:13px;line-height:1.2">'+label+'</div>'
+     +'<div style="margin-top:auto;font-size:'+(val==null?'12px':'22px')+';font-weight:800;color:'+(color||'var(--purpletxt)')+'">'+(val==null?'Open ›':val)+'</div></button>';
+ }
+ window.renderHome=function(){
+   var el=document.getElementById('out'); if(!el)return;
+   if(typeof destData==='undefined'||!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
+   if(typeof loadDrafts==='function')loadDrafts(function(ch){if(ch&&view==='home')renderHome();});
+   var ck=getCk();
+   if(!ck||ck.__edit){
+     var isCh=HB==='chapel';
+     el.innerHTML='<div style="padding:14px">'
+      +'<div style="background:#f3e8ff;border-radius:14px;padding:16px;margin-bottom:14px"><div style="font-size:17px;font-weight:800;color:#5b21b6">Good morning — '+BNAME+'</div><div style="font-size:13px;color:#5b21b6;margin-top:3px">Set today\u2019s team and the jobs get allocated.</div></div>'
+      +'<label style="font-size:13px;font-weight:600;color:var(--sub)">Staff in today (including manager)</label>'
+      +'<input id="hm-cnt" type="number" min="1" max="12" value="'+((ck&&ck.count)||'')+'" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:16px;margin:5px 0 10px">'
+      +'<label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:10px"><input id="hm-mgr" type="checkbox" '+((ck&&ck.mgr)?'checked':'')+'>Manager is one of them</label>'
+      +(isCh?'<label style="font-size:13px;font-weight:600;color:var(--sub)">Picking mode today</label><select id="hm-pick" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:15px;margin:5px 0 12px"><option value="full" '+(((ck&&ck.pick)||defPick())==='full'?'selected':'')+'>Full pick (all branch top-ups)</option><option value="urgent" '+(((ck&&ck.pick)||defPick())==='urgent'?'selected':'')+'>Urgent OOS only</option></select>':'')
+      +'<button onclick="homeStart()" style="width:100%;padding:13px;background:var(--purple);color:#fff;border:none;border-radius:11px;font-size:15px;font-weight:700">Start the day ›</button></div>';
+     return;
+   }
+   var c=counts(), a=allocate(ck.count,ck.mgr);
+   var h='<div style="padding:12px">';
+   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><div style="font-weight:800;font-size:16px">'+BNAME+' — today</div><div style="font-size:12px;color:var(--sub)">'+ck.count+' in'+(ck.mgr?' (incl. manager)':'')+(HB==='chapel'?' · '+(ck.pick==='full'?'Full pick':'Urgent pick')+' day':'')+'</div></div><button onclick="homeEdit()" style="font-size:12px;border:1px solid var(--border);background:#fff;border-radius:9px;padding:6px 10px">Edit</button></div>';
+   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+   h+=card('📦','Missing & Low Stock','low',null);
+   h+=card('🔴','Negatives','neg',c.neg,'var(--red)');
+   h+=card('⏱','Out of stock','oos',c.oos,'var(--red)');
+   h+=card('🔄','Overstock','over',null);
+   h+=card('🚚','W/H Order','whorder',null);
+   h+=card('🛍','+ Shopify','shopify',null);
+   h+=card('🟡','Drafts to activate','shopify',c.drafts==null?null:c.drafts,'#92400e');
+   h+=card('📸','Images','imgs',c.img,'var(--amber)');
+   if(typeof disc!=='undefined')h+=card('🚫','Discontinued','disc',c.disc==null?null:c.disc);
+   h+=card('🗺️','Map','map',null);
+   h+='</div>';
+   h+='<div style="font-weight:800;font-size:14px;margin:16px 0 8px">Today\u2019s jobs</div>';
+   a.rows.forEach(function(r){
+     h+='<div style="border:1px solid '+(r.crit?'#fecaca':'var(--border)')+';background:'+(r.crit?'#fff5f5':'#fff')+';border-radius:12px;padding:11px;margin-bottom:8px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:14px">'+r.who+'</b><span style="font-size:13px;color:var(--purpletxt);font-weight:700;text-align:right">'+r.s.i+' '+r.s.l+'</span></div>'
+      +'<div style="font-size:12px;color:#374151;margin-top:5px">'+r.s.t.join(' · ')+'</div>'
+      +((r.also&&r.also.length)?r.also.map(function(s){return '<div style="font-size:12px;color:#92400e;background:#fffbeb;border-radius:8px;padding:5px 8px;margin-top:5px">Also covering '+s.l+'</div>';}).join(''):'')
+      +'</div>';
+   });
+   if(a.mgr)h+='<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:12px;padding:11px;margin-bottom:8px"><b style="font-size:14px">Manager</b> <span style="font-size:12px;color:#92400e;font-weight:700">floats</span><div style="font-size:12px;color:#374151;margin-top:5px">Keep jobs moving, approve the update'+(a.covers?' · cover '+a.covers:'')+'</div></div>';
+   if(a.pool>0)h+='<div style="font-size:12px;color:var(--sub);margin-bottom:8px">'+a.pool+' extra on flex: image / negatives backlog, breaks cover.</div>';
+   var msg=BNAME+' — update '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'\nNegatives '+c.neg+' · OOS '+c.oos+' · Images '+c.img+(c.drafts!=null?' · Drafts '+c.drafts:'')+'\nStaff '+ck.count+(ck.mgr?' (incl mgr)':'')+(HB==='chapel'?' · '+(ck.pick==='full'?'Full pick':'Urgent pick'):'');
+   var ph=localStorage.getItem('cc_mgr_phone')||'';
+   h+='<a href="https://wa.me/'+ph+'?text='+encodeURIComponent(msg)+'" target="_blank" style="display:block;text-align:center;text-decoration:none;background:#16a34a;color:#fff;font-weight:800;padding:13px;border-radius:11px;margin-top:8px">📲 Send update to manager</a>';
+   h+='<div style="text-align:center;margin-top:8px"><a onclick="homeSetPhone()" style="font-size:12px;color:var(--sub);cursor:pointer">'+(ph?'Manager: +'+ph+' (change)':'Set manager WhatsApp number')+'</a></div>';
+   h+='</div>';
+   el.innerHTML=h;
+ };
+ var __rv=renderView;
+ renderView=function(){
+   if(typeof view!=='undefined'&&view==='home'){
+     try{document.getElementById('day-filter').style.display='none';}catch(e){}
+     try{document.getElementById('prog-wrap').style.display='none';}catch(e){}
+     try{document.getElementById('timer-bar').style.display='none';}catch(e){}
+     return renderHome();
+   }
+   return __rv.apply(this,arguments);
+ };
+})();
+</script>
 </body>
 </html>
