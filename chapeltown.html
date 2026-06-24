@@ -1560,8 +1560,11 @@ function priceByBc(bc){var S=[destData,srcData[0],srcData[1],srcData[2]];for(var
 var existsCheck={};       // bc -> {exists, hasImage}
 var __existsTried={};     // bc -> 1 once queried (avoid refetch loops)
 function shopExistsConfirmed(bc){return !!(existsCheck[bc]&&existsCheck[bc].exists);}
-function shopDraftInfo(bc){var e=existsCheck[bc];return (e&&e.exists&&e.status&&e.status!=='ACTIVE')?e:null;}
-function shopDraftSection(items){var rows=items.map(function(p){var e=existsCheck[p.bc]||{};return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid #fde68a"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+shopEsc(p.nm)+'</div><div style="font-size:11px;color:var(--sub)">'+p.bc+' \u00b7 '+p.qty+' in stock</div></div><a href="'+shopEscAttr(e.adminUrl||'#')+'" target="_blank" style="font-size:12px;font-weight:800;padding:6px 11px;border-radius:9px;background:#d97706;color:#fff;text-decoration:none;white-space:nowrap">Activate \u203a</a></div>';}).join('');return '<div style="border:1px solid #fde68a;border-radius:12px;background:#fffbeb;margin:10px 0;overflow:hidden"><div style="padding:10px 12px;font-weight:800;color:#92400e;font-size:13px">\u26a0 '+items.length+' item'+(items.length===1?'':'s')+' on Shopify as DRAFT \u2014 activate to publish</div>'+rows+'</div>';}
+var draftSet={},__draftsTried=false;
+function isDraftBc(bc){return !!(draftSet&&draftSet[bc]);}
+function shopDraftInfo(bc){return (draftSet&&draftSet[bc])||null;}
+function loadDrafts(cb){if(__draftsTried){if(cb)cb(false);return;}__draftsTried=true;fetch('/api/shopify/drafts').then(function(r){return r.ok?r.json():null;}).then(function(j){var d=j&&j.drafts;if(d&&typeof d==='object'){draftSet=d;if(cb)cb(true);else if(typeof renderView==='function')renderView();}else if(cb)cb(false);}).catch(function(){if(cb)cb(false);});}
+function shopDraftSection(items){var rows=items.map(function(p){var e=shopDraftInfo(p.bc)||{};return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid #fde68a"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+shopEsc(p.nm)+'</div><div style="font-size:11px;color:var(--sub)">'+p.bc+' \u00b7 '+p.qty+' in stock</div></div><a href="'+shopEscAttr(e.admin||'#')+'" target="_blank" style="font-size:12px;font-weight:800;padding:6px 11px;border-radius:9px;background:#d97706;color:#fff;text-decoration:none;white-space:nowrap">Activate \u203a</a></div>';}).join('');return '<div style="border:1px solid #fde68a;border-radius:12px;background:#fffbeb;margin:10px 0;overflow:hidden"><div style="padding:10px 12px;font-weight:800;color:#92400e;font-size:13px">\u26a0 '+items.length+' item'+(items.length===1?'':'s')+' on Shopify as DRAFT \u2014 activate to publish</div>'+rows+'</div>';}
 (function(){try{localStorage.removeItem('cc_shop_exists');}catch(e){}})();
 function __saveExists(){try{localStorage.setItem('cc_shop_exists',JSON.stringify({ts:Date.now(),d:existsCheck}));}catch(e){}}
 function backfillVisibleImages(){
@@ -1599,6 +1602,7 @@ function shopEnsure(){
 function shopDecorate(){
   var out=document.getElementById('out'); if(!out)return;
   if(['low','neg','over','whorder','imgs'].indexOf(view)<0)return;
+  loadDrafts();
   var rows=out.querySelectorAll('.item-card,.neg-card,.over-card,.who-row,.img-row');
   var vis=[];
   for(var i=0;i<rows.length;i++){
@@ -1607,7 +1611,7 @@ function shopDecorate(){
     if(!bc)continue;
     var existing=row.querySelector('.shop-add');
     var __di=shopDraftInfo(bc);
-    if(__di){if(existing)existing.remove();if(!row.querySelector('.shop-draft')){var __c=document.createElement('a');__c.className='shop-draft shop-mini';__c.textContent='\u26a0 Draft';__c.href=__di.adminUrl||'#';__c.target='_blank';__c.title='On Shopify as draft \u2014 tap to activate';__c.style.cssText='display:inline-block;margin-left:auto;font-size:11px;font-weight:800;padding:4px 9px;border-radius:8px;background:#fef3c7;color:#92400e;text-decoration:none;white-space:nowrap';row.appendChild(__c);}continue;}
+    if(__di){if(existing)existing.remove();if(!row.querySelector('.shop-draft')){var __c=document.createElement('a');__c.className='shop-draft shop-mini';__c.textContent='\u26a0 Draft';__c.href=__di.admin||'#';__c.target='_blank';__c.title='On Shopify as draft \u2014 tap to activate';__c.style.cssText='display:inline-block;margin-left:auto;font-size:11px;font-weight:800;padding:4px 9px;border-radius:8px;background:#fef3c7;color:#92400e;text-decoration:none;white-space:nowrap';row.appendChild(__c);}continue;}
     if((typeof imgs!=='undefined'&&imgs[bc])||shopExistsConfirmed(bc)){if(existing)existing.remove();continue;} // online (photo) or confirmed listed -> no button
     if(!(bc in existsCheck))vis.push(bc);
     if(existing)continue;
@@ -1632,6 +1636,7 @@ function renderShopify(){
   var el=document.getElementById('out');
   if(!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
   shopPrefetch();
+  loadDrafts(function(ch){if(ch&&view==='shopify')renderShopify();});
   // make sure we know which barcodes already have a photo online before filtering
   if(!Object.keys(shopifyData).length && !window.__shopImgsTried){
     window.__shopImgsTried=1;
@@ -1640,8 +1645,8 @@ function renderShopify(){
     return;
   }
   // in-stock items in the 4 categories that are NOT yet on the website (no Shopify image)
-  var all=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!imgs[p.bc]&&!shopExistsConfirmed(p.bc);});
-  var draftItems=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&shopDraftInfo(p.bc);});
+  var all=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!imgs[p.bc]&&!shopExistsConfirmed(p.bc)&&!isDraftBc(p.bc);});
+  var draftItems=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopDraftInfo(p.bc);});
   var draftHTML=draftItems.length?shopDraftSection(draftItems):'';
   var counts={};SHOP_CATS.forEach(function(c){counts[c.key]=0;});
   all.forEach(function(p){var k=shopCatOf(p.dp);if(k)counts[k]++;});
