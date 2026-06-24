@@ -40,6 +40,36 @@ body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);-web
 .bar button{flex:1;border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
 .bar button.danger{color:#b91c1c;border-color:#fca5a5}
 .loading{text-align:center;color:var(--sub);padding:40px;font-size:13px}
+.live-card{margin:12px;padding:14px;border-radius:12px;background:var(--greenbg);border:1px solid var(--green)}
+.live-card.stale{background:var(--amberbg);border-color:var(--amber)}
+.live-row{display:flex;align-items:center;gap:9px}
+.live-dot{width:11px;height:11px;border-radius:50%;background:var(--green);flex:none;animation:lp 1.4s infinite}
+.live-dot.off{background:var(--amber);animation:none}
+@keyframes lp{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.live-t{font-size:14px;font-weight:800;color:var(--greentxt)}
+.live-card.stale .live-t{color:var(--ambertxt)}
+.live-el{margin-left:auto;font-size:15px;font-weight:800;color:var(--greentxt);font-variant-numeric:tabular-nums}
+.live-card.stale .live-el{color:var(--ambertxt)}
+.live-meta{font-size:11px;color:var(--sub);margin-top:6px}
+.live-ticks{margin-top:8px;border-top:1px dashed var(--green);padding-top:6px;display:flex;flex-direction:column;gap:3px}
+.live-card.stale .live-ticks{border-top-color:var(--amber)}
+.lt{display:flex;justify-content:space-between;font-size:11px;color:var(--ink)}
+.lt-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%}
+.lt-gap{font-weight:700;color:var(--greentxt);font-variant-numeric:tabular-nums}
+.row.tappable{cursor:pointer}
+.caret{width:16px;text-align:center;color:var(--sub);flex:none}
+.tk-panel{background:#faf9fd;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;margin:-6px 0 6px;padding:8px 11px}
+.tk-hd{font-size:11px;font-weight:800;color:var(--purpletxt);padding:2px 0 6px;text-transform:uppercase;letter-spacing:.3px}
+.tk{display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid #efeef5;font-size:12px}
+.tk:first-of-type{border-top:none}
+.tk-time{color:var(--sub);width:52px;flex:none;font-variant-numeric:tabular-nums}
+.tk-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600}
+.tk-x{color:var(--sub);font-weight:400}
+.tk-br{color:var(--sub);width:74px;flex:none;text-align:right;font-size:11px}
+.tk-gap{width:62px;flex:none;text-align:right;font-weight:800;color:var(--greentxt);font-variant-numeric:tabular-nums}
+.tk-gap.start{color:var(--sub);font-weight:600}
+.tk-gap.slow{color:#b91c1c}
+.tk-empty{font-size:12px;color:var(--sub);padding:4px 0}
 </style>
 </head>
 <body>
@@ -63,10 +93,31 @@ function dayLabel(ts){var d=new Date(ts),t=new Date(),y=new Date(Date.now()-864e
   if(dayKey(ts)===dayKey(y.getTime()))return 'Yesterday';
   return d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});}
 function timeLabel(ts){return new Date(ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}
+function esc(s){return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function brLabel(bi){return bi===0?'Chapeltown':bi===1?'City':bi===2?'Roundhay':'item';}
+var EXPANDED=null;
+function tickRows(ticks){
+  if(!ticks||!ticks.length)return '<div class="tk-empty">No per‑pick detail saved for this run.</div>';
+  var gaps=ticks.map(function(t){return t.g;}).filter(function(g,i){return i>0&&g>0;});
+  var avg=gaps.length?gaps.reduce(function(a,b){return a+b;},0)/gaps.length:0;
+  var h='<div class="tk-hd">'+ticks.length+' picks · avg '+fmtDur(avg)+' between picks</div>';
+  ticks.forEach(function(tk,i){
+    var gap=i===0?'<span class="tk-gap start">start</span>':'<span class="tk-gap'+(tk.g>120000?' slow':'')+'">+'+fmtDur(tk.g)+'</span>';
+    h+='<div class="tk"><span class="tk-time">'+timeLabel(tk.t)+'</span>'+
+       '<span class="tk-nm">'+esc(tk.nm)+(tk.n>1?' <span class="tk-x">×'+tk.n+'</span>':'')+'</span>'+
+       '<span class="tk-br">'+brLabel(tk.bi)+'</span>'+gap+'</div>';
+  });
+  return h;
+}
 
-var LOG=[],SRC='';
+var LOG=[],SRC='',SESSION=null;
 async function load(){
   document.getElementById('body').innerHTML='<div class="loading">Loading pick log…</div>';
+  try{
+    var rs=await fetch('/api/ticks?key=cc_pk_session',{signal:AbortSignal.timeout(5000)});
+    var ds=await rs.json();var sv=ds&&ds.data;if(typeof sv==='string'){try{sv=JSON.parse(sv);}catch(e){sv=null;}}
+    SESSION=(sv&&sv.start)?sv:null;
+  }catch(e){SESSION=null;}
   var log=null;
   try{
     var r=await fetch('/api/ticks?key=cc_pk_log',{signal:AbortSignal.timeout(5000)});
@@ -86,11 +137,23 @@ function summary(items){
   var pace=picks>0?ms/1000/picks:0;
   return {n:n,picks:picks,ms:ms,pace:pace};
 }
+function liveCard(){
+  if(!SESSION||!SESSION.start)return '';
+  var stale=(Date.now()-(SESSION.last||SESSION.start))>5*60*1000;
+  var done=SESSION.done||0, total=SESSION.total||0;
+  return '<div class="live-card'+(stale?' stale':'')+'">'+
+    '<div class="live-row"><span class="live-dot'+(stale?' off':'')+'"></span>'+
+      '<span class="live-t">'+(stale?'Pick paused / abandoned':'Pick in progress')+'</span>'+
+      '<span class="live-el" id="live-el">⏱ '+fmtDur(Date.now()-SESSION.start)+'</span></div>'+
+    '<div class="live-meta">'+done+(total?' / '+total:'')+' picks done · started '+timeLabel(SESSION.start)+(stale?' · will be logged on next sync':'')+'</div>'+
+    (SESSION.ticks&&SESSION.ticks.length?'<div class="live-ticks">'+SESSION.ticks.slice(-6).map(function(tk,i,arr){var first=(SESSION.ticks.length<=6&&i===0);return '<div class="lt"><span class="lt-nm">'+esc(tk.nm)+'</span><span class="lt-gap">'+(first?'start':'+'+fmtDur(tk.g))+'</span></div>';}).join('')+'</div>':'')+
+  '</div>';
+}
 function render(){
   var body=document.getElementById('body');
-  document.getElementById('src').textContent=LOG.length?('Source: '+SRC+'. A “pick” = one branch box packed. Times are logged automatically when a pick run is completed.'):'';
-  if(!LOG.length){
-    body.innerHTML='<div class="empty">No pick runs logged yet.<br><br>When staff finish ticking off a Top‑up pick on the warehouse app, the time is recorded here automatically.</div>';
+  document.getElementById('src').textContent=(LOG.length||SESSION)?('Source: '+(SRC||'shared store')+'. A “pick” = one branch box packed. A run is logged automatically when it finishes (or after 5 min idle).'):'';
+  if(!LOG.length&&!SESSION){
+    body.innerHTML='<div class="empty">No pick runs logged yet.<br><br>When staff tick off a Top‑up pick on the warehouse app, the time is recorded here automatically once the run finishes (or after a short idle).</div>';
     return;
   }
   var now=Date.now();
@@ -98,26 +161,35 @@ function render(){
   var week=LOG.filter(function(x){return x.ts>=now-7*864e5;});
   var st=summary(today),sw=summary(week),sa=summary(LOG);
   var fastest=LOG.slice().sort(function(a,b){return (a.ms/(a.cells||1))-(b.ms/(b.cells||1));})[0];
-  var h='<div class="cards">'+
+  var h=liveCard()+'<div class="cards">'+
     '<div class="card"><div class="lbl">Today</div><div class="big">'+st.n+'</div><div class="meta">'+(st.n?(st.picks+' picks · '+fmtDur(st.ms)+' · '+st.pace.toFixed(0)+'s/pick'):'no picks yet')+'</div></div>'+
     '<div class="card"><div class="lbl">Last 7 days</div><div class="big">'+sw.n+'</div><div class="meta">'+(sw.n?(sw.picks+' picks · '+fmtDur(sw.ms)+' · '+sw.pace.toFixed(0)+'s/pick'):'—')+'</div></div>'+
     '<div class="card full"><div class="lbl">All‑time average pace</div><div class="big">'+sa.pace.toFixed(0)+'s <span style="font-size:13px;color:var(--sub);font-weight:600">per pick</span></div><div class="meta">'+sa.n+' runs · '+sa.picks+' picks · '+fmtDur(sa.ms)+' total'+(fastest?' · best '+(fastest.ms/1000/(fastest.cells||1)).toFixed(0)+'s/pick':'')+'</div></div>'+
   '</div>';
   h+='<div class="sec-t">Every pick run</div>';
+  if(!LOG.length)h+='<div class="day"><div class="row" style="justify-content:center;color:var(--sub)">No completed runs yet</div></div>';
   var curDay='',open=false;
   LOG.forEach(function(x){
     var dk=dayKey(x.ts);
     if(dk!==curDay){if(open)h+='</div>';curDay=dk;h+='<div class="day"><div class="day-h">'+dayLabel(x.ts)+'</div>';open=true;}
     var pace=x.cells?Math.round(x.ms/1000/x.cells):0;
-    h+='<div class="row"><span class="time">'+timeLabel(x.ts)+'</span>'+
+    var open=EXPANDED===x.id, hasT=x.ticks&&x.ticks.length;
+    h+='<div class="row'+(hasT?' tappable':'')+(open?' open':'')+'"'+(hasT?' data-runid="'+x.id+'"':'')+'>'+
+       '<span class="time">'+timeLabel(x.ts)+'</span>'+
        '<span class="dur">'+fmtDur(x.ms)+'</span>'+
        '<span class="picks">'+(x.cells||0)+' picks</span>'+
-       '<span class="pace">'+pace+'s/pick</span></div>';
+       '<span class="pace">'+pace+'s/pick</span>'+
+       (hasT?'<span class="caret">'+(open?'▾':'▸')+'</span>':'')+'</div>';
+    if(open)h+='<div class="tk-panel">'+tickRows(x.ticks)+'</div>';
   });
   if(open)h+='</div>';
   body.innerHTML=h;
 }
 document.getElementById('refresh').addEventListener('click',load);
+document.getElementById('body').addEventListener('click',function(e){
+  var r=e.target.closest('.row[data-runid]');if(!r)return;
+  var id=r.dataset.runid;EXPANDED=(EXPANDED===id)?null:id;render();
+});
 document.getElementById('reset-pace').addEventListener('click',function(){
   if(!confirm('Reset the learned seconds-per-pick back to the 40s default? (This only affects the estimate, not the log.)'))return;
   try{localStorage.removeItem('cc_pk_secper');}catch(e){}
@@ -130,6 +202,8 @@ document.getElementById('clear').addEventListener('click',function(){
     .catch(function(){alert('Could not clear the shared log (offline?). Try again.');});
 });
 load();
+setInterval(function(){var e=document.getElementById('live-el');if(e&&SESSION&&SESSION.start)e.textContent='⏱ '+fmtDur(Date.now()-SESSION.start);},1000);
+setInterval(load,10000);
 </script>
 </body>
 </html>

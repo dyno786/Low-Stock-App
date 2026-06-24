@@ -506,8 +506,10 @@ function saveSecPer(v){try{localStorage.setItem('cc_pk_secper',String(v));}catch
 function pkHist(){try{var a=JSON.parse(localStorage.getItem('cc_pk_times')||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
 function estMins(cells){return cells>0?Math.max(1,Math.round(cells*loadSecPer()/60)):0;}
 // ── LIVE PICK SESSION (so another device can watch progress) ──
-var pkSession=null, livePollIv=null, liveTickIv=null, lastDoneSig=-1;
+var pkSession=null, livePollIv=null, liveTickIv=null, lastDoneSig=-1, sessPend=null;
+var IDLE_MS=5*60*1000;   // a run with no ticks for this long is auto-finished & logged
 function pushSession(obj){try{fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_pk_session',value:obj})}).catch(function(){});}catch(e){}}
+function pushSessionDebounced(){if(sessPend)clearTimeout(sessPend);sessPend=setTimeout(function(){sessPend=null;if(pkSession)pushSession(pkSession);},1500);}
 function pkDoneSig(){var n=0;Object.keys(pkTx).forEach(function(k){var a=pkTx[k];if(a)for(var i=0;i<3;i++)if(a[i])n++;});return n;}
 function liveBanner(list){
   if(!pkSession||!pkSession.start)return '';
@@ -519,7 +521,10 @@ function liveBanner(list){
 }
 function liveTickStart(){
   if(liveTickIv)clearInterval(liveTickIv);
-  liveTickIv=setInterval(function(){var t=document.getElementById('live-time');if(t&&pkSession&&pkSession.start)t.textContent='⏱ '+fmt(Date.now()-pkSession.start);},1000);
+  liveTickIv=setInterval(function(){
+    var t=document.getElementById('live-time');if(t&&pkSession&&pkSession.start)t.textContent='⏱ '+fmt(Date.now()-pkSession.start);
+    if(tmr.on&&tmr.start&&tmr.last&&(Date.now()-tmr.last)>IDLE_MS&&typeof tmrFinish==='function')tmrFinish();  // auto-log an abandoned run
+  },1000);
 }
 async function livePoll(){
   try{
@@ -542,7 +547,9 @@ function pushPickLog(sess){
       var seen={};cur.forEach(function(x){if(x&&x.id)seen[x.id]=1;});
       if(!seen[sess.id])cur.push(sess);
       cur.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
-      if(cur.length>300)cur=cur.slice(-300);
+      if(cur.length>120)cur=cur.slice(-120);
+      // keep full tick detail only for the most recent 25 runs; older keep summary
+      if(cur.length>25){for(var i=0;i<cur.length-25;i++){if(cur[i]&&cur[i].ticks)delete cur[i].ticks;}}
       fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_pk_log',value:cur})}).catch(function(){});
     }).catch(function(){});
   }catch(e){}
@@ -553,13 +560,25 @@ var tmr={on:false,start:0,last:0,count:0,gaps:[],iv:null,done:false};
 function tmrPick(){
   if(tmr.done)return;
   var now=Date.now();
-  if(!tmr.on){tmr.on=true;tmr.start=now;tmr.last=now;tmr.count=0;tmr.gaps=[];if(SHOW_TIMER_BAR)document.getElementById('timer-bar').style.display='block';tmr.iv=setInterval(tmrUpdate,1000);pkSession={start:now,total:pkTotalCells};pushSession(pkSession);}
+  if(!tmr.on){tmr.on=true;tmr.start=now;tmr.last=now;tmr.count=0;tmr.gaps=[];lastTickTs=0;if(SHOW_TIMER_BAR)document.getElementById('timer-bar').style.display='block';tmr.iv=setInterval(tmrUpdate,1000);pkSession={start:now,last:now,done:0,total:pkTotalCells,ticks:[]};pushSession(pkSession);}
   if(tmr.last)tmr.gaps.push(now-tmr.last);
   tmr.last=now;tmr.count++;
   tmrUpdate();
 }
+// record one pick event with the gap since the previous pick
+var lastTickTs=0;
+function recordTick(bc,nm,bi,n){
+  var now=Date.now();
+  var g=lastTickTs?(now-lastTickTs):0;
+  lastTickTs=now;
+  if(!pkSession)return;
+  pkSession.ticks=pkSession.ticks||[];
+  pkSession.ticks.push({t:now,g:g,bc:bc,nm:(''+(nm||'')).slice(0,30),bi:bi,n:n||1});
+  if(pkSession.ticks.length>1200)pkSession.ticks=pkSession.ticks.slice(-1200);
+  pushSessionDebounced();
+}
 function tmrReset(){
-  tmr.on=false;tmr.start=0;tmr.count=0;tmr.gaps=[];tmr.done=false;
+  tmr.on=false;tmr.start=0;tmr.count=0;tmr.gaps=[];tmr.done=false;lastTickTs=0;
   clearInterval(tmr.iv);
   pkSession=null;pushSession(null);
   document.getElementById('timer-bar').style.display='none';
@@ -582,12 +601,16 @@ function tmrUpdate(){
 function tmrFinish(){
   if(!tmr.on||tmr.done)return;
   tmr.done=true;tmr.on=false;clearInterval(tmr.iv);
+  var endTs=tmr.last||Date.now();
+  var ms=Math.max(0,endTs-tmr.start);
+  var cells=(pkSession&&pkSession.done)||tmr.count||pkTotalCells||0;
+  var ticks=(pkSession&&pkSession.ticks)?pkSession.ticks.slice(-1200):[];
+  lastTickTs=0;
   pkSession=null;pushSession(null);
-  var ms=Date.now()-tmr.start;var cells=pkTotalCells||tmr.count||0;
   if(cells>0&&ms>0){
     var per=ms/1000/cells;var old=loadSecPer();
     saveSecPer(old>0?(old*0.6+per*0.4):per);
-    var sess={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),ts:Date.now(),cells:cells,ms:ms,secPer:Math.round(per*10)/10};
+    var sess={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),ts:Date.now(),cells:cells,ms:ms,secPer:Math.round(per*10)/10,ticks:ticks};
     var h=pkHist();h.push(sess);if(h.length>50)h=h.slice(-50);
     try{localStorage.setItem('cc_pk_times',JSON.stringify(h));}catch(e){}
     pushPickLog(sess);
@@ -622,6 +645,11 @@ async function doSync(){
   var st=await syncLoad('cc_wh_set');
   if(st&&typeof st==='object'){if(st.minPick>=1)minPick=st.minPick|0;if(st.minMode==='total'||st.minMode==='branch')minMode=st.minMode;try{localStorage.setItem('cc_pk_minqty',String(minPick));localStorage.setItem('cc_pk_minmode',minMode);}catch(e){}}
   var ss=await syncLoad('cc_pk_session');pkSession=(ss&&ss.start)?ss:null;
+  if(pkSession&&pkSession.last&&!tmr.on&&(Date.now()-pkSession.last)>IDLE_MS){
+    var sms=Math.max(0,pkSession.last-pkSession.start),scells=pkSession.done||0;
+    if(scells>0&&sms>0)pushPickLog({id:Date.now()+'-stale',ts:pkSession.last,cells:scells,ms:sms,ticks:(pkSession.ticks||[]).slice(-1200)});
+    pkSession=null;pushSession(null);
+  }
   await loadMap();
   setSyncTxt(syncOk?'✓ Synced':'Offline — local only');
   livePollStart();liveTickStart();
@@ -1272,6 +1300,7 @@ function wireTicks(all){
       if(typeof syncSave==='function')syncSave('cc_pk_ticks',pkTx);
       refreshRow(row);updateProgress();updateBranchCards();
       if(mark&&typeof tmrPick==='function')tmrPick();
+      if(mark){var _si=findItem(bc);recordTick(bc,_si?_si.nm:'',-1,cells.length);}
       if(mark)collapseBrandIfDone(row);
     });
   });
@@ -1292,6 +1321,7 @@ function wireTicks(all){
       updateProgress();
       updateBranchCards();
       if(nowDone&&typeof tmrPick==='function')tmrPick();
+      if(nowDone){var _it=findItem(bc);recordTick(bc,_it?_it.nm:'',bi,1);}
       if(nowDone)collapseBrandIfDone(this.closest('.pk-row'));
     });
   });
@@ -1317,6 +1347,7 @@ function updateProgress(){
   document.getElementById('prog-txt').textContent=pct+'%';
   document.getElementById('prog-sub').textContent=dn+' of '+tot+' picks done';
   if(tot>0&&dn>=tot&&tmr.on&&!tmr.done)tmrFinish();
+  else if(tmr.on&&pkSession){pkSession.last=Date.now();pkSession.done=dn;pkSession.total=tot;pushSessionDebounced();}
   // Update dept counters
   document.querySelectorAll('.pk-dept').forEach(function(h){
     var dept=h.dataset.dept;
