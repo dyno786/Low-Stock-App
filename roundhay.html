@@ -1004,78 +1004,12 @@ function computeOverstockRows(){
   return rows;
 }
 
-// ===== Shared discontinued list (cc_discontinued via /api/ticks) — read on every device =====
-var __discCentral={}, __discTried=false;
-function discIs(bc){ if(__discCentral&&__discCentral[bc])return true; if(typeof disc!=='undefined'&&disc&&disc[bc])return true; return false; }
-function ensureDisc(){
-  if(__discTried)return;__discTried=true;
-  if(typeof syncLoad!=='function')return;
-  syncLoad('cc_discontinued').then(function(v){
-    if(!v)return; if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){return;}}
-    if(v&&typeof v==='object'){__discCentral=v;
-      if(typeof disc!=='undefined'&&disc){Object.keys(v).forEach(function(bc){if(!disc[bc])disc[bc]=v[bc];});}
-      if(typeof view!=='undefined'&&typeof renderView==='function')renderView();}
-  }).catch(function(){});
-}
-// ===== Overstock fulfil card: % of receiving branches' need this branch can cover from spare =====
-function computeFulfil(){
-  if(!destLoaded||!srcLoaded[0]||!srcLoaded[1]||!srcLoaded[2])return null;
-  var s=loadOverSettings();
-  var b1=SOURCES[1], b2=SOURCES[2];
-  var wh={};(srcData[0]||[]).forEach(function(p){if(p.bc)wh[p.bc]=p;});
-  var m1={},m2={};(srcData[1]||[]).forEach(function(p){if(p.bc)m1[p.bc]=p;});(srcData[2]||[]).forEach(function(p){if(p.bc)m2[p.bc]=p;});
-  var t1=BRANCH_TARGETS[b1.name]||7, t2=BRANCH_TARGETS[b2.name]||7;
-  var per={};per[b1.short]={name:b1.name,color:b1.color,need:0,fill:0};per[b2.short]={name:b2.name,color:b2.color,need:0,fill:0};
-  var totalNeed=0,totalFill=0,items=[];
-  (destData||[]).forEach(function(p){
-    if(!p.bc)return;
-    if(discIs(p.bc))return;                              // discontinued — never send
-    if(wh[p.bc]&&wh[p.bc].qty>0)return;                  // warehouse already has it — branch pulls from WH
-    var dept=(p.dp||'').toUpperCase();
-    if(dept!=='AFRO BEAUTY PRODUCTS'&&dept!=='AFRO PRODUCTS 2')return;
-    var spare=(p.qty>=s.min)?Math.max(0,p.qty-s.buffer):0;
-    var q1=m1[p.bc]?m1[p.bc].qty:null, q2=m2[p.bc]?m2[p.bc].qty:null;
-    var n1=(q1!=null&&q1<=s.destThresh)?Math.max(0,t1-q1):0;
-    var n2=(q2!=null&&q2<=s.destThresh)?Math.max(0,t2-q2):0;
-    var need=n1+n2;if(need<=0)return;
-    per[b1.short].need+=n1;per[b2.short].need+=n2;totalNeed+=need;
-    if(spare<=0)return;
-    var slots=[{k:b1.short,need:n1},{k:b2.short,need:n2}].sort(function(a,b){return b.need-a.need;});
-    var rem=spare,give={};give[b1.short]=0;give[b2.short]=0;
-    slots.forEach(function(sl){var g=Math.max(0,Math.min(sl.need,rem));rem-=g;give[sl.k]=g;});
-    per[b1.short].fill+=give[b1.short];per[b2.short].fill+=give[b2.short];
-    var f=give[b1.short]+give[b2.short];totalFill+=f;
-    if(f>0)items.push({bc:p.bc,nm:p.nm,fill:f});
-  });
-  return {pct:totalNeed>0?Math.round(totalFill/totalNeed*100):0,totalNeed:totalNeed,totalFill:totalFill,per:per,b1:b1,b2:b2,items:items};
-}
-function fulfilCardHTML(){
-  ensureDisc();
-  var f=computeFulfil();if(!f)return '';
-  function bar(p){var pct=p.need>0?Math.round(p.fill/p.need*100):0;var w=Math.max(3,Math.min(100,pct));
-    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 14px">'+
-      '<span style="width:11px;height:11px;border-radius:50%;background:'+p.color+';flex:none"></span>'+
-      '<span style="font-weight:700;font-size:14px;min-width:92px">'+p.name+'</span>'+
-      '<span style="flex:1;height:9px;background:#eee;border-radius:999px;overflow:hidden"><span style="display:block;height:100%;width:'+w+'%;background:'+p.color+'"></span></span>'+
-      '<span style="font-weight:800;font-size:14px;min-width:40px;text-align:right">'+pct+'%</span>'+
-      '<span style="color:var(--sub);font-size:13px;min-width:52px;text-align:right">'+p.fill+'/'+p.need+'</span></div>';
-  }
-  return '<div style="border:1px solid #e9d5ff;border-radius:14px;overflow:hidden;margin:8px 10px;background:#fff">'+
-    '<div style="background:#f3e8ff;padding:13px 16px;display:flex;align-items:baseline;gap:11px">'+
-      '<span style="font-size:30px;font-weight:900;color:#5b21b6;line-height:1">'+f.pct+'%</span>'+
-      '<span style="font-size:13px;color:#5b21b6;font-weight:600;line-height:1.3">of the other branches\u2019 needs you can cover from your spare (excludes anything the warehouse already has, and discontinued lines)</span></div>'+
-    bar(f.per[f.b1.short])+bar(f.per[f.b2.short])+
-    '<div style="border-top:1px solid #f0f0f0;padding:8px 14px;font-size:12px;color:var(--sub);display:flex;justify-content:space-between">'+
-      '<span>'+f.totalFill+' of '+f.totalNeed+' units coverable</span><span>'+f.items.length+' item'+(f.items.length===1?'':'s')+' you can send</span></div></div>';
-}
-
 function renderOverstock(){
   var el=document.getElementById('out');
   if(!destLoaded||!srcLoaded[0]||!srcLoaded[1]||!srcLoaded[2]){
     el.innerHTML='<div class="loading"><div class="spin"></div>Loading branches…</div>';return;
   }
   var rows=computeOverstockRows();
-  if(rows&&rows.length)rows=rows.filter(function(r){return !discIs(r.bc);});
   if(rows&&rows.length&&wmLayoutOn())rows.sort(function(a,b){var ra=wmRank(a.nm),rb=wmRank(b.nm);return ra!==rb?ra-rb:(a.nm<b.nm?-1:1);});
   // ALWAYS render the settings panel + header, even when no overstock — so
   // the user can still adjust thresholds when nothing is showing.
@@ -1129,7 +1063,7 @@ function renderOverstock(){
   }
 
   // Header + sub-tab pills
-  var html=shellHeader+fulfilCardHTML()+wmLayBar();
+  var html=shellHeader+wmLayBar();
   html+='<div class="over-subtabs">';
   destBranches.forEach(function(b){
     var cnt=b.rows.length;
@@ -1466,7 +1400,7 @@ function renderCollect(srcIdx){
 var WHO_BR={0:'Chapeltown',1:'City Centre',2:'Roundhay'}[DEST_ID]||'this branch';
 var WHO_TICK_KEY='cc_whord'+DEST_ID;
 var whoTx={};try{whoTx=JSON.parse(localStorage.getItem(WHO_TICK_KEY)||'{}');}catch(e){}
-function whoMin(){var v=parseInt(localStorage.getItem('cc_whord_min'));return (isNaN(v)||v<0)?3:v;}
+function whoMin(){var v=parseInt(localStorage.getItem('cc_whord_min2'));return (isNaN(v)||v<0)?4:v;}
 function whoMax(){var v=parseInt(localStorage.getItem('cc_whord_max'));return (isNaN(v)||v<1)?7:v;}
 var WHO_NS_KEY='cc_whns'+DEST_ID;
 var whoNS={};try{whoNS=JSON.parse(localStorage.getItem(WHO_NS_KEY)||'{}');}catch(e){}
@@ -1488,7 +1422,7 @@ function whoNSbarHTML(){
 }
 var WHO_ALIASES={'CHER':'CHERISH','BLUE':'BLUE MAGIC','SHEA':'SHEA MOISTURE','JUST':'JUST 4 ME','KERA':'KERACARE','AUNT':'AUNT JACKIES','JANET':'JANET COLLECTION'};
 function whoBrand(nm){if(!nm)return 'OTHER';var w=(''+nm).trim().toUpperCase().split(/\s+/);var f=(w[0]||'').replace(/[^A-Z0-9&\/+-]/g,'');if(!f||/^[0-9]+$/.test(f))f=((w[1]||'OTHER').replace(/[^A-Z0-9&\/+-]/g,''))||'OTHER';return WHO_ALIASES[f]||f;}
-// ===== Central warehouse map (cc_wh_map) — read-only; drives W/H Order order =====
+// ===== Central warehouse map (cc_wh_map) — read-only; orders the W/H Order picking list =====
 var whMapData={rows:[],tagRules:[]}, __whMapTried=false, __whTagsTried=false, __whVenTried=false;
 function ensureWHMap(){
   if(__whMapTried)return;__whMapTried=true;
@@ -1545,15 +1479,14 @@ function renderWHOrder(){
   var rows=[];
   wh.forEach(function(p){
     if(!p.bc||!p.nm||p.qty<=0)return;
-    if(whoNS[p.bc])return;
-    if(discIs(p.bc))return;            // marked "not stocked here"
+    if(whoNS[p.bc])return;            // marked "not stocked here"
     var here=(destMap[p.bc]?destMap[p.bc].qty:0);
     if(here>MN)return;                 // reorder only when at/below the min
     var order=Math.min(MX-here,p.qty);
     if(order<=0)return;
     rows.push({bc:p.bc,nm:p.nm,sz:p.sz||(destMap[p.bc]?destMap[p.bc].sz:''),here:here,wh:p.qty,order:order,pr:p.pr});
   });
-  var __pos=brandPosMap2();ensureWHMap();ensureWHTags();ensureVendors2();ensureDisc();
+  var __pos=brandPosMap2();ensureWHMap();ensureWHTags();ensureVendors2();
   var groups={},__gord={};rows.forEach(function(r){var R=whResolve(r,__pos);r._grp=R.name;r._ord=R.ord;r._loc=R.label;(groups[r._grp]=groups[r._grp]||[]).push(r);if(__gord[r._grp]==null||r._ord<__gord[r._grp])__gord[r._grp]=r._ord;});
   var brands=Object.keys(groups).sort(function(a,b){var d=(__gord[a]||0)-(__gord[b]||0);if(d)return d;return a.localeCompare(b);});
   var total=rows.length,done=rows.filter(function(r){return whoTx[r.bc];}).length;
@@ -1573,7 +1506,7 @@ function renderWHOrder(){
       var ck=!!whoTx[r.bc];
       html+='<div class="who-row'+(ck?' ck':'')+'" data-bc="'+r.bc+'">'+
         '<div class="who-img">'+imgEl(r.bc,46)+'</div>'+
-        '<div class="who-info"><div class="who-nm">'+r.nm+(r.sz?' \u00b7 '+r.sz:'')+'</div>'+'<div class="who-bc">'+r.bc+(r._loc?' \u00b7 \uD83D\uDCCD '+r._loc:'')+'</div>'+
+        '<div class="who-info"><div class="who-nm">'+r.nm+(r.sz?' \u00b7 '+r.sz:'')+'</div>'+'<div class="who-bc">'+r.bc+(r._loc?' · 📍 '+r._loc:'')+'</div>'+
           '<div class="who-meta">you have '+r.here+' \u00b7 W/H has '+r.wh+(r.pr>0?' \u00b7 \u00a3'+r.pr.toFixed(2):'')+'</div>'+'<button class="who-ns" data-bc="'+r.bc+'">\u2715 not stocked here</button>'+'</div>'+
         '<div class="who-ord"><div class="who-ordn">'+r.order+'</div><div class="who-ordl">order</div></div>'+
         '<div class="who-tick">'+(ck?'\u2713':'')+'</div>'+
@@ -1587,7 +1520,7 @@ function wireWHO(){
   var el=document.getElementById('out');
   el.querySelectorAll('.who-tbtn').forEach(function(b){b.addEventListener('click',function(){
     var set=this.dataset.set,d=+this.dataset.d,mn=whoMin(),mx=whoMax();
-    if(set==='min'){mn+=d;if(mn<0)mn=0;if(mn>=mx)mn=mx-1;try{localStorage.setItem('cc_whord_min',String(mn));}catch(e){}}
+    if(set==='min'){mn+=d;if(mn<0)mn=0;if(mn>=mx)mn=mx-1;try{localStorage.setItem('cc_whord_min2',String(mn));}catch(e){}}
     else{mx+=d;if(mx>99)mx=99;if(mx<=mn)mx=mn+1;try{localStorage.setItem('cc_whord_max',String(mx));}catch(e){}}
     renderWHOrder();
   });});
