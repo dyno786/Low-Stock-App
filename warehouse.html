@@ -547,9 +547,16 @@ function pushPickLog(sess){
       var seen={};cur.forEach(function(x){if(x&&x.id)seen[x.id]=1;});
       if(!seen[sess.id])cur.push(sess);
       cur.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
-      if(cur.length>120)cur=cur.slice(-120);
-      // keep full tick detail only for the most recent 25 runs; older keep summary
-      if(cur.length>25){for(var i=0;i<cur.length-25;i++){if(cur[i]&&cur[i].ticks)delete cur[i].ticks;}}
+      if(cur.length>400)cur=cur.slice(-400);
+      // keep full per-tick detail for the most recent 80 runs
+      if(cur.length>80){for(var i=0;i<cur.length-80;i++){if(cur[i]&&cur[i].ticks)delete cur[i].ticks;}}
+      // hard byte budget: shed oldest detail, then oldest runs, until it fits
+      var guard=0;
+      while(JSON.stringify(cur).length>420000&&guard++<800){
+        var dropped=false;
+        for(var j=0;j<cur.length;j++){if(cur[j]&&cur[j].ticks){delete cur[j].ticks;dropped=true;break;}}
+        if(!dropped)cur.shift();
+      }
       fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_pk_log',value:cur})}).catch(function(){});
     }).catch(function(){});
   }catch(e){}

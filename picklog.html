@@ -70,6 +70,16 @@ body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);-web
 .tk-gap.start{color:var(--sub);font-weight:600}
 .tk-gap.slow{color:#b91c1c}
 .tk-empty{font-size:12px;color:var(--sub);padding:4px 0}
+.tk-bc{display:block;font-family:monospace;font-size:10px;color:var(--sub);margin-top:1px;user-select:all}
+.searchbar{position:sticky;top:54px;z-index:4;display:flex;gap:6px;align-items:center;padding:10px 12px;background:var(--bg);border-bottom:1px solid var(--border)}
+.searchbar input{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;font-family:var(--font);background:#fff;color:var(--ink);-webkit-appearance:none}
+.searchbar input:focus{outline:none;border-color:var(--purple)}
+.q-clear{border:none;background:var(--s1);width:34px;height:34px;border-radius:9px;font-size:13px;color:var(--sub);cursor:pointer;font-family:var(--font);flex:none}
+.srow{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 11px;margin-bottom:6px;font-size:12px}
+.sr-date{width:50px;flex:none;font-weight:700;color:var(--purpletxt)}
+.sr-time{width:46px;flex:none;color:var(--sub);font-variant-numeric:tabular-nums}
+.sr-nm{flex:1;overflow:hidden;color:var(--ink);font-weight:600;min-width:0}
+.sr-nm .tk-bc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -78,6 +88,7 @@ body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);-web
     <div class="hdr-l"><div class="t">⏱ Pick Times</div><div class="s">Manager view — not linked from the app</div></div>
     <button class="hbtn" id="refresh">↺ Refresh</button>
   </div>
+  <div class="searchbar"><input id="q" type="search" placeholder="🔍 Search past picks by name or barcode…" autocomplete="off"><button id="q-clear" class="q-clear" title="Clear">✕</button></div>
   <div id="body"><div class="loading">Loading pick log…</div></div>
   <div class="bar">
     <button id="reset-pace" title="Reset the app's learned seconds-per-pick">↺ Reset learned pace</button>
@@ -95,7 +106,28 @@ function dayLabel(ts){var d=new Date(ts),t=new Date(),y=new Date(Date.now()-864e
 function timeLabel(ts){return new Date(ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}
 function esc(s){return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function brLabel(bi){return bi===0?'Chapeltown':bi===1?'City':bi===2?'Roundhay':'item';}
-var EXPANDED=null;
+var EXPANDED=null, SEARCH='';
+function renderSearch(){
+  var q=SEARCH, matches=[];
+  LOG.forEach(function(run){(run.ticks||[]).forEach(function(tk){
+    if((tk.bc&&(''+tk.bc).toLowerCase().indexOf(q)>=0)||(tk.nm&&(''+tk.nm).toLowerCase().indexOf(q)>=0))matches.push({tk:tk,run:run});
+  });});
+  matches.sort(function(a,b){return b.tk.t-a.tk.t;});
+  var total=matches.length;
+  if(!total)return '<div class="sec-t">Search</div><div class="day"><div class="row" style="display:block;text-align:center;color:var(--sub)">No picks match “'+esc(q)+'”<br><small style="display:block;margin-top:4px">Tip: only recent runs keep per‑pick detail.</small></div></div>';
+  var cut=matches.slice(0,250);
+  var h='<div class="sec-t">'+total+' pick'+(total>1?'s':'')+' matching “'+esc(q)+'”</div><div class="day">';
+  cut.forEach(function(m){var tk=m.tk,d=new Date(tk.t);
+    h+='<div class="srow"><span class="sr-date">'+d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+'</span>'+
+       '<span class="sr-time">'+timeLabel(tk.t)+'</span>'+
+       '<span class="sr-nm">'+esc(tk.nm)+'<span class="tk-bc">'+esc(tk.bc||'')+'</span></span>'+
+       '<span class="tk-br">'+brLabel(tk.bi)+'</span>'+
+       '<span class="tk-gap'+(tk.g>120000?' slow':'')+'">'+(tk.g>0?'+'+fmtDur(tk.g):'start')+'</span></div>';
+  });
+  h+='</div>';
+  if(total>250)h+='<div class="note">Showing the 250 most recent of '+total+'. Refine your search to narrow it.</div>';
+  return h;
+}
 function tickRows(ticks){
   if(!ticks||!ticks.length)return '<div class="tk-empty">No per‑pick detail saved for this run.</div>';
   var gaps=ticks.map(function(t){return t.g;}).filter(function(g,i){return i>0&&g>0;});
@@ -104,7 +136,7 @@ function tickRows(ticks){
   ticks.forEach(function(tk,i){
     var gap=i===0?'<span class="tk-gap start">start</span>':'<span class="tk-gap'+(tk.g>120000?' slow':'')+'">+'+fmtDur(tk.g)+'</span>';
     h+='<div class="tk"><span class="tk-time">'+timeLabel(tk.t)+'</span>'+
-       '<span class="tk-nm">'+esc(tk.nm)+(tk.n>1?' <span class="tk-x">×'+tk.n+'</span>':'')+'</span>'+
+       '<span class="tk-nm">'+esc(tk.nm)+(tk.n>1?' <span class="tk-x">×'+tk.n+'</span>':'')+'<span class="tk-bc">'+esc(tk.bc||'')+'</span></span>'+
        '<span class="tk-br">'+brLabel(tk.bi)+'</span>'+gap+'</div>';
   });
   return h;
@@ -112,7 +144,7 @@ function tickRows(ticks){
 
 var LOG=[],SRC='',SESSION=null;
 async function load(){
-  document.getElementById('body').innerHTML='<div class="loading">Loading pick log…</div>';
+  if(!LOG.length)document.getElementById('body').innerHTML='<div class="loading">Loading pick log…</div>';
   try{
     var rs=await fetch('/api/ticks?key=cc_pk_session',{signal:AbortSignal.timeout(5000)});
     var ds=await rs.json();var sv=ds&&ds.data;if(typeof sv==='string'){try{sv=JSON.parse(sv);}catch(e){sv=null;}}
@@ -167,6 +199,7 @@ function render(){
     '<div class="card full"><div class="lbl">All‑time average pace</div><div class="big">'+sa.pace.toFixed(0)+'s <span style="font-size:13px;color:var(--sub);font-weight:600">per pick</span></div><div class="meta">'+sa.n+' runs · '+sa.picks+' picks · '+fmtDur(sa.ms)+' total'+(fastest?' · best '+(fastest.ms/1000/(fastest.cells||1)).toFixed(0)+'s/pick':'')+'</div></div>'+
   '</div>';
   h+='<div class="sec-t">Every pick run</div>';
+  if(SEARCH){body.innerHTML=liveCard()+renderSearch();return;}
   if(!LOG.length)h+='<div class="day"><div class="row" style="justify-content:center;color:var(--sub)">No completed runs yet</div></div>';
   var curDay='',open=false;
   LOG.forEach(function(x){
@@ -186,6 +219,7 @@ function render(){
   body.innerHTML=h;
 }
 document.getElementById('refresh').addEventListener('click',load);
+(function(){var qEl=document.getElementById('q');if(qEl)qEl.addEventListener('input',function(){SEARCH=this.value.trim().toLowerCase();render();});var qc=document.getElementById('q-clear');if(qc)qc.addEventListener('click',function(){SEARCH='';if(qEl)qEl.value='';render();});})();
 document.getElementById('body').addEventListener('click',function(e){
   var r=e.target.closest('.row[data-runid]');if(!r)return;
   var id=r.dataset.runid;EXPANDED=(EXPANDED===id)?null:id;render();
