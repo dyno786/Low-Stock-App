@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Pick Times — Manager</title>
+<style>
+:root{
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --bg:#f4f4f8;--s1:#eceaf3;--ink:#1f2230;--sub:#6b7280;--border:#e3e1ec;
+  --purple:#7c3aed;--purpletxt:#6d28d9;--purplebg:#f1ebfe;
+  --green:#22c55e;--greenbg:#ecfdf3;--greentxt:#15803d;
+  --amber:#f59e0b;--amberbg:#fffbeb;--ambertxt:#b45309;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:460px;margin:0 auto;min-height:100vh;background:var(--bg)}
+.hdr{background:var(--purple);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between}
+.hdr-l .t{font-size:16px;font-weight:800}
+.hdr-l .s{font-size:11px;opacity:.85;margin-top:2px}
+.hbtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:7px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
+.card.full{grid-column:1/-1}
+.card .lbl{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px}
+.card .big{font-size:26px;font-weight:800;color:var(--purpletxt);line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+.card .meta{font-size:11px;color:var(--sub);margin-top:3px}
+.sec-t{font-size:13px;font-weight:800;color:var(--ink);padding:6px 16px 4px}
+.day{padding:2px 12px 10px}
+.day-h{font-size:11px;font-weight:800;color:var(--purpletxt);padding:8px 4px 4px;text-transform:uppercase;letter-spacing:.3px}
+.row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:9px 11px;margin-bottom:6px}
+.row .time{font-size:12px;font-weight:700;color:var(--ink);width:64px;flex:none;font-variant-numeric:tabular-nums}
+.row .dur{font-size:14px;font-weight:800;color:var(--purpletxt);flex:1;font-variant-numeric:tabular-nums}
+.row .picks{font-size:11px;color:var(--sub);width:56px;text-align:right;flex:none}
+.row .pace{font-size:11px;font-weight:700;color:var(--greentxt);width:64px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.empty{text-align:center;color:var(--sub);font-size:13px;padding:50px 24px;line-height:1.6}
+.note{font-size:11px;color:var(--sub);padding:6px 16px 22px;line-height:1.5}
+.bar{display:flex;gap:8px;padding:0 12px 10px}
+.bar button{flex:1;border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.bar button.danger{color:#b91c1c;border-color:#fca5a5}
+.loading{text-align:center;color:var(--sub);padding:40px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="hdr-l"><div class="t">⏱ Pick Times</div><div class="s">Manager view — not linked from the app</div></div>
+    <button class="hbtn" id="refresh">↺ Refresh</button>
+  </div>
+  <div id="body"><div class="loading">Loading pick log…</div></div>
+  <div class="bar">
+    <button id="reset-pace" title="Reset the app's learned seconds-per-pick">↺ Reset learned pace</button>
+    <button id="clear" class="danger">🗑 Clear log</button>
+  </div>
+  <div class="note" id="src"></div>
+</div>
+<script>
+function fmtDur(ms){var s=Math.round((ms||0)/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60);s=s%60;return (h>0?h+'h ':'')+(h>0||m>0?m+'m ':'')+s+'s';}
+function dayKey(ts){var d=new Date(ts);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function dayLabel(ts){var d=new Date(ts),t=new Date(),y=new Date(Date.now()-864e5);
+  if(dayKey(ts)===dayKey(t.getTime()))return 'Today';
+  if(dayKey(ts)===dayKey(y.getTime()))return 'Yesterday';
+  return d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});}
+function timeLabel(ts){return new Date(ts).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});}
+
+var LOG=[],SRC='';
+async function load(){
+  document.getElementById('body').innerHTML='<div class="loading">Loading pick log…</div>';
+  var log=null;
+  try{
+    var r=await fetch('/api/ticks?key=cc_pk_log',{signal:AbortSignal.timeout(5000)});
+    var d=await r.json();
+    var cur=d&&d.data;if(typeof cur==='string'){try{cur=JSON.parse(cur);}catch(e){cur=null;}}
+    if(Array.isArray(cur)){log=cur;SRC='shared store (all devices)';}
+  }catch(e){}
+  if(!log||!log.length){
+    try{var l=JSON.parse(localStorage.getItem('cc_pk_times')||'[]');if(Array.isArray(l)&&l.length){log=l;SRC='this device only (shared log empty or offline)';}}catch(e){}
+  }
+  LOG=(log||[]).filter(function(x){return x&&x.ts&&x.ms;}).sort(function(a,b){return b.ts-a.ts;});
+  render();
+}
+function summary(items){
+  var n=items.length,picks=0,ms=0;
+  items.forEach(function(x){picks+=(x.cells||0);ms+=(x.ms||0);});
+  var pace=picks>0?ms/1000/picks:0;
+  return {n:n,picks:picks,ms:ms,pace:pace};
+}
+function render(){
+  var body=document.getElementById('body');
+  document.getElementById('src').textContent=LOG.length?('Source: '+SRC+'. A “pick” = one branch box packed. Times are logged automatically when a pick run is completed.'):'';
+  if(!LOG.length){
+    body.innerHTML='<div class="empty">No pick runs logged yet.<br><br>When staff finish ticking off a Top‑up pick on the warehouse app, the time is recorded here automatically.</div>';
+    return;
+  }
+  var now=Date.now();
+  var today=LOG.filter(function(x){return dayKey(x.ts)===dayKey(now);});
+  var week=LOG.filter(function(x){return x.ts>=now-7*864e5;});
+  var st=summary(today),sw=summary(week),sa=summary(LOG);
+  var fastest=LOG.slice().sort(function(a,b){return (a.ms/(a.cells||1))-(b.ms/(b.cells||1));})[0];
+  var h='<div class="cards">'+
+    '<div class="card"><div class="lbl">Today</div><div class="big">'+st.n+'</div><div class="meta">'+(st.n?(st.picks+' picks · '+fmtDur(st.ms)+' · '+st.pace.toFixed(0)+'s/pick'):'no picks yet')+'</div></div>'+
+    '<div class="card"><div class="lbl">Last 7 days</div><div class="big">'+sw.n+'</div><div class="meta">'+(sw.n?(sw.picks+' picks · '+fmtDur(sw.ms)+' · '+sw.pace.toFixed(0)+'s/pick'):'—')+'</div></div>'+
+    '<div class="card full"><div class="lbl">All‑time average pace</div><div class="big">'+sa.pace.toFixed(0)+'s <span style="font-size:13px;color:var(--sub);font-weight:600">per pick</span></div><div class="meta">'+sa.n+' runs · '+sa.picks+' picks · '+fmtDur(sa.ms)+' total'+(fastest?' · best '+(fastest.ms/1000/(fastest.cells||1)).toFixed(0)+'s/pick':'')+'</div></div>'+
+  '</div>';
+  h+='<div class="sec-t">Every pick run</div>';
+  var curDay='',open=false;
+  LOG.forEach(function(x){
+    var dk=dayKey(x.ts);
+    if(dk!==curDay){if(open)h+='</div>';curDay=dk;h+='<div class="day"><div class="day-h">'+dayLabel(x.ts)+'</div>';open=true;}
+    var pace=x.cells?Math.round(x.ms/1000/x.cells):0;
+    h+='<div class="row"><span class="time">'+timeLabel(x.ts)+'</span>'+
+       '<span class="dur">'+fmtDur(x.ms)+'</span>'+
+       '<span class="picks">'+(x.cells||0)+' picks</span>'+
+       '<span class="pace">'+pace+'s/pick</span></div>';
+  });
+  if(open)h+='</div>';
+  body.innerHTML=h;
+}
+document.getElementById('refresh').addEventListener('click',load);
+document.getElementById('reset-pace').addEventListener('click',function(){
+  if(!confirm('Reset the learned seconds-per-pick back to the 40s default? (This only affects the estimate, not the log.)'))return;
+  try{localStorage.removeItem('cc_pk_secper');}catch(e){}
+  alert('Learned pace reset to default.');
+});
+document.getElementById('clear').addEventListener('click',function(){
+  if(!confirm('Clear the ENTIRE pick-time log for all devices? This cannot be undone.'))return;
+  fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_pk_log',value:[]})})
+    .then(function(){try{localStorage.removeItem('cc_pk_times');}catch(e){}LOG=[];render();})
+    .catch(function(){alert('Could not clear the shared log (offline?). Try again.');});
+});
+load();
+</script>
+</body>
+</html>

@@ -66,6 +66,29 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .dist-u{width:42px;text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
 .dist-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;padding:8px 13px;border-top:1px solid var(--border);font-size:11px;color:var(--sub)}
 .dist-est{font-weight:700;color:var(--purpletxt)}
+.wh-gear{flex:none;width:40px;border:1.5px solid var(--border);background:#fff;border-radius:10px;font-size:17px;cursor:pointer;font-family:var(--font);-webkit-tap-highlight-color:transparent}
+.live-bar{display:flex;align-items:center;gap:9px;margin:0 11px 10px;padding:10px 13px;border-radius:11px;background:var(--greenbg);border:1px solid var(--green)}
+.live-dot{width:10px;height:10px;border-radius:50%;background:var(--green);flex:none;animation:livepulse 1.4s infinite}
+@keyframes livepulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.live-txt{font-size:13px;font-weight:800;color:var(--greentxt)}
+.live-prog{font-size:12px;font-weight:700;color:var(--greentxt);background:#fff;border:1px solid var(--green);border-radius:7px;padding:2px 8px;font-variant-numeric:tabular-nums}
+.live-time{margin-left:auto;font-size:13px;font-weight:800;color:var(--greentxt);font-variant-numeric:tabular-nums}
+.pk-tag-sold{background:#fff7ed;color:#b45309;border:1px solid #fed7aa}
+.set-ov{position:fixed;inset:0;background:rgba(20,18,30,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.set-box{background:#fff;width:100%;max-width:460px;border-radius:18px 18px 0 0;padding:16px 16px 22px;animation:setup .2s ease}
+@keyframes setup{from{transform:translateY(30px);opacity:.6}to{transform:translateY(0);opacity:1}}
+.set-h{display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:800;color:var(--ink);margin-bottom:14px}
+.set-x{border:none;background:var(--s1);width:30px;height:30px;border-radius:8px;font-size:14px;cursor:pointer;color:var(--sub);font-family:var(--font)}
+.set-lbl{font-size:12px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.3px;margin:14px 0 8px}
+.set-ctl{display:flex;align-items:center;gap:14px;justify-content:center}
+.set-btn{width:44px;height:44px;border-radius:11px;border:1px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);font-size:22px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.set-v{font-size:30px;font-weight:800;color:var(--purpletxt);min-width:50px;text-align:center;font-variant-numeric:tabular-nums}
+.set-note{font-size:11px;color:var(--sub);line-height:1.45;margin-top:6px}
+.set-modes{display:flex;gap:8px}
+.set-mode{flex:1;border:1.5px solid var(--border);background:#fff;color:var(--sub);border-radius:11px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.set-mode.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+.set-save{width:100%;margin-top:18px;border:none;background:var(--purple);color:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:var(--font)}
+.set-link{display:block;text-align:center;margin-top:12px;font-size:13px;font-weight:700;color:var(--purpletxt);text-decoration:none}
 
 /* PROGRESS */
 .prog-wrap{background:var(--s1);padding:8px 13px;border-bottom:1px solid var(--border)}
@@ -388,6 +411,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 
 <script>
 var WA='447305505976';
+// Pick-time monitoring: card hidden from staff; timer runs silently; review in picklog.html
+var SHOW_DIST=false;       // set true to show the distribution % + estimate card again
+var SHOW_TIMER_BAR=false;  // false = time picks silently (no on-screen timer for staff)
 var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 var BR=[
@@ -465,19 +491,69 @@ function brandOf(nm,bc){
 function loadTarget(){var v=parseInt(localStorage.getItem('cc_wh_target'));return (isNaN(v)||v<1)?7:v;}
 function saveTarget(v){try{localStorage.setItem('cc_wh_target',String(v));}catch(e){}}
 
+// ── PICK SETTINGS (min qty to bother picking) ──────────────
+var minPick=2, minMode='branch';   // 'branch' = each branch must reach minPick; 'total' = combined across branches
+try{var _mp=parseInt(localStorage.getItem('cc_pk_minqty'));if(!isNaN(_mp)&&_mp>=1)minPick=_mp;var _mm=localStorage.getItem('cc_pk_minmode');if(_mm==='total'||_mm==='branch')minMode=_mm;}catch(e){}
+function saveSettings(){
+  try{localStorage.setItem('cc_pk_minqty',String(minPick));localStorage.setItem('cc_pk_minmode',minMode);}catch(e){}
+  if(typeof syncSave==='function')syncSave('cc_wh_set',{minPick:minPick,minMode:minMode});
+}
+
 // ── PICK-TIME ESTIMATE (self-calibrating) ──────────────────
 var pkTotalCells=0;
 function loadSecPer(){var v=parseFloat(localStorage.getItem('cc_pk_secper'));return (isNaN(v)||v<=0)?40:v;}
 function saveSecPer(v){try{localStorage.setItem('cc_pk_secper',String(v));}catch(e){}}
 function pkHist(){try{var a=JSON.parse(localStorage.getItem('cc_pk_times')||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
 function estMins(cells){return cells>0?Math.max(1,Math.round(cells*loadSecPer()/60)):0;}
+// ── LIVE PICK SESSION (so another device can watch progress) ──
+var pkSession=null, livePollIv=null, liveTickIv=null, lastDoneSig=-1;
+function pushSession(obj){try{fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_pk_session',value:obj})}).catch(function(){});}catch(e){}}
+function pkDoneSig(){var n=0;Object.keys(pkTx).forEach(function(k){var a=pkTx[k];if(a)for(var i=0;i<3;i++)if(a[i])n++;});return n;}
+function liveBanner(list){
+  if(!pkSession||!pkSession.start)return '';
+  var done=0,tot=0;(list||[]).forEach(function(it){var t=pkTx[it.bc]||[false,false,false];for(var b=0;b<3;b++){if(it.sp[b]>0){tot++;if(t[b])done++;}}});
+  return '<div class="live-bar" id="live-bar"><span class="live-dot"></span>'+
+    '<span class="live-txt">Pick in progress</span>'+
+    '<span class="live-prog">'+done+'/'+(tot||pkSession.total||0)+'</span>'+
+    '<span class="live-time" id="live-time">⏱ '+fmt(Date.now()-pkSession.start)+'</span></div>';
+}
+function liveTickStart(){
+  if(liveTickIv)clearInterval(liveTickIv);
+  liveTickIv=setInterval(function(){var t=document.getElementById('live-time');if(t&&pkSession&&pkSession.start)t.textContent='⏱ '+fmt(Date.now()-pkSession.start);},1000);
+}
+async function livePoll(){
+  try{
+    if(typeof syncLoad!=='function')return;
+    var s=await syncLoad('cc_pk_session');pkSession=(s&&s.start)?s:null;
+    if(tmr.on)return;                       // this device is the picker — don't pull over its own work
+    var shared=await syncLoad('cc_pk_ticks');
+    if(shared){Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=(shared[k]&&shared[k].slice)?shared[k].slice():shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
+    var sig=pkDoneSig();
+    if(sig!==lastDoneSig){lastDoneSig=sig;if((whTab==='topup'||whTab==='oos')&&loaded>=4)renderWH();}
+    else if(pkSession&&!document.getElementById('live-bar')&&(whTab==='topup'||whTab==='oos')&&loaded>=4)renderWH();
+  }catch(e){}
+}
+function livePollStart(){if(livePollIv)clearInterval(livePollIv);livePollIv=setInterval(livePoll,12000);}
+function pushPickLog(sess){
+  try{
+    fetch('/api/ticks?key=cc_pk_log',{signal:AbortSignal.timeout(4000)}).then(function(r){return r.json();}).then(function(d){
+      var cur=d&&d.data;if(typeof cur==='string'){try{cur=JSON.parse(cur);}catch(e){cur=[];}}
+      if(!Array.isArray(cur))cur=[];
+      var seen={};cur.forEach(function(x){if(x&&x.id)seen[x.id]=1;});
+      if(!seen[sess.id])cur.push(sess);
+      cur.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+      if(cur.length>300)cur=cur.slice(-300);
+      fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_pk_log',value:cur})}).catch(function(){});
+    }).catch(function(){});
+  }catch(e){}
+}
 
 // ── TIMER ──────────────────────────────────────────────────
 var tmr={on:false,start:0,last:0,count:0,gaps:[],iv:null,done:false};
 function tmrPick(){
   if(tmr.done)return;
   var now=Date.now();
-  if(!tmr.on){tmr.on=true;tmr.start=now;tmr.last=now;tmr.count=0;tmr.gaps=[];document.getElementById('timer-bar').style.display='block';tmr.iv=setInterval(tmrUpdate,1000);}
+  if(!tmr.on){tmr.on=true;tmr.start=now;tmr.last=now;tmr.count=0;tmr.gaps=[];if(SHOW_TIMER_BAR)document.getElementById('timer-bar').style.display='block';tmr.iv=setInterval(tmrUpdate,1000);pkSession={start:now,total:pkTotalCells};pushSession(pkSession);}
   if(tmr.last)tmr.gaps.push(now-tmr.last);
   tmr.last=now;tmr.count++;
   tmrUpdate();
@@ -485,6 +561,7 @@ function tmrPick(){
 function tmrReset(){
   tmr.on=false;tmr.start=0;tmr.count=0;tmr.gaps=[];tmr.done=false;
   clearInterval(tmr.iv);
+  pkSession=null;pushSession(null);
   document.getElementById('timer-bar').style.display='none';
   document.getElementById('timer-row').innerHTML='<span class="timer-txt">⏱ 0s</span>';
 }
@@ -505,12 +582,15 @@ function tmrUpdate(){
 function tmrFinish(){
   if(!tmr.on||tmr.done)return;
   tmr.done=true;tmr.on=false;clearInterval(tmr.iv);
+  pkSession=null;pushSession(null);
   var ms=Date.now()-tmr.start;var cells=pkTotalCells||tmr.count||0;
   if(cells>0&&ms>0){
     var per=ms/1000/cells;var old=loadSecPer();
     saveSecPer(old>0?(old*0.6+per*0.4):per);
-    var h=pkHist();h.push({ts:Date.now(),cells:cells,ms:ms});if(h.length>20)h=h.slice(-20);
+    var sess={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),ts:Date.now(),cells:cells,ms:ms,secPer:Math.round(per*10)/10};
+    var h=pkHist();h.push(sess);if(h.length>50)h=h.slice(-50);
     try{localStorage.setItem('cc_pk_times',JSON.stringify(h));}catch(e){}
+    pushPickLog(sess);
   }
   var el=document.getElementById('timer-row');
   if(el)el.innerHTML='<span class="timer-txt">✓ Picked '+cells+' in '+fmt(ms)+'</span>'+
@@ -539,8 +619,12 @@ async function doSync(){
   var shared=await syncLoad('cc_pk_ticks');
   if(shared){Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
   try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
+  var st=await syncLoad('cc_wh_set');
+  if(st&&typeof st==='object'){if(st.minPick>=1)minPick=st.minPick|0;if(st.minMode==='total'||st.minMode==='branch')minMode=st.minMode;try{localStorage.setItem('cc_pk_minqty',String(minPick));localStorage.setItem('cc_pk_minmode',minMode);}catch(e){}}
+  var ss=await syncLoad('cc_pk_session');pkSession=(ss&&ss.start)?ss:null;
   await loadMap();
   setSyncTxt(syncOk?'✓ Synced':'Offline — local only');
+  livePollStart();liveTickStart();
   if(loaded>=4)renderWH();
 }
 
@@ -688,7 +772,10 @@ function buildPickList(){
       needs.forEach(function(n){if(n.n>0&&rem>0){var g=Math.min(n.n,rem);sp[n.i]=g;rem-=g;}});
     }
     if(whNSat(0,p.bc))sp[0]=0;if(whNSat(1,p.bc))sp[1]=0;if(whNSat(2,p.bc))sp[2]=0;
-    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,st:st,bq:c,sp:sp,tgts:tgts};
+    // min-pick rule: don't bother picking tiny amounts
+    if(minMode==='branch'){for(var mb=0;mb<3;mb++){if(sp[mb]>0&&sp[mb]<minPick)sp[mb]=0;}if(sp[0]+sp[1]+sp[2]<=0)return;}
+    else{if(sp[0]+sp[1]+sp[2]<minPick)return;}
+    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,st:st,bq:c,sp:sp,tgts:tgts,ls:p.ls};
     if(st.type==='dead')dead.push(item);else normal.push(item);
   });
   dead.sort(function(a,b){return a.nm.localeCompare(b.nm);});
@@ -785,6 +872,41 @@ function renderDistCard(items,cells){
       '<span class="dist-est">⏱ '+cells+' picks · should take ~'+est+' min'+lastTxt+'</span></div>'+
   '</div>';
 }
+var setTmpMp=2,setTmpMode='branch';
+function setSettingsUI(){
+  var mp=document.getElementById('set-mp');if(mp)mp.textContent=setTmpMp;
+  var bb=document.getElementById('set-mode-branch'),tb=document.getElementById('set-mode-total');
+  if(bb)bb.classList.toggle('on',setTmpMode==='branch');
+  if(tb)tb.classList.toggle('on',setTmpMode==='total');
+  var n=document.getElementById('set-mode-note');
+  if(n)n.textContent=setTmpMode==='branch'?('Each branch must need at least '+setTmpMp+'. A branch needing fewer is skipped for that item.'):('The combined total across all branches must reach '+setTmpMp+'.');
+}
+function ensureSettingsModal(){
+  if(document.getElementById('set-ov'))return;
+  var m=document.createElement('div');m.id='set-ov';m.className='set-ov';m.style.display='none';
+  m.innerHTML='<div class="set-box">'+
+    '<div class="set-h"><span>⚙ Picking settings</span><button class="set-x" id="set-x">✕</button></div>'+
+    '<div class="set-lbl">Minimum quantity worth picking</div>'+
+    '<div class="set-ctl"><button class="set-btn" id="set-mp-down">−</button><span class="set-v" id="set-mp">2</span><button class="set-btn" id="set-mp-up">+</button></div>'+
+    '<div class="set-note">Picks smaller than this are hidden, so staff don\u2019t waste time on tiny pulls.</div>'+
+    '<div class="set-lbl">Apply the minimum…</div>'+
+    '<div class="set-modes"><button class="set-mode" id="set-mode-branch">Per branch</button><button class="set-mode" id="set-mode-total">Across branches</button></div>'+
+    '<div class="set-note" id="set-mode-note"></div>'+
+    '<button class="set-save" id="set-save">Save</button>'+
+    '<a class="set-link" href="picklog.html" target="_blank">⏱ Open pick-times log →</a>'+
+  '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click',function(e){if(e.target===m)closeSettings();});
+  document.getElementById('set-x').addEventListener('click',closeSettings);
+  document.getElementById('set-mp-down').addEventListener('click',function(){setTmpMp=Math.max(1,setTmpMp-1);setSettingsUI();});
+  document.getElementById('set-mp-up').addEventListener('click',function(){setTmpMp=Math.min(99,setTmpMp+1);setSettingsUI();});
+  document.getElementById('set-mode-branch').addEventListener('click',function(){setTmpMode='branch';setSettingsUI();});
+  document.getElementById('set-mode-total').addEventListener('click',function(){setTmpMode='total';setSettingsUI();});
+  document.getElementById('set-save').addEventListener('click',function(){minPick=setTmpMp;minMode=setTmpMode;saveSettings();closeSettings();renderWH();});
+}
+function openSettings(){setTmpMp=minPick;setTmpMode=minMode;ensureSettingsModal();setSettingsUI();document.getElementById('set-ov').style.display='flex';}
+function closeSettings(){var o=document.getElementById('set-ov');if(o)o.style.display='none';}
+
 function renderWH(){
   var el=document.getElementById('out');
   if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
@@ -796,8 +918,9 @@ function renderWH(){
     '<button class="wh-tab'+(whTab==='oos'?' active':'')+'" data-tab="oos">⚠ Out of stock <span class="wh-tab-n">'+oosList.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='over'?' active':'')+'" data-tab="over">🏷 Overstock <span class="wh-tab-n">'+overList.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='map'?' active':'')+'" data-tab="map">🗺 Map</button>'+
+    '<button class="wh-gear" id="wh-gear" title="Settings">⚙</button>'+
   '</div>';
-  function wireTabsBar(){el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});}
+  function wireTabsBar(){el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});var g=document.getElementById('wh-gear');if(g)g.addEventListener('click',openSettings);ensureSettingsModal();if(!livePollIv){livePollStart();liveTickStart();}}
   if(whTab==='map'){
     el.innerHTML=tabBar+renderMapHTML();
     wireTabsBar();wireMap(el);
@@ -826,8 +949,8 @@ function renderWH(){
   var subTitle=(whTab==='oos')
     ?'<div class="sec-hdr"><div class="sec-title" style="color:var(--redtxt)">⚠ Out of stock — by brand</div><div class="sec-sub">Only items a branch is out of (0 or below) that the warehouse can cover. Ordered by your map.</div></div>'
     :'<div class="sec-hdr"><div class="sec-title" style="color:var(--purpletxt)">📦 Top up — by brand</div><div class="sec-sub">Every branch below target. Ordered by your map (set it in the Map tab). ☠ flags dead stock.</div></div>';
-  var html=tabBar+targetCtl;
-  if(whTab!=='oos'&&allItems.length)html+=renderDistCard(allItems,totalCells);
+  var html=tabBar+liveBanner(list)+targetCtl;
+  if(SHOW_DIST&&whTab!=='oos'&&allItems.length)html+=renderDistCard(allItems,totalCells);
   if(list.length){
     html+=subTitle;
     html+='<div class="wh-bulk"><button id="wh-expand">▾ Expand all</button><button id="wh-collapse">▸ Collapse all</button></div>';
@@ -845,11 +968,13 @@ function renderWH(){
   el.querySelectorAll('.wh-tbtn').forEach(function(b){b.addEventListener('click',function(){var v=loadTarget()+(+this.dataset.d);if(v<1)v=1;if(v>99)v=99;saveTarget(v);renderWH();});});
   el.querySelectorAll('.brand-hdr').forEach(function(h){
     h.addEventListener('click',function(){
-      var b=this.dataset.brand;brandCollapsed[b]=!brandCollapsed[b];
-      try{localStorage.setItem('cc_wh_brandcollapsed',JSON.stringify(brandCollapsed));}catch(e){}
+      var b=this.dataset.brand;
       var body=el.querySelector('.brand-body[data-brand="'+b+'"]');var car=this.querySelector('.brand-caret');
-      if(body)body.classList.toggle('collapsed',brandCollapsed[b]);
-      if(car)car.textContent=brandCollapsed[b]?'▸':'▾';
+      var nowColl=body?!body.classList.contains('collapsed'):!brandCollapsed[b];
+      brandCollapsed[b]=nowColl;
+      try{localStorage.setItem('cc_wh_brandcollapsed',JSON.stringify(brandCollapsed));}catch(e){}
+      if(body)body.classList.toggle('collapsed',nowColl);
+      if(car)car.textContent=nowColl?'▸':'▾';
     });
   });
   var eA=document.getElementById('wh-expand');if(eA)eA.addEventListener('click',function(){brandCollapsed={};try{localStorage.setItem('cc_wh_brandcollapsed','{}');}catch(e){}renderWH();});
@@ -1022,7 +1147,7 @@ function renderBrandGroups(all){
     var items=groups[b].slice().sort(function(x,y){return x.nm.localeCompare(y.nm);});
     var cells=0,done=0,pcs=0;
     items.forEach(function(it){var t=pkTx[it.bc]||[false,false,false];for(var k=0;k<3;k++){if(it.sp[k]>0){cells++;pcs+=it.sp[k];if(t[k])done++;}}});
-    var coll=!!brandCollapsed[b], allDone=cells>0&&done===cells;
+    var allDone=cells>0&&done===cells, coll=(b in brandCollapsed)?!!brandCollapsed[b]:allDone;
     var key=b.replace(/"/g,'');
     var locCls=m.isTag?' loc-tag':(m.label==='E'?' loc-e':'');
     html+='<div class="brand-hdr" data-brand="'+key+'">'+
@@ -1059,6 +1184,7 @@ function mkRow(item){
         '<div class="pk-tags">'+
           '<span class="pk-tag pk-tag-wh">WH: '+item.wh+'</span>'+
           stag+
+          (item.ls?'<span class="pk-tag pk-tag-sold">🗓 sold '+item.ls+(daysSince(item.ls)<9999?' ('+daysSince(item.ls)+'d)':'')+'</span>':'')+
           (item.prc>0?'<span class="pk-tag pk-tag-price">£'+item.prc.toFixed(2)+'</span>':'')+
         '</div>'+
       '</div>'+
@@ -1146,6 +1272,7 @@ function wireTicks(all){
       if(typeof syncSave==='function')syncSave('cc_pk_ticks',pkTx);
       refreshRow(row);updateProgress();updateBranchCards();
       if(mark&&typeof tmrPick==='function')tmrPick();
+      if(mark)collapseBrandIfDone(row);
     });
   });
   el.querySelectorAll('.pk-cell').forEach(function(cell){
@@ -1165,8 +1292,20 @@ function wireTicks(all){
       updateProgress();
       updateBranchCards();
       if(nowDone&&typeof tmrPick==='function')tmrPick();
+      if(nowDone)collapseBrandIfDone(this.closest('.pk-row'));
     });
   });
+}
+function collapseBrandIfDone(rowEl){
+  if(!rowEl)return;
+  var body=rowEl.closest('.brand-body');if(!body)return;
+  var rows=body.querySelectorAll('.pk-row');
+  for(var i=0;i<rows.length;i++){var need=rows[i].querySelectorAll('.pk-cell[data-take="1"]').length;var dn=rows[i].querySelectorAll('.pk-cell[data-take="1"].on').length;if(need===0||dn<need)return;}
+  var brand=body.dataset.brand;
+  body.classList.add('collapsed');brandCollapsed[brand]=true;
+  try{localStorage.setItem('cc_wh_brandcollapsed',JSON.stringify(brandCollapsed));}catch(e){}
+  var hdr=body.previousElementSibling;
+  if(hdr&&hdr.classList&&hdr.classList.contains('brand-hdr')){var car=hdr.querySelector('.brand-caret');if(car)car.textContent='▸';}
 }
 
 function updateProgress(){
