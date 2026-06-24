@@ -3,7 +3,7 @@
 
 export const config = { runtime: 'edge' };
 
-const ALLOWED_KEYS = ['cc_pk_ticks','cc_staff2_ticks','cc_neg_ticks','cc_auto_log','cc_staff_week','cc_whns0','cc_whns1','cc_whns2','cc_wh_map','cc_wh_qty'];
+const ALLOWED_KEYS = ['cc_pk_ticks','cc_staff2_ticks','cc_neg_ticks','cc_auto_log','cc_staff_week','cc_whns0','cc_whns1','cc_whns2','cc_wh_map','cc_wh_qty','cc_pk_log','cc_pk_session','cc_wh_set'];
 
 export default async function handler(req) {
   const cors = {
