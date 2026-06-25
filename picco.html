@@ -4,98 +4,1416 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PICCO · Scan monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  html,body{margin:0;background:#F4F6F8;font-family:Inter,system-ui,sans-serif}
-  #boot{max-width:560px;margin:18vh auto;padding:0 24px;color:#69727E;text-align:center}
-  #boot h1{font-size:18px;color:#171A21;margin:0 0 8px}
-  #boot p{font-size:14px;line-height:1.5;margin:0}
-  #boot .err{color:#B42318;font-weight:600;margin-top:14px;display:none}
-  #boot a{color:#0B545C}
+  :root{
+    --bg:#F4F6F8; --surface:#FFFFFF; --surface-2:#FBFCFD;
+    --ink:#171A21; --muted:#69727E; --faint:#9AA3AD;
+    --line:#E3E8EE; --line-strong:#D2D9E1;
+    --brand:#0F6E78; --brand-ink:#0B545C; --brand-wash:#E4F1F2;
+    --ok:#11804A; --ok-wash:#DCF3E6;
+    --warn:#9A6700; --warn-wash:#FFF4D6;
+    --bad:#B42318; --bad-wash:#FDE6E3;
+    --viol:#5B3FB5; --viol-wash:#ECE7FB;
+    --radius:12px; --radius-sm:8px;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --shadow:0 1px 2px rgba(20,30,45,.04),0 4px 16px rgba(20,30,45,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--ink); font-family:"Inter",system-ui,sans-serif; font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 20px}
+
+  .topbar{position:sticky; top:0; z-index:30; background:rgba(244,246,248,.86); backdrop-filter:saturate(140%) blur(8px); border-bottom:1px solid var(--line)}
+  .topbar__inner{display:flex; align-items:center; gap:16px; height:62px}
+  .brand{display:flex; align-items:baseline; gap:10px; margin-right:auto}
+  .brand__mark{font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:22px; letter-spacing:.14em}
+  .brand__dot{color:var(--brand)}
+  .brand__sub{font-size:12px; color:var(--muted)}
+  .updated{font-size:12px; color:var(--muted); text-align:right; line-height:1.3}
+  .updated b{color:var(--ink); font-weight:600}
+  .btn{font:inherit; font-weight:600; font-size:13px; cursor:pointer; border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); padding:8px 13px; border-radius:var(--radius-sm); display:inline-flex; align-items:center; gap:7px; transition:border-color .15s,background .15s,transform .05s}
+  .btn:hover{border-color:var(--brand); color:var(--brand-ink)}
+  .btn:active{transform:translateY(1px)}
+  .btn svg{width:14px; height:14px}
+  .btn.spin svg{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .tabs{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; padding:10px 0 0}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{position:relative; flex:0 0 auto; background:transparent; border:0; cursor:pointer; font:inherit; font-weight:600; font-size:13.5px; color:var(--muted); padding:11px 15px 14px; border-radius:8px 8px 0 0; white-space:nowrap; display:flex; align-items:center; gap:9px; transition:color .15s}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--ink)}
+  .tab[aria-selected="true"]::after{content:""; position:absolute; left:12px; right:12px; bottom:-1px; height:2.5px; background:var(--brand); border-radius:2px}
+  .tab__count{font-family:var(--mono); font-size:11px; font-weight:600; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:1px 7px}
+  .tab--exc[aria-selected="true"]::after{background:var(--warn)}
+  .tab--exc .tab__count.hot{background:var(--warn-wash); color:var(--warn); border-color:transparent}
+  .statusdot{width:8px; height:8px; border-radius:50%; flex:0 0 auto; background:var(--faint)}
+  .statusdot--live{background:var(--ok); box-shadow:0 0 0 3px var(--ok-wash); animation:pulse 2.4s ease-in-out infinite}
+  .statusdot--stale{background:var(--warn); box-shadow:0 0 0 3px var(--warn-wash)}
+  .statusdot--none{background:var(--faint)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+  main{padding:22px 0 80px}
+  .panel{animation:rise .25s ease both}
+  @keyframes rise{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+
+  .branchhead{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap}
+  .branchhead__name{font-family:"Space Grotesk",sans-serif; font-size:25px; font-weight:600; letter-spacing:-.01em}
+  .lede{color:var(--muted); margin:-6px 0 16px; max-width:660px}
+  .lede code,.state code,.demobar code{font-family:var(--mono); font-size:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:6px; padding:1px 6px}
+
+  .freshness{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:20px; border:1px solid var(--line); background:var(--surface)}
+  .freshness--live{color:var(--ok); border-color:transparent; background:var(--ok-wash)}
+  .freshness--stale{color:var(--warn); border-color:transparent; background:var(--warn-wash)}
+  .freshness--none{color:var(--muted)}
+
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px}
+  .kpi{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:15px 17px; box-shadow:var(--shadow)}
+  .kpi__label{font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted)}
+  .kpi__value{font-family:"Space Grotesk",sans-serif; font-size:27px; font-weight:600; margin-top:6px; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+  .kpi__value small{font-size:13px; color:var(--faint); font-weight:500; margin-left:4px}
+  .kpi--exc.hot .kpi__value{color:var(--warn)}
+  .kpi--age .kpi__value{font-size:21px}
+
+  .overview{display:grid; grid-template-columns:repeat(2,1fr); gap:14px}
+  .bcard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; cursor:pointer; transition:border-color .15s,transform .06s; text-align:left; width:100%; font:inherit; color:inherit; display:block}
+  .bcard:hover{border-color:var(--brand)}
+  .bcard:active{transform:translateY(1px)}
+  .bcard:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .bcard__top{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:15px}
+  .bcard__name{font-family:"Space Grotesk",sans-serif; font-size:19px; font-weight:600}
+  .bcard__kpis{display:flex; gap:20px}
+  .bcard__kpi .l{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600}
+  .bcard__kpi .v{font-family:"Space Grotesk",sans-serif; font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:3px}
+  .bcard__kpi.exc.hot .v{color:var(--warn)}
+  .demohint{margin-top:13px; font-size:12px; color:var(--warn); font-weight:600}
+
+  .toolbar{display:flex; align-items:center; gap:10px; margin-bottom:13px; flex-wrap:wrap}
+  .search{position:relative; flex:1 1 240px; min-width:0}
+  .search input{width:100%; font:inherit; font-size:13.5px; padding:9px 12px 9px 34px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface); color:var(--ink)}
+  .search input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-wash)}
+  .search svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--faint)}
+  .seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:var(--radius-sm); overflow:hidden; background:var(--surface)}
+  .seg button{font:inherit; font-weight:600; font-size:13px; border:0; background:transparent; color:var(--muted); padding:9px 13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px}
+  .seg button[aria-pressed="true"]{background:var(--brand); color:#fff}
+  .seg button[aria-pressed="true"].warnsel{background:var(--warn)}
+  .seg svg{width:15px;height:15px}
+
+  /* product media (photo slot, falls back to clean placeholder — never a barcode) */
+  .media{position:relative; background:var(--surface-2); display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .media .ph{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:var(--brand-ink)}
+  .media .ph .ini{font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:20px}
+  .media .ph .lbl{font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+  .media img{position:relative; z-index:1; max-width:100%; max-height:100%; object-fit:contain}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px}
+  .icard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column}
+  .icard.is-exc{border-color:#EFCF86}
+  .icard .media{height:104px; border-bottom:1px solid var(--line); padding:10px}
+  .icard__body{padding:12px 13px; display:flex; flex-direction:column; gap:5px; flex:1}
+  .icard__desc{font-weight:600; font-size:13.5px; line-height:1.3}
+  .icard__sub{font-family:var(--mono); font-size:11px; color:var(--muted)}
+  .icard__mv{margin-top:4px}
+  .icard__foot{margin-top:auto; padding-top:8px; display:flex; align-items:flex-end; justify-content:space-between; gap:8px}
+  .icard__qty{font-family:"Space Grotesk",sans-serif; font-size:22px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1}
+  .icard__qty small{font-size:10.5px; color:var(--faint); font-weight:500; margin-left:3px}
+
+  /* movement from -> to */
+  .mv{display:inline-flex; align-items:center; gap:7px; font-family:var(--mono); font-size:12.5px; font-variant-numeric:tabular-nums}
+  .mv .from{color:var(--muted)} .mv .to{font-weight:600}
+  .mv .arr{color:var(--faint)}
+  .mv.to-bad .to{color:var(--bad)}
+  .mv.to-up .to{color:var(--ok)}
+  .mv.to-down .to{color:var(--warn)} .mv.to-down .arr{color:var(--warn)}
+  .add{font-family:var(--mono); font-weight:600; font-variant-numeric:tabular-nums}
+  .add.pos{color:var(--ok)} .add.neg{color:var(--bad)}
+  .addtag{margin-left:10px; padding-left:10px; border-left:1px solid var(--line)}
+  .mvt{display:inline-flex; align-items:stretch}
+  .mvt__c{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0 15px; position:relative}
+  .mvt__c:first-child{padding-left:0}
+  .mvt__c+.mvt__c::before{content:""; position:absolute; left:0; top:4px; bottom:4px; width:1px; background:var(--line)}
+  .mvt__n{font-family:var(--mono); font-weight:600; font-variant-numeric:tabular-nums; font-size:15px; color:var(--ink); line-height:1.1}
+  .mvt__l{font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--faint); font-weight:600; white-space:nowrap}
+  .mvt__now{color:var(--brand-ink); font-size:17px}
+  .mvt__now--bad{color:var(--bad)}
+  .mvt__stk{color:var(--ink); font-size:17px}
+  .okpill{display:inline-block; font-size:11px; font-weight:600; color:var(--muted); background:var(--bg,#F1F3F4);
+    border:1px solid var(--line); border-radius:999px; padding:3px 10px; white-space:nowrap}
+  .adjpill{display:inline-block; font-family:var(--mono); font-weight:700; font-size:16px; line-height:1.15; border-radius:8px; padding:2px 10px}
+  .adjpill--pos{color:#0A7B3E; background:var(--ok-wash,#E3F4E8)}
+  .adjpill--neg{color:var(--bad); background:var(--bad-wash)}
+  .adjpill--zero{color:var(--muted); background:var(--bg,#F1F3F4)}
+  .add.zero{color:var(--muted)}
+  .bc{display:inline-flex; align-items:center; gap:5px; cursor:pointer; border-radius:6px; padding:1px 6px; margin:-1px -2px;
+    user-select:none; -webkit-user-select:none; transition:background .12s, color .12s; vertical-align:baseline}
+  .bc__t{font-variant-numeric:tabular-nums}
+  .bc__i{flex:none; opacity:.4; transition:opacity .12s}
+  .bc:hover{background:var(--brand-wash,#E6F0F1); color:var(--brand-ink)}
+  .bc:hover .bc__i,.bc:focus-visible .bc__i{opacity:.85}
+  .bc:focus-visible{outline:2px solid var(--brand); outline-offset:1px}
+  .bc--done{background:var(--ok-wash,#E3F4E8); color:var(--ok,#1E7A46)}
+  .bc--done .bc__i{opacity:0; width:0}
+  .bc--done::after{content:"✓ copied"; font-size:11px; font-weight:700; white-space:nowrap}
+  td.mv-cell .mv{display:inline-flex}
+  .listtop{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--surface-2)}
+  .listtop__val{font-size:13px; color:var(--muted)} .listtop__val b{color:var(--ink); font-family:var(--mono); font-size:14px; margin-left:4px}
+  .listtop__cnt{font-size:12px; color:var(--faint); font-family:var(--mono)}
+  .freshwrap{display:inline-flex; flex-direction:column; align-items:flex-end; gap:4px}
+  .checked{font-size:12px; color:var(--muted); font-family:var(--mono)}
+  .checked b{color:var(--ink); font-weight:600}
+  .bcard .checked{align-self:flex-start; margin-top:2px}
+  .traceprod{display:flex; align-items:center; gap:13px; margin:4px 0 18px}
+  .traceprod .media{width:54px; height:54px; border-radius:9px; border:1px solid var(--line)}
+  .traceprod .nm{font-weight:600; font-size:16px} .traceprod .sub{font-family:var(--mono); font-size:12px; color:var(--muted)}
+  .provtag{display:inline-block; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:20px; white-space:nowrap}
+  .prov--from{color:var(--brand-ink); background:#E2F1F2}
+  .prov--store{color:var(--muted); background:var(--surface-2)}
+  .prov--out{color:var(--warn); background:var(--warn-wash)}
+  .prov--in{color:var(--ok); background:var(--ok-wash)}
+  .prov--neg{color:var(--warn); background:var(--warn-wash)}
+  .prov--fixed{color:var(--viol); background:var(--viol-wash); white-space:normal}
+  .provrow{margin-top:5px}
+  .provsum{display:flex; flex-wrap:wrap; gap:8px 18px; align-items:center; margin:2px 0 14px; padding:11px 14px; background:var(--surface-2); border:1px solid var(--line); border-radius:12px; font-size:13px; color:var(--ink)}
+  .provsum__i{display:inline-flex; align-items:center; gap:7px} .provsum__i b{font-weight:700}
+  .provsum__sub{color:var(--muted); font-weight:500}
+  .provsum__dot{width:9px; height:9px; border-radius:50%; flex:none}
+  .provsum__dot.prov--from{background:var(--brand)} .provsum__dot.prov--fixed{background:var(--viol)} .provsum__dot.prov--neg{background:var(--warn)}
+  .bcard__prov{display:flex; flex-direction:column; gap:3px; margin-top:11px; padding-top:11px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted)}
+  .bcard__prov span{display:inline-flex; align-items:center; gap:6px} .bcard__prov b{color:var(--ink); font-weight:700}
+  .bcard__pf{display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12.5px; color:var(--muted)} .bcard__pf b{color:var(--ink); font-weight:700}
+  .bcard__pf.hot{color:var(--warn)} .bcard__pf.hot b{color:var(--warn)}
+  .bcard__pfdot{width:7px; height:7px; border-radius:50%; background:var(--ok); flex:none} .bcard__pfdot.hot{background:var(--warn)}
+  .bcard__pfdot.bad{background:var(--bad)} .bcard__pfdot.ok{background:var(--ok)}
+  .bcard__neg{display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12.5px; color:var(--muted)} .bcard__neg b{color:var(--ink); font-weight:700}
+  .bcard__neg.hot{color:var(--bad)} .bcard__neg.hot b{color:var(--bad)}
+  .negbanner{display:flex; align-items:center; gap:9px; padding:11px 15px; margin:0 0 16px; border-radius:12px; font-size:13.5px; background:var(--bad-wash); color:var(--bad); border:1px solid #F3C9C3} .negbanner b{font-weight:700}
+  .negbanner--ok{background:var(--ok-wash); color:var(--ok); border-color:#BFE6CF}
+  .negbanner__dot{width:9px; height:9px; border-radius:50%; background:currentColor; flex:none}
+  .feedbanner{display:flex; align-items:flex-start; gap:9px; padding:11px 15px; margin:0 0 12px; border-radius:12px; font-size:13.5px; font-weight:600; background:var(--bad-wash); color:var(--bad); border:1px solid #F3C9C3} .feedbanner b{font-weight:800}
+  .feedbanner--ok{background:var(--ok-wash); color:var(--ok); border-color:#BFE6CF}
+  .feedbanner__dot{width:9px; height:9px; border-radius:50%; background:currentColor; flex:none; margin-top:4px}
+  .settings{display:flex; flex-direction:column; gap:18px; max-width:560px}
+  .setrow{display:flex; flex-direction:column; gap:6px}
+  .setrow__l{font-size:14px; font-weight:600; color:var(--ink)}
+  .setrow__c{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--muted)}
+  .setinput{font:inherit; font-weight:600; width:90px; padding:8px 10px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface); color:var(--ink)}
+  .setinput:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-wash)}
+  .setrow__h{font-size:12.5px; color:var(--muted)}
+  .setactions{display:flex; align-items:center; gap:12px; margin-top:4px}
+  .setmsg{font-size:13px; color:var(--ok); font-weight:600}
+  .wflow{margin:2px 0 18px}
+  .wflow__sum{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px}
+  .wflow__chip{font-size:13px; font-weight:600; padding:6px 11px; border-radius:999px; background:var(--surface-2); color:var(--muted)} .wflow__chip b{font-weight:800}
+  .wflow__chip--in{background:var(--ok-wash); color:var(--ok)}
+  .wflow__chip--out{background:var(--bad-wash); color:var(--bad)}
+  .wflow__chip--net{background:var(--surface-2); color:var(--ink)}
+  .wfcorr-note{font-size:12.5px; color:var(--bad); margin:0 0 10px; font-weight:600}
+  .wflow__cols{display:flex; flex-wrap:wrap; gap:14px}
+  .wflow__col{flex:1 1 260px; min-width:0}
+  .wflow__h{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px}
+  .wflow__h--out{color:var(--bad)} .wflow__h--in{color:var(--ok)}
+  .wfrow{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13.5px}
+  .wfrow__q{font-weight:800; min-width:48px; font-variant-numeric:tabular-nums}
+  .wfrow__q--out{color:var(--bad)} .wfrow__q--in{color:var(--ok)}
+  .wfrow__n{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .wfempty{font-size:13px; color:var(--muted); padding:6px 0}
+  .ret-out{color:var(--bad); font-weight:700; font-variant-numeric:tabular-nums}
+  .retbranch{margin-bottom:22px}
+  .retbranch__head{display:flex; align-items:center; gap:9px; margin:2px 2px 10px; flex-wrap:wrap}
+  .retbranch__name{font-weight:700; font-size:16px; letter-spacing:-.01em}
+  .retbranch__tot{margin-left:auto; font-size:12.5px; color:var(--muted)} .retbranch__tot b{color:var(--ink); font-weight:700}
+  .pfiles{margin:0 0 16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); overflow:hidden}
+  .pfiles>summary{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 15px; cursor:pointer; list-style:none; font-size:13.5px}
+  .pfiles>summary::-webkit-details-marker{display:none}
+  .pfiles__lead b{font-weight:700} .pfiles .muted{color:var(--muted)}
+  .pf-flag{font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; white-space:nowrap}
+  .pf-flag.ok{color:var(--ok); background:var(--ok-wash)} .pf-flag.hot{color:var(--warn); background:var(--warn-wash)}
+  .pfiles__body{border-top:1px solid var(--line); padding:12px 15px}
+  .pf-note{font-size:12px; color:var(--muted); margin-bottom:10px} .pf-note b{color:var(--ink)}
+  .pf-first{color:var(--faint)}
+  .pfile{border:1px solid var(--line); border-radius:9px; margin-bottom:8px; overflow:hidden; background:var(--surface)}
+  .pfile:last-child{margin-bottom:0}
+  .pfile--over{border-color:#F0D9A8}
+  .pfile>summary{display:flex; align-items:center; gap:12px; padding:10px 13px; cursor:pointer; list-style:none; font-size:13.5px}
+  .pfile>summary::-webkit-details-marker{display:none}
+  .pfile__ref{font-family:var(--mono); font-weight:700; color:var(--brand-ink)}
+  .pfile__time{font-variant-numeric:tabular-nums; font-weight:600}
+  .pfile__gap{font-size:12.5px; color:var(--muted)} .pfile--over .pfile__gap b{color:var(--warn)}
+  .pfile__cnt{margin-left:auto; font-size:12.5px; color:var(--muted)} .pfile__exc{color:var(--warn)}
+  .pfile__chev{transition:transform .15s; color:var(--faint)} .pfile[open] .pfile__chev{transform:rotate(180deg)}
+  .pfile__body{border-top:1px solid var(--line); padding:6px 13px 10px}
+  .pfline{display:flex; align-items:center; gap:12px; padding:7px 0; border-bottom:1px solid var(--line)}
+  .pfline:last-of-type{border-bottom:0}
+  .pfline.is-exc{background:var(--warn-wash); margin:0 -13px; padding:7px 13px}
+  .pfline__nm{flex:1; min-width:0; font-size:13px; line-height:1.3} .pfline__nm small{display:block; font-family:var(--mono); font-size:11px; color:var(--muted)}
+  .pfline__mv{flex:none} .pfline__add{flex:none; min-width:42px; text-align:right}
+  .pfile__tot{margin-top:9px; text-align:right; font-size:12.5px; color:var(--muted)} .pfile__tot b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .seg--prov button[aria-pressed="true"].prov-from{background:var(--brand)} .seg--prov button[aria-pressed="true"].prov-fixed{background:var(--viol)} .seg--prov button[aria-pressed="true"].prov-neg{background:var(--warn)}
+  .traceverdict{margin:-4px 0 10px; font-size:13.5px}
+  .trace-ok{color:var(--ok); font-weight:600}
+  .trace-warn{color:var(--warn); font-weight:600}
+  .trace-muted{color:var(--muted)}
+  td .add{white-space:nowrap}
+
+  .tablecard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
+  .tablescroll{overflow-x:auto}
+  table{border-collapse:collapse; width:100%; min-width:560px}
+  thead th{background:var(--surface-2); text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:11px 14px; border-bottom:1px solid var(--line)}
+  th.num,td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums}
+  tbody td{padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr.row{cursor:pointer}
+  tbody tr.row:hover{background:var(--surface-2)}
+  td.media-cell{width:54px; padding:6px 14px}
+  td.media-cell .media{width:42px; height:42px; border-radius:7px; border:1px solid var(--line)}
+  td.media-cell .ph .ini{font-size:13px}
+  td.media-cell .ph .lbl{display:none}
+  td.prod{min-width:220px}
+  td.prod .nm{font-weight:600}
+  td.prod .sub{font-family:var(--mono); font-size:11px; color:var(--muted)}
+  td.time{color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+  td.time .since{display:block; font-size:11px; color:var(--faint)}
+  tr.is-exc{background:var(--warn-wash)}
+  tr.is-exc:hover{background:#FCEDC4}
+  .pill{display:inline-block; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:20px}
+  .pill--ok{color:var(--ok); background:var(--ok-wash)}
+  .pill--exc{color:var(--warn); background:#FBE7B8}
+  .branchtag{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--muted)}
+  .branchtag .statusdot{width:7px; height:7px; box-shadow:none; animation:none}
+  tr.detail td{background:var(--surface-2); padding:0}
+  .fields{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:2px 22px; padding:14px 16px}
+  .field{display:flex; gap:8px; font-size:12.5px; padding:3px 0; border-bottom:1px dotted var(--line)}
+  .field b{color:var(--muted); font-weight:600; min-width:108px; flex:0 0 auto}
+  .field span{font-family:var(--mono); color:var(--ink); word-break:break-word}
+
+  .listfoot{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 4px 0; font-size:12.5px; color:var(--muted); flex-wrap:wrap}
+  .tablecard .listfoot{padding:12px 16px; border-top:1px solid var(--line)}
+  .linkbtn{font:inherit; font-weight:600; font-size:12.5px; color:var(--brand-ink); background:none; border:0; cursor:pointer; padding:0}
+  .linkbtn:hover{text-decoration:underline}
+
+  .board{margin-bottom:24px}
+  .fboard{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:22px}
+  .fcard{border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:12px 14px}
+  .fcard__top{display:flex; align-items:center; gap:8px; margin-bottom:7px}
+  .fcard__name{font-weight:700; font-size:14.5px; flex:1; min-width:0}
+  .fcard__top .agetag{flex:none}
+  .fcard__meta{font-size:12.5px; color:var(--muted); line-height:1.55} .fcard__meta b{color:var(--ink); font-weight:700}
+  .src-live{color:var(--ok); font-weight:700} .src-demo{color:var(--warn); font-weight:700}
+  .agetag{font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px; display:inline-block}
+  .age--live{color:var(--ok); background:var(--ok-wash)}
+  .age--stale{color:var(--warn); background:var(--warn-wash)}
+  .age--none{color:var(--muted); background:var(--surface-2)}
+  .age--err{color:var(--bad); background:var(--bad-wash)}
+  .sectionlabel{font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 10px}
+
+  .state{text-align:center; padding:50px 20px; color:var(--muted)}
+  .state h3{font-family:"Space Grotesk",sans-serif; font-size:18px; color:var(--ink); margin:0 0 6px; font-weight:600}
+  .state p{margin:0 auto; max-width:470px; font-size:13.5px}
+  .state--err h3{color:var(--bad)}
+  .demobar{display:flex; align-items:center; gap:9px; font-size:12.5px; font-weight:600; color:var(--warn); background:var(--warn-wash); border:1px solid #F2DFA8; border-radius:var(--radius-sm); padding:9px 13px; margin-bottom:14px}
+  .demobar svg{width:15px; height:15px; flex:0 0 auto}
+
+  .mapnote{margin-top:16px}
+  .mapnote summary{cursor:pointer; font-size:12.5px; color:var(--muted); font-weight:600; list-style:none}
+  .mapnote summary::-webkit-details-marker{display:none}
+  .mapnote summary::before{content:"▸ "; color:var(--faint)}
+  .mapnote[open] summary::before{content:"▾ "}
+  .mapnote__body{margin-top:10px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px; font-size:12.5px}
+  .mapnote__row{display:flex; gap:10px; padding:4px 0}
+  .mapnote__row b{min-width:108px; color:var(--muted); font-weight:600}
+  .mapnote__row span{font-family:var(--mono); color:var(--ink)}
+  .mapnote__row .miss{color:var(--bad)}
+
+  .daynav{display:inline-flex; align-items:center; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface); overflow:hidden}
+  .daynav button{font:inherit; border:0; background:transparent; color:var(--ink); padding:8px 9px; cursor:pointer; display:inline-flex; align-items:center}
+  .daynav button:hover:not(:disabled){background:var(--surface-2); color:var(--brand-ink)}
+  .daynav button:disabled{color:var(--faint); cursor:default}
+  .daynav .lbl{font-weight:600; font-size:13px; padding:0 8px; min-width:158px; text-align:center; font-variant-numeric:tabular-nums}
+  .daynav .latest{font-weight:600; font-size:12px; border-left:1px solid var(--line)}
+  .daynav svg{width:15px; height:15px}
+  .scanline{display:flex; gap:10px; font-size:12.5px; padding:4px 0; border-bottom:1px dotted var(--line); font-family:var(--mono)}
+  .scanline b{color:var(--muted); font-weight:600; min-width:74px; flex:0 0 auto}
+  footer{border-top:1px solid var(--line); padding:18px 0; font-size:12px; color:var(--faint)}
+
+  @media (max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:760px){.overview{grid-template-columns:1fr}}
+  @media (max-width:560px){
+    .kpis{grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px} .branchhead__name{font-size:21px}
+    .kpi{padding:10px 12px} .kpi__label{font-size:10px}
+    .kpi__value{font-size:18px; margin-top:2px} .kpi--age .kpi__value{font-size:14px}
+    /* tabs: compact, snap-scroll, hide line-count chips (keep exceptions count) */
+    /* tabs: fixed 4-across grid (wraps to rows of 4), no sideways scroll */
+    .tabwrap{position:static}
+    .tabwrap::after{display:none}
+    .tabs{display:grid; grid-template-columns:repeat(4,1fr); gap:5px; overflow:visible; padding:8px 0 2px}
+    .tab{flex:none; justify-content:center; text-align:center; gap:5px; padding:9px 4px; font-size:11.5px; line-height:1.15; border-radius:9px; white-space:normal; min-height:42px; background:var(--surface); border:1px solid var(--line)}
+    .tab[aria-selected="true"]{background:#E2F1F2; border-color:transparent; color:var(--ink)}
+    .tab[aria-selected="true"]::after{display:none}
+    .tab .statusdot{width:7px; height:7px}
+    .tab .tab__count{display:none}
+    .tab--exc .tab__count{display:none}
+    .seg--flow{overflow-x:auto; scrollbar-width:none} .seg--flow::-webkit-scrollbar{display:none}
+    .seg--flow button{white-space:nowrap}
+    /* product table: everything on one screen — image, product, movement+added, time */
+    .tablescroll{overflow-x:visible}
+    .fboard{grid-template-columns:1fr}
+    .tablescroll--x{overflow-x:auto; -webkit-overflow-scrolling:touch}
+    .tablescroll--x table{table-layout:auto; width:auto; min-width:480px}
+    table{min-width:0; width:100%; table-layout:fixed}
+    thead th, tbody td{padding:9px 8px}
+    td.media-cell{width:40px; padding:7px 0 7px 10px}
+    th.media-cell{width:40px}
+    td.media-cell .media{width:34px; height:34px}
+    td.prod{min-width:0} td.prod .nm{font-size:13.5px; line-height:1.25} td.prod .sub{font-size:10.5px}
+    th.mv-cell, td.mv-cell{width:104px; white-space:nowrap}
+    .mv{font-size:12px; gap:4px}
+    .addtag{margin-left:6px; padding-left:6px}
+    th.time-cell, td.time-cell{width:58px}
+    td.time-cell .ts{display:none}            /* phone: show only "x ago", not the clock */
+    td.time-cell .since{font-size:11px}
+    .listtop{padding:9px 12px} .listtop__cnt{display:none}
+    .scanline{flex-wrap:wrap}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
 </style>
 </head>
 <body>
-<div id="boot">
-  <h1>Loading PICCO…</h1>
-  <p>Fetching the live dashboard and applying the warehouse Scanned&nbsp;in&nbsp;/&nbsp;Scanned&nbsp;out view.</p>
-  <p class="err" id="bootErr"></p>
-</div>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="topbar__inner">
+      <div class="brand"><span class="brand__mark">PICCO<span class="brand__dot">.</span></span>
+        <span class="brand__sub">Scan monitor — CC Hair &amp; Beauty</span></div>
+      <div class="updated" id="updated">—</div>
+      <button class="btn" id="refresh" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>Refresh</button>
+    </div>
+    <div class="tabwrap"><nav class="tabs" id="tabs" role="tablist" aria-label="Views"></nav></div>
+  </div>
+</header>
+
+<main class="wrap"><div id="panel" class="panel" role="tabpanel"></div></main>
+<footer class="wrap" id="footer"></footer>
+
 <script>
-/* ============================================================================
-   PICCO loader + warehouse table patch.
-   This file is tiny and safe: it loads your real, live picco.html from Vercel,
-   then patches ONE function (mvCell) so the Warehouse table reads
-   "Scanned in / Scanned out · In stock" instead of the confusing
-   Was / Adjusted / On shelf row. Shop tabs are untouched.
-   Because the big file is fetched (never retyped), it can't be corrupted.
-   ============================================================================ */
-(function(){
-  var SRC = "https://low-stock-app.vercel.app/picco.html";
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const CONFIG = {
+  // Connected directly to your picco sheets by ID (no publish step needed).
+  // Requires each sheet shared "Anyone with the link — Viewer" for the browser
+  // to read it. If you keep them private, we switch to a small /api endpoint.
+  branches: [
+    { key:"roundhay",   name:"Roundhay",    sheetId:"1XmZ8sl6T8cT-Iuwp1uB-eXths121GIW2zU9bDCpc-IQ" },
+    { key:"city",       name:"City Centre", sheetId:"1n-Xb3Zowb7J-FQ9rjZrChCrSC7UFT3iscFGPnjfWxas" },
+    { key:"chapeltown", name:"Chapeltown",  sheetId:"10o97Gmcoa41MglKmIQb8bkTnCyHb5Qqix9znu8WBDRg" },
+    { key:"warehouse",  name:"Warehouse",   sheetId:"1f9uvQSTJo9Rns6lniUJ0sZZIwZVIGQhpUCpAHSdC4vs", warehouse:true }
+      // Warehouse now reads its own PICCO sheet, exactly like the shop branches (live scans).
+      // A product whose count DROPS (net < 0) = stock that left the warehouse — this drives the
+      // "from warehouse" tags on the shops. A rise = a delivery in.
+  ],
 
-  function fail(msg){
-    var e=document.getElementById("bootErr");
-    if(e){e.style.display="block";
-      e.innerHTML="Couldn't load automatically: "+msg+"<br>Open the live dashboard directly: <a href=\""+SRC+"\">"+SRC+"</a>";}
+  // PRODUCT IMAGES: pulled from your shopify-images feed (barcode -> Shopify CDN
+  // url), the same source your stock pages use. Loaded once, then each scan's
+  // Barcode is matched against it (OwnCode tried as a fallback key).
+  imagesFeedUrl: "/api/stock-data?branch=shopify-images",
+  // Optional direct override instead of the feed: a plain pattern with {barcode}
+  //   e.g. "https://cdn.shopify.com/s/files/.../{barcode}.jpg"
+  imageUrlPattern: "",
+
+  // Real picco columns. Override only if a sheet ever differs.
+  columns: { barcode:"Barcode", description:"ProductName", size:"Size", qty:"QtyAdded",
+             value:"ValueAdded", before:"BeforeValue", after:"AfterValue",
+             timestamp:"Date", productId:"ProductID", ownCode:"OwnCode", stock:"CurrentStock", reason:"ReasonCode", reference:"Reference" },
+
+  // A line is an EXCEPTION when this is true. Default: stock ends negative, or a
+  // negative value booked. (BeforeValue<0 would flag ~half your rows because each
+  // scan writes a pair, so it's not used here — tell me your real rule to change.)
+  isException: (r) => (r.after!=null && r.after<0) || (r.value!=null && r.value<0),
+
+  staleAfterMinutes: 60,
+  frozenAfterHours: 3,    // DEFAULT: flag a feed "frozen" after this many hours with no new scan. Editable live in the Settings tab.
+  emptyBelowRows: 50,     // DEFAULT: a branch sheet with fewer rows than this is flagged "empty" (an import likely wiped it). Editable in Settings.
+  correctionAboveUnits: 5000,  // a single movement this big (e.g. the −85,000 DETTOL fix) is treated as a data correction and kept OUT of the In/Out totals so it can't distort them.
+  refreshMinutes: 5,
+  maxRows: 400,
+  maxCards: 120,
+  // Branch picco "Date" is written by the branch PC in LOCAL (UK) time, the same wall-clock
+  // time staff see, so it is shown as-is. (It is NOT UTC: e.g. file #2360 stored 11:51:58 was
+  // really done at 11:51 local — adding a BST hour wrongly pushed it to 12:51, into the future.)
+  // Warehouse Movements are also local. Set this true ONLY if a feed is ever exported in UTC.
+  branchTimeUTC: false,
+  // When a shop scans stock IN, look back this many days in the Warehouse "scanned out"
+  // history to decide if it was a warehouse transfer. Transfers can lag a few days.
+  transferLookbackDays: 3,
+  // Staff are told to finish a PICCO (which creates a new Reference / file number) this often.
+  // Gaps between consecutive files longer than this are flagged.
+  piccoTargetMinutes: 15
+};
+
+/* sample data in the REAL schema (shown if a sheet can't be read yet) */
+const DEMO_HEADERS = ["TransactionID","Date","BranchID","Branch","ProductID","ProductName","Size","OwnCode","Barcode","QtyAdded","ValueAdded","BeforeValue","AfterValue","Suspicious","CurrentStock","Reference","ReasonCode","CashierCode"];
+function demoRows(seed){
+  const items=[
+    ["DEXE BLACK HAIR SHAMPOO","400ML","799439313934",4,25.98,0,4,4,7],
+    ["A-PRIDE D-KIDS OIL MISTURIZER","8OZ","802535472099",6,15.96,0,6,6,7],
+    ["NM COLOR SHAMPO DARK BROWN","500ML","5060844823710",4,59.95,0,4,4,7],
+    ["HAZ PURE ACETONE 400ML","400ML","5060433980763",4,15.96,0,4,4,7],
+    ["SCHW CURL BALM","150ML","5012583212959",5,0,-6,-1,6,7],
+    ["SM MANUKA & HONEY INT HYD COND","13OZ","764302231059",6,-9.99,0,6,6,7],
+    ["BIGEN SPEEDY MEN D/BROWN","1","4987205933844",8,31.96,0,8,8,7],
+    ["LETS JAM SHINING COND GEL","396GM","72790615573",8,31.96,0,8,8,7],
+    ["VASELINE COCOA BUTTER LOTION","400ML","8712561483162",6,24.95,0,6,6,7],
+    ["ORS OLIVE OIL GIRLS RELAXER","","632169191550",8,29.96,0,8,8,7]
+  ];
+  const now=new Date(); let tx=445565+seed*7;
+  return items.map((it,i)=>{
+    const t=new Date(now.getTime()-(i*6+seed*25)*60000);
+    return [tx--, pad(t), "2", "BRANCH", 20000+i, it[0], it[1], "", it[2], it[3], it[4], it[5], it[6], 1, it[7], 2897-i, it[8], 1];
+  });
+}
+function pad(d){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
+
+const state={ active:"__overview", data:{}, search:"", filter:"all", flow:"all", prov:"all", itemView:"table", expanded:{}, showAll:{}, log:[], lastUpdated:null, day:null, days:[], images:{map:null,count:0,total:0,error:null,urlKey:null,keyKey:null} };
+
+/* CSV + gviz handling */
+function parseCSV(text){
+  const rows=[]; let row=[],field="",inQ=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(inQ){ if(c==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false;} else field+=c; }
+    else{ if(c==='"')inQ=true; else if(c===","){row.push(field);field="";}
+      else if(c==="\n"){row.push(field);rows.push(row);row=[];field="";}
+      else if(c==="\r"){} else field+=c; }
   }
+  if(field.length||row.length){row.push(field);rows.push(row);}
+  return rows.filter(r=>r.length>1||(r.length===1&&r[0].trim()!==""));
+}
+// gviz returns date cells as Date(y,m,d,h,mi,s) with 0-based month
+function cleanCell(v){
+  if(v==null)return "";
+  const m=/^Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)$/.exec(String(v).trim());
+  if(m){const z=n=>String(n).padStart(2,"0");
+    return `${+m[1]}-${z(+m[2]+1)}-${z(+m[3])} ${z(+(m[4]||0))}:${z(+(m[5]||0))}:${z(+(m[6]||0))}`;}
+  return v;
+}
+function resolveCol(headers,name){
+  if(name==null)return -1;
+  return headers.findIndex(h=>h.trim().toLowerCase()===String(name).trim().toLowerCase());
+}
+function buildMap(headers){const m={};for(const k in CONFIG.columns)m[k]=resolveCol(headers,CONFIG.columns[k]);return m;}
+function toNumber(v){if(v==null||v==="")return null;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,""));return isNaN(n)?null:n;}
+function normalise(rows){
+  if(!rows.length)return{headers:[],map:{},items:[]};
+  const headers=rows[0].map(h=>cleanCell(h).trim());
+  const map=buildMap(headers);
+  const items=rows.slice(1).map(r=>{
+    const get=i=>(i>=0&&i<r.length)?cleanCell(r[i]):"";
+    const o={ barcode:String(get(map.barcode)).replace(/\.0$/,""), description:get(map.description), size:get(map.size),
+      qty:toNumber(get(map.qty)), qtyRaw:get(map.qty), value:toNumber(get(map.value)),
+      before:toNumber(get(map.before)), after:toNumber(get(map.after)),
+      time:(CONFIG.branchTimeUTC?utcToLocal(get(map.timestamp)):get(map.timestamp)), productId:String(get(map.productId)).replace(/\.0$/,""),
+      ownCode:String(get(map.ownCode)||"").trim(),
+      stock:get(map.stock), reason:get(map.reason), reference:String(get(map.reference)||"").trim(),
+      raw:headers.reduce((a,h,i)=>{a[h]=r[i]!==undefined?cleanCell(r[i]):"";return a;},{}) };
+    o.isExc=!!CONFIG.isException(o);
+    return o;
+  });
+  return{headers,map,items};
+}
+// Google caches gviz responses server-side for several minutes; cache:"no-store" only covers the
+// browser. A unique query param each fetch changes the cache key so we always get fresh data.
+function bust(u){ return u+(u.includes("?")?"&":"?")+"_="+Date.now(); }
+function gvizUrl(b){ return bust(b.url || `https://docs.google.com/spreadsheets/d/${b.sheetId}/gviz/tq?tqx=out:csv`); }
+function movementsUrl(m){ return bust(m.url || `https://docs.google.com/spreadsheets/d/${m.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(m.tab||"Movements")}`); }
 
-  fetch(SRC, {cache:"no-store"})
-    .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.text(); })
-    .then(function(html){
-      // Pull out the <script> body (the app) and the <style> body so we can run them here.
-      var appScript = "";
-      html.replace(/<script>([\s\S]*?)<\/script>/g, function(_, body){ appScript += body + "\n"; return _; });
-      var styleCss = "";
-      var sm = html.match(/<style>([\s\S]*?)<\/style>/);
-      if(sm) styleCss = sm[1];
+/* dd/mm/yyyy [hh:mm:ss] -> yyyy-mm-dd hh:mm:ss (so dayKey/newest work). Leaves yyyy-… untouched. */
+function ukDate(s){const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(String(s||"").trim());
+  if(!m)return s;const z=n=>String(n).padStart(2,"0");return `${m[3]}-${z(m[2])}-${z(m[1])} ${z(m[4]||0)}:${z(m[5]||0)}:${z(m[6]||0)}`;}
 
-      if(!appScript) throw new Error("no app script found in source");
+/* "yyyy-mm-dd hh:mm:ss" understood as UTC -> same format in the viewer's local timezone.
+   Fixes branch scans showing ~1h stale on BST when the till stores UTC. */
+function utcToLocal(s){const m=/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(s||"").trim());
+  if(!m)return s;const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]||0));
+  if(isNaN(d))return s;const z=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
 
-      // --- THE WAREHOUSE PATCH -------------------------------------------------
-      // Append code that overrides mvCell so warehouse rows show plain scanned in/out.
-      // Defined after the app's own code, so these win.
-      var patch = [
-        "\n/* ---- warehouse table patch (added by loader) ---- */",
-        "function activeIsWarehouse(){ try{ var b=CONFIG.branches.find(function(x){return x.key===state.active;}); return !!(b&&b.warehouse); }catch(e){ return false; } }",
-        "function mvFlowCell(p){",
-        "  var moved=(p.scans||[]).reduce(function(s,x){return s+(toNumber(x.qty)||0);},0);",
-        "  var stk=inStock(p);",
-        "  var big=(typeof getSetting==='function'?getSetting('correctionAboveUnits',(CONFIG.correctionAboveUnits||5000)):(CONFIG.correctionAboveUnits||5000));",
-        "  var shelf='<span style=\"display:block;font-size:12px;color:var(--muted);font-weight:600;margin-top:2px\">In stock '+(stk==null?'\u00b7':fmt(stk))+'</span>';",
-        "  var lead;",
-        "  if(Math.abs(moved)>=big) lead='<b style=\"color:var(--bad)\">Correction '+(moved>0?'+':'\u2212')+fmt(Math.abs(moved))+'</b>';",
-        "  else if(moved>0) lead='<b style=\"color:var(--ok)\">Scanned in '+fmt(moved)+'</b>';",
-        "  else if(moved<0) lead='<b style=\"color:var(--bad)\">Scanned out '+fmt(Math.abs(moved))+'</b>';",
-        "  else lead='<b style=\"color:var(--muted)\">No change</b>';",
-        "  return lead+shelf;",
-        "}",
-        "mvCell=function(p){ return activeIsWarehouse()?mvFlowCell(p):mvTriple(p); };",
-        // Re-render so the override takes effect immediately if the app already drew once.
-        "try{ if(typeof renderPanel==='function') renderPanel(); }catch(e){}"
-      ].join("\n");
+/* trackMovementsAll "Movements" tab -> picco-shaped items, but before/after are REAL stock
+   levels and qty is the signed delta. Reuses collapse/render so warehouse shows in-stock -> reduced-to. */
+function normaliseMovements(rows){
+  if(!rows.length)return{headers:[],map:{},items:[],movements:true};
+  const r0=rows[0].map(c=>cleanCell(c).trim());
+  const looksHeader=r0.some(c=>/^(barcode|before|after|delta|reason|product|name|date|branch)$/i.test(c));
+  let idx,data;
+  if(looksHeader){const H=r0.map(h=>h.toLowerCase());const f=(re,fb)=>{const i=H.findIndex(h=>re.test(h));return i<0?fb:i;};
+    idx={date:f(/date|time/,0),branch:f(/branch/,1),barcode:f(/barcode|ean|^code$/,2),name:f(/name|product/,3),before:f(/before/,4),after:f(/after/,5),delta:f(/delta|change|qty/,6),reason:f(/reason|status|type/,8)};data=rows.slice(1);}
+  else{idx={date:0,branch:1,barcode:2,name:3,before:4,after:5,delta:6,reason:8};data=rows;}
+  const headers=["Date","Branch","Barcode","Product","Before","After","Delta","Suspicious","Reason"];
+  let items=data.map(r=>{const g=i=>(i>=0&&i<r.length)?cleanCell(r[i]):"";
+    const before=toNumber(g(idx.before)),after=toNumber(g(idx.after));
+    let delta=toNumber(g(idx.delta));if(delta==null&&before!=null&&after!=null)delta=after-before;
+    const reason=String(g(idx.reason)||"").trim();
+    return{ barcode:String(g(idx.barcode)).replace(/\.0$/,""), ownCode:"", productId:"", description:g(idx.name), size:"",
+      before, after, qty:delta, qtyRaw:(delta==null?"":String(delta)), value:null,
+      time:ukDate(g(idx.date)), reason,
+      raw:{Date:ukDate(g(idx.date)),Branch:g(idx.branch),Barcode:g(idx.barcode),Product:g(idx.name),Before:g(idx.before),After:g(idx.after),Delta:(delta==null?"":delta),Reason:reason},
+      isExc:(after!=null&&after<0) };
+  }).filter(it=>it.barcode||it.description);
+  // Drop PHANTOM movements from a bad/empty stock snapshot: a single timestamp where many
+  // products all drop to 0 (an empty export) and then get "re-delivered" next snapshot.
+  // Those net to nothing and aren't real stock moving anywhere.
+  const byTs={}; for(const it of items){(byTs[it.time]=byTs[it.time]||[]).push(it);}
+  const badTs=new Set();
+  for(const ts in byTs){const arr=byTs[ts], zeros=arr.filter(x=>x.after===0&&(x.before||0)>0).length;
+    if(arr.length>=4 && zeros>=4 && zeros/arr.length>=0.5) badTs.add(ts);}
+  let dropped=0;
+  if(badTs.size){
+    const phantom=new Set(); // barcode|day that suffered a phantom zero-out
+    for(const it of items){if(badTs.has(it.time)&&it.after===0)phantom.add(it.barcode+"|"+dayKey(it.time));}
+    items=items.filter(it=>{
+      if(badTs.has(it.time)&&it.after===0){dropped++;return false;}                                  // the →0 leg
+      if((it.before===0)&&(it.qty||0)>0&&phantom.has(it.barcode+"|"+dayKey(it.time))){dropped++;return false;} // the 0→ restore leg
+      return true;});
+  }
+  return{headers,map:idx,items,movements:true,dropped};
+}
+function demoMovementRows(){const now=new Date(),z=n=>String(n).padStart(2,"0");
+  const d=`${z(now.getDate())}/${z(now.getMonth()+1)}/${now.getFullYear()} ${z(now.getHours())}:${z(now.getMinutes())}:${z(now.getSeconds())}`;
+  return [
+    [d,"Warehouse","636227027614","MAGIC RUBBER BANDS BLACK","610","500","-110","FALSE","REMOVED","",""],
+    [d,"Warehouse","8691988008014","GUMMY WAX ULTRA HOLD RED","1976","1912","-64","FALSE","REMOVED","",""],
+    [d,"Warehouse","75610166101","BLUE MAGIC SUPER SURE GRO","65","49","-16","FALSE","REMOVED","",""],
+    [d,"Warehouse","75724180130","CON DYE RICH BLACK","20","62","42","FALSE","DELIVERY","",""],
+    [d,"Warehouse","40102127502","ANDIS COOL CARE CLIPPER SPRAY","26","50","24","FALSE","DELIVERY","",""],
+    [d,"Warehouse","802535374003","J4ME TEXTURE SOFTENER KIT","19","67","48","FALSE","DELIVERY","",""]
+  ];
+}
 
-      // Inject styles
-      if(styleCss){
-        var st=document.createElement("style");
-        st.textContent=styleCss;
-        document.head.appendChild(st);
-      }
-      // Build the body the app expects (it looks for #updated, #tabs, #panel, #footer, #refresh).
-      document.body.innerHTML =
-        '<header class="topbar"><div class="wrap"><div class="topbar__inner">'+
-        '<div class="brand"><span class="brand__mark">PICCO<span class="brand__dot">.</span></span>'+
-        '<span class="brand__sub">Scan monitor &mdash; CC Hair &amp; Beauty</span></div>'+
-        '<div class="updated" id="updated">&mdash;</div>'+
-        '<button class="btn" id="refresh" type="button">Refresh</button>'+
-        '</div><div class="tabwrap"><nav class="tabs" id="tabs" role="tablist" aria-label="Views"></nav></div></div></header>'+
-        '<main class="wrap"><div id="panel" class="panel" role="tabpanel"></div></main>'+
-        '<footer class="wrap" id="footer"></footer>';
+/* shopify-images feed -> { barcode/code : imageUrl } */
+async function loadImages(){
+  const out={map:null,count:0,total:0,error:null,urlKey:null,keyKey:null};
+  if(!CONFIG.imagesFeedUrl)return out;
+  try{
+    const res=await fetch(CONFIG.imagesFeedUrl,{cache:"no-store"});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const text=await res.text();
+    let records=null;
+    try{const j=JSON.parse(text); if(Array.isArray(j))records=j; else if(j&&Array.isArray(j.rows))records=j.rows; else if(j&&Array.isArray(j.data))records=j.data; else if(j&&Array.isArray(j.values))records=j.values;}catch(e){}
+    if(!records){const rows=parseCSV(text); if(rows.length){const hs=rows[0].map(h=>cleanCell(h).trim()); records=rows.slice(1).map(r=>hs.reduce((a,h,i)=>{a[h]=r[i]!==undefined?cleanCell(r[i]):"";return a;},{}));}}
+    if(!records||!records.length)throw new Error("empty feed");
+    const keys=Object.keys(records[0]);
+    const urlKey=keys.find(k=>/^image\s*url$|^imageurl$|^image$|^url$|image_url|^img$|photo/i.test(k.trim()))
+              || keys.find(k=>records.some(r=>/^https?:\/\//i.test(String(r[k]||""))));
+    const keyKey=keys.find(k=>/^barcode$/i.test(k.trim()))
+              || keys.find(k=>/barcode|ean|^bar$|^code$/i.test(k.trim()))
+              || keys.find(k=>records.some(r=>/^\d{6,}$/.test(String(r[k]||"").trim()))) || keys[0];
+    const map={};
+    for(const r of records){const k=String(r[keyKey]||"").trim().replace(/\.0$/,"");const u=String(r[urlKey]||"").trim();if(k&&/^https?:\/\//i.test(u))map[k]=u;}
+    out.map=map;out.total=records.length;out.count=Object.keys(map).length;out.urlKey=urlKey;out.keyKey=keyKey;
+    return out;
+  }catch(err){out.error=String(err.message||err);return out;}
+}
 
-      // Run the app, then the patch.
-      var s=document.createElement("script");
-      s.textContent = appScript + "\n" + patch;
-      document.body.appendChild(s);
-    })
-    .catch(function(err){ fail(String(err&&err.message||err)); });
-})();
+async function fetchSheet(url){
+  const res=await fetch(url,{cache:"no-store"});
+  if(!res.ok)throw new Error("HTTP "+res.status);
+  const text=await res.text();
+  if(/^\s*</.test(text)) throw new Error("not shared for link access");
+  const d=normalise(parseCSV(text));
+  if(!d.items.length) throw new Error("empty sheet");
+  return d;
+}
+async function loadBranch(b){
+  // gviz defaults to the FIRST tab. If a tab was added/reordered so the picco data isn't first,
+  // the default read comes back empty — so fall back to targeting the data tab by name.
+  const base = b.url ? b.url : `https://docs.google.com/spreadsheets/d/${b.sheetId}/gviz/tq?tqx=out:csv`;
+  const urls=[ gvizUrl(b) ];
+  for(const t of [b.tab,"picco","Picco","Sheet1"]) if(t) urls.push(bust(base+(base.includes("?")?"&":"?")+"sheet="+encodeURIComponent(t)));
+  let lastErr=null;
+  for(const url of urls){
+    try{ const d=await fetchSheet(url); return{demo:false,warehouse:!!b.warehouse,checkedAt:new Date(),...d}; }
+    catch(err){ lastErr=err; }
+  }
+  return{demo:true, warehouse:!!b.warehouse, error:String((lastErr&&lastErr.message)||lastErr), ...normalise([DEMO_HEADERS,...demoRows(b.key.length)])};
+}
+async function loadAll(){
+  setRefreshing(true);
+  const [imgs, ...results]=await Promise.all([loadImages(), ...CONFIG.branches.map(loadBranch)]);
+  state.images=imgs;
+  CONFIG.branches.forEach((b,i)=>state.data[b.key]=results[i]);
+  buildDays(); resolveDay();
+  state.lastUpdated=new Date(); logCheck(state.lastUpdated);
+  setRefreshing(false);
+  renderTabs();renderPanel();renderUpdated();renderFooter();
+}
+function logCheck(at){
+  const e={at,branches:{}};
+  for(const b of CONFIG.branches){const d=state.data[b.key];let r={lines:null,exc:0,ageMin:null,demo:false};
+    if(d&&d.items){const n=newest(d.items);r.lines=d.items.length;r.exc=branchExceptions(d).length;r.demo=!!d.demo;r.ageMin=n?Math.max(0,Math.round((at.getTime()-n.getTime())/60000)):null;}
+    e.branches[b.key]=r;}
+  state.log.unshift(e); if(state.log.length>150)state.log.pop();
+}
+
+/* freshness */
+function newest(items){let max=null;for(const it of items){if(!it.time)continue;const d=new Date(String(it.time).replace(/-/g,"/").replace("T"," "));if(!isNaN(d)){if(!max||d>max)max=d;}}return max;}
+function freshness(d){if(!d)return{cls:"none",label:"No timestamp",dot:"none"};const m=Math.round((Date.now()-d.getTime())/60000);
+  if(m<=0)return{cls:"live",label:"Live · just now",dot:"live"};
+  if(m<=CONFIG.staleAfterMinutes)return{cls:"live",label:"Live · "+ago(m),dot:"live"};
+  return{cls:"stale",label:"Stale · "+ago(m),dot:"stale"};}
+function ago(m){if(m<1)return"just now";if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<24)return h+(h===1?" hr ago":" hrs ago");const dys=Math.floor(h/24);return dys+(dys===1?" day ago":" days ago");}
+function agoShort(d){if(!d)return"—";return ago(Math.max(0,Math.round((Date.now()-d.getTime())/60000)));}
+function timeOnly(t){const m=/\d{4}-\d{1,2}-\d{1,2}[ T](\d{1,2}:\d{2}(?::\d{2})?)/.exec(String(t||""));return m?m[1]:(String(t||"").trim()||"—");}
+/* dual readout: when the till last SCANNED vs when the monitor last CHECKED (read) the sheet */
+function freshBlock(d){
+  const n=newest(d.items), f=freshness(n);
+  const scan=n?agoShort(n):"no scans yet";
+  const checked=d.demo?"sample":(d.checkedAt?ago(Math.max(0,Math.round((Date.now()-d.checkedAt.getTime())/60000))):"—");
+  return `<div class="freshwrap">
+    <span class="freshness freshness--${f.cls}"><span class="statusdot statusdot--${f.dot}"></span>Scan · ${esc(scan)}</span>
+    <span class="checked">Checked <b>${esc(checked)}</b></span></div>`;
+}
+
+/* helpers */
+const $=(s,el=document)=>el.querySelector(s);
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function fmt(n){return n==null?"—":n.toLocaleString("en-GB");}
+function money(n){return n==null?"—":"£"+n.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function branchExceptions(d){return(d&&d.items)?d.items.filter(i=>i.isExc):[];}
+function totalExceptions(){return CONFIG.branches.reduce((a,b)=>{const d=state.data[b.key];return a+(d&&d.items?branchExceptions(d).length:0);},0);}
+function initials(name){const w=String(name||"").trim().split(/\s+/).filter(Boolean);return ((w[0]?w[0][0]:"")+(w[1]?w[1][0]:"")||"·").toUpperCase();}
+function imageSrc(it){
+  const M=state.images&&state.images.map;
+  if(M){const u=M[(it.barcode||"").trim()]||M[(it.ownCode||"").trim()];if(u)return u;}
+  const p=CONFIG.imageUrlPattern;
+  if(p)return p.replace(/\{barcode\}/gi,encodeURIComponent(it.barcode||"")).replace(/\{productId\}/gi,encodeURIComponent(it.productId||""));
+  return"";
+}
+function mediaHTML(it){const src=imageSrc(it);
+  return `<div class="media"><span class="ph"><span class="ini">${esc(initials(it.description))}</span><span class="lbl">no photo</span></span>${src?`<img loading="lazy" src="${esc(src)}" alt="" onerror="this.remove()">`:""}</div>`;}
+function mvHTML(it){const a=it.after, b=it.before;
+  const cls=(a!=null&&a<0)?"to-bad":((it.qty||0)>0?"to-up":"");
+  return `<span class="mv ${cls}"><span class="from">${b==null?"·":b}</span><span class="arr">→</span><span class="to">${a==null?"·":a}</span></span>`;}
+function addHTML(it){const q=it.qty;if(q==null)return esc(it.qtyRaw)||"—";return `<span class="add ${q<0?"neg":"pos"}">${q>0?"+":""}${fmt(q)}</span>`;}
+function addNum(q){if(q==null)return "—";return `<span class="add ${q<0?"neg":"pos"}">${q>0?"+":""}${fmt(q)}</span>`;}
+function mvPair(from,to){const cls=(to!=null&&to<0)?"to-bad":((to!=null&&from!=null&&to>from)?"to-up":((to!=null&&from!=null&&to<from)?"to-down":""));
+  return `<span class="mv ${cls}"><span class="from">${from==null?"·":from}</span><span class="arr">→</span><span class="to">${to==null?"·":to}</span></span>`;}
+/* The clearing leg of a PICCO pair stores the OLD count as a negative (e.g. old 2 → "-2"). For a normal
+   recount, show that as the real OLD count (positive). p.net is the TRUE change (new - old).
+   Genuine exceptions keep their raw values so the anomaly stays visible. */
+function dispWas(p){ return (!p.isExc && p.from!=null && p.from<0) ? -p.from : p.from; }
+/* Live qty in stock = CurrentStock from the latest scan of this product (the EPOS on-hand at export time). */
+function inStock(p){ if(p.scans&&p.scans.length){const v=toNumber(p.scans[p.scans.length-1].stock); if(v!=null)return v;} return p.to; }
+/* Numbers per scan. If nothing moved (net 0, not an exception) the middle reads "Stock correct";
+   any real adjustment shows as a bold coloured pill so it stands out from the confirmations. */
+function mvTriple(p){
+  const was=dispWas(p), now=p.to, adj=(p.net==null?0:p.net), stk=inStock(p);
+  let adjCell;
+  if(adj===0 && !p.isExc){
+    adjCell = `<span class="mvt__c"><span class="okpill">Stock correct</span></span>`;
+  } else {
+    const cls = adj<0?"adjpill--neg":(adj>0?"adjpill--pos":"adjpill--zero");
+    adjCell = `<span class="mvt__c"><span class="adjpill ${cls}">${adj>0?"+":""}${fmt(adj)}</span><span class="mvt__l">adjusted</span></span>`;
+  }
+  return `<span class="mvt${(adj!==0||p.isExc)?" mvt--changed":""}">`+
+    `<span class="mvt__c"><span class="mvt__n">${was==null?"·":fmt(was)}</span><span class="mvt__l">was</span></span>`+
+    adjCell+
+    `<span class="mvt__c"><span class="mvt__n mvt__now ${(now!=null&&now<0)?"mvt__now--bad":""}">${now==null?"·":fmt(now)}</span><span class="mvt__l">on shelf</span></span>`+
+    `<span class="mvt__c"><span class="mvt__n mvt__stk ${(stk!=null&&stk<0)?"mvt__now--bad":""}">${stk==null?"·":fmt(stk)}</span><span class="mvt__l">in stock</span></span>`+
+  `</span>`;
+}
+function mvCell(p){ return mvTriple(p); }
+
+/* one-click-copy barcode chip (used everywhere a barcode is shown) */
+function bc(code){
+  code=(code==null?"":String(code)).trim();
+  if(!code) return "—";
+  return `<span class="bc" role="button" tabindex="0" data-bc="${esc(code)}" aria-label="Copy barcode ${esc(code)}" title="Click to copy">`+
+    `<span class="bc__t">${esc(code)}</span>`+
+    `<svg class="bc__i" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>`+
+  `</span>`;
+}
+function fallbackCopy(text){
+  try{const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.top="-1000px";ta.style.opacity="0";
+    document.body.appendChild(ta);ta.focus();ta.select();document.execCommand("copy");ta.remove();return true;}catch(e){return false;}
+}
+function copyBC(el){
+  const code=el&&el.dataset?el.dataset.bc:""; if(!code)return;
+  const done=()=>{el.classList.add("bc--done");el.setAttribute("title","Copied");setTimeout(()=>{el.classList.remove("bc--done");el.setAttribute("title","Click to copy");},1100);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(code).then(done).catch(()=>{if(fallbackCopy(code))done();});}
+  else if(fallbackCopy(code)){done();}
+}
+
+/* ---- day handling ---- */
+function dayKey(t){const s=String(t||"");const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);if(m)return m[1]+"-"+m[2]+"-"+m[3];
+  const d=new Date(s.replace(/-/g,"/"));if(!isNaN(d)){const z=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate());}return "";}
+function todayKey(){const n=new Date(),z=x=>String(x).padStart(2,"0");return n.getFullYear()+"-"+z(n.getMonth()+1)+"-"+z(n.getDate());}
+function buildDays(){const set=new Set();for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items)for(const it of d.items){const k=dayKey(it.time);if(k)set.add(k);}}
+  set.add(todayKey()); // always include today so the dashboard opens on today (even before the day's first scan); ‹ steps back to yesterday
+  state.days=[...set].sort();}
+function resolveDay(){if(!state.days.length){state.day=null;return;}if(!state.day||state.days.indexOf(state.day)<0)state.day=state.days[state.days.length-1];}
+function itemsForDay(items){if(!state.day)return items;return items.filter(it=>dayKey(it.time)===state.day);}
+function humanDay(dk){if(!dk)return "All dates";const [y,m,d]=dk.split("-").map(Number);const dt=new Date(y,m-1,d);
+  const wd=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()], mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1];
+  const now=new Date(),z=n=>String(n).padStart(2,"0");
+  const tk=now.getFullYear()+"-"+z(now.getMonth()+1)+"-"+z(now.getDate());
+  const ye=new Date(now.getTime()-864e5),yk=ye.getFullYear()+"-"+z(ye.getMonth()+1)+"-"+z(ye.getDate());
+  const suffix=dk===tk?" · Today":dk===yk?" · Yesterday":"";
+  return `${wd} ${d} ${mo}${y!==now.getFullYear()?" "+y:""}${suffix}`;}
+function daynavHTML(){const idx=state.days.indexOf(state.day);const atStart=idx<=0,atEnd=idx<0||idx>=state.days.length-1;
+  return `<div class="daynav" role="group" aria-label="Day">
+    <button data-day="prev" ${atStart?"disabled":""} aria-label="Previous day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <span class="lbl">${esc(humanDay(state.day))}</span>
+    <button data-day="next" ${atEnd?"disabled":""} aria-label="Next day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+    <button class="latest" data-day="latest" ${atEnd?"disabled":""}>Latest</button></div>`;}
+
+/* ---- collapse scan-pairs into one row per product (for the selected day) ---- */
+function firstNonNull(a){for(const v of a)if(v!=null)return v;return null;}
+function lastNonNull(a){for(let i=a.length-1;i>=0;i--)if(a[i]!=null)return a[i];return null;}
+function tval(t){return Date.parse(String(t).replace(/-/g,"/"))||0;}
+function collapse(items){
+  const groups=new Map();
+  for(const it of items){const key=(it.barcode||it.ownCode||it.productId||it.description||"?").trim();
+    if(!groups.has(key))groups.set(key,[]);groups.get(key).push(it);}
+  const out=[];
+  for(const grp of groups.values()){
+    grp.sort((a,b)=>{const d=tval(a.time)-tval(b.time);if(d)return d;return (toNumber(a.raw&&a.raw.TransactionID)||0)-(toNumber(b.raw&&b.raw.TransactionID)||0);});
+    const rep=grp.find(g=>g.description)||grp[0];
+    const from=firstNonNull(grp.map(g=>g.before)), to=lastNonNull(grp.map(g=>g.after));
+    // "added" is measured FROM ZERO: clearing a negative (oversold) balance up to 0 is NOT stock arriving,
+    // only the part at/above 0 counts. e.g. -1 -> 4 is +4, not +5; 2 -> 6 is +4; 610 -> 500 is -110.
+    const fz=v=>Math.max(0, v==null?0:v);
+    const added=fz(to)-fz(from), value=grp.reduce((a,g)=>a+(g.value||0),0);
+    // TRUE net stock change. 'from' is stored as the NEGATED old count (the clearing leg),
+    // so old = -from and net = new - old = to + from. Negative = stock left; positive = arrived.
+    out.push({ barcode:rep.barcode, ownCode:rep.ownCode, productId:rep.productId, description:rep.description, size:rep.size,
+      from, to, added, value, net:(to==null?0:to)+(from==null?0:from), scans:grp, count:grp.length, time:grp[grp.length-1].time,
+      isExc:grp.some(g=>g.isExc)||(to!=null&&to<0) });
+  }
+  out.sort((a,b)=>tval(b.time)-tval(a.time));
+  return out;
+}
+function applyFlow(products){
+  if(state.flow==="added")return products.filter(p=>p.net>0||(p.net===0&&p.added>0));
+  if(state.flow==="reduced")return products.filter(p=>p.net<0);
+  if(state.flow==="exc")return products.filter(p=>p.isExc);
+  return products;
+}
+
+/* tabs */
+function renderTabs(){
+  const tabs=$("#tabs");let html="";
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__overview"}" data-key="__overview">Overview</button>`;
+  for(const b of CONFIG.branches){const d=state.data[b.key];let dot="none",count="—";
+    if(d&&d.items){dot=freshness(newest(d.items)).dot;count=fmt(d.items.length);}
+    html+=`<button class="tab" role="tab" aria-selected="${state.active===b.key}" data-key="${b.key}"><span class="statusdot statusdot--${dot}"></span>${esc(b.name)}<span class="tab__count">${count}</span></button>`;}
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__returns"}" data-key="__returns">Returns</button>`;
+  const exc=totalExceptions();
+  html+=`<button class="tab tab--exc" role="tab" aria-selected="${state.active==="__exc"}" data-key="__exc"><span>Exceptions</span><span class="tab__count ${exc>0?"hot":""}">${fmt(exc)}</span></button>`;
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__trace"}" data-key="__trace">Trace</button>`;
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__log"}" data-key="__log">Update log</button>`;
+  html+=`<button class="tab" role="tab" aria-selected="${state.active==="__settings"}" data-key="__settings">Settings</button>`;
+  tabs.innerHTML=html;
+  tabs.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{state.active=t.dataset.key;state.search="";state.filter="all";state.prov="all";renderTabs();renderPanel();}));
+}
+
+function toolbar(opts){const cards=state.itemView==="cards";
+  return `<div class="toolbar">
+    ${opts.day?daynavHTML():""}
+    <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" type="search" placeholder="Search product or barcode" value="${esc(state.search)}" autocomplete="off"></label>
+    ${opts.flow?`<div class="seg seg--flow" role="group" aria-label="Flow">
+      <button data-flow="all" aria-pressed="${state.flow==='all'}">All</button>
+      <button data-flow="added" aria-pressed="${state.flow==='added'}">Added</button>
+      <button data-flow="reduced" aria-pressed="${state.flow==='reduced'}">Reduced</button>
+      <button data-flow="exc" class="flow-exc" aria-pressed="${state.flow==='exc'}">Exceptions</button></div>`:""}
+    ${opts.prov?`<div class="seg seg--flow seg--prov" role="group" aria-label="Source">
+      <button data-prov="all" aria-pressed="${state.prov==='all'}">All sources</button>
+      <button data-prov="from" class="prov-from" aria-pressed="${state.prov==='from'}">Warehouse</button>
+      <button data-prov="fixed" class="prov-fixed" aria-pressed="${state.prov==='fixed'}">Top-up</button>
+      <button data-prov="neg" class="prov-neg" aria-pressed="${state.prov==='neg'}">Not from WH</button></div>`:""}
+    ${opts.view?`<div class="seg" role="group" aria-label="Layout">
+      <button data-v="table" aria-pressed="${!cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Table</button>
+      <button data-v="cards" aria-pressed="${cards}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Cards</button></div>`:""}
+  </div>`;}
+function matchSearch(p){const q=state.search.trim().toLowerCase();if(!q)return true;return ((p.barcode||"")+" "+(p.description||"")).toLowerCase().includes(q);}
+function listFoot(cap,total,key){return `<div class="listfoot"><span>Showing ${fmt(cap)} of ${fmt(total)} products</span>${cap<total?`<button class="linkbtn" data-showall="${key}">Show all ${fmt(total)}</button>`:""}</div>`;}
+
+/* warehouse "scanned OUT" history: barcode -> [{day, qty}] of units that LEFT the warehouse.
+   Derived from the warehouse's own PICCO sheet: per day, a product whose net count dropped
+   (net < 0) is stock that went out (to a shop). */
+function normBar(b){return String(b==null?"":b).trim().replace(/\.0$/,"");}
+function dayNum(dk){const m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(dk||""));return m?Math.round(Date.UTC(+m[1],+m[2]-1,+m[3])/864e5):null;}
+function warehouseOutMap(){
+  const wb=CONFIG.branches.find(b=>b.warehouse); if(!wb)return null;
+  const d=state.data[wb.key]; if(!d||!d.items)return null;
+  if(d.demo)return {demo:true,by:{}};
+  const by={};
+  const days={};
+  for(const it of d.items){const dk=dayKey(it.time); if(!dk)continue; (days[dk]=days[dk]||[]).push(it);}
+  for(const dk in days){
+    for(const p of collapse(days[dk])){
+      const net=(p.to||0)+(p.from||0);
+      if(net<0){const bc=normBar(p.barcode); if(!bc)continue; (by[bc]=by[bc]||[]).push({day:dk,qty:-net});}
+    }
+  }
+  return {demo:false,by};
+}
+/* warehouse "scanned IN" history: barcode -> [{day, qty}] of units that came BACK INTO the warehouse
+   (net rise = a delivery in OR a branch return that staff stock-controlled back in). */
+function warehouseInMap(){
+  const wb=CONFIG.branches.find(b=>b.warehouse); if(!wb)return null;
+  const d=state.data[wb.key]; if(!d||!d.items)return null;
+  if(d.demo)return {demo:true,by:{}};
+  const by={};
+  const days={};
+  for(const it of d.items){const dk=dayKey(it.time); if(!dk)continue; (days[dk]=days[dk]||[]).push(it);}
+  for(const dk in days){
+    for(const p of collapse(days[dk])){
+      const net=(p.to||0)+(p.from||0);
+      if(net>0){const bc=normBar(p.barcode); if(!bc)continue; (by[bc]=by[bc]||[]).push({day:dk,qty:net});}
+    }
+  }
+  return {demo:false,by};
+}
+/* A confirmed RETURN from a shop branch: the branch's count DROPPED (net < 0 = stock left the shop)
+   AND the warehouse's count ROSE for the same barcode within the window [dropDay-1, dropDay+N] —
+   i.e. staff stock-controlled it back into the warehouse. A drop with no matching warehouse rise is
+   treated as an ordinary sale, not a return. Returns the confirmed returns for one shop branch. */
+function branchReturns(d){
+  if(!d||!d.items||d.warehouse)return [];
+  const win=warehouseInMap(); if(!win||win.demo)return [];
+  const N=CONFIG.transferLookbackDays||0;
+  const out=[];
+  for(const p of collapse(itemsForDay(d.items))){
+    const net=(p.to||0)+(p.from||0);
+    if(net>=0)continue;                       // only drops (stock that left the shop)
+    const bc=normBar(p.barcode); const dd=dayNum(dayKey(p.time)); if(!bc||dd==null)continue;
+    const list=win.by[bc]; if(!list)continue;
+    let backIn=0, when=null, wd=-1;
+    for(const e of list){const ed=dayNum(e.day); if(ed==null)continue; const diff=ed-dd; if(diff>=-1&&diff<=N){backIn+=e.qty; if(ed>wd){wd=ed;when=e.day;}}}
+    if(backIn<=0)continue;                     // not confirmed back into the warehouse → treat as a sale
+    out.push({ description:p.description, barcode:p.barcode, size:p.size,
+      returnedQty:-net, shopFloorQty:(p.to!=null?p.to:null), value:Math.abs(p.value||0),
+      backIn, when, time:p.time });
+  }
+  out.sort((a,b)=>b.returnedQty-a.returnedQty);
+  return out;
+}
+function renderReturns(){
+  const head=`<div class="branchhead"><div class="branchhead__name">Returns</div>${daynavHTML()}</div>
+    <p class="lede">Stock each shop <b>scanned out</b> that the <b>Warehouse stock-controlled back in</b> — i.e. confirmed returns, not sales. <b>Returned</b> is how many left the shop; <b>On shop floor</b> is what the shop still has counted for that product. A drop with no matching warehouse scan-in is treated as a sale and isn't shown here.</p>`;
+  const wh=state.data[(CONFIG.branches.find(b=>b.warehouse)||{}).key];
+  if(!wh||wh.demo) return head+`<div class="tablecard"><div class="state"><h3>Warehouse not loaded</h3><p>Returns are confirmed against the Warehouse scanning items back in, so the Warehouse sheet needs to be live. It's currently showing ${wh&&wh.demo?"sample data":"nothing"}.</p></div></div>`;
+  let blocks=""; let grand=0;
+  for(const b of CONFIG.branches){
+    if(b.warehouse)continue;
+    const d=state.data[b.key]; if(!d)continue;
+    const rs=branchReturns(d).filter(r=>{const q=state.search.trim().toLowerCase(); if(!q)return true; return ((r.barcode||"")+" "+(r.description||"")).toLowerCase().includes(q);});
+    const units=rs.reduce((a,r)=>a+r.returnedQty,0); grand+=units;
+    const f=freshness(newest(d.items));
+    const rows=rs.map(r=>`<tr>
+        <td class="prod">${mediaHTML({description:r.description,barcode:r.barcode})}<div><div class="nm">${esc(r.description)||"—"}</div><div class="sub">${bc(r.barcode)}${r.size?" · "+esc(r.size):""}</div></div></td>
+        <td style="text-align:right"><span class="ret-out">−${fmt(r.returnedQty)}</span></td>
+        <td style="text-align:right"><b>${r.shopFloorQty==null?"—":fmt(r.shopFloorQty)}</b><div class="sub">on floor</div></td>
+        <td style="text-align:right">${money(r.value)}</td>
+        <td style="text-align:right" class="time">${esc(timeOnly(r.time))}<div class="sub">${esc(humanDay(dayKey(r.time)))}</div></td></tr>`).join("");
+    blocks+=`<div class="retbranch">
+      <div class="retbranch__head"><span class="statusdot statusdot--${f.dot}"></span><span class="retbranch__name">${esc(b.name)}</span>
+        <span class="retbranch__tot">${rs.length?`<b>${fmt(units)}</b> unit${units===1?"":"s"} returned · ${fmt(rs.length)} product${rs.length===1?"":"s"}`:"No confirmed returns"}</span></div>
+      ${rs.length?`<div class="tablecard"><div class="tablescroll tablescroll--x"><table><thead><tr><th>Product</th><th style="text-align:right">Returned</th><th style="text-align:right">On shop floor</th><th style="text-align:right">Value</th><th style="text-align:right">When</th></tr></thead><tbody>${rows}</tbody></table></div></div>`:""}
+    </div>`;
+  }
+  const banner=`<div class="negbanner ${grand>0?"":"negbanner--ok"}"><span class="negbanner__dot"></span>${grand>0?`<b>${fmt(grand)}</b> units confirmed returned to the warehouse on this day (across all shops)`:"No confirmed returns on this day"}</div>`;
+  return head+`${toolbar({day:false,flow:false,view:false})}`+banner+blocks+
+    `<p class="lede" style="margin-top:4px;color:var(--muted)">Note: the feed records <b>what</b> and <b>how much</b> was returned, but not <b>why</b> — there's no reason field in the PICCO data. Matching a shop's drop to a warehouse scan-in is an inference; tell me if you want the window (currently ${fmt(CONFIG.transferLookbackDays)} day${CONFIG.transferLookbackDays===1?"":"s"}) or the definition tightened.</p>`;
+}
+/* wasNegative(p): true only for a genuine negative-stock signal —
+   the dashboard exception flag (stock or value ended negative) or a negative CurrentStock.
+   NOTE: the "before" leg of a PICCO pair is always stored negative (it's the clearing leg),
+   so it is NOT a negative-stock signal and must not be used here. */
+function wasNegative(p){
+  if(p.isExc)return true;
+  if(p.scans&&p.scans.some(s=>toNumber(s.stock)<0))return true;
+  return false;
+}
+/* genuine negative stock: an item whose resulting on-hand is below zero.
+   Read from CurrentStock (the true level); fall back to the ending AfterValue. */
+function negUnits(p){
+  let s=null;
+  if(p.scans&&p.scans.length){for(const sc of p.scans){const v=toNumber(sc.stock); if(v!=null&&(s==null||v<s))s=v;}}
+  if(s==null&&p.to!=null)s=p.to;
+  else if(p.to!=null&&p.to<0&&(s==null||p.to<s))s=p.to;
+  return (s!=null&&s<0)?-s:0;
+}
+function negStockStats(d){
+  if(!d||!d.items)return {count:0,units:0};
+  let count=0,units=0;
+  for(const p of collapse(itemsForDay(d.items))){const u=negUnits(p); if(u>0){count++;units+=u;}}
+  return {count,units};
+}
+/* classify one shop product by warehouse provenance within the lookback window.
+   kind: "from" (clean warehouse transfer) | "fixed" (warehouse top-up of a negative/oversold item) | "neg" (no warehouse dispatch). */
+function classifyProv(p,wh){
+  if(!wh||wh.demo)return null;
+  const list=wh.by[normBar(p.barcode)], pd=dayNum(dayKey(p.time)), N=CONFIG.transferLookbackDays||0;
+  let out=0,when=null,wd=-1;
+  if(list&&pd!=null){for(const e of list){const ed=dayNum(e.day); if(ed==null)continue; const diff=pd-ed; if(diff>=0&&diff<=N){out+=e.qty; if(ed>wd){wd=ed;when=e.day;}}}}
+  if(out>0)return {kind:wasNegative(p)?"fixed":"from",out,when};
+  return {kind:"neg",out:0,when:null};
+}
+function provTag(p,wh){
+  const c=classifyProv(p,wh); if(!c)return ""; const N=CONFIG.transferLookbackDays||0;
+  if(c.kind==="fixed")return `<span class="provtag prov--fixed" title="stock had gone negative (not stock-controlled); warehouse sent ${fmt(c.out)} on ${esc(c.when)} to top it up">warehouse top-up · was negative</span>`;
+  if(c.kind==="from")return `<span class="provtag prov--from" title="warehouse scanned out ${fmt(c.out)} on ${esc(c.when)} (within ${fmt(N)} days)">warehouse transfer</span>`;
+  return `<span class="provtag prov--neg" title="no warehouse dispatch in the ${fmt(N)} days before this scan — scanned in from elsewhere (supplier/in-store)">not from warehouse</span>`;
+}
+/* per shop-branch totals for the selected day: how much came from the warehouse, and how much of that
+   was topping up a negative item. Units = what the shop actually scanned in (matches the +N on each row). */
+function provStats(d){
+  const wh=warehouseOutMap();
+  if(!wh||wh.demo||!d||!d.items||d.warehouse)return null;
+  const products=collapse(itemsForDay(d.items));
+  const s={whItems:0,whUnits:0,topItems:0,topUnits:0,negItems:0,negUnits:0};
+  for(const p of products){const c=classifyProv(p,wh); if(!c)continue; const u=Math.max(0,Math.round(p.added||0));
+    if(c.kind==="from"){s.whItems++;s.whUnits+=u;}
+    else if(c.kind==="fixed"){s.whItems++;s.whUnits+=u;s.topItems++;s.topUnits+=u;}
+    else{s.negItems++;s.negUnits+=u;}}
+  return s;
+}
+function applyProv(products){
+  if(!state.prov||state.prov==="all")return products;
+  const wh=warehouseOutMap(); if(!wh||wh.demo)return products;
+  return products.filter(p=>{const c=classifyProv(p,wh); return c&&c.kind===state.prov;});
+}
+/* PICCO files: every finished PICCO writes a new Reference (file number) shared by all its rows.
+   Group the selected day's rows by Reference, time each file by its latest row, and gap consecutive files. */
+function piccoFiles(d){
+  if(!d||!d.items)return null;
+  const items=itemsForDay(d.items).filter(it=>it.reference);
+  if(!items.length)return null;
+  const by={};
+  for(const it of items){const ref=it.reference; const tv=tval(it.time);
+    if(!by[ref])by[ref]={ref,t:0,first:Infinity,last:null,start:null,rows:[]};
+    const f=by[ref]; f.rows.push(it); if(tv>=f.t){f.t=tv;f.last=it.time;} if(tv<f.first){f.first=tv;f.start=it.time;}}
+  const files=Object.values(by).sort((a,b)=>a.t-b.t||(toNumber(a.ref)-toNumber(b.ref)));
+  const tgt=CONFIG.piccoTargetMinutes||15; let over=0,maxGap=0;
+  for(let i=0;i<files.length;i++){const f=files[i];
+    f.products=collapse(f.rows);
+    f.units=f.products.reduce((a,p)=>a+(p.added>0?p.added:0),0);
+    f.value=f.products.reduce((a,p)=>a+(p.value||0),0);
+    f.exc=f.products.filter(p=>p.isExc).length;
+    f.gap=i>0?Math.round((f.t-files[i-1].t)/60000):null;
+    if(f.gap!=null){if(f.gap>tgt)over++; if(f.gap>maxGap)maxGap=f.gap;}}
+  return {files,over,tgt,maxGap};
+}
+function piccoFilesHTML(pf){
+  if(!pf||!pf.files.length)return "";
+  const last=pf.files[pf.files.length-1];
+  const lastAgo=last.last?agoShort(new Date(String(last.last).replace(/-/g,"/"))):"";
+  const blocks=pf.files.slice().reverse().map(f=>{
+    const over=f.gap!=null&&f.gap>pf.tgt;
+    const lines=f.products.map(p=>`<div class="pfline ${p.isExc?"is-exc":""}">
+        <span class="pfline__nm">${esc(p.description)||"—"}<small>${bc(p.barcode)}${p.size?" · "+esc(p.size):""}</small></span>
+        <span class="pfline__mv">${mvTriple(p)}</span></div>`).join("");
+    return `<details class="pfile${over?" pfile--over":""}"><summary>
+        <span class="pfile__ref">#${esc(f.ref)}</span>
+        <span class="pfile__time">${esc(timeOnly(f.last))}</span>
+        <span class="pfile__gap">${f.gap==null?'<span class="pf-first">first today</span>':(over?`<b>${fmt(f.gap)} min</b>`:fmt(f.gap)+" min")}</span>
+        <span class="pfile__cnt">${fmt(f.products.length)} product${f.products.length===1?"":"s"} · ${fmt(Math.round(f.units))} units${f.exc?` · <b class="pfile__exc">${fmt(f.exc)} check</b>`:""}</span>
+        <span class="pfile__chev">▾</span></summary>
+      <div class="pfile__body">${lines||'<div class="pf-note">No lines in this file.</div>'}
+        <div class="pfile__tot">Total value <b>${money(f.value)}</b></div></div></details>`;
+  }).join("");
+  return `<details class="pfiles"><summary>
+      <span class="pfiles__lead"><b>PICCO files</b> — ${fmt(pf.files.length)} today · last <b>${esc(timeOnly(last.last))}</b> <span class="muted">(${esc(lastAgo)})</span></span>
+      <span class="pf-flag ${pf.over?"hot":"ok"}">${pf.over?fmt(pf.over)+" gap"+(pf.over===1?"":"s")+" over "+pf.tgt+" min":"on cadence"}</span></summary>
+    <div class="pfiles__body"><div class="pf-note">Each file = one finished PICCO. Tap a file to see what was scanned in it. Target: a new file every ${pf.tgt} min — gaps over that are amber. Longest gap today: <b>${fmt(pf.maxGap)} min</b>.</div>
+      ${blocks}</div></details>`;
+}
+
+function cardsHTML(products,key,showProv){
+  if(!products.length)return emptyList();
+  const wh=showProv?warehouseOutMap():null;
+  const cap=state.showAll[key]?products.length:Math.min(products.length,CONFIG.maxCards);let html=`<div class="cards">`;
+  for(let i=0;i<cap;i++){const p=products[i];const tag=wh?provTag(p,wh):"";
+    html+=`<div class="icard ${p.isExc?"is-exc":""}">${mediaHTML(p)}
+      <div class="icard__body">
+        <div class="icard__desc">${esc(p.description)||"—"}</div>
+        <div class="icard__sub">${bc(p.barcode)}${p.size?" · "+esc(p.size):""}</div>
+        ${tag?`<div class="provrow">${tag}</div>`:""}
+        <div class="icard__mv">${mvTriple(p)}</div>
+        <div class="icard__foot">
+          ${p.isExc?`<span class="pill pill--exc">check</span>`:`<span class="pill pill--ok">ok</span>`}</div>
+      </div></div>`;}
+  return html+`</div>`+listFoot(cap,products.length,key);
+}
+function tableHTML(products,key,withBranch,showProv){
+  if(!products.length)return `<div class="tablecard">${emptyList()}</div>`;
+  const wh=showProv?warehouseOutMap():null;
+  const cap=state.showAll[key]?products.length:Math.min(products.length,CONFIG.maxRows);
+  const totalVal=products.reduce((a,p)=>a+(p.value||0),0);
+  let rows="";
+  for(let i=0;i<cap;i++){const p=products[i];const id=key+"_"+i;const open=state.expanded[id];const tag=wh?provTag(p,wh):"";
+    rows+=`<tr class="row ${p.isExc?"is-exc":""}" data-id="${id}">
+      ${withBranch?`<td><span class="branchtag"><span class="statusdot statusdot--live"></span>${esc(p._branch)}</span></td>`:""}
+      <td class="media-cell">${mediaHTML(p)}</td>
+      <td class="prod"><div class="nm">${esc(p.description)||"—"}</div><div class="sub">${bc(p.barcode)}${p.size?" · "+esc(p.size):""}</div>${tag?`<div class="provrow">${tag}</div>`:""}</td>
+      <td class="mv-cell">${mvCell(p)}</td>
+      <td class="time time-cell"><span class="ts">${timeOnly(p.time)}</span><span class="since">${p.time?agoShort(new Date(String(p.time).replace(/-/g,"/"))):""}</span></td></tr>`;
+    if(open){const span=4+(withBranch?1:0);
+      const sc=(p.scans||[]).map(s=>`<div class="scanline"><b>${esc(timeOnly(s.time)||"—")}</b><span>${mvPair(s.before,s.after)} &nbsp; ${addNum(s.qty)} &nbsp; ${money(s.value)}${s.reason?" &nbsp; "+(p.scans&&p.scans[0]&&p.scans[0].reason&&isNaN(+s.reason)?esc(s.reason):"RC "+esc(s.reason)):""}</span></div>`).join("");
+      rows+=`<tr class="detail"><td colspan="${span}"><div style="padding:14px 16px"><div class="sectionlabel">${fmt(p.count)} scan${p.count===1?"":"s"} this day</div>${sc}</div></td></tr>`;}
+  }
+  const top=`<div class="listtop"><span class="listtop__val">Total value<b>${money(totalVal)}</b></span><span class="listtop__cnt">${fmt(products.length)} product${products.length===1?"":"s"}</span></div>`;
+  return `<div class="tablecard">${top}<div class="tablescroll"><table>
+    <thead><tr>${withBranch?"<th>Branch</th>":""}<th class="media-cell"></th><th>Product</th><th class="mv-cell">Was · Adjusted · On shelf · In stock</th><th class="time-cell">Time</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>${listFoot(cap,products.length,key)}</div>`;
+}
+function emptyList(){return `<div class="state"><h3>No products</h3><p>Nothing matches this day, flow or search.</p></div>`;}
+
+function mapNote(d){
+  const rows=Object.entries(d.map).map(([k,ix])=>`<div class="mapnote__row"><b>${k}</b><span class="${ix>=0?"":"miss"}">${ix>=0?esc(d.headers[ix]):"not found"}</span></div>`).join("");
+  const im=state.images||{};
+  let matched=0; if(im.map){for(const it of d.items){if(im.map[(it.barcode||"").trim()]||im.map[(it.ownCode||"").trim()])matched++;}}
+  const imgLine = im.error
+    ? `<div class="mapnote__row"><b>images</b><span class="miss">feed error — ${esc(im.error)}</span></div>`
+    : (im.map
+        ? `<div class="mapnote__row"><b>images</b><span>${fmt(matched)} of ${fmt(d.items.length)} rows matched · feed "${esc(im.keyKey)}" → "${esc(im.urlKey)}" (${fmt(im.count)} mapped)</span></div>`
+        : `<div class="mapnote__row"><b>images</b><span class="miss">feed not loaded yet</span></div>`);
+  return `<details class="mapnote"><summary>Column mapping &amp; image match</summary><div class="mapnote__body">${rows}${imgLine}</div></details>`;
+}
+
+/* Feed health: catches the failures we kept hitting by hand — a branch whose export/import
+   froze (no new scans), whose sheet got wiped (near-empty), or whose sheet won't read at all.
+   Reuses the same newest-scan signal the cards already show, just makes it loud and aggregated. */
+/* Editable settings, persisted per-device in localStorage (this is a real deployed site, so
+   localStorage is fine here). Falls back to the CONFIG defaults when unset. */
+function loadSettings(){ try{ return JSON.parse(localStorage.getItem("picco.settings")||"{}")||{}; }catch(e){ return {}; } }
+function getSetting(k,def){ const v=loadSettings()[k]; const n=+v; return (v==null||v===""||isNaN(n))?def:n; }
+function saveSetting(k,v){ const s=loadSettings(); s[k]=v; try{localStorage.setItem("picco.settings",JSON.stringify(s));}catch(e){} }
+
+function feedHealth(){
+  const out=[];
+  const frozenMin=getSetting("frozenAfterHours",CONFIG.frozenAfterHours)*60;
+  const emptyBelow=getSetting("emptyBelowRows",CONFIG.emptyBelowRows);
+  for(const b of CONFIG.branches){
+    const d=state.data[b.key];
+    if(!d) continue;                                   // still loading — not an error
+    if(d.demo){ out.push({name:b.name, kind:"unreadable", detail:d.error||""}); continue; }
+    const items=d.items||[];
+    if(items.length < emptyBelow){ out.push({name:b.name, kind:"empty"}); continue; }
+    const n=newest(items);
+    const ageMin = n ? Math.round((Date.now()-n.getTime())/60000) : Infinity;
+    if(ageMin > frozenMin){ out.push({name:b.name, kind:"frozen", since:n, ageMin}); }
+  }
+  return out;
+}
+function stamp(d){
+  if(!d) return "—";
+  const days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], z=x=>String(x).padStart(2,"0");
+  return days[d.getDay()]+" "+d.getDate()+" "+mon[d.getMonth()]+" "+z(d.getHours())+":"+z(d.getMinutes());
+}
+function feedHealthBanner(){
+  const bad=feedHealth();
+  if(!bad.length) return `<div class="feedbanner feedbanner--ok"><span class="feedbanner__dot"></span><span>All branch feeds are fresh — a new scan landed within ${getSetting("frozenAfterHours",CONFIG.frozenAfterHours)}h on every branch.</span></div>`;
+  const parts=bad.map(h=>{
+    if(h.kind==="unreadable") return `<b>${esc(h.name)}</b> — feed won't load${h.detail?` (${esc(h.detail)})`:""}`;
+    if(h.kind==="empty")      return `<b>${esc(h.name)}</b> — feed empty, an import may have wiped it`;
+    if(h.kind==="frozen")     return `<b>${esc(h.name)}</b> — frozen, no new scan for ${ago(h.ageMin)} (since ${esc(stamp(h.since))})`;
+    return `<b>${esc(h.name)}</b>`;
+  });
+  return `<div class="feedbanner feedbanner--bad"><span class="feedbanner__dot"></span><span><b>Feed problem on ${bad.length} branch${bad.length===1?"":"es"}.</b> ${parts.join(" · ")}. Check that branch's export → CSV → import.</span></div>`;
+}
+function renderSettings(){
+  const fh=getSetting("frozenAfterHours",CONFIG.frozenAfterHours);
+  const eb=getSetting("emptyBelowRows",CONFIG.emptyBelowRows);
+  return `<div class="branchhead"><div class="branchhead__name">Settings</div></div>
+    <p class="lede">Tune how the dashboard flags a broken feed. Saved on this device.</p>
+    <div class="settings">
+      <div class="setrow">
+        <div class="setrow__l">Flag a feed as <b>stale</b> after</div>
+        <div class="setrow__c"><input id="set-frozen" class="setinput" type="number" min="1" max="72" step="1" value="${fh}"><span>hours</span></div>
+        <div class="setrow__h">No new scan within this window turns the Overview banner red. Try 3–6.</div>
+      </div>
+      <div class="setrow">
+        <div class="setrow__l">Treat a sheet as <b>empty</b> below</div>
+        <div class="setrow__c"><input id="set-empty" class="setinput" type="number" min="1" max="2000" step="1" value="${eb}"><span>rows</span></div>
+        <div class="setrow__h">Catches a wiped sheet — a healthy branch has thousands of rows.</div>
+      </div>
+      <div class="setactions"><button id="set-save" class="btn" type="button">Save settings</button><span id="set-msg" class="setmsg"></span></div>
+    </div>`;
+}
+function renderOverview(){
+  let cards="";
+  const negTotal={count:0,units:0};
+  for(const b of CONFIG.branches){const d=state.data[b.key];
+    if(!d){cards+=`<div class="bcard"><div class="bcard__name">${esc(b.name)}</div><p class="lede">Loading…</p></div>`;continue;}
+    const dayItems=itemsForDay(d.items), products=collapse(dayItems), exc=products.filter(p=>p.isExc);
+    const units=products.reduce((a,p)=>a+(p.net||0),0), n=newest(d.items), f=freshness(n);
+    const ps=provStats(d);
+    const pf=piccoFiles(d);
+    const ns=negStockStats(d);
+    negTotal.count+=ns.count; negTotal.units+=ns.units;
+    cards+=`<button class="bcard" data-key="${b.key}" aria-label="Open ${esc(b.name)}">
+      <div class="bcard__top"><span class="bcard__name">${esc(b.name)}</span>
+        ${freshBlock(d)}</div>
+      <div class="bcard__kpis">
+        <div class="bcard__kpi"><div class="l">Products</div><div class="v">${fmt(products.length)}</div></div>
+        <div class="bcard__kpi"><div class="l">Net change</div><div class="v">${fmt(Math.round(units))}</div></div>
+        <div class="bcard__kpi exc ${exc.length?"hot":""}"><div class="l">Exceptions</div><div class="v">${fmt(exc.length)}</div></div></div>
+      ${ps?`<div class="bcard__prov">
+        <span><span class="provsum__dot prov--from"></span>From warehouse <b>${fmt(ps.whItems)}</b> item${ps.whItems===1?"":"s"} · <b>${fmt(ps.whUnits)}</b> units</span>
+        <span><span class="provsum__dot prov--fixed"></span>Topped up <b>${fmt(ps.topUnits)}</b> units</span></div>`:""}
+      ${pf?`<div class="bcard__pf ${pf.over?"hot":""}"><span class="bcard__pfdot ${pf.over?"hot":""}"></span>PICCO: <b>${fmt(pf.files.length)}</b> files · last <b>${esc(timeOnly(pf.files[pf.files.length-1].last))}</b>${pf.over?` · <b>${fmt(pf.over)}</b> over ${pf.tgt}m`:" · on cadence"}</div>`:""}
+      <div class="bcard__neg ${ns.units>0?"hot":""}"><span class="bcard__pfdot ${ns.units>0?"bad":"ok"}"></span>${ns.units>0?`Negative stock: <b>${fmt(ns.units)}</b> units short across <b>${fmt(ns.count)}</b> product${ns.count===1?"":"s"}`:"No negative stock"}</div>
+      ${d.demo?`<div class="demohint">Sample data — couldn't read the live sheet (${esc(d.error||"")})</div>`:""}</button>`;}
+  const negBanner = negTotal.units>0
+    ? `<div class="negbanner"><span class="negbanner__dot"></span><b>${fmt(negTotal.units)}</b> units of negative stock across <b>${fmt(negTotal.count)}</b> product${negTotal.count===1?"":"s"} (all branches, this day)</div>`
+    : `<div class="negbanner negbanner--ok"><span class="negbanner__dot"></span>No negative stock on this day — every item recounts to zero or above.</div>`;
+  return `<div class="branchhead"><div class="branchhead__name">Overview</div>${daynavHTML()}</div>
+    <p class="lede">Each branch for the selected day — products scanned, units added, exceptions. Green means scanned recently, amber means stale. Tap a card to open it.</p>
+    ${feedHealthBanner()}
+    ${negBanner}
+    <div class="overview">${cards}</div>`;
+}
+/* Warehouse IN/OUT, read straight from the SIGNED scan quantity (QtyAdded), which is the
+   reliable direction signal — positive = came in, negative = went out. We sum the signed qty
+   per product for the selected day (so a recount's clear/add legs net within the product), then
+   split into in / out. A single movement bigger than the correction threshold (e.g. the
+   −85,000 DETTOL fix) is pulled out as a "correction" so it can't distort the totals. */
+function warehouseFlow(d){
+  const items=itemsForDay(d.items);
+  const big=getSetting("correctionAboveUnits",CONFIG.correctionAboveUnits);
+  const map={};
+  for(const it of items){
+    const q=toNumber(it.qty); if(q==null||q===0)continue;
+    const key=normBar(it.barcode)||String(it.description||it.productId||"").trim();
+    if(!key)continue;
+    if(!map[key])map[key]={name:it.description||"",barcode:it.barcode||"",net:0};
+    map[key].net+=q;
+    if(it.description&&!map[key].name)map[key].name=it.description;
+    if(it.barcode&&!map[key].barcode)map[key].barcode=it.barcode;
+  }
+  const ins=[],outs=[],corrections=[];
+  for(const k in map){const m=map[k]; if(m.net===0)continue;
+    if(Math.abs(m.net)>=big){corrections.push(m);continue;}
+    if(m.net>0)ins.push(m); else outs.push(m);
+  }
+  ins.sort((a,b)=>b.net-a.net); outs.sort((a,b)=>a.net-b.net);
+  const inUnits=ins.reduce((a,m)=>a+m.net,0), outUnits=outs.reduce((a,m)=>a+Math.abs(m.net),0);
+  return {ins,outs,corrections,inUnits,outUnits};
+}
+function warehouseFlowHTML(d){
+  const w=warehouseFlow(d);
+  const row=(m,dir)=>`<div class="wfrow"><span class="wfrow__q wfrow__q--${dir}">${dir==="out"?"−":"+"}${fmt(Math.abs(m.net))}</span><span class="wfrow__n">${esc(m.name||"—")}</span>${m.barcode?bc(m.barcode):""}</div>`;
+  const inList=w.ins.length?w.ins.map(m=>row(m,"in")).join(""):`<div class="wfempty">Nothing scanned in on this day.</div>`;
+  const outList=w.outs.length?w.outs.map(m=>row(m,"out")).join(""):`<div class="wfempty">Nothing scanned out on this day.</div>`;
+  const corr=w.corrections.length?`<div class="wfcorr-note">Note: ${fmt(w.corrections.length)} big correction${w.corrections.length===1?"":"s"} left out of the totals — ${w.corrections.map(m=>esc(m.name||"—")+" ("+(m.net>0?"+":"−")+fmt(Math.abs(m.net))+")").join(", ")}.</div>`:"";
+  return `<div class="wflow">
+    <div class="wflow__sum">
+      <span class="wflow__chip wflow__chip--in">Scanned in <b>${fmt(w.inUnits)}</b> units · ${fmt(w.ins.length)} product${w.ins.length===1?"":"s"}</span>
+      <span class="wflow__chip wflow__chip--out">Scanned out <b>${fmt(w.outUnits)}</b> units · ${fmt(w.outs.length)} product${w.outs.length===1?"":"s"}</span>
+    </div>
+    ${corr}
+    <div class="wflow__cols">
+      <div class="wflow__col"><div class="wflow__h wflow__h--in">Scanned in</div>${inList}</div>
+      <div class="wflow__col"><div class="wflow__h wflow__h--out">Scanned out</div>${outList}</div>
+    </div>
+  </div>`;
+}
+function renderBranch(b){
+  const d=state.data[b.key];
+  if(!d)return `<div class="state"><h3>Loading ${esc(b.name)}…</h3></div>`;
+  const dayItems=itemsForDay(d.items);
+  const products=collapse(dayItems);
+  const exc=products.filter(p=>p.isExc);
+  const units=products.reduce((a,p)=>a+(p.net||0),0);
+  const n=newest(d.items),f=freshness(n);
+  const ps=d.warehouse?null:provStats(d);
+  let view=applyFlow(products); if(!d.warehouse)view=applyProv(view); view=view.filter(matchSearch);
+  return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
+      ${freshBlock(d)}</div>
+    ${d.warehouse?`<p class="lede">Everything <b>scanned in</b> (added, or adjusted up) and <b>scanned out</b> (taken out, or adjusted down) of the Warehouse on this day. Step days with ‹ ›.</p>`+warehouseFlowHTML(d):""}
+    ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Showing sample data — couldn't read the live sheet (${esc(d.error||"")}). Share it "anyone with the link — viewer", or we use an /api endpoint.</div>`:""}
+    <div class="kpis">
+      <div class="kpi"><div class="kpi__label">Products</div><div class="kpi__value">${fmt(products.length)}</div></div>
+      <div class="kpi"><div class="kpi__label">Net change</div><div class="kpi__value">${fmt(Math.round(units))}</div></div>
+      <div class="kpi kpi--age"><div class="kpi__label">Last scan</div><div class="kpi__value">${n?esc(agoShort(n)):"—"}</div></div>
+      <div class="kpi kpi--exc ${exc.length?"hot":""}"><div class="kpi__label">Exceptions</div><div class="kpi__value">${fmt(exc.length)}</div></div></div>
+    ${ps?provSumHTML(ps):""}
+    ${piccoFilesHTML(piccoFiles(d))}
+    ${toolbar({day:true,flow:true,prov:!!ps,view:true})}
+    ${state.itemView==="cards"?cardsHTML(view,b.key,!d.warehouse):tableHTML(view,b.key,false,!d.warehouse)}
+    ${mapNote(d)}`;
+}
+function provSumHTML(s){
+  return `<div class="provsum">
+    <span class="provsum__i"><span class="provsum__dot prov--from"></span>From warehouse <b>${fmt(s.whItems)}</b> item${s.whItems===1?"":"s"} · <b>${fmt(s.whUnits)}</b> units</span>
+    <span class="provsum__i"><span class="provsum__dot prov--fixed"></span>Topped up <span class="provsum__sub">(was negative)</span> <b>${fmt(s.topItems)}</b> · <b>${fmt(s.topUnits)}</b> units</span>
+    <span class="provsum__i"><span class="provsum__dot prov--neg"></span>Not from warehouse <b>${fmt(s.negItems)}</b></span>
+  </div>`;
+}
+function renderExceptions(){
+  const all=[];
+  for(const b of CONFIG.branches){const d=state.data[b.key];if(d&&d.items){
+    collapse(itemsForDay(d.items)).filter(p=>p.isExc).forEach(p=>all.push(Object.assign({_branch:b.name},p)));}}
+  const view=all.filter(matchSearch);
+  const head=`<div class="branchhead"><div class="branchhead__name">Exceptions</div>
+    <span class="freshness freshness--${all.length?"stale":"live"}"><span class="statusdot statusdot--${all.length?"stale":"live"}"></span>${all.length?fmt(all.length)+" to check":"All clear"}</span></div>
+    <p class="lede">Products flagged on the selected day across all branches — by default stock ending negative (<code>AfterValue &lt; 0</code>) or a negative value booked.</p>
+    ${toolbar({day:true,flow:false,view:false})}`;
+  if(!all.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing flagged</h3><p>Every product on this day reconciles.</p></div></div>`;
+  return head+tableHTML(view,"__exc",true);
+}
+function renderLog(){
+  let board="";
+  for(const b of CONFIG.branches){const d=state.data[b.key];
+    if(!d){board+=`<div class="fcard"><div class="fcard__top"><span class="statusdot statusdot--none"></span><span class="fcard__name">${esc(b.name)}</span><span class="agetag age--none">—</span></div><div class="fcard__meta">Loading…</div></div>`;continue;}
+    const n=newest(d.items),f=freshness(n);
+    board+=`<div class="fcard"><div class="fcard__top"><span class="statusdot statusdot--${f.dot}"></span><span class="fcard__name">${esc(b.name)}</span><span class="agetag age--${f.cls}">${esc(f.label)}</span></div>
+      <div class="fcard__meta">Last scan <b>${n?esc(pad(n)):"—"}</b></div>
+      <div class="fcard__meta"><b>${fmt(d.items.length)}</b> lines · <b>${fmt(branchExceptions(d).length)}</b> exceptions · ${d.demo?'<span class="src-demo">sample</span>':'<span class="src-live">live</span>'}</div></div>`;}
+  let logRows="";
+  for(const e of state.log){let cells="";
+    for(const b of CONFIG.branches){const r=e.branches[b.key];let cls="age--none",txt="—";
+      if(r&&r.ageMin!=null){cls=r.ageMin<=CONFIG.staleAfterMinutes?"age--live":"age--stale";txt=ago(r.ageMin);}
+      else if(r&&r.lines!=null){txt="no time";}
+      cells+=`<td><span class="agetag ${cls}">${txt}</span></td>`;}
+    logRows+=`<tr><td class="time">${e.at.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</td>${cells}</tr>`;}
+  const heads=CONFIG.branches.map(b=>`<th>${esc(b.name)}</th>`).join("");
+  const last=state.lastUpdated, z=n=>String(n).padStart(2,"0");
+  const lastStr=last?`${z(last.getHours())}:${z(last.getMinutes())}:${z(last.getSeconds())}`:"—";
+  const nextStr=(last&&CONFIG.refreshMinutes)?(()=>{const t=new Date(last.getTime()+CONFIG.refreshMinutes*6e4);return `${z(t.getHours())}:${z(t.getMinutes())}`;})():"—";
+  const sched=`<p class="sectionlabel">What updates when</p>
+    <div class="tablecard"><div class="tablescroll tablescroll--x"><table><thead><tr><th>Step</th><th>How often</th><th>What it does</th></tr></thead><tbody>
+      <tr><td>Till export (each shop PC)</td><td>every 3 min</td><td>writes the latest scans to picco.csv</td></tr>
+      <tr><td>Sheet import (Apps Script)</td><td>every 10 min</td><td>loads picco.csv into each branch's picco sheet</td></tr>
+      <tr><td>Warehouse stock snapshot</td><td>~hourly (8×/day)</td><td>diffs warehouse stock → Movements (deliveries / removals)</td></tr>
+      <tr><td>This monitor re-reads sheets</td><td>every ${fmt(CONFIG.refreshMinutes)} min</td><td>last checked <b>${esc(lastStr)}</b> · next ≈ <b>${esc(nextStr)}</b></td></tr>
+    </tbody></table></div></div>
+    <p class="lede" style="margin-top:6px">A fresh scan can take up to ~13 min to reach this page (3-min export + 10-min import), plus up to ${fmt(CONFIG.refreshMinutes)} more for the page to pull it. Warehouse stock changes show after the next hourly snapshot.</p>`;
+  return `<div class="branchhead"><div class="branchhead__name">Update log</div></div>
+    <p class="lede">How long since each branch last scanned, and a running log of every refresh this session. If an age stops shrinking, that branch's export or importer has stalled. (Resets on reload — say the word for a permanent sheet-backed log.)</p>
+    ${sched}
+    <p class="sectionlabel">Freshness now</p>
+    <div class="fboard">${board}</div>
+    <p class="sectionlabel">Refresh log · ${fmt(state.log.length)} check${state.log.length===1?"":"s"}</p>
+    <div class="tablecard"><div class="tablescroll tablescroll--x"><table><thead><tr><th>Checked at</th>${heads}</tr></thead><tbody>${logRows||`<tr><td colspan="${CONFIG.branches.length+1}" style="padding:16px;color:var(--muted)">No checks yet.</td></tr>`}</tbody></table></div></div>`;
+}
+
+/* ---- barcode trace across branches + warehouse ---- */
+function traceEvents(query){
+  const q=String(query||"").trim().toLowerCase(); if(!q)return [];
+  const evs=[];
+  for(const b of CONFIG.branches){const d=state.data[b.key]; if(!d||!d.items)continue;
+    for(const it of d.items){
+      const hay=((it.barcode||"")+" "+(it.description||"")).toLowerCase();
+      if(!hay.includes(q))continue;
+      evs.push({key:b.key,branch:b.name,warehouse:!!d.warehouse,day:dayKey(it.time),it});
+    }}
+  return evs;
+}
+function renderTrace(){
+  const head=`<div class="branchhead"><div class="branchhead__name">Trace a product</div></div>
+    <p class="lede">Search a barcode (or name). For each day it shows what each shop <b>scanned IN</b> and how much the Warehouse <b>scanned OUT</b> — so if Roundhay took in 6, you can see whether the warehouse dispatched 6.</p>
+    ${toolbar({day:false,flow:false,view:false})}`;
+  const q=state.search.trim();
+  if(!q)return head+`<div class="tablecard"><div class="state"><h3>Enter a barcode</h3><p>Type a barcode or product name above to trace it across the shops and warehouse.</p></div></div>`;
+  const evs=traceEvents(q);
+  if(!evs.length)return head+`<div class="tablecard"><div class="state"><h3>Nothing found</h3><p>No activity for “${esc(q)}” in the loaded data (the feeds usually hold the last day or two).</p></div></div>`;
+  const rep=(evs.find(e=>e.it.description)||evs[0]).it;
+  const prod=`<div class="traceprod">${mediaHTML({description:rep.description,barcode:rep.barcode})}<div><div class="nm">${esc(rep.description)||"—"}</div><div class="sub">${bc(rep.barcode||q)}</div></div></div>`;
+  const days=[...new Set(evs.map(e=>e.day))].filter(Boolean).sort().reverse();
+  let blocks="";
+  for(const day of days){
+    const de=evs.filter(e=>e.day===day);
+    const byKey={};
+    for(const e of de){(byKey[e.key]=byKey[e.key]||{name:e.branch,warehouse:e.warehouse,items:[]}).items.push(e.it);}
+    let whOut=0, whIn=0; const byBranch=new Map();
+    for(const key in byKey){
+      const g=byKey[key]; const prods=collapse(g.items);
+      let net=0,last=null; for(const p of prods){net+=(p.to||0)+(p.from||0); if(!last||tval(p.time)>tval(last))last=p.time;}
+      if(g.warehouse){ if(net<0)whOut+=-net; else whIn+=net; }
+      else byBranch.set(key,{name:g.name,inq:net,count:prods.length,last});
+    }
+    const totalIn=[...byBranch.values()].reduce((a,o)=>a+Math.max(0,o.inq),0);
+    let rows="";
+    for(const o of byBranch.values()){
+      const tag = whOut>0 ? `<span class="provtag prov--from">likely from warehouse</span>` : `<span class="provtag prov--store">in-store / supplier</span>`;
+      rows+=`<tr><td class="prod"><div class="nm">${esc(o.name)}</div><div class="sub">${fmt(o.count)} product${o.count===1?"":"s"} · last ${esc(timeOnly(o.last))}</div></td>
+        <td><span class="add pos">scanned IN ${o.inq>=0?"+":""}${fmt(o.inq)}</span></td><td style="text-align:right">${tag}</td></tr>`;
+    }
+    if(whOut>0)rows+=`<tr><td class="prod"><div class="nm">Warehouse</div></td><td><span class="add neg">scanned OUT −${fmt(whOut)}</span></td><td style="text-align:right"><span class="provtag prov--out">dispatched</span></td></tr>`;
+    if(whIn>0)rows+=`<tr><td class="prod"><div class="nm">Warehouse</div></td><td><span class="add pos">delivered IN +${fmt(whIn)}</span></td><td style="text-align:right"><span class="provtag prov--in">delivery</span></td></tr>`;
+    let verdict="";
+    if(byBranch.size&&whOut>0) verdict = (totalIn===whOut)
+      ? `<span class="trace-ok">✓ Matches — shops took in ${fmt(totalIn)}, warehouse sent out ${fmt(whOut)}</span>`
+      : `<span class="trace-warn">Shops took in ${fmt(totalIn)} · warehouse sent out ${fmt(whOut)}${totalIn>whOut?" (more taken in than warehouse dispatched)":" (warehouse sent out more than shops logged)"}</span>`;
+    else if(byBranch.size) verdict = `<span class="trace-muted">No warehouse dispatch this day — added in-store / from supplier</span>`;
+    blocks+=`<p class="sectionlabel">${esc(humanDay(day))}</p>${verdict?`<p class="traceverdict">${verdict}</p>`:""}<div class="tablecard"><div class="tablescroll"><table><tbody>${rows}</tbody></table></div></div>`;
+  }
+  return head+prod+blocks;
+}
+
+function renderPanel(){
+  resolveDay();
+  const panel=$("#panel");panel.classList.remove("panel");void panel.offsetWidth;panel.classList.add("panel");
+  let html="";
+  try{
+    if(state.active==="__overview")html=renderOverview();
+    else if(state.active==="__exc")html=renderExceptions();
+    else if(state.active==="__trace")html=renderTrace();
+    else if(state.active==="__returns")html=renderReturns();
+    else if(state.active==="__log")html=renderLog();
+    else if(state.active==="__settings")html=renderSettings();
+    else html=renderBranch(CONFIG.branches.find(x=>x.key===state.active));
+  }catch(err){
+    console.error("renderPanel error:",err);
+    html=`<div class="tablecard"><div class="state"><h3>Couldn't display this tab</h3>`+
+      `<p>The data loaded fine — your sheet is healthy — but something went wrong while drawing this view. Use the button below or switch tabs; this won't affect the other branches.</p>`+
+      `<p style="font-family:monospace;font-size:12px;white-space:pre-wrap;color:var(--warn);text-align:left;margin-top:12px">${esc(String((err&&err.message)||err))}\n${esc(String((err&&err.stack)||"").split("\n").slice(1,4).join("\n"))}</p></div></div>`;
+  }
+  panel.innerHTML=html;
+  wirePanel();
+}
+function wirePanel(){
+  const s=$("#search");if(s)s.addEventListener("input",e=>{state.search=e.target.value;renderPanel();const f=$("#search");if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length);}});
+  document.querySelectorAll(".seg button[data-flow]").forEach(b=>b.addEventListener("click",()=>{state.flow=b.dataset.flow;renderPanel();}));
+  document.querySelectorAll(".seg button[data-prov]").forEach(b=>b.addEventListener("click",()=>{state.prov=b.dataset.prov;renderPanel();}));
+  document.querySelectorAll(".seg button[data-v]").forEach(b=>b.addEventListener("click",()=>{state.itemView=b.dataset.v;renderPanel();}));
+  document.querySelectorAll(".daynav button[data-day]").forEach(b=>b.addEventListener("click",()=>{
+    const idx=state.days.indexOf(state.day);
+    if(b.dataset.day==="prev"&&idx>0)state.day=state.days[idx-1];
+    else if(b.dataset.day==="next"&&idx>=0&&idx<state.days.length-1)state.day=state.days[idx+1];
+    else if(b.dataset.day==="latest"&&state.days.length)state.day=state.days[state.days.length-1];
+    state.expanded={}; renderPanel();
+  }));
+  document.querySelectorAll(".bcard[data-key]").forEach(c=>{const go=()=>{state.active=c.dataset.key;state.search="";state.flow="all";renderTabs();renderPanel();window.scrollTo({top:0,behavior:"smooth"});};
+    c.addEventListener("click",go);c.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});});
+  document.querySelectorAll("tr.row").forEach(tr=>tr.addEventListener("click",()=>{const id=tr.dataset.id;state.expanded[id]=!state.expanded[id];renderPanel();}));
+  document.querySelectorAll("[data-showall]").forEach(b=>b.addEventListener("click",()=>{state.showAll[b.dataset.showall]=true;renderPanel();}));
+  document.querySelectorAll(".bc").forEach(el=>{
+    el.addEventListener("click",e=>{e.stopPropagation();e.preventDefault();copyBC(el);});
+    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();e.stopPropagation();copyBC(el);}});
+  });
+  const sf=$("#set-save");
+  if(sf)sf.addEventListener("click",()=>{
+    const fh=Math.max(1,Math.min(72, parseInt(($("#set-frozen")||{}).value,10)||CONFIG.frozenAfterHours));
+    const eb=Math.max(1,Math.min(2000, parseInt(($("#set-empty")||{}).value,10)||CONFIG.emptyBelowRows));
+    saveSetting("frozenAfterHours",fh); saveSetting("emptyBelowRows",eb);
+    const m=$("#set-msg"); if(m)m.textContent=`Saved — feeds now flagged after ${fh}h.`;
+  });
+}
+function renderUpdated(){const el=$("#updated");if(!state.lastUpdated){el.textContent="";return;}
+  el.innerHTML=`Updated <b>${state.lastUpdated.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}</b>${CONFIG.refreshMinutes?` · auto every ${CONFIG.refreshMinutes} min`:""}`;}
+function renderFooter(){$("#footer").innerHTML="PICCO scan monitor · reads each branch's picco sheet directly · imports run every 10 min, exports every 3 min.";}
+function setRefreshing(on){const b=$("#refresh");if(!b)return;b.classList.toggle("spin",on);b.disabled=on;}
+
+$("#refresh").addEventListener("click",loadAll);
+renderTabs();renderPanel();loadAll();
+if(CONFIG.refreshMinutes>0)setInterval(loadAll,CONFIG.refreshMinutes*60000);
 </script>
 </body>
 </html>
