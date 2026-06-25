@@ -204,6 +204,22 @@
   .setrow__h{font-size:12.5px; color:var(--muted)}
   .setactions{display:flex; align-items:center; gap:12px; margin-top:4px}
   .setmsg{font-size:13px; color:var(--ok); font-weight:600}
+  .wflow{margin:2px 0 18px}
+  .wflow__sum{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px}
+  .wflow__chip{font-size:13px; font-weight:600; padding:6px 11px; border-radius:999px; background:var(--surface-2); color:var(--muted)} .wflow__chip b{font-weight:800}
+  .wflow__chip--in{background:var(--ok-wash); color:var(--ok)}
+  .wflow__chip--out{background:var(--bad-wash); color:var(--bad)}
+  .wflow__chip--net{background:var(--surface-2); color:var(--ink)}
+  .wfcorr-note{font-size:12.5px; color:var(--bad); margin:0 0 10px; font-weight:600}
+  .wflow__cols{display:flex; flex-wrap:wrap; gap:14px}
+  .wflow__col{flex:1 1 260px; min-width:0}
+  .wflow__h{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px}
+  .wflow__h--out{color:var(--bad)} .wflow__h--in{color:var(--ok)}
+  .wfrow{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13.5px}
+  .wfrow__q{font-weight:800; min-width:48px; font-variant-numeric:tabular-nums}
+  .wfrow__q--out{color:var(--bad)} .wfrow__q--in{color:var(--ok)}
+  .wfrow__n{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .wfempty{font-size:13px; color:var(--muted); padding:6px 0}
   .ret-out{color:var(--bad); font-weight:700; font-variant-numeric:tabular-nums}
   .retbranch{margin-bottom:22px}
   .retbranch__head{display:flex; align-items:center; gap:9px; margin:2px 2px 10px; flex-wrap:wrap}
@@ -421,6 +437,7 @@ const CONFIG = {
   staleAfterMinutes: 60,
   frozenAfterHours: 3,    // DEFAULT: flag a feed "frozen" after this many hours with no new scan. Editable live in the Settings tab.
   emptyBelowRows: 50,     // DEFAULT: a branch sheet with fewer rows than this is flagged "empty" (an import likely wiped it). Editable in Settings.
+  correctionAboveUnits: 5000,  // a single movement this big (e.g. the −85,000 DETTOL fix) is treated as a data correction and kept OUT of the In/Out totals so it can't distort them.
   refreshMinutes: 5,
   maxRows: 400,
   maxCards: 120,
@@ -1161,6 +1178,51 @@ function renderOverview(){
     ${negBanner}
     <div class="overview">${cards}</div>`;
 }
+/* Warehouse IN/OUT, read straight from the SIGNED scan quantity (QtyAdded), which is the
+   reliable direction signal — positive = came in, negative = went out. We sum the signed qty
+   per product for the selected day (so a recount's clear/add legs net within the product), then
+   split into in / out. A single movement bigger than the correction threshold (e.g. the
+   −85,000 DETTOL fix) is pulled out as a "correction" so it can't distort the totals. */
+function warehouseFlow(d){
+  const items=itemsForDay(d.items);
+  const big=getSetting("correctionAboveUnits",CONFIG.correctionAboveUnits);
+  const map={};
+  for(const it of items){
+    const q=toNumber(it.qty); if(q==null||q===0)continue;
+    const key=normBar(it.barcode)||String(it.description||it.productId||"").trim();
+    if(!key)continue;
+    if(!map[key])map[key]={name:it.description||"",barcode:it.barcode||"",net:0};
+    map[key].net+=q;
+    if(it.description&&!map[key].name)map[key].name=it.description;
+    if(it.barcode&&!map[key].barcode)map[key].barcode=it.barcode;
+  }
+  const ins=[],outs=[],corrections=[];
+  for(const k in map){const m=map[k]; if(m.net===0)continue;
+    if(Math.abs(m.net)>=big){corrections.push(m);continue;}
+    if(m.net>0)ins.push(m); else outs.push(m);
+  }
+  ins.sort((a,b)=>b.net-a.net); outs.sort((a,b)=>a.net-b.net);
+  const inUnits=ins.reduce((a,m)=>a+m.net,0), outUnits=outs.reduce((a,m)=>a+Math.abs(m.net),0);
+  return {ins,outs,corrections,inUnits,outUnits};
+}
+function warehouseFlowHTML(d){
+  const w=warehouseFlow(d);
+  const row=(m,dir)=>`<div class="wfrow"><span class="wfrow__q wfrow__q--${dir}">${dir==="out"?"−":"+"}${fmt(Math.abs(m.net))}</span><span class="wfrow__n">${esc(m.name||"—")}</span>${m.barcode?bc(m.barcode):""}</div>`;
+  const inList=w.ins.length?w.ins.map(m=>row(m,"in")).join(""):`<div class="wfempty">Nothing scanned in on this day.</div>`;
+  const outList=w.outs.length?w.outs.map(m=>row(m,"out")).join(""):`<div class="wfempty">Nothing scanned out on this day.</div>`;
+  const corr=w.corrections.length?`<div class="wfcorr-note">Note: ${fmt(w.corrections.length)} big correction${w.corrections.length===1?"":"s"} left out of the totals — ${w.corrections.map(m=>esc(m.name||"—")+" ("+(m.net>0?"+":"−")+fmt(Math.abs(m.net))+")").join(", ")}.</div>`:"";
+  return `<div class="wflow">
+    <div class="wflow__sum">
+      <span class="wflow__chip wflow__chip--in">Scanned in <b>${fmt(w.inUnits)}</b> units · ${fmt(w.ins.length)} product${w.ins.length===1?"":"s"}</span>
+      <span class="wflow__chip wflow__chip--out">Scanned out <b>${fmt(w.outUnits)}</b> units · ${fmt(w.outs.length)} product${w.outs.length===1?"":"s"}</span>
+    </div>
+    ${corr}
+    <div class="wflow__cols">
+      <div class="wflow__col"><div class="wflow__h wflow__h--in">Scanned in</div>${inList}</div>
+      <div class="wflow__col"><div class="wflow__h wflow__h--out">Scanned out</div>${outList}</div>
+    </div>
+  </div>`;
+}
 function renderBranch(b){
   const d=state.data[b.key];
   if(!d)return `<div class="state"><h3>Loading ${esc(b.name)}…</h3></div>`;
@@ -1173,7 +1235,7 @@ function renderBranch(b){
   let view=applyFlow(products); if(!d.warehouse)view=applyProv(view); view=view.filter(matchSearch);
   return `<div class="branchhead"><div class="branchhead__name">${esc(b.name)}</div>
       ${freshBlock(d)}</div>
-    ${d.warehouse?`<p class="lede">The Warehouse's own PICCO scans. Each row shows what the count <b>was</b>, what it was <b>adjusted</b> by, and what's <b>on the shelf</b> now. A <b>drop</b> (negative adjust) means stock <b>left</b> the warehouse — sent out to a shop (this powers the "from warehouse" tags on the branches); a <b>rise</b> is a <b>delivery in</b>. Use the <b>Trace</b> tab to follow a barcode into the branches.</p>`:""}
+    ${d.warehouse?`<p class="lede">Everything <b>scanned in</b> (added, or adjusted up) and <b>scanned out</b> (taken out, or adjusted down) of the Warehouse on this day. Step days with ‹ ›.</p>`+warehouseFlowHTML(d):""}
     ${d.demo?`<div class="demobar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Showing sample data — couldn't read the live sheet (${esc(d.error||"")}). Share it "anyone with the link — viewer", or we use an /api endpoint.</div>`:""}
     <div class="kpis">
       <div class="kpi"><div class="kpi__label">Products</div><div class="kpi__value">${fmt(products.length)}</div></div>
