@@ -723,7 +723,20 @@ function mvTriple(p){
     `<span class="mvt__c"><span class="mvt__n mvt__stk ${(stk!=null&&stk<0)?"mvt__now--bad":""}">${stk==null?"·":fmt(stk)}</span><span class="mvt__l">in stock</span></span>`+
   `</span>`;
 }
-function mvCell(p){ return mvTriple(p); }
+function activeIsWarehouse(){ try{ var b=CONFIG.branches.find(function(x){return x.key===state.active;}); return !!(b&&b.warehouse); }catch(e){ return false; } }
+function mvFlowCell(p){
+  var moved=(p.scans||[]).reduce(function(s,x){return s+(toNumber(x.qty)||0);},0);
+  var stk=inStock(p);
+  var big=getSetting('correctionAboveUnits',(CONFIG.correctionAboveUnits||5000));
+  var shelf='<span style="display:block;font-size:12px;color:var(--muted);font-weight:600;margin-top:2px">In stock '+(stk==null?'·':fmt(stk))+'</span>';
+  var lead;
+  if(Math.abs(moved)>=big) lead='<b style="color:var(--bad)">Correction '+(moved>0?'+':'−')+fmt(Math.abs(moved))+'</b>';
+  else if(moved>0) lead='<b style="color:var(--ok)">Scanned in '+fmt(moved)+'</b>';
+  else if(moved<0) lead='<b style="color:var(--bad)">Scanned out '+fmt(Math.abs(moved))+'</b>';
+  else lead='<b style="color:var(--muted)">No change</b>';
+  return lead+shelf;
+}
+function mvCell(p){ return activeIsWarehouse()?mvFlowCell(p):mvTriple(p); }
 
 /* one-click-copy barcode chip (used everywhere a barcode is shown) */
 function bc(code){
