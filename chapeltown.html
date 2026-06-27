@@ -376,6 +376,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
+  <div class="vtab" data-v="fast">⚡ Fast OOS</div>
   <div class="vtab" data-v="whorder">🚚 W/H Order</div>
   <div class="vtab" data-v="shopify">🛍 + Shopify</div>
   <div class="vtab" data-v="imgs">📸 Images</div>
@@ -1732,7 +1733,10 @@ function openShopModal(p){
        '<label>Description<textarea id="sm-desc" rows="5" placeholder="product description"></textarea></label>'+
        '<label>SEO title<input id="sm-seotitle" maxlength="70" placeholder="search engine title"></label>'+
        '<label>SEO description<textarea id="sm-seodesc" rows="2" maxlength="320" placeholder="search engine description"></textarea></label>'+
-       '<label>Photo (optional)<input id="sm-photo" type="file" accept="image/*" capture="environment"></label>'+
+       '<div class="sm-imgsec"><div style="font-weight:600;font-size:13px;margin:2px 0">Photo</div>'+
+         '<div id="sm-autowrap"><div style="font-size:12px;color:var(--sub);padding:6px 0">\u23F3 Finding a photo online\u2026</div></div>'+
+         '<label id="sm-photolabel" style="display:none">Upload your own<input id="sm-photo" type="file" accept="image/*" capture="environment"></label>'+
+       '</div>'+
        '<div class="sm-collabel">Menu sections (collections)</div>'+
        '<input id="sm-colsearch" class="sm-colsearch" placeholder="search collections\u2026">'+
        '<div id="sm-cols" class="sm-cols">'+shopColsHTML('')+'</div>'+
@@ -1749,6 +1753,7 @@ function openShopModal(p){
   document.getElementById('sm-ai').onclick=function(){enrichShop(p);};
   document.getElementById('sm-go').onclick=function(){submitShop(p);};
   enrichShop(p);
+  findImageShop(p);
 }
 function closeShopModal(){var ov=document.getElementById('shop-modal');if(ov)ov.style.display='none';}
 function shopVal(id){var e=document.getElementById(id);return e?(''+e.value).trim():'';}
@@ -1764,11 +1769,12 @@ function submitShop(p){
   if(descTxt){descHtml=/</.test(descTxt)?descTxt:descTxt.split(/\n\n+/).map(function(x){return '<p>'+shopEsc(x.trim()).replace(/\n/g,'<br>')+'</p>';}).join('');}
   var go=document.getElementById('sm-go');go.disabled=true;
   var photo=document.getElementById('sm-photo').files[0];
-  st.textContent=photo?'Processing photo\u2026':'Creating draft\u2026';
+  var autoUrl=(window._shopImg&&window._shopImg.bc===p.bc&&window._shopImg.mode==='auto'&&window._shopImg.imageUrl)?window._shopImg.imageUrl:null;
+  st.textContent=photo?'Processing photo\u2026':(autoUrl?'Attaching photo\u2026':'Creating draft\u2026');
   var chain=photo?downscaleShop(photo).then(function(dataUrl){st.textContent='Uploading image\u2026';
       return fetch('/api/shopify/upload-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl})})
         .then(function(r){return r.json();}).then(function(j){return (j&&j.source)||null;});
-    }).catch(function(){return null;}):Promise.resolve(null);
+    }).catch(function(){return null;}):Promise.resolve(autoUrl);
   chain.then(function(imageUrl){
     st.textContent='Creating draft\u2026';
     return fetch('/api/shopify/create-product',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -1806,6 +1812,32 @@ function enrichShop(p){
    .catch(function(e){btn.disabled=false;btn.textContent=old;if(hint)hint.innerHTML='<span class="sm-err">AI failed: '+shopEsc(String(e))+'</span>';});
 }
 function shopHtmlToText(h){return (''+(h||'')).replace(/<\/p>\s*<p>/gi,'\n\n').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').trim();}
+function findImageShop(p){
+  var wrap=document.getElementById('sm-autowrap'); if(!wrap)return;
+  window._shopImg={bc:p.bc,imageUrl:null,mode:'finding'};
+  wrap.innerHTML='<div style="font-size:12px;color:var(--sub);padding:6px 0">\u23F3 Finding a photo online\u2026</div>';
+  fetch('/api/shopify/find-image',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({barcode:p.bc,name:(shopVal('sm-name')||p.nm),brand:(shopVal('sm-brand')||shopBrandOf(p.bc,p.nm))})})
+   .then(function(r){return r.json();})
+   .then(function(j){
+     if(!j||!j.imageUrl){window._shopImg={bc:p.bc,imageUrl:null,mode:'manual'};wrap.innerHTML='<div style="font-size:12px;color:var(--sub);padding:4px 0">No photo found online \u2014 add one below if you like.</div>';shopShowManual(true);return;}
+     window._shopImg={bc:p.bc,imageUrl:j.imageUrl,mode:'auto'};
+     wrap.innerHTML='<div style="display:flex;gap:10px;align-items:flex-start;padding:4px 0">'+
+       '<img src="'+shopEscAttr(j.imageUrl)+'" onerror="shopAutoImgError()" style="width:64px;height:64px;object-fit:contain;border:1px solid var(--border);border-radius:8px;background:#fff;flex-shrink:0">'+
+       '<div style="font-size:13px;line-height:1.5">'+
+         '<label style="display:block;cursor:pointer"><input type="radio" name="sm-imgchoice" value="auto" checked> Use this photo'+(j.source?(' <span style="color:var(--sub);font-size:11px">('+shopEsc(j.source)+')</span>'):'')+'</label>'+
+         '<label style="display:block;cursor:pointer"><input type="radio" name="sm-imgchoice" value="own"> Use my own</label>'+
+       '</div></div>';
+     wrap.querySelectorAll('input[name=sm-imgchoice]').forEach(function(rb){rb.addEventListener('change',function(){
+       if(this.value==='own'){shopShowManual(true);if(window._shopImg)window._shopImg.mode='manual';}
+       else{shopShowManual(false);if(window._shopImg)window._shopImg.mode='auto';}
+     });});
+     shopShowManual(false);
+   })
+   .catch(function(){window._shopImg={bc:p.bc,imageUrl:null,mode:'manual'};wrap.innerHTML='';shopShowManual(true);});
+}
+function shopShowManual(show){var l=document.getElementById('sm-photolabel');if(l)l.style.display=show?'':'none';}
+function shopAutoImgError(){var w=document.getElementById('sm-autowrap');if(w)w.innerHTML='<div style="font-size:12px;color:var(--sub);padding:4px 0">Couldn\u2019t load that photo \u2014 add one below.</div>';shopShowManual(true);if(window._shopImg){window._shopImg.imageUrl=null;window._shopImg.mode='manual';}}
 function downscaleShop(file){
   return new Promise(function(res,rej){
     var img=new Image(),url=URL.createObjectURL(file);
@@ -2798,6 +2830,87 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
  };
 })();
 </script>
-<script>(function(){var order=["home","neg","over","shopify","imgs","low","oos","whorder","disc","map"];var vt=document.getElementById("vtabs");if(!vt)return;var m={};vt.querySelectorAll(".vtab").forEach(function(d){m[d.getAttribute("data-v")]=d;});order.forEach(function(v){if(m[v])vt.appendChild(m[v]);});})();</script>
+<script>(function(){var order=["home","neg","over","fast","shopify","imgs","low","oos","whorder","disc","map"];var vt=document.getElementById("vtabs");if(!vt)return;var m={};vt.querySelectorAll(".vtab").forEach(function(d){m[d.getAttribute("data-v")]=d;});order.forEach(function(v){if(m[v])vt.appendChild(m[v]);});})();</script>
+<script>
+(function(){
+  if(typeof renderView!=='function')return;
+  var FAST_TICK_KEY='cc_fast'+DEST_ID;
+  var fastTx={};try{fastTx=JSON.parse(localStorage.getItem(FAST_TICK_KEY)||'{}');}catch(e){}
+  var fastData=null, fastMeta={}, fastLoaded=false, fastTried=0;
+
+  (function(){if(typeof syncLoad!=='function')return;syncLoad(FAST_TICK_KEY).then(function(srv){if(srv&&typeof srv==='object'){for(var k in srv){fastTx[k]=srv[k];}try{localStorage.setItem(FAST_TICK_KEY,JSON.stringify(fastTx));}catch(e){}if(window.view==='fast')renderFast();}}).catch(function(){});})();
+
+  window.loadFastSellers=function(force){
+    if(fastLoaded&&!force&&(Date.now()-fastTried<300000))return;
+    fastTried=Date.now();
+    fetch('/api/fast-sellers').then(function(r){return r.json();}).then(function(d){
+      fastData=(d&&d.items)?d.items:{}; fastMeta=d||{}; fastLoaded=true;
+      if(window.view==='fast')renderFast();
+    }).catch(function(){fastData={};fastLoaded=true;if(window.view==='fast')renderFast();});
+  };
+
+  function fhead(){
+    var n=fastData?Object.keys(fastData).length:0;
+    var when=(fastMeta&&fastMeta.generated)?(' \u00b7 list updated '+fastMeta.generated):'';
+    var warn=(fastMeta&&fastMeta.error)?'<div class="src-rule" style="color:var(--red)">\u26a0 Fast-seller list not loaded ('+fastMeta.error+'). '+(fastMeta.hint||'')+'</div>':'';
+    return '<div class="src-card" style="margin-bottom:8px"><div class="src-hdr">'+
+      '<div class="src-name">\u26a1 Fast movers out of stock</div>'+
+      '<div class="src-rule" style="color:var(--sub)">Best sellers that have hit 0 here \u2014 and the warehouse can cover until your delivery.'+(n?(' ('+n+' fast sellers'+when+')'):'')+'</div>'+
+      warn+'</div></div>';
+  }
+
+  window.renderFast=function(){
+    var el=document.getElementById('out');
+    if(!destLoaded||!srcLoaded[0]){ if(!srcLoaded[0])loadSrc(0); el.innerHTML='<div class="loading"><div class="spin"></div>Loading stock\u2026</div>'; return; }
+    if(!fastLoaded){ loadFastSellers(); el.innerHTML='<div class="loading"><div class="spin"></div>Loading fast sellers\u2026</div>'; return; }
+    var fd=fastData||{};
+    var wh={};(srcData[0]||[]).forEach(function(p){if(p.bc)wh[p.bc]=p;});
+    var bm={};(destData||[]).forEach(function(p){if(p.bc)bm[p.bc]=p;});
+    var rows=[];
+    Object.keys(fd).forEach(function(bc){
+      var b=bm[bc]; if(!b)return;            // branch carries this line
+      if(b.qty>0)return;                       // must be out of stock here
+      var w=wh[bc]; var wq=w?w.qty:0;
+      if(!(wq>0))return;                        // warehouse must have stock to cover
+      rows.push({bc:bc, nm:b.nm||fd[bc].nm, dp:b.dp||fd[bc].dp||'General', wk:fd[bc].wk||0, u90:fd[bc].u90||0, whQty:wq, rank:fd[bc].rank||999});
+    });
+    rows.sort(function(a,b){return b.wk-a.wk;});
+    var total=rows.length, done=rows.filter(function(r){return fastTx[r.bc];}).length;
+    if(typeof setProg==='function')setProg(total,done,total?(done+' of '+total+' sorted'):'No fast movers out of stock');
+    if(!total){ el.innerHTML=fhead()+'<div class="empty" style="margin-top:8px">No fast-selling items are out of stock here right now \u2713</div>'; return; }
+    var html=fhead();
+    var byDept={}; rows.forEach(function(r){(byDept[r.dp]=byDept[r.dp]||[]).push(r);});
+    Object.keys(byDept).forEach(function(dp){
+      var items=byDept[dp];
+      html+='<div class="dept-hdr"><div class="dept-name">'+dp+'</div><div class="dept-sub" style="color:var(--sub)">'+items.length+'</div></div>';
+      html+='<div class="card-list">';
+      items.forEach(function(r){
+        var isDone=!!fastTx[r.bc];
+        html+='<div class="item-card'+(isDone?' fixed':'')+'" style="display:flex;gap:10px;align-items:center">'+
+          '<div>'+imgEl(r.bc,46)+'</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(r.nm||r.bc)+'</div>'+
+            '<div class="item-bc" style="font-size:11px;color:var(--sub)">'+r.bc+'</div>'+
+            '<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">'+
+              '<span class="itag itag-out">Here: 0</span>'+
+              '<span class="itag itag-info">\u2248'+r.wk+'/wk</span>'+
+              '<span class="itag" style="background:#ecfdf5;color:#047857;border-radius:4px;padding:2px 6px;font-weight:600">W/H has '+r.whQty+'</span>'+
+            '</div>'+
+          '</div>'+
+          '<div class="fast-tick'+(isDone?' on':'')+'" data-fbc="'+r.bc+'" title="Mark sorted" style="flex-shrink:0;width:30px;height:30px;border:2px solid '+(isDone?'var(--green)':'var(--border)')+';border-radius:8px;display:flex;align-items:center;justify-content:center;background:'+(isDone?'var(--green)':'#fff')+';cursor:pointer">'+
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="'+(isDone?'#fff':'var(--border)')+'" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'+
+          '</div>'+
+        '</div>';
+      });
+      html+='</div>';
+    });
+    el.innerHTML=html;
+    el.querySelectorAll('.fast-tick').forEach(function(t){t.addEventListener('click',function(){var bc=this.dataset.fbc;fastTx[bc]=!fastTx[bc];try{localStorage.setItem(FAST_TICK_KEY,JSON.stringify(fastTx));}catch(e){}if(typeof syncSave==='function')syncSave(FAST_TICK_KEY,fastTx);renderFast();});});
+  };
+
+  var __rvFast=renderView;
+  renderView=function(){ if(window.view==='fast'){return renderFast();} return __rvFast.apply(this,arguments); };
+})();
+</script>
 </body>
 </html>
