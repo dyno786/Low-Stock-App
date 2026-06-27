@@ -898,6 +898,14 @@ function renderView(){
 var BRANCH_TARGETS={'Chapeltown':7,'City Center':7};
 var OVER_TICK_KEY='cc_over'+DEST_ID;
 var overTx={};try{overTx=JSON.parse(localStorage.getItem(OVER_TICK_KEY)||'{}');}catch(e){}
+var OVER_NS_KEY='cc_over_ns';
+var overNS={};try{overNS=JSON.parse(localStorage.getItem(OVER_NS_KEY)||'{}');}catch(e){}
+(function(){if(typeof syncLoad!=='function')return;syncLoad(OVER_NS_KEY).then(function(srv){if(srv&&typeof srv==='object'){for(var k in srv){if(!overNS[k])overNS[k]=srv[k];}try{localStorage.setItem(OVER_NS_KEY,JSON.stringify(overNS));}catch(e){}if(typeof view!=='undefined'&&view==='over'&&typeof renderOverstock==='function')renderOverstock();}if(Object.keys(overNS).length&&typeof syncSave==='function')syncSave(OVER_NS_KEY,overNS);}).catch(function(){});})();
+function overNSk(bc,dest){return bc+'_'+dest;}
+function overIsNS(bc,dest){return !!overNS[overNSk(bc,dest)];}
+function overSetNS(bc,dest){if(!bc||!dest)return;overNS[overNSk(bc,dest)]=1;try{localStorage.setItem(OVER_NS_KEY,JSON.stringify(overNS));}catch(e){}if(typeof syncSave==='function')syncSave(OVER_NS_KEY,overNS);renderOverstock();}
+var overSearch='';
+window.overDoSearch=function(v){overSearch=v;renderOverstock();};
 var overSubTab=null;
 
 // ── OVERSTOCK SETTINGS (shared across all 3 branches via cc_over_* keys) ──
@@ -1007,6 +1015,7 @@ function computeOverstockRows(){
 
 function renderOverstock(){
   var el=document.getElementById('out');
+  if(overSearch){setTimeout(function(){var si=document.getElementById('over-search');if(si){si.focus();si.setSelectionRange(si.value.length,si.value.length);}},0);}
   if(!destLoaded||!srcLoaded[0]||!srcLoaded[1]||!srcLoaded[2]){
     el.innerHTML='<div class="loading"><div class="spin"></div>Loading branches…</div>';return;
   }
@@ -1016,7 +1025,7 @@ function renderOverstock(){
   // the user can still adjust thresholds when nothing is showing.
   var __s=loadOverSettings();
   var shellHeader='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock to redistribute</div>'+
-    '<div class="src-rule" style="color:var(--sub)">Pick a destination box to pack. Adjust thresholds below.</div></div></div>'+
+    '<div class="src-rule" style="color:var(--sub)">Pick a destination box to pack. Adjust thresholds below.</div></div></div>'+'<div style="margin:8px 0"><input id="over-search" type="search" value="'+(overSearch||'').replace(/"/g,'&quot;')+'" oninput="overDoSearch(this.value)" placeholder="🔍 Search barcode or destination…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:15px"></div>'+
     '<div class="over-settings">'+
     '<div class="over-setting"><div class="over-setting-lbl">Min stock here</div>'+
       '<div class="over-setting-ctl"><button class="over-set-btn" data-set="min" data-d="-1">−</button>'+
@@ -1051,7 +1060,7 @@ function renderOverstock(){
       if(a.send<=0)return;
       for(var i=0;i<destBranches.length;i++){
         if(destBranches[i].name===a.name){
-          destBranches[i].rows.push({row:r, alloc:a});
+          if(!overIsNS(r.bc,destBranches[i].short))destBranches[i].rows.push({row:r, alloc:a});
           return;
         }
       }
@@ -1063,6 +1072,8 @@ function renderOverstock(){
     overSubTab=(destBranches[0].rows.length>0?destBranches[0].short:destBranches[1].short);
   }
 
+  var __q=(overSearch||'').trim().toLowerCase(), __isDestQ=false;
+  if(__q){destBranches.forEach(function(b){if(b.short.toLowerCase().indexOf(__q)>=0||b.name.toLowerCase().indexOf(__q)>=0){overSubTab=b.short;__isDestQ=true;}});}
   // Header + sub-tab pills
   var html=shellHeader+wmLayBar();
   html+='<div class="over-subtabs">';
@@ -1087,15 +1098,17 @@ function renderOverstock(){
   }
 
   // Group by department
+  var __arows=active.rows.filter(function(x){if(!__q||__isDestQ)return true;return (x.row.bc.toLowerCase().indexOf(__q)>=0)||((x.row.nm||'').toLowerCase().indexOf(__q)>=0);});
   var byDept={};
-  active.rows.forEach(function(x){
+  __arows.forEach(function(x){
     var d=x.row.dp||'General';
     if(!byDept[d])byDept[d]=[];
     byDept[d].push(x);
   });
+  if(Object.keys(byDept).length===0){html+='<div class="empty" style="margin-top:12px">No matches.</div>';}
 
-  var totalCount=active.rows.length;
-  var doneCount=active.rows.filter(function(x){return overTx['o_'+x.row.bc+'_'+active.short];}).length;
+  var totalCount=__arows.length;
+  var doneCount=__arows.filter(function(x){return overTx['o_'+x.row.bc+'_'+active.short];}).length;
   setProg(totalCount,doneCount,doneCount+' of '+totalCount+' packed for '+active.name);
 
   Object.keys(byDept).forEach(function(dept){
@@ -1124,7 +1137,7 @@ function renderOverstock(){
               '<span class="over-send">send '+a.send+'</span>'+
               '<span class="over-bqty">('+qtyTag+')</span></div>'+
           '</div>'+
-          '<div class="over-disc-row" style="margin-top:8px"><button class="disc-btn" data-bc="'+r.bc+'" style="border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">\uD83D\uDEAB Discontinued \u2014 don\u2019t send</button></div>'+
+          '<div class="over-disc-row" style="margin-top:8px"><button class="disc-btn" data-bc="'+r.bc+'" style="border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">\uD83D\uDEAB Discontinued \u2014 don\u2019t send</button>'+'<button class="overns-btn" data-bc="'+r.bc+'" data-dest="'+active.short+'" style="margin-left:6px;border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">\u2715 Doesn\u2019t stock</button></div>'+
         '</div>'+
         '<div class="over-right">'+
           '<div class="over-qty">'+a.send+'</div>'+
@@ -1139,6 +1152,7 @@ function renderOverstock(){
 
   el.innerHTML=html;
   wireOverSubTabs();
+  el.querySelectorAll('.overns-btn').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();overSetNS(this.dataset.bc,this.dataset.dest);});});
 
   el.querySelectorAll('.over-tick').forEach(function(btn){
     btn.addEventListener('click',function(e){
