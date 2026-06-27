@@ -925,6 +925,11 @@ function overIsNS(bc,dest){return !!overNS[overNSk(bc,dest)];}
 function overSetNS(bc,dest){if(!bc||!dest)return;overNS[overNSk(bc,dest)]=1;try{localStorage.setItem(OVER_NS_KEY,JSON.stringify(overNS));}catch(e){}if(typeof syncSave==='function')syncSave(OVER_NS_KEY,overNS);renderOverstock();}
 var overSearch='';
 window.overDoSearch=function(v){overSearch=v;renderOverstock();};
+window.__overShowEx=false;
+window.overToggleEx=function(){window.__overShowEx=!window.__overShowEx;renderOverstock();};
+window.overRestore=function(key){if(overNS[key]){delete overNS[key];try{localStorage.setItem(OVER_NS_KEY,JSON.stringify(overNS));}catch(e){}if(typeof syncSave==='function')syncSave(OVER_NS_KEY,overNS);}renderOverstock();};
+function overExcludedHTML(){var keys=Object.keys(overNS),nm={};(typeof destData!=='undefined'&&destData?destData:[]).forEach(function(p){if(p.bc)nm[p.bc]=p.nm;});var rows=keys.map(function(k){var u=k.lastIndexOf('_'),bc=k.substring(0,u),dest=k.substring(u+1);return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(nm[bc]||bc)+'</div><div style="font-size:11px;color:var(--sub)">'+bc+' \u00b7 \u2192'+dest+'</div></div><button onclick="overRestore(\''+k+'\')" style="border:1px solid var(--purple);background:#fff;color:var(--purpletxt);border-radius:9px;padding:7px 12px;font-weight:700;font-size:12px;cursor:pointer">Restore</button></div>';}).join('');return '<div style="border:1px solid var(--border);border-radius:12px;background:#fff;margin-top:8px;overflow:hidden"><div style="padding:11px 12px;font-weight:800;display:flex;justify-content:space-between;align-items:center"><span>\uD83D\uDEAB Excluded items ('+keys.length+')</span><button onclick="overToggleEx()" style="border:none;background:none;color:var(--purpletxt);font-weight:700;font-size:13px;cursor:pointer">\u2190 Back</button></div>'+(keys.length?rows:'<div style="padding:14px;color:var(--sub);font-size:13px">Nothing excluded yet.</div>')+'</div>';}
+window.overLiveFilter=function(){var si=document.getElementById('over-search');if(!si)return;var q=si.value.trim().toLowerCase();if(q.length>=3&&window.__overDest){for(var i=0;i<window.__overDest.length;i++){var b=window.__overDest[i];if(b.short!==window.__overActive&&b.name.toLowerCase().indexOf(q)>=0){var pill=document.querySelector('.over-subtab[data-sub="'+b.short+'"]');if(pill){overSearch='';pill.click();return;}}}}var out=document.getElementById('out');out.querySelectorAll('.over-card').forEach(function(c){var bc=(c.getAttribute('data-bc')||'').toLowerCase();var ne=c.querySelector('.over-name');var nm=ne?ne.textContent.toLowerCase():'';c.style.display=(!q||bc.indexOf(q)>=0||nm.indexOf(q)>=0)?'':'none';});out.querySelectorAll('.card-list').forEach(function(list){var vis=Array.prototype.some.call(list.querySelectorAll('.over-card'),function(c){return c.style.display!=='none';});list.style.display=vis?'':'none';var hdr=list.previousElementSibling;if(hdr&&hdr.className&&(''+hdr.className).indexOf('dept-hdr')>=0)hdr.style.display=vis?'':'none';});};
 var overSubTab=null;
 
 // ── OVERSTOCK SETTINGS (shared across all 3 branches via cc_over_* keys) ──
@@ -1006,7 +1011,6 @@ function computeOverstockRows(){
 
 function renderOverstock(){
   var el=document.getElementById('out');
-  if(overSearch){setTimeout(function(){var si=document.getElementById('over-search');if(si){si.focus();si.setSelectionRange(si.value.length,si.value.length);}},0);}
   if(!destLoaded||!srcLoaded[0]||!srcLoaded[1]||!srcLoaded[2]){
     el.innerHTML='<div class="loading"><div class="spin"></div>Loading branches…</div>';return;
   }
@@ -1016,7 +1020,7 @@ function renderOverstock(){
   // the user can still adjust thresholds when nothing is showing.
   var __s=loadOverSettings();
   var shellHeader='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock to redistribute</div>'+
-    '<div class="src-rule" style="color:var(--sub)">Pick a destination box to pack. Adjust thresholds below.</div></div></div>'+'<div style="margin:8px 0"><input id="over-search" type="search" value="'+(overSearch||'').replace(/"/g,'&quot;')+'" oninput="overDoSearch(this.value)" placeholder="🔍 Search barcode or destination…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:15px"></div>'+
+    '<div class="src-rule" style="color:var(--sub)">Pick a destination box to pack. Adjust thresholds below.</div></div></div>'+'<div style="margin:8px 0"><input id="over-search" type="search" value="'+(overSearch||'').replace(/"/g,'&quot;')+'" oninput="overSearch=this.value;overLiveFilter()" placeholder="🔍 Search barcode or destination…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:15px"></div>'+
     '<div class="over-settings">'+
     '<div class="over-setting"><div class="over-setting-lbl">Min stock here</div>'+
       '<div class="over-setting-ctl"><button class="over-set-btn" data-set="min" data-d="-1">−</button>'+
@@ -1031,8 +1035,9 @@ function renderOverstock(){
       '<span class="over-set-val" id="over-set-destThresh">'+__s.destThresh+'</span>'+
       '<button class="over-set-btn" data-set="destThresh" data-d="1">+</button></div></div>'+
     '</div>'+
-    '<div class="over-reset-row"><button class="over-reset-btn">↺ Reset to defaults (12 / 7 / 2)</button></div>';
+    '<div class="over-reset-row"><button class="over-reset-btn">↺ Reset to defaults (12 / 7 / 2)</button></div>'+'<div style="margin-top:6px"><button onclick="overToggleEx()" style="border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">🚫 Excluded items ('+Object.keys(overNS).length+')</button></div>';
 
+  if(window.__overShowEx){el.innerHTML=shellHeader+overExcludedHTML();setProg(0,0,'Excluded items');return;}
   if(!rows||!rows.length){
     el.innerHTML=shellHeader+'<div class="empty" style="margin-top:8px">No overstock matches current settings — adjust thresholds above or check back later ✓</div>';
     setProg(0,0,'No overstock');
@@ -1080,6 +1085,7 @@ function renderOverstock(){
 
   // Active branch's rows
   var active=destBranches.filter(function(b){return b.short===overSubTab;})[0];
+  window.__overDest=destBranches.map(function(b){return {short:b.short,name:b.name};});window.__overActive=active?active.short:'';
   if(!active||active.rows.length===0){
     html+='<div class="empty" style="margin-top:12px">Nothing to send to this branch right now ✓</div>';
     el.innerHTML=html;
@@ -1144,6 +1150,7 @@ function renderOverstock(){
   el.innerHTML=html;
   wireOverSubTabs();
   el.querySelectorAll('.overns-btn').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();overSetNS(this.dataset.bc,this.dataset.dest);});});
+  if(overSearch)overLiveFilter();
 
   el.querySelectorAll('.over-tick').forEach(function(btn){
     btn.addEventListener('click',function(e){
@@ -2791,5 +2798,6 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
  };
 })();
 </script>
+<script>(function(){var order=["home","neg","over","shopify","imgs","low","oos","whorder","disc","map"];var vt=document.getElementById("vtabs");if(!vt)return;var m={};vt.querySelectorAll(".vtab").forEach(function(d){m[d.getAttribute("data-v")]=d;});order.forEach(function(v){if(m[v])vt.appendChild(m[v]);});})();</script>
 </body>
 </html>
