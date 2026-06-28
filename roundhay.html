@@ -971,7 +971,17 @@ function renderDisc(){
 var FILL_TARGET=7;                 // top up a needy branch toward this
 var ROUNDHAY_KEY=2;                // last-resort giver
 var FILL_TRIGGER=0;                // qty <= this means "needs stock"; preset 0, resets on reload
-// No department scope: spec redistributes ALL stocked items ("Doesn't stock" exclusions still apply).
+// Department filter (DISPLAY only — does not change the redistribution maths). Defaults to the
+// two Afro depts pre-selected; shown as a collapsed panel the user can open to widen/narrow.
+// Resets to these defaults on reload. Empty selection = show ALL departments.
+var OVER_DEPTS_DEFAULT=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'];
+var overDeptSel={};OVER_DEPTS_DEFAULT.forEach(function(d){overDeptSel[d]=1;});
+var overDeptOpen=false;            // collapsed by default
+function overAllDepts(){           // union of depts in the feed + the defaults, sorted
+  var set={};OVER_DEPTS_DEFAULT.forEach(function(d){set[d]=1;});
+  (typeof destData!=='undefined'&&destData?destData:[]).forEach(function(p){var d=(p.dp||'').toUpperCase();if(d)set[d]=1;});
+  return Object.keys(set).sort();
+}
 // Canonical branch metadata keyed by branch id — identical on every page (no SOURCES-order drift)
 var BR_META={0:{short:'Chap',name:'Chapeltown',color:'#fb923c'},
              1:{short:'City',name:'City Center',color:'#4ade80'},
@@ -1049,9 +1059,11 @@ function computeOverstockRows(){
     var m=srcMapByKey[key],x=m&&m[bc];return x&&typeof x.qty==='number'?x.qty:0;
   }
   var allKeys=[0,1,2];
+  var selDepts=overDeptSel, anyDept=Object.keys(selDepts).length>0;  // dept filter (display scope)
   var rows=[];
   destData.forEach(function(p){
     if(!p.bc||!p.nm)return;
+    if(anyDept&&!selDepts[(p.dp||'').toUpperCase()])return;          // department scope (default = Afro depts)
     if(typeof isDisc==='function'&&isDisc(p.bc))return;              // discontinued — never transfer out
     var thisQty=(typeof p.qty==='number'?p.qty:0);
     var spareHere=Math.max(0,thisQty-FILL_TARGET);
@@ -1099,6 +1111,26 @@ function renderOverstock(){
       '<div class="over-setting-ctl"><span class="over-set-val">'+FILL_TARGET+'</span></div></div>'+
     '</div>'+
     '<div class="over-reset-row"><button class="over-reset-btn">↺ Reset trigger to 0</button></div>'+
+    (function(){
+      var depts=overAllDepts(), sc=Object.keys(overDeptSel).length;
+      var h='<div style="margin-top:6px;border:1px solid var(--border);border-radius:10px;background:#fff;overflow:hidden">'+
+        '<div class="over-dept-hdr" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;cursor:pointer;font-weight:700;font-size:13px;user-select:none">'+
+          '<span>🏷️ Departments ('+(sc?sc+' selected':'all')+')</span>'+
+          '<span style="color:var(--sub)">'+(overDeptOpen?'▲':'▼')+'</span></div>';
+      if(overDeptOpen){
+        h+='<div style="padding:2px 12px 10px;border-top:1px solid var(--border)">'+
+          depts.map(function(d){
+            var on=!!overDeptSel[d], isDef=OVER_DEPTS_DEFAULT.indexOf(d)>=0;
+            return '<label style="display:flex;align-items:center;gap:9px;padding:6px 2px;font-size:13px;cursor:pointer">'+
+              '<input type="checkbox" class="over-dept-cb" data-dept="'+d.replace(/"/g,'&quot;')+'"'+(on?' checked':'')+' style="width:16px;height:16px;flex:none">'+
+              '<span>'+d+(isDef?' <span style="color:var(--sub);font-size:11px">· default</span>':'')+'</span></label>';
+          }).join('')+
+          '<div style="margin-top:6px"><button class="over-dept-reset" style="border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer">↺ Reset to Afro depts</button></div>'+
+          '<div style="margin-top:4px;font-size:11px;color:var(--sub)">Untick all to show every department.</div>'+
+        '</div>';
+      }
+      return h+'</div>';
+    })()+
     '<div style="margin-top:6px"><button onclick="overToggleEx()" style="border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">🚫 Excluded items ('+Object.keys(overNS).length+')</button></div>';
 
   if(window.__overShowEx){el.innerHTML=shellHeader+overExcludedHTML();setProg(0,0,'Excluded items');wireOverSubTabs();return;}
@@ -1250,6 +1282,18 @@ function wireOverSubTabs(){
   });
   var resetBtn=document.querySelector('.over-reset-btn');
   if(resetBtn){resetBtn.addEventListener('click',function(){FILL_TRIGGER=0;renderOverstock();});}
+  // Department filter panel (collapsed by default; defaults to the two Afro depts)
+  var dh=document.querySelector('.over-dept-hdr');
+  if(dh)dh.addEventListener('click',function(){overDeptOpen=!overDeptOpen;renderOverstock();});
+  document.querySelectorAll('.over-dept-cb').forEach(function(cb){
+    cb.addEventListener('change',function(){
+      var d=this.dataset.dept;
+      if(this.checked)overDeptSel[d]=1;else delete overDeptSel[d];
+      renderOverstock();
+    });
+  });
+  var dr=document.querySelector('.over-dept-reset');
+  if(dr)dr.addEventListener('click',function(){overDeptSel={};OVER_DEPTS_DEFAULT.forEach(function(d){overDeptSel[d]=1;});renderOverstock();});
 }
 
 
