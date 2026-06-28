@@ -947,66 +947,127 @@ function saveOverSetting(k,v){
   try{localStorage.setItem('cc_over_'+k,String(v));}catch(e){}
 }
 
+/* ===== OVERSTOCK REDISTRIBUTION — warehouse-first waterfall (build spec 2026-06-28) =====
+   Rewrite of the overstock calc. A branch "needs stock" when its qty <= FILL_TRIGGER
+   (preset 0 = empty shelf; adjustable via the DEST<= dial; resets to 0 on reload).
+   Fill that branch UP TOWARD FILL_TARGET (7). A shop's spare = max(0, qty-7); no shop is
+   ever pulled below 7. Supply waterfall: WAREHOUSE first -> primary shops (everyone except
+   Roundhay) split PROPORTIONALLY by spare -> ROUNDHAY last resort. Roundhay still gets
+   topped up normally when IT is the empty branch ("last resort" applies only to giving).
+   All needy branches for an item are planned in ONE pass from a single shared pool
+   (warehouse + each shop's spare), decremented as committed, so no source is ever
+   over-promised — not within a page, and not across pages. Every branch page runs this
+   IDENTICAL maths on the same feeds (warehouse + all 3 branches), so the shares always
+   agree. Each page shows only ITS OWN share to pack (plans[destKey].shops[DEST_ID]).
+   Branch keys match DEST_ID: Chapeltown=0, City Center=1, Roundhay=2; warehouse = srcData[0]. */
+var FILL_TARGET=7;                 // top up a needy branch toward this
+var ROUNDHAY_KEY=2;                // last-resort giver
+var FILL_TRIGGER=0;                // qty <= this means "needs stock"; preset 0, resets on reload
+// No department scope: spec redistributes ALL stocked items ("Doesn't stock" exclusions still apply).
+// Canonical branch metadata keyed by branch id — identical on every page (no SOURCES-order drift)
+var BR_META={0:{short:'Chap',name:'Chapeltown',color:'#fb923c'},
+             1:{short:'City',name:'City Center',color:'#4ade80'},
+             2:{short:'Roun',name:'Roundhay',color:'#60a5fa'}};
+
+/* Split `total` into integer parts proportional to `weights`, summing EXACTLY to total
+   (largest-remainder). weights [3,5], total 6 -> [2,4]. */
+function largestRemainder(weights,total){
+  var sum=weights.reduce(function(a,b){return a+b;},0);
+  if(sum<=0||total<=0)return weights.map(function(){return 0;});
+  var raw=weights.map(function(w){return total*w/sum;});
+  var out=raw.map(Math.floor);
+  var used=out.reduce(function(a,b){return a+b;},0);
+  var rem=total-used;
+  var order=raw.map(function(v,i){return {i:i,frac:v-Math.floor(v)};}).sort(function(a,b){return b.frac-a.frac;});
+  for(var k=0;k<order.length&&rem>0;k++){out[order[k].i]++;rem--;}
+  return out;
+}
+
+/* GLOBAL planner for ONE item across ALL needy destinations at once.
+   qtyByKey: {0,1,2} -> current branch qty · warehouseQty: warehouse qty for this item.
+   Needy dests (qty <= FILL_TRIGGER) are processed in canonical key order, drawing from a
+   SINGLE shared pool (warehouse + each shop's spare) that is decremented as it is committed,
+   so no source is ever asked to give more than it has — even when two branches are empty for
+   the same item. The pool, the needy set and the order depend only on the shared stock feeds,
+   never on which page is running, so every branch page computes the identical plan and reads
+   only its own slice (plans[destKey].shops[DEST_ID]).
+   Returns { destKey: { warehouse, shops:{key:qty}, need, shortBy } }. */
+function allocItem(qtyByKey,warehouseQty){
+  var plans={};
+  var whAvail=Math.max(0,warehouseQty||0);
+  var spareAvail={};
+  [0,1,2].forEach(function(k){spareAvail[k]=Math.max(0,(qtyByKey[k]||0)-FILL_TARGET);});
+  var needy=[0,1,2].filter(function(k){return (qtyByKey[k]||0)<=FILL_TRIGGER;}).sort(function(a,b){return a-b;});
+  needy.forEach(function(destKey){
+    var destQty=qtyByKey[destKey]||0;
+    var need=Math.max(0,FILL_TARGET-destQty);
+    var plan={warehouse:0,shops:{},need:need,shortBy:0};
+    if(need<=0){plans[destKey]=plan;return;}
+    // 1) Warehouse first (shared pool, decremented)
+    plan.warehouse=Math.min(need,whAvail);whAvail-=plan.warehouse;
+    var remaining=need-plan.warehouse;
+    // 2) Primary shops (everyone except dest and Roundhay), proportional to remaining spare
+    if(remaining>0){
+      var primaries=[0,1,2].filter(function(k){return k!==destKey&&k!==ROUNDHAY_KEY&&spareAvail[k]>0;}).sort(function(a,b){return a-b;});
+      var primTotal=primaries.reduce(function(s,k){return s+spareAvail[k];},0);
+      var takePrim=Math.min(remaining,primTotal);
+      if(takePrim>0){
+        var alloc=largestRemainder(primaries.map(function(k){return spareAvail[k];}),takePrim);
+        primaries.forEach(function(k,i){if(alloc[i]>0){plan.shops[k]=(plan.shops[k]||0)+alloc[i];spareAvail[k]-=alloc[i];}});
+        remaining-=takePrim;
+      }
+    }
+    // 3) Roundhay — last resort only, and never a giver to itself
+    if(remaining>0&&destKey!==ROUNDHAY_KEY&&spareAvail[ROUNDHAY_KEY]>0){
+      var give=Math.min(remaining,spareAvail[ROUNDHAY_KEY]);
+      if(give>0){plan.shops[ROUNDHAY_KEY]=(plan.shops[ROUNDHAY_KEY]||0)+give;spareAvail[ROUNDHAY_KEY]-=give;remaining-=give;}
+    }
+    plan.shortBy=Math.max(0,remaining); // >0 just means nobody can fully cover — that's fine
+    plans[destKey]=plan;
+  });
+  return plans;
+}
+
 function computeOverstockRows(){
-  var settings=loadOverSettings();
-  function mapFor(idx){
-    var m={};
-    var arr=srcData[idx]||[];
-    for(var i=0;i<arr.length;i++){if(arr[i].bc)m[arr[i].bc]=arr[i];}
-    return m;
-  }
   if(!destLoaded||!srcLoaded[0]||!srcLoaded[1]||!srcLoaded[2])return null;
-  var whMap=mapFor(0), b1Map=mapFor(1), b2Map=mapFor(2);
-  var b1Name=SOURCES[1].name, b2Name=SOURCES[2].name;
-  var b1Tgt=BRANCH_TARGETS[b1Name]||7, b2Tgt=BRANCH_TARGETS[b2Name]||7;
-
-  // Sanity: if buffer >= min, no item can ever ship (extra would be <= 0). Bail gracefully.
-  if(settings.min<=settings.buffer)return [];
-
+  function mapFor(idx){var m={},arr=srcData[idx]||[];for(var i=0;i<arr.length;i++){if(arr[i].bc)m[arr[i].bc]=arr[i];}return m;}
+  var whMap=mapFor(0);                                   // srcData[0] = warehouse
+  var srcMapByKey={};                                    // other branches by their key (.si)
+  srcMapByKey[SOURCES[1].si]=mapFor(1);
+  srcMapByKey[SOURCES[2].si]=mapFor(2);
+  var destByBc={};destData.forEach(function(p){if(p.bc)destByBc[p.bc]=p;}); // THIS branch by bc
+  function qtyOfKey(key,bc){
+    if(key===DEST_ID){var d=destByBc[bc];return d&&typeof d.qty==='number'?d.qty:0;}
+    var m=srcMapByKey[key],x=m&&m[bc];return x&&typeof x.qty==='number'?x.qty:0;
+  }
+  var allKeys=[0,1,2];
   var rows=[];
   destData.forEach(function(p){
     if(!p.bc||!p.nm)return;
-    // Department filter: only AFRO BEAUTY PRODUCTS and AFRO PRODUCTS 2
-    var dept=(p.dp||'').toUpperCase();
-    if(dept!=='AFRO BEAUTY PRODUCTS'&&dept!=='AFRO PRODUCTS 2')return;
-    if(p.qty<settings.min)return;                   // overstock rule
-    var extra=p.qty-settings.buffer;
-    if(extra<=0)return;
-    var wh=whMap[p.bc];
-    if(wh&&wh.qty>0)return;                          // warehouse can supply — skip
-    var b1=b1Map[p.bc]||{qty:0};
-    var b2=b2Map[p.bc]||{qty:0};
-    // Branch is eligible to receive only if its qty is at or below destThresh
-    var b1Eligible=(b1.qty<=settings.destThresh);
-    var b2Eligible=(b2.qty<=settings.destThresh);
-    if(!b1Eligible&&!b2Eligible)return;
-    var need1=b1Eligible?Math.max(0,b1Tgt-b1.qty):0;
-    var need2=b2Eligible?Math.max(0,b2Tgt-b2.qty):0;
-    if(need1<=0&&need2<=0)return;
-    var slots=[
-      {name:b1Name,short:SOURCES[1].short,color:SOURCES[1].color,qty:b1.qty,need:need1},
-      {name:b2Name,short:SOURCES[2].short,color:SOURCES[2].color,qty:b2.qty,need:need2}
-    ];
-    slots.sort(function(a,b){return a.qty-b.qty;});
-    var remaining=extra;
-    var alloc=[];
-    slots.forEach(function(s){
-      if(s.need<=0||remaining<=0){alloc.push(Object.assign({},s,{send:0}));return;}
-      var send=Math.min(s.need,remaining);
-      remaining-=send;
-      alloc.push(Object.assign({},s,{send:send}));
+    if(typeof isDisc==='function'&&isDisc(p.bc))return;              // discontinued — never transfer out
+    var thisQty=(typeof p.qty==='number'?p.qty:0);
+    var spareHere=Math.max(0,thisQty-FILL_TARGET);
+    var wq=(whMap[p.bc]&&whMap[p.bc].qty)||0;
+    var qtyByKey={};allKeys.forEach(function(k){qtyByKey[k]=qtyOfKey(k,p.bc);});
+    var plans=allocItem(qtyByKey,wq);                               // one global pass — identical on every page
+    var allocs=[];
+    allKeys.filter(function(k){return k!==DEST_ID;}).sort(function(a,b){return a-b;}).forEach(function(destKey){
+      var plan=plans[destKey];if(!plan)return;                       // dest didn't need stock
+      var thisSend=plan.shops[DEST_ID]||0;
+      if(thisSend<=0)return;                                         // nothing for THIS branch to pack
+      var contribs=[];
+      if(plan.warehouse>0)contribs.push({short:'WH',color:'#a78bfa',amt:plan.warehouse,isWH:true});
+      Object.keys(plan.shops).map(Number).sort(function(a,b){return a-b;}).forEach(function(kk){contribs.push({short:BR_META[kk].short,color:BR_META[kk].color,amt:plan.shops[kk],isThis:kk===DEST_ID});});
+      allocs.push({key:destKey,name:BR_META[destKey].name,short:BR_META[destKey].short,color:BR_META[destKey].color,
+                   qty:qtyByKey[destKey],need:plan.need,send:thisSend,wh:plan.warehouse,contribs:contribs,
+                   shortBy:plan.shortBy});
     });
-    var totalSent=alloc.reduce(function(a,b){return a+b.send;},0);
-    if(totalSent===0)return;
-    rows.push({
-      bc:p.bc, nm:p.nm, sz:p.sz, dp:p.dp||'General', pr:p.pr,
-      hereQty:p.qty, extra:extra, allocs:alloc, totalSent:totalSent, kept:extra-totalSent
-    });
+    if(!allocs.length)return;
+    var totalSent=allocs.reduce(function(a,b){return a+b.send;},0);
+    rows.push({bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',pr:p.pr,hereQty:thisQty,extra:spareHere,
+               allocs:allocs,totalSent:totalSent,kept:Math.max(0,spareHere-totalSent)});
   });
-  rows.sort(function(a,b){
-    if(a.dp!==b.dp)return a.dp<b.dp?-1:1;
-    return a.nm<b.nm?-1:1;
-  });
+  rows.sort(function(a,b){if(a.dp!==b.dp)return a.dp<b.dp?-1:1;return a.nm<b.nm?-1:1;});
   return rows;
 }
 
@@ -1017,37 +1078,30 @@ function renderOverstock(){
   }
   var rows=computeOverstockRows();
   if(rows&&rows.length&&wmLayoutOn())rows.sort(function(a,b){var ra=wmRank(a.nm),rb=wmRank(b.nm);return ra!==rb?ra-rb:(a.nm<b.nm?-1:1);});
-  // ALWAYS render the settings panel + header, even when no overstock — so
-  // the user can still adjust thresholds when nothing is showing.
-  var __s=loadOverSettings();
-  var shellHeader='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock to redistribute</div>'+
-    '<div class="src-rule" style="color:var(--sub)">Pick a destination box to pack. Adjust thresholds below.</div></div></div>'+'<div style="margin:8px 0"><input id="over-search" type="search" value="'+(overSearch||'').replace(/"/g,'&quot;')+'" oninput="overSearch=this.value;overLiveFilter()" placeholder="🔍 Search barcode or destination…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:15px"></div>'+
+  // Always render the settings panel + header, even when nothing is showing.
+  var shellHeader='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">🔄 Overstock — top up empty shelves</div>'+
+    '<div class="src-rule" style="color:var(--sub)">Warehouse first, then shops by spare, Roundhay last. Pick a destination box to pack.</div></div></div>'+
+    '<div style="margin:8px 0"><input id="over-search" type="search" value="'+(overSearch||'').replace(/"/g,'&quot;')+'" oninput="overSearch=this.value;overLiveFilter()" placeholder="🔍 Search barcode or destination…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:15px"></div>'+
     '<div class="over-settings">'+
-    '<div class="over-setting"><div class="over-setting-lbl">Min stock here</div>'+
-      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="min" data-d="-1">−</button>'+
-      '<span class="over-set-val" id="over-set-min">'+__s.min+'</span>'+
-      '<button class="over-set-btn" data-set="min" data-d="1">+</button></div></div>'+
-    '<div class="over-setting"><div class="over-setting-lbl">Keep buffer</div>'+
-      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="buffer" data-d="-1">−</button>'+
-      '<span class="over-set-val" id="over-set-buffer">'+__s.buffer+'</span>'+
-      '<button class="over-set-btn" data-set="buffer" data-d="1">+</button></div></div>'+
-    '<div class="over-setting"><div class="over-setting-lbl">Dest ≤</div>'+
-      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="destThresh" data-d="-1">−</button>'+
-      '<span class="over-set-val" id="over-set-destThresh">'+__s.destThresh+'</span>'+
-      '<button class="over-set-btn" data-set="destThresh" data-d="1">+</button></div></div>'+
+    '<div class="over-setting"><div class="over-setting-lbl">Needs stock when qty ≤</div>'+
+      '<div class="over-setting-ctl"><button class="over-set-btn" data-set="trigger" data-d="-1">−</button>'+
+      '<span class="over-set-val" id="over-set-trigger">'+FILL_TRIGGER+'</span>'+
+      '<button class="over-set-btn" data-set="trigger" data-d="1">+</button></div></div>'+
+    '<div class="over-setting"><div class="over-setting-lbl">Top-up to</div>'+
+      '<div class="over-setting-ctl"><span class="over-set-val">'+FILL_TARGET+'</span></div></div>'+
     '</div>'+
-    '<div class="over-reset-row"><button class="over-reset-btn">↺ Reset to defaults (12 / 7 / 2)</button></div>'+'<div style="margin-top:6px"><button onclick="overToggleEx()" style="border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">🚫 Excluded items ('+Object.keys(overNS).length+')</button></div>';
+    '<div class="over-reset-row"><button class="over-reset-btn">↺ Reset trigger to 0</button></div>'+
+    '<div style="margin-top:6px"><button onclick="overToggleEx()" style="border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">🚫 Excluded items ('+Object.keys(overNS).length+')</button></div>';
 
-  if(window.__overShowEx){el.innerHTML=shellHeader+overExcludedHTML();setProg(0,0,'Excluded items');return;}
+  if(window.__overShowEx){el.innerHTML=shellHeader+overExcludedHTML();setProg(0,0,'Excluded items');wireOverSubTabs();return;}
   if(!rows||!rows.length){
-    el.innerHTML=shellHeader+'<div class="empty" style="margin-top:8px">No overstock matches current settings — adjust thresholds above or check back later ✓</div>';
-    setProg(0,0,'No overstock');
+    el.innerHTML=shellHeader+'<div class="empty" style="margin-top:8px">No branch needs topping up at this trigger — adjust “Needs stock when qty ≤” above or check back later ✓</div>';
+    setProg(0,0,'Nothing to redistribute');
     wireOverSubTabs();
     return;
   }
 
-  // Build per-destination row lists. SOURCES[1] and SOURCES[2] are the
-  // two other branches. An item appears under each destination it ships to.
+  // One sub-tab per OTHER branch (the destinations THIS branch can pack for).
   var destBranches=[
     {short:SOURCES[1].short, name:SOURCES[1].name, color:SOURCES[1].color, rows:[]},
     {short:SOURCES[2].short, name:SOURCES[2].name, color:SOURCES[2].color, rows:[]}
@@ -1064,14 +1118,12 @@ function renderOverstock(){
     });
   });
 
-  // If sub-tab pointer is stale or unset, pick the first non-empty branch
   if(!overSubTab||!destBranches.some(function(b){return b.short===overSubTab;})){
     overSubTab=(destBranches[0].rows.length>0?destBranches[0].short:destBranches[1].short);
   }
 
   var __q=(overSearch||'').trim().toLowerCase(), __isDestQ=false;
   if(__q){destBranches.forEach(function(b){if(b.short.toLowerCase().indexOf(__q)>=0||b.name.toLowerCase().indexOf(__q)>=0){overSubTab=b.short;__isDestQ=true;}});}
-  // Header + sub-tab pills
   var html=shellHeader+wmLayBar();
   html+='<div class="over-subtabs">';
   destBranches.forEach(function(b){
@@ -1084,7 +1136,6 @@ function renderOverstock(){
   });
   html+='</div>';
 
-  // Active branch's rows
   var active=destBranches.filter(function(b){return b.short===overSubTab;})[0];
   window.__overDest=destBranches.map(function(b){return {short:b.short,name:b.name};});window.__overActive=active?active.short:'';
   if(!active||active.rows.length===0){
@@ -1095,14 +1146,9 @@ function renderOverstock(){
     return;
   }
 
-  // Group by department
   var __arows=active.rows.filter(function(x){if(!__q||__isDestQ)return true;return (x.row.bc.toLowerCase().indexOf(__q)>=0)||((x.row.nm||'').toLowerCase().indexOf(__q)>=0);});
   var byDept={};
-  __arows.forEach(function(x){
-    var d=x.row.dp||'General';
-    if(!byDept[d])byDept[d]=[];
-    byDept[d].push(x);
-  });
+  __arows.forEach(function(x){var d=x.row.dp||'General';if(!byDept[d])byDept[d]=[];byDept[d].push(x);});
   if(Object.keys(byDept).length===0){html+='<div class="empty" style="margin-top:12px">No matches.</div>';}
 
   var totalCount=__arows.length;
@@ -1120,6 +1166,7 @@ function renderOverstock(){
       var tickKey='o_'+r.bc+'_'+active.short;
       var isDone=!!overTx[tickKey];
       var qtyTag=a.qty<=0?'<span style="color:var(--red);font-weight:600">qty '+a.qty+'</span>':'<span style="color:var(--sub)">qty '+a.qty+'</span>';
+      var fillLine='Filled by '+a.contribs.map(function(c){return '<b style="color:'+c.color+'">'+c.short+' '+c.amt+'</b>'+(c.isThis?' (you)':'');}).join(' · ')+(a.shortBy>0?' · <span style="color:var(--red)">still short '+a.shortBy+'</span>':'');
       html+='<div class="over-card'+(isDone?' fixed':'')+'" data-bc="'+r.bc+'" data-dest="'+active.short+'">'+
         '<div class="over-img">'+imgEl(r.bc,46)+'</div>'+
         '<div class="over-body">'+
@@ -1127,15 +1174,20 @@ function renderOverstock(){
           '<div class="over-bc item-bc">'+r.bc+'</div>'+
           '<div class="over-tags">'+
             '<span class="itag itag-info">Here: '+r.hereQty+'</span>'+
-            '<span class="itag itag-info">Extra: '+r.extra+'</span>'+
+            '<span class="itag itag-info">Spare: '+r.extra+'</span>'+
             (r.pr>0?'<span class="itag itag-info">£'+r.pr.toFixed(2)+'</span>':'')+
           '</div>'+
           '<div class="over-allocs">'+
             '<div class="over-alloc"><span class="over-arrow" style="color:'+a.color+'">→ '+a.name+'</span>'+
               '<span class="over-send">send '+a.send+'</span>'+
-              '<span class="over-bqty">('+qtyTag+')</span></div>'+
+              '<span class="over-bqty">('+qtyTag+')</span>'+
+              '<span class="over-wh" style="margin-left:6px;background:#ede9fe;color:#5b21b6;border-radius:6px;padding:2px 7px;font-weight:700;font-size:11px">W/H: '+a.wh+'</span></div>'+
+            '<div class="over-fill" style="margin-top:4px;font-size:11px;color:var(--sub)">'+fillLine+'</div>'+
           '</div>'+
-          '<div class="over-ns-row" style="margin-top:8px"><button class="overns-btn" data-bc="'+r.bc+'" data-dest="'+active.short+'" style="border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">\u2715 Doesn\u2019t stock</button></div>'+
+          '<div class="over-ns-row" style="margin-top:8px">'+
+            (typeof setDisc==='function'?'<button class="disc-btn" data-bc="'+r.bc+'" style="border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer;margin-right:6px">\uD83D\uDEAB Discontinued \u2014 don\u2019t send</button>':'')+
+            '<button class="overns-btn" data-bc="'+r.bc+'" data-dest="'+active.short+'" style="border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:9px;padding:7px 11px;font-weight:700;font-size:12px;cursor:pointer">\u2715 Doesn\u2019t stock</button>'+
+          '</div>'+
         '</div>'+
         '<div class="over-right">'+
           '<div class="over-qty">'+a.send+'</div>'+
@@ -1151,6 +1203,7 @@ function renderOverstock(){
   el.innerHTML=html;
   wireOverSubTabs();
   el.querySelectorAll('.overns-btn').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();overSetNS(this.dataset.bc,this.dataset.dest);});});
+  el.querySelectorAll('.disc-btn').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();if(typeof setDisc!=='function')return;var bc=this.dataset.bc;var card=this.closest('.over-card');var nm=card&&card.querySelector('.over-name')?card.querySelector('.over-name').textContent:'';setDisc(bc,nm,true);renderOverstock();});});
   if(overSearch)overLiveFilter();
 
   el.querySelectorAll('.over-tick').forEach(function(btn){
@@ -1166,7 +1219,6 @@ function renderOverstock(){
       this.querySelector('svg').setAttribute('stroke',nowDone?'#fff':'var(--border)');
       var tot=el.querySelectorAll('.over-tick').length;
       var dn=el.querySelectorAll('.over-tick.on').length;
-      // Update the active sub-tab count badge too
       var activePill=el.querySelector('.over-subtab.on .over-sub-cnt');
       if(activePill)activePill.textContent=dn+'/'+tot;
       setProg(tot,dn,dn+' of '+tot+' packed');
@@ -1177,35 +1229,19 @@ function renderOverstock(){
 
 function wireOverSubTabs(){
   document.querySelectorAll('.over-subtab').forEach(function(t){
-    t.addEventListener('click',function(){
-      overSubTab=this.dataset.sub;
-      renderOverstock();
-    });
+    t.addEventListener('click',function(){overSubTab=this.dataset.sub;renderOverstock();});
   });
-  // Wire settings buttons
+  // Trigger dial (the only adjustable setting now; resets to 0 on reload)
   document.querySelectorAll('.over-set-btn').forEach(function(b){
     b.addEventListener('click',function(){
-      var k=this.dataset.set, d=parseInt(this.dataset.d);
-      var cur=loadOverSettings();
-      var newVal=Math.max(0,cur[k]+d);
-      // Cap top sensibly
-      if(k==='min'&&newVal>999)newVal=999;
-      if(k==='buffer'&&newVal>999)newVal=999;
-      if(k==='destThresh'&&newVal>99)newVal=99;
-      saveOverSetting(k,newVal);
+      if(this.dataset.set!=='trigger')return;
+      var d=parseInt(this.dataset.d,10)||0;
+      FILL_TRIGGER=Math.max(0,Math.min(99,FILL_TRIGGER+d));
       renderOverstock();
     });
   });
-  // Wire reset button
   var resetBtn=document.querySelector('.over-reset-btn');
-  if(resetBtn){
-    resetBtn.addEventListener('click',function(){
-      Object.keys(OVER_SETTINGS_DEFAULTS).forEach(function(k){
-        saveOverSetting(k,OVER_SETTINGS_DEFAULTS[k]);
-      });
-      renderOverstock();
-    });
-  }
+  if(resetBtn){resetBtn.addEventListener('click',function(){FILL_TRIGGER=0;renderOverstock();});}
 }
 
 
