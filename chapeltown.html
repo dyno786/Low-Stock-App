@@ -3230,6 +3230,7 @@ img.thumb{cursor:zoom-in}
 .vrow2:last-child{border-bottom:none}
 .vrow2 input{width:18px;height:18px;accent-color:var(--purple);flex:0 0 auto}
 .vmore{padding:9px 11px;font-size:11.5px;color:var(--sub);text-align:center}
+.dpk-new{border:1px dashed var(--purple)!important;color:var(--purpletxt);font-weight:700}
 
 .hdr{display:none}
 .scopewrap{display:none}
@@ -3325,10 +3326,9 @@ var ORDERS_STATE_KEY='cc_orders_'+__BR;
 var syncOk=true, syncPend=null, hydrated=false;
 async function syncLoad(k){try{var r=await fetch('/api/ticks?key='+encodeURIComponent(k),{signal:AbortSignal.timeout(3500)});var d=await r.json();if(d&&d.fallback){syncOk=false;return null;}return (d&&d.data)||null;}catch(e){syncOk=false;return null;}}
 function syncSave(k,v){if(!syncOk)return;if(syncPend)clearTimeout(syncPend);syncPend=setTimeout(function(){fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,value:v})}).catch(function(){});syncPend=null;},400);}
-function ordersSnapshot(){return {edited:edited,picked:picked,exCol:exCol,exProd:exProd,openProd:openProd,MIN:MIN,MAX:MAX,BOX:BOX,UNIT:UNIT,BRAND:BRAND,DEPT:DEPT,CAT:CAT,customBrands:customBrands};}
+function ordersSnapshot(){return {edited:edited,picked:picked,exCol:exCol,exProd:exProd,openProd:openProd,MIN:MIN,MAX:MAX,BOX:BOX,UNIT:UNIT,BRAND:BRAND,DEPT:DEPT,CAT:CAT};}
 function ordersApplyState(st){
   if(!st||typeof st!=='object')return;
-  if(Array.isArray(st.customBrands)){customBrands=st.customBrands;try{saveCustom();}catch(e){}applyCustomBrands();}
   if(st.edited&&typeof st.edited==='object')edited=st.edited;
   if(st.picked&&typeof st.picked==='object')picked=st.picked;
   if(st.exCol&&typeof st.exCol==='object')exCol=st.exCol;
@@ -3361,14 +3361,26 @@ var BRANDS=[
 ];
 // suppliers added by the user on the page (tag-based). Persisted on the live site; session-only if storage is blocked.
 var customBrands=[];
-var DEPTS=[{k:'synthetic',lbl:'Synthetic hair'},{k:'dyes',lbl:'Hair dyes'},{k:'makeup',lbl:'Makeup'}];
+var BASE_DEPTS=[{k:'synthetic',lbl:'Synthetic hair'},{k:'dyes',lbl:'Hair dyes'},{k:'makeup',lbl:'Makeup'}];
+var extraCats=[];                       // custom categories (shared)
+var DEPTS=BASE_DEPTS.slice();
+function rebuildDepts(){DEPTS=BASE_DEPTS.slice();extraCats.forEach(function(c){if(c&&c.k&&c.lbl&&!DEPTS.some(function(d){return d.k===c.k;}))DEPTS.push({k:c.k,lbl:c.lbl});});}
 var DEPT='synthetic';
 var vendorCache=null, pickVendors={};
 function deptOf(b){return (b&&b.dept)||'synthetic';}   // built-in braids suppliers => synthetic
 function deptLabel(k){for(var i=0;i<DEPTS.length;i++)if(DEPTS[i].k===k)return DEPTS[i].lbl;return k;}
-function loadCustom(){try{var s=localStorage.getItem('cc_custom_sup');customBrands=s?JSON.parse(s):[];}catch(e){customBrands=[];}}
-function saveCustom(){try{localStorage.setItem('cc_custom_sup',JSON.stringify(customBrands));}catch(e){}}
+/* ===== SHARED catalog: custom categories + suppliers, identical across ALL branches and orders.html =====
+   One /api/ticks key (cc_catalog) holds {cats:[{k,lbl}], suppliers:[{k,label,tag,vendors,dept}]}.
+   localStorage is just a fast cache; the shared store is the source of truth. */
+var CATALOG_KEY='cc_catalog', __catOk=true, __catPend=null;
+async function catSyncLoad(){try{var r=await fetch('/api/ticks?key='+CATALOG_KEY,{signal:AbortSignal.timeout(3500)});var d=await r.json();if(d&&d.fallback){__catOk=false;return null;}return (d&&d.data)||null;}catch(e){__catOk=false;return null;}}
+function catSyncSave(obj){if(!__catOk)return;if(__catPend)clearTimeout(__catPend);__catPend=setTimeout(function(){fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:CATALOG_KEY,value:obj})}).catch(function(){});__catPend=null;},300);}
+function catApply(obj){if(!obj||typeof obj!=='object')return;if(Array.isArray(obj.cats))extraCats=obj.cats.filter(function(c){return c&&c.k&&c.lbl;});if(Array.isArray(obj.suppliers))customBrands=obj.suppliers;rebuildDepts();}
+function loadCustom(){try{var s=localStorage.getItem('cc_catalog');if(s){catApply(JSON.parse(s));}else{var old=localStorage.getItem('cc_custom_sup');if(old){customBrands=JSON.parse(old)||[];}}}catch(e){}rebuildDepts();}
+function saveCustom(){var obj={cats:extraCats,suppliers:customBrands};try{localStorage.setItem('cc_catalog',JSON.stringify(obj));}catch(e){}catSyncSave(obj);}
 function applyCustomBrands(){customBrands.forEach(function(c){if(!BRANDS.some(function(b){return b.k===c.k;}))BRANDS.push({k:c.k,label:c.label,tag:c.tag,vendors:c.vendors||[],dept:c.dept||'synthetic',custom:true});});}
+function addCategory(name){name=(name||'').trim();if(!name)return null;for(var i=0;i<DEPTS.length;i++){if(DEPTS[i].lbl.toLowerCase()===name.toLowerCase())return DEPTS[i].k;}var k='cat_'+name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')+Math.random().toString(36).slice(2,5);extraCats.push({k:k,lbl:name});rebuildDepts();saveCustom();return k;}
+function catBoot(){catSyncLoad().then(function(obj){if(obj){catApply(obj);try{localStorage.setItem('cc_catalog',JSON.stringify({cats:extraCats,suppliers:customBrands}));}catch(e){}applyCustomBrands();if(typeof render==='function')render();}}).catch(function(){});}
 var DATA={
   xpression:[
     {nm:'Outre X-pression Lil Looks Passion Waterwave Feed Twist',active:true,lens:[
@@ -3775,8 +3787,10 @@ var editingSup=null, supDept='synthetic';
 function supMode(editKey){editingSup=editKey||null;
   document.getElementById('sup-save').textContent=editingSup?'Save changes':'Add supplier';
   document.getElementById('sup-cancel').textContent=editingSup?'Cancel edit':'Cancel';}
-function renderDeptPick(){document.getElementById('sup-dept').innerHTML=DEPTS.map(function(d){return '<div class="dpk'+(supDept===d.k?' on':'')+'" data-d="'+d.k+'">'+esc(d.lbl)+'</div>';}).join('');
-  document.querySelectorAll('#sup-dept .dpk').forEach(function(el){el.addEventListener('click',function(){supDept=this.getAttribute('data-d');renderDeptPick();});});}
+function renderDeptPick(){document.getElementById('sup-dept').innerHTML=DEPTS.map(function(d){return '<div class="dpk'+(supDept===d.k?' on':'')+'" data-d="'+d.k+'">'+esc(d.lbl)+'</div>';}).join('')+'<div class="dpk dpk-new" data-new="1">＋ New category</div>';
+  document.querySelectorAll('#sup-dept .dpk').forEach(function(el){el.addEventListener('click',function(){
+    if(this.getAttribute('data-new')){var nm=window.prompt('New category name (e.g. Hair dyes, Wigs, Skincare):');if(nm&&nm.trim()){var k=addCategory(nm);if(k)supDept=k;}renderDeptPick();return;}
+    supDept=this.getAttribute('data-d');renderDeptPick();});});}
 function loadVendors(cb){
   if(vendorCache){cb(vendorCache);return;}
   if(!LIVE){vendorCache=[];cb(vendorCache);return;}
@@ -3861,6 +3875,7 @@ function init(){
 
 
 init();
+catBoot();
 
 
 </script>
