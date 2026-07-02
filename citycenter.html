@@ -1343,12 +1343,14 @@ function renderOrders(){
 }
 
 
-// ── PICKING / SHOPIFY ORDERS (full/mixed pick; branch tabs; tap image = full details; rings) ──
-// Unfulfilled orders as a pick list for THIS branch. Full vs Mixed; per-order branch tabs show
-// what each branch holds; tapping an item photo opens full details (enlarged image + variant +
-// per-branch stock). Ready-for-pickup and refund-pending orders are hidden; order tags shown.
+// ── PICKING / SHOPIFY ORDERS (each item assigned to ONE branch by priority; rings on new) ──
+// Shows only the items THIS branch needs to pick. Every item is assigned to the branch that
+// should pick it: Roundhay 1st, Chapeltown 2nd, City Centre 3rd (a branch that can fully supply
+// the item wins by that order; otherwise any branch that holds some, same order). So an item only
+// in stock at Roundhay shows in Roundhay only. Ready-for-pickup / fulfilled / refunded orders are
+// not shown. Tap a photo for full details (variant + per-branch stock). Rings on new orders.
 var ORDERS_API='/api/orders';
-var ordData=[], ordErr='', ordHttp=0, ordLoading=false, ordLastAt=0, ordBranchView={};
+var ordData=[], ordErr='', ordHttp=0, ordLoading=false, ordLastAt=0;
 var ordAlertsOn=false, ordPrimed=false, ordPollTimer=null, ordClockTimer=null, ordRinging=false, ordRingTimer=null, ordAudioCtx=null;
 var ORD_SEEN_KEY='cc_ord_seen'+DEST_ID, ORD_TICK_KEY='cc_pick_ticks'+DEST_ID;
 var ordSeen=[];try{ordSeen=JSON.parse(localStorage.getItem(ORD_SEEN_KEY)||'[]');}catch(e){}
@@ -1359,9 +1361,9 @@ function ordEsc(s){return String(s==null?'':s).replace(/[<>&]/g,function(c){retu
 function ordAttr(s){return String(s==null?'':s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 function onPick(){return typeof view!=='undefined'&&view==='pick';}
 var _obm=(typeof BR_META!=='undefined')?BR_META:{0:{short:'Chap',name:'Chapeltown',color:'#fb923c'},1:{short:'City',name:'City Centre',color:'#16a34a'},2:{short:'Roun',name:'Roundhay',color:'#2563eb'}};
+var PICK_PRIORITY=[2,0,1];               // Roundhay 1st, Chapeltown 2nd, City Centre 3rd
 function otherKeys(){var a=[];if(SOURCES[1])a.push(SOURCES[1].si);if(SOURCES[2])a.push(SOURCES[2].si);a.push(3);return a.filter(function(k){return k!==DEST_ID;});}
 function ordBranchName(k){return k===3?'Warehouse':(_obm[k]?_obm[k].name:'Branch '+k);}
-function ordBranchShort(k){return k===3?'W/H':(_obm[k]?_obm[k].short:'B'+k);}
 function ordBranchColor(k){return k===3?'#0891b2':(_obm[k]?_obm[k].color:'#64748b');}
 
 // ---- stock across the loaded feeds (incl. warehouse=key 3) ----
@@ -1375,25 +1377,28 @@ function ordIndex(){
   return byKey;
 }
 function ordQtyAt(byKey,bc,k){var x=bc&&byKey[k]&&byKey[k][String(bc).trim()];return x&&typeof x.qty==='number'?x.qty:0;}
+function ordReady(){return !!(destLoaded&&srcLoaded[1]&&srcLoaded[2]);}   // both other branches + this one
 
-// ---- per-order analysis (this branch + per-branch holdings) ----
-function ordAnalyze(o,byKey){
-  byKey=byKey||ordIndex()||{};
-  var keys=[DEST_ID].concat(otherKeys());
-  var rows=(o.items||[]).map(function(it,idx){
-    var byBranch={};keys.forEach(function(k){byBranch[k]=it.barcode?ordQtyAt(byKey,it.barcode,k):0;});
-    var here=byBranch[DEST_ID]||0, need=Math.max(0,it.qty-here), from=null,fq=0;
-    if(need>0)otherKeys().forEach(function(k){if((byBranch[k]||0)>fq){fq=byBranch[k];from=k;}});
-    return {it:it,idx:idx,here:here,need:need,from:from,byBranch:byBranch};
+// ---- per-item branch assignment by priority ----
+function ordAssignItem(byKey,bc,qty){
+  var i,k;
+  for(i=0;i<PICK_PRIORITY.length;i++){k=PICK_PRIORITY[i];if(qty>0&&ordQtyAt(byKey,bc,k)>=qty)return k;} // can fully supply
+  for(i=0;i<PICK_PRIORITY.length;i++){k=PICK_PRIORITY[i];if(ordQtyAt(byKey,bc,k)>0)return k;}            // holds some
+  return PICK_PRIORITY[0];                                                                                // nobody has it -> top priority
+}
+function ordForBranch(o,byKey){
+  var mine=[],elsewhere=0;
+  (o.items||[]).forEach(function(it,idx){
+    var k=ordAssignItem(byKey,it.barcode,it.qty);
+    if(k===DEST_ID)mine.push({it:it,idx:idx,here:it.barcode?ordQtyAt(byKey,it.barcode,DEST_ID):0});
+    else elsewhere++;
   });
-  var missing=rows.filter(function(r){return r.need>0;});
-  return {rows:rows,missing:missing,full:missing.length===0};
+  return {mine:mine,elsewhere:elsewhere};
 }
 function ordTickKey(o,idx,bc){return (bc||('i'+idx));}
 function ordItemDone(o,idx,bc){var t=ordTicks[o.id];return !!(t&&t[ordTickKey(o,idx,bc)]);}
 function ordToggle(oid,key){if(!ordTicks[oid])ordTicks[oid]={};ordTicks[oid][key]=!ordTicks[oid][key];if(!ordTicks[oid][key])delete ordTicks[oid][key];ordSaveTicks();if(onPick())renderOrdersInbox();}
-function ordOrderDone(o){var a=(o.items||[]);if(!a.length)return false;for(var i=0;i<a.length;i++){if(!ordItemDone(o,i,a[i].barcode))return false;}return true;}
-function ordSetBranch(oid,k){ordBranchView[oid]=parseInt(k,10);if(onPick())renderOrdersInbox();}
+function ordBranchDone(o,fb){if(!fb.mine.length)return false;for(var i=0;i<fb.mine.length;i++){if(!ordItemDone(o,fb.mine[i].idx,fb.mine[i].it.barcode))return false;}return true;}
 
 // ---- full details modal (enlarged image + variant + what each branch holds) ----
 function ordZoom(bc,nm){try{var u=(typeof imgs!=='undefined'&&imgs[bc])?imgs[bc]:'';if(u&&typeof openImg==='function')openImg(u,nm||'');}catch(e){}}
@@ -1436,10 +1441,10 @@ function ordStopRing(){ordRinging=false;if(ordRingTimer){clearTimeout(ordRingTim
 function ordTestRing(){if(!ordAudioCtx){ordEnableAlerts();}ordRinging=true;ordRingLoop();setTimeout(ordStopRing,1800);}
 function ordNotify(n){try{if('Notification' in window && Notification.permission==='granted')new Notification('🔔 '+n+' new order'+(n>1?'s':'')+' — '+_obm[DEST_ID].name,{body:'Open Picking',tag:'cc-order'});}catch(e){}}
 
-// ---- poll (unfulfilled; not refunded/voided; not ready-for-pickup / refund-pending by tag) ----
+// ---- poll: keep ONLY genuinely unfulfilled; drop ready-for-pickup / refunded / tagged ----
 function ordTagHide(o){var t=(o.tags||[]).map(function(x){return String(x).toLowerCase();}).join(' | ');
-  return /ready.?(for)?.?pick|ready.?to.?collect|picked.?up|awaiting.?collection|collected/.test(t) || /refund.?pending|pending.?refund/.test(t);}
-function ordKeep(o){return o.fulfillment!=='FULFILLED' && ['REFUNDED','PARTIALLY_REFUNDED','VOIDED','EXPIRED'].indexOf(o.financial)<0 && !ordTagHide(o);}
+  return /ready.?(for)?.?pick|ready.?to.?collect|picked.?up|awaiting.?collection|collect(ed|ion)|refund.?pending|pending.?refund/.test(t);}
+function ordKeep(o){return o.fulfillment==='UNFULFILLED' && ['REFUNDED','PARTIALLY_REFUNDED','VOIDED','EXPIRED'].indexOf(o.financial)<0 && !ordTagHide(o);}
 function ordPoll(){
   ordLoading=true;if(onPick())renderOrdersInbox();
   fetch(ORDERS_API,{cache:'no-store'}).then(function(r){ordHttp=r.status;return r.text().then(function(tx){
@@ -1457,7 +1462,7 @@ function ordPoll(){
   });}).catch(function(e){ordLoading=false;ordErr='Network error reaching /api/orders: '+((e&&e.message)||e);if(onPick())renderOrdersInbox();});
 }
 function startOrdPoller(){if(ordPollTimer)return;ordPoll();ordPollTimer=setInterval(ordPoll,30000);}
-function ordActiveCount(){return ordData.filter(function(o){return !ordOrderDone(o);}).length;}
+function ordActiveCount(){var byKey=ordIndex();if(!byKey||!ordReady())return 0;var n=0;ordData.forEach(function(o){var fb=ordForBranch(o,byKey);if(fb.mine.length&&!ordBranchDone(o,fb))n++;});return n;}
 function ordUpdateBadge(){try{var tab=document.querySelector('.vtab[data-v="pick"]');if(!tab)return;var n=ordActiveCount();tab.innerHTML='📦 Picking'+(n?' <span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800">'+n+'</span>':'');}catch(e){}}
 
 // ---- delivery countdown ----
@@ -1472,52 +1477,44 @@ function startOrdClock(){if(ordClockTimer)return;ordClockTimer=setInterval(funct
 var ordCompact=true;try{ordCompact=localStorage.getItem('cc_pick_compact')!=='0';}catch(e){}
 function ordSetView(v){ordCompact=!!v;try{localStorage.setItem('cc_pick_compact',ordCompact?'1':'0');}catch(e){}if(onPick())renderOrdersInbox();}
 function ordTagsHTML(o){if(!o.tags||!o.tags.length)return '';return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'+o.tags.map(function(t){var lc=String(t).toLowerCase(),amber=/refund|hold|urgent|vip|priority/.test(lc);return '<span style="background:'+(amber?'#b453091f':'#6d28d91a')+';color:'+(amber?'#b45309':'#6d28d9')+';border:1px solid '+(amber?'#b4530955':'#6d28d955')+';border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700">'+ordEsc(t)+'</span>';}).join('')+'</div>';}
-function ordBranchTabs(o){
-  var keys=[DEST_ID].concat(otherKeys());var cur=(ordBranchView[o.id]!=null)?ordBranchView[o.id]:DEST_ID;
-  return '<div style="display:flex;gap:5px;margin:7px 0 4px">'+keys.map(function(k){var on=(k===cur),c=ordBranchColor(k);return '<button class="ordbt" data-o="'+ordAttr(o.id)+'" data-k="'+k+'" style="flex:1;border:1px solid '+(on?c:'#d1d5db')+';background:'+(on?c:'#fff')+';color:'+(on?'#fff':'#374151')+';border-radius:8px;padding:5px 4px;font-size:11.5px;font-weight:700;cursor:pointer">'+ordBranchShort(k)+'</button>';}).join('')+'</div>';
-}
-function ordItemRow(o,r,cur){
+function ordItemRow(o,r){
   var it=r.it,done=ordItemDone(o,r.idx,it.barcode),key=ordTickKey(o,r.idx,it.barcode);
   var imgFn=(typeof imgEl==='function')?imgEl:function(){return '';};
   var img='<div onclick="ordDetails(\''+ordAttr(o.id)+'\','+r.idx+')" style="flex:none;width:56px;height:56px;border-radius:9px;overflow:hidden;background:#f3f3f6;display:flex;align-items:center;justify-content:center;cursor:zoom-in">'+imgFn(it.barcode,56)+'</div>';
   var tick='<button class="pick-tick" data-o="'+ordAttr(o.id)+'" data-k="'+ordAttr(key)+'" style="flex:none;width:30px;height:30px;border-radius:8px;border:2px solid '+(done?'#16a34a':'#cbd5e1')+';background:'+(done?'#16a34a':'#fff')+';color:#fff;font-weight:900;cursor:pointer;font-size:16px;line-height:1">'+(done?'✓':'')+'</button>';
-  var avail,acol;
-  if(cur===DEST_ID){acol=r.need>0?'#b45309':'#16a34a';avail=done?'collected':(r.need>0?('collect '+r.need+' from '+(r.from!=null?ordBranchName(r.from):'another branch')):'in stock here');}
-  else{var q=r.byBranch[cur]||0;acol=q>0?'#16a34a':'#94a3b8';avail=ordBranchName(cur)+' holds '+q;}
+  var short=r.here<it.qty, acol=done?'#16a34a':(short?'#b45309':'#16a34a'), note=done?'collected':(short?('only '+r.here+' here / '+it.qty+' needed'):'in stock here');
   var strike=done?';text-decoration:line-through;color:#94a3b8':'';
   var mid;
   if(ordCompact){
     mid='<div style="flex:1;min-width:0"><div style="font-family:ui-monospace,Menlo,monospace;font-size:16px;font-weight:700;letter-spacing:.3px'+(it.barcode?'':';color:#b91c1c')+strike+'">'+(it.barcode?ordEsc(it.barcode):'no barcode')+'</div>'+
       (it.variant?'<div style="font-size:11px;color:var(--sub)">'+ordEsc(it.variant)+'</div>':'')+
-      '<div style="font-size:11.5px;color:'+acol+';font-weight:700">'+avail+'</div></div>';
+      '<div style="font-size:11.5px;color:'+acol+';font-weight:700">'+note+'</div></div>';
   }else{
     mid='<div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'+strike+'">'+ordEsc(it.title||it.sku||'item')+(it.variant?(' <span style="color:var(--sub);font-weight:500">· '+ordEsc(it.variant)+'</span>'):'')+'</div>'+
       '<div style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--sub)">'+(it.barcode?ordEsc(it.barcode):'no barcode')+'</div>'+
-      '<div style="font-size:11.5px;color:'+acol+';font-weight:700">'+(cur===DEST_ID&&!done?('here '+r.here+'/'+it.qty+' · '):'')+avail+'</div></div>';
+      '<div style="font-size:11.5px;color:'+acol+';font-weight:700">'+note+'</div></div>';
   }
   var right='<div style="flex:none;font-weight:800;font-size:22px;min-width:44px;text-align:right'+strike+'">x'+it.qty+'</div>';
   return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid #f1f1f4">'+tick+img+mid+right+'</div>';
 }
-function ordCard(o,a){
-  var done=ordOrderDone(o),collectN=a.missing.reduce(function(s,r){return s+r.need;},0);
-  var cur=(ordBranchView[o.id]!=null)?ordBranchView[o.id]:DEST_ID;
-  var chip=done?'<span style="background:#16a34a;color:#fff;border-radius:8px;padding:2px 9px;font-weight:800;font-size:12px">✓ Picked</span>'
-    :(a.full?'<span style="background:#16a34a1f;color:#16a34a;border:1px solid #16a34a;border-radius:8px;padding:2px 9px;font-weight:800;font-size:12px">Full order pick</span>'
-            :'<span style="background:#b453091f;color:#b45309;border:1px solid #b45309;border-radius:8px;padding:2px 9px;font-weight:800;font-size:12px">Mixed pick · collect '+collectN+'</span>');
+function ordCard(o,fb){
+  var done=ordBranchDone(o,fb);
   var when='';try{when=new Date(o.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}catch(e){}
-  return '<div class="over-card" style="display:block;opacity:'+(done?'.6':'1')+';'+(a.full&&!done?'border:2px solid '+_obm[DEST_ID].color:'')+'">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:800;font-size:15px">'+ordEsc(o.name)+' <span style="color:var(--sub);font-weight:600;font-size:12px">'+when+(o.total?' · '+ordEsc(o.currency)+' '+ordEsc(o.total):'')+'</span></div>'+chip+'</div>'+
-    ordTagsHTML(o)+ordBranchTabs(o)+
-    '<div>'+a.rows.map(function(r){return ordItemRow(o,r,cur);}).join('')+'</div>'+
+  var elsewhere=fb.elsewhere?'<span style="color:var(--sub);font-size:11.5px;font-weight:600"> · +'+fb.elsewhere+' item'+(fb.elsewhere>1?'s':'')+' at another branch</span>':'';
+  var chip=done?'<span style="background:#16a34a;color:#fff;border-radius:8px;padding:2px 9px;font-weight:800;font-size:12px">✓ Picked</span>':'<span style="background:'+_obm[DEST_ID].color+'1f;color:'+_obm[DEST_ID].color+';border:1px solid '+_obm[DEST_ID].color+';border-radius:8px;padding:2px 9px;font-weight:800;font-size:12px">'+fb.mine.length+' to pick</span>';
+  return '<div class="over-card" style="display:block;opacity:'+(done?'.6':'1')+';'+(!done?'border-left:4px solid '+_obm[DEST_ID].color:'')+'">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:800;font-size:15px">'+ordEsc(o.name)+' <span style="color:var(--sub);font-weight:600;font-size:12px">'+when+(o.total?' · '+ordEsc(o.currency)+' '+ordEsc(o.total):'')+'</span>'+elsewhere+'</div>'+chip+'</div>'+
+    ordTagsHTML(o)+
+    '<div style="margin-top:4px">'+fb.mine.map(function(r){return ordItemRow(o,r);}).join('')+'</div>'+
   '</div>';
 }
 function ordVwBtn(c,label){var on=(ordCompact===c);return '<button class="ord-vw" data-c="'+(c?1:0)+'" style="flex:1;border:1px solid '+(on?'var(--purple,#6d28d9)':'var(--line,#ddd)')+';background:'+(on?'var(--purple,#6d28d9)':'var(--card,#fff)')+';color:'+(on?'#fff':'inherit')+';border-radius:9px;padding:8px;font-weight:700;cursor:pointer">'+label+'</button>';}
 function ordStatusLine(){var t='';if(ordLastAt){try{t=new Date(ordLastAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){}}
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin:0 0 8px"><span>'+(ordLoading?'Checking…':('Endpoint '+(ordHttp?('HTTP '+ordHttp):'—')+' · '+ordData.length+' open'+(t?(' · '+t):'')))+'</span><button class="ord-refresh" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer">↻ Refresh</button></div>';}
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin:0 0 8px"><span>'+(ordLoading?'Checking…':('Endpoint '+(ordHttp?('HTTP '+ordHttp):'—')+' · '+ordData.length+' unfulfilled'+(t?(' · '+t):'')))+'</span><button class="ord-refresh" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer">↻ Refresh</button></div>';}
 function renderOrdersInbox(){
   var el=document.getElementById('out');if(!el)return;
   var head='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">📦 Picking — '+_obm[DEST_ID].name+'</div>'+
-    '<div class="src-rule" style="color:var(--sub)">Unfulfilled orders. Branch tabs show what each branch holds; tap a photo for full details (variant + stock). Tick items as picked.</div></div></div>';
+    '<div class="src-rule" style="color:var(--sub)">Only items this branch should pick (priority Roundhay → Chapeltown → City). Tap a photo for details; tick each item as picked.</div></div></div>';
   head+='<div id="ord-timer" style="font-weight:800;font-size:15px;text-align:center;margin:0 0 8px;color:'+ordTimerColor()+'">'+ordTimerText()+'</div>';
   head+=ordStatusLine();
   head+='<div style="display:flex;gap:6px;margin:0 0 8px">'+ordVwBtn(true,'🖼️ Pictures + barcode')+ordVwBtn(false,'📋 Details')+'</div>';
@@ -1527,17 +1524,17 @@ function renderOrdersInbox(){
 
   if(ordErr){el.innerHTML=head+'<div class="empty" style="margin-top:6px;text-align:left;line-height:1.5"><b>Couldn\u2019t load orders.</b><br>'+ordEsc(ordErr)+'<br><br>Check: api/orders.js deployed · SHOPIFY_STORE + SHOPIFY_ADMIN_TOKEN env · read_orders scope · Protected customer data access.</div>';wireOrders();return;}
   if(!ordData.length){el.innerHTML=head+'<div class="empty" style="margin-top:6px">'+(ordLoading?'Checking for orders…':'No orders to pick right now.')+'</div>';wireOrders();return;}
+  if(!ordReady()){el.innerHTML=head+'<div class="empty" style="margin-top:6px">Loading branch stock to assign picks…</div>';wireOrders();return;}
 
   var byKey=ordIndex()||{};
-  var active=[],doneL=[];ordData.forEach(function(o){(ordOrderDone(o)?doneL:active).push(o);});
-  var withA=active.map(function(o){return {o:o,a:ordAnalyze(o,byKey)};});
-  var fullO=withA.filter(function(x){return x.a.full;}),mixO=withA.filter(function(x){return !x.a.full;});
+  var active=[],doneL=[];
+  ordData.forEach(function(o){var fb=ordForBranch(o,byKey);if(!fb.mine.length)return;(ordBranchDone(o,fb)?doneL:active).push({o:o,fb:fb});});
   var body='';
-  if(fullO.length)body+='<div style="font-weight:800;margin:6px 0 6px;color:'+_obm[DEST_ID].color+'">✅ Full order picks ('+fullO.length+')</div><div class="card-list">'+fullO.map(function(x){return ordCard(x.o,x.a);}).join('')+'</div>';
-  if(mixO.length)body+='<div style="font-weight:800;margin:14px 0 6px;color:#b45309">🔀 Mixed picks — collect from other branches ('+mixO.length+')</div><div class="card-list">'+mixO.map(function(x){return ordCard(x.o,x.a);}).join('')+'</div>';
-  if(doneL.length)body+='<div style="font-weight:800;margin:14px 0 6px;color:var(--sub)">✓ Picked ('+doneL.length+')</div><div class="card-list">'+doneL.map(function(o){return ordCard(o,ordAnalyze(o,byKey));}).join('')+'</div>';
+  if(active.length)body+='<div style="font-weight:800;margin:6px 0 6px;color:'+_obm[DEST_ID].color+'">📦 To pick ('+active.length+')</div><div class="card-list">'+active.map(function(x){return ordCard(x.o,x.fb);}).join('')+'</div>';
+  if(doneL.length)body+='<div style="font-weight:800;margin:14px 0 6px;color:var(--sub)">✓ Picked ('+doneL.length+')</div><div class="card-list">'+doneL.map(function(x){return ordCard(x.o,x.fb);}).join('')+'</div>';
+  if(!active.length&&!doneL.length)body='<div class="empty" style="margin-top:6px">Nothing for '+_obm[DEST_ID].name+' to pick right now.</div>';
   el.innerHTML=head+body;
-  if(typeof setProg==='function')setProg(0,0,active.length+' to pick · '+ordData.length+' open');
+  if(typeof setProg==='function')setProg(0,0,active.length+' orders to pick');
   wireOrders();
 }
 function wireOrders(){
@@ -1547,7 +1544,6 @@ function wireOrders(){
   var ts=document.querySelector('.ord-test');if(ts)ts.addEventListener('click',ordTestRing);
   document.querySelectorAll('.ord-vw').forEach(function(b){b.addEventListener('click',function(){ordSetView(this.getAttribute('data-c')==='1');});});
   document.querySelectorAll('.pick-tick').forEach(function(b){b.addEventListener('click',function(){ordToggle(this.getAttribute('data-o'),this.getAttribute('data-k'));});});
-  document.querySelectorAll('.ordbt').forEach(function(b){b.addEventListener('click',function(){ordSetBranch(this.getAttribute('data-o'),this.getAttribute('data-k'));});});
 }
 function renderPick(){
   var el=document.getElementById('out');if(el)el.innerHTML='<div class="loading"><div class="spin"></div>Loading orders…</div>';
