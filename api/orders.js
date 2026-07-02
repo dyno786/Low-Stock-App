@@ -26,9 +26,9 @@ export default async function handler(req, res) {
   const query = `query($cursor:String){
     orders(first:40, after:$cursor, sortKey:CREATED_AT, reverse:true, query:"fulfillment_status:unfulfilled AND status:open"){
       edges{ node{
-        id name createdAt displayFulfillmentStatus displayFinancialStatus
+        id name createdAt displayFulfillmentStatus displayFinancialStatus tags
         currentTotalPriceSet{ shopMoney{ amount currencyCode } }
-        lineItems(first:60){ edges{ node{ quantity title sku variant{ barcode sku } } } }
+        lineItems(first:60){ edges{ node{ quantity title sku variantTitle variant{ title barcode sku } } } }
       } }
       pageInfo{ hasNextPage endCursor }
     }
@@ -55,6 +55,7 @@ export default async function handler(req, res) {
             barcode: (it.variant && it.variant.barcode) || '',
             sku: (it.variant && it.variant.sku) || it.sku || '',
             title: it.title || '',
+            variant: it.variantTitle || (it.variant && it.variant.title) || '',
             qty: it.quantity || 0
           };
         });
@@ -64,6 +65,7 @@ export default async function handler(req, res) {
           createdAt: n.createdAt,
           fulfillment: n.displayFulfillmentStatus || '',
           financial: n.displayFinancialStatus || '',
+          tags: n.tags || [],
           total: (n.currentTotalPriceSet && n.currentTotalPriceSet.shopMoney && n.currentTotalPriceSet.shopMoney.amount) || '',
           currency: (n.currentTotalPriceSet && n.currentTotalPriceSet.shopMoney && n.currentTotalPriceSet.shopMoney.currencyCode) || '',
           items
