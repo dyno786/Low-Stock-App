@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   const endpoint = `https://${SHOP}/admin/api/2024-10/graphql.json`;
   const query = `query($cursor:String){
-    orders(first:40, after:$cursor, sortKey:CREATED_AT, reverse:true, query:"status:open"){
+    orders(first:40, after:$cursor, sortKey:CREATED_AT, reverse:true, query:"fulfillment_status:unfulfilled AND status:open"){
       edges{ node{
         id name createdAt displayFulfillmentStatus displayFinancialStatus
         currentTotalPriceSet{ shopMoney{ amount currencyCode } }
