@@ -1363,6 +1363,8 @@ var ordSeen=[];try{ordSeen=JSON.parse(localStorage.getItem(ORD_SEEN_KEY)||'[]');
 function ordSaveSeen(){try{localStorage.setItem(ORD_SEEN_KEY,JSON.stringify(ordSeen.slice(-800)));}catch(e){}}
 function ordEsc(s){return String(s==null?'':s).replace(/[<>&]/g,function(c){return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;';});}
 function onPick(){return typeof view!=='undefined'&&view==='pick';}
+var ordCompact=true;try{ordCompact=localStorage.getItem('cc_pick_compact')!=='0';}catch(e){}
+function ordSetView(v){ordCompact=!!v;try{localStorage.setItem('cc_pick_compact',ordCompact?'1':'0');}catch(e){}if(onPick())renderOrdersInbox();}
 var _obm=(typeof BR_META!=='undefined')?BR_META:{0:{short:'Chap',name:'Chapeltown',color:'#fb923c'},1:{short:'City',name:'City Centre',color:'#16a34a'},2:{short:'Roun',name:'Roundhay',color:'#2563eb'}};
 
 // ---- stock lookup across the already-loaded branch feeds ----
@@ -1396,9 +1398,11 @@ function ordEnableAlerts(){
 }
 function ordRingLoop(){
   if(!ordRinging)return;
-  try{var c=ordAudioCtx,t=c.currentTime;[[880,0],[660,0.26]].forEach(function(p){var o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=p[0];g.gain.setValueAtTime(0.0001,t+p[1]);g.gain.exponentialRampToValueAtTime(0.35,t+p[1]+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+p[1]+0.24);o.connect(g);g.connect(c.destination);o.start(t+p[1]);o.stop(t+p[1]+0.26);});}catch(e){}
-  try{if(navigator.vibrate)navigator.vibrate([300,140,300]);}catch(e){}
-  ordRingTimer=setTimeout(ordRingLoop,1700);
+  try{var c=ordAudioCtx,t=c.currentTime;
+    [[988,0],[988,0.20],[784,0.42]].forEach(function(p){var o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=p[0];g.gain.setValueAtTime(0.0001,t+p[1]);g.gain.exponentialRampToValueAtTime(0.9,t+p[1]+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+p[1]+0.17);o.connect(g);g.connect(c.destination);o.start(t+p[1]);o.stop(t+p[1]+0.19);});
+  }catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([500,150,500,150,500]);}catch(e){}
+  ordRingTimer=setTimeout(ordRingLoop,1250);
 }
 function ordStartRing(){if(!ordAlertsOn||ordRinging||!ordAudioCtx)return;ordRinging=true;ordRingLoop();}
 function ordStopRing(){ordRinging=false;if(ordRingTimer){clearTimeout(ordRingTimer);ordRingTimer=null;}if(onPick())renderOrdersInbox();}
@@ -1414,7 +1418,7 @@ function ordPoll(){
     if(!r.ok){ordErr='HTTP '+r.status+((j&&j.error)?(' — '+j.error):(tx?(' — '+tx.slice(0,140)):''));if(onPick())renderOrdersInbox();ordUpdateBadge();return;}
     if(!j){ordErr='Endpoint did not return JSON (is /api/orders deployed?): '+tx.slice(0,120);if(onPick())renderOrdersInbox();return;}
     if(j.error){ordErr=j.error+(j.detail?(' — '+(typeof j.detail==='string'?j.detail:JSON.stringify(j.detail)).slice(0,200)):'');if(onPick())renderOrdersInbox();return;}
-    ordErr='';ordData=(j.orders||[]);
+    ordErr='';ordData=(j.orders||[]).filter(function(o){return o.fulfillment!=='FULFILLED';});
     var fresh=ordData.filter(function(o){return ordSeen.indexOf(o.id)<0;});
     ordData.forEach(function(o){if(ordSeen.indexOf(o.id)<0)ordSeen.push(o.id);});
     ordSeen=ordSeen.slice(-800);ordSaveSeen();
@@ -1434,14 +1438,24 @@ function ordUpdateBadge(){
 
 // ---- UI ----
 function ordItemsHTML(o){
+  var imgFn=(typeof imgEl==='function')?imgEl:function(){return '';};
   return (o.items||[]).map(function(it){
     var here=o.__byKey?ordQtyAt(o.__byKey,it.barcode,DEST_ID):0;
     var enough=it.barcode&&here>=it.qty;
     var col=enough?'#16a34a':(it.barcode?'#b45309':'#b91c1c');
-    var note=!it.barcode?'no barcode':(enough?'in stock':'here '+here+'/'+it.qty);
-    return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0;border-top:1px solid #f1f1f4">'+
-      '<span style="min-width:0"><b>'+it.qty+'×</b> '+ordEsc(it.title||it.sku||it.barcode||'item')+'</span>'+
-      '<span style="flex:none;color:'+col+';font-weight:700">'+note+'</span></div>';
+    var img='<div style="flex:none;width:56px;height:56px;border-radius:9px;overflow:hidden;background:#f3f3f6;display:flex;align-items:center;justify-content:center">'+imgFn(it.barcode,56)+'</div>';
+    var qty='<div style="flex:none;font-weight:800;font-size:22px;min-width:46px;text-align:right">x'+it.qty+'</div>';
+    if(ordCompact){
+      return '<div style="display:flex;align-items:center;gap:11px;padding:7px 0;border-top:1px solid #f1f1f4">'+img+
+        '<div style="flex:1;min-width:0"><div style="font-family:ui-monospace,Menlo,monospace;font-size:16px;font-weight:700;letter-spacing:.3px'+(it.barcode?'':';color:#b91c1c')+'">'+(it.barcode?ordEsc(it.barcode):'no barcode')+'</div></div>'+
+        qty+'</div>';
+    }
+    var note=!it.barcode?'no barcode':(enough?'in stock here':'here '+here+'/'+it.qty);
+    return '<div style="display:flex;align-items:center;gap:11px;padding:7px 0;border-top:1px solid #f1f1f4">'+img+
+      '<div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ordEsc(it.title||it.sku||'item')+'</div>'+
+      '<div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--sub)">'+(it.barcode?ordEsc(it.barcode):'no barcode')+'</div>'+
+      '<div style="font-size:12px;color:'+col+';font-weight:700">'+note+'</div></div>'+
+      qty+'</div>';
   }).join('');
 }
 function ordCard(o){
@@ -1462,11 +1476,13 @@ function ordStatusLine(){
     '<span>'+(ordLoading?'Checking…':('Endpoint '+(ordHttp?('HTTP '+ordHttp):'—')+' · '+ordData.length+' open'+(t?(' · '+t):'')))+'</span>'+
     '<button class="ord-refresh" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer">↻ Refresh</button></div>';
 }
+function ordVwBtn(c,label){var on=(ordCompact===c);return '<button class="ord-vw" data-c="'+(c?1:0)+'" style="flex:1;border:1px solid '+(on?'var(--purple,#6d28d9)':'var(--line,#ddd)')+';background:'+(on?'var(--purple,#6d28d9)':'var(--card,#fff)')+';color:'+(on?'#fff':'inherit')+';border-radius:9px;padding:8px;font-weight:700;cursor:pointer">'+label+'</button>';}
 function renderOrdersInbox(){
   var el=document.getElementById('out');if(!el)return;
   var head='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">📦 Picking — '+_obm[DEST_ID].name+'</div>'+
     '<div class="src-rule" style="color:var(--sub)">New Shopify orders, routed to the branch that has the stock. Orders for this branch are outlined and ring on arrival.</div></div></div>';
   head+=ordStatusLine();
+  head+='<div style="display:flex;gap:6px;margin:0 0 8px">'+ordVwBtn(true,'\uD83D\uDDBC\uFE0F Pictures + barcode')+ordVwBtn(false,'\uD83D\uDCCB Details')+'</div>';
   if(!ordAlertsOn){
     head+='<div style="margin:0 0 8px;display:flex;gap:8px"><button class="ord-enable" style="flex:1;border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:14px;cursor:pointer">🔔 Enable order alerts</button>'+
       '<button class="ord-test" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:11px;padding:11px 14px;font-weight:700;cursor:pointer">Test ring</button></div>'+
@@ -1503,6 +1519,7 @@ function wireOrders(){
   var st=document.querySelector('.ord-stop');if(st)st.addEventListener('click',ordStopRing);
   var rf=document.querySelector('.ord-refresh');if(rf)rf.addEventListener('click',ordPoll);
   var ts=document.querySelector('.ord-test');if(ts)ts.addEventListener('click',ordTestRing);
+  document.querySelectorAll('.ord-vw').forEach(function(b){b.addEventListener('click',function(){ordSetView(this.getAttribute('data-c')==='1');});});
 }
 function renderPick(){
   var el=document.getElementById('out');
