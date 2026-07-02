@@ -915,6 +915,7 @@ function renderView(){
   else if(view==='whorder')renderWHOrder();
   else if(view==='shopify')renderShopify();
   else if(view==='map')renderMap();
+  else if(view==='home')renderHome();
   else renderImgs();
   backfillVisibleImages();
 }
@@ -1342,152 +1343,169 @@ function renderOrders(){
 }
 
 
-// ── PICKING / SHOPIFY ORDERS (routes each order to the branch holding the stock; rings on new) ──
-// Polls /api/orders. Each order is routed to the branch that can fully fill it (same deterministic
-// calc on every page, so exactly one branch is the picker). New orders make the phone RING until
-// acknowledged. Orders show whether or not alerts are on; the tab surfaces endpoint errors so
-// setup problems (missing read_orders scope, env vars, or an undeployed endpoint) are visible.
+// ── PICKING / SHOPIFY ORDERS (full vs mixed pick from THIS branch; tick to collect; rings on new) ──
+// Shows unfulfilled orders as a pick list for THIS branch. "Full order pick" = everything is in
+// this branch. "Mixed pick" = some here, the rest to collect from other branches (listed). Tap a
+// photo to enlarge; tick an item once picked/collected. A countdown shows the next delivery cutoff.
 var ORDERS_API='/api/orders';
 var ordData=[], ordErr='', ordHttp=0, ordLoading=false, ordLastAt=0;
-var ordAlertsOn=false, ordPrimed=false, ordPollTimer=null, ordRinging=false, ordRingTimer=null, ordAudioCtx=null;
-var ORD_SEEN_KEY='cc_ord_seen'+DEST_ID;
+var ordAlertsOn=false, ordPrimed=false, ordPollTimer=null, ordClockTimer=null, ordRinging=false, ordRingTimer=null, ordAudioCtx=null;
+var ORD_SEEN_KEY='cc_ord_seen'+DEST_ID, ORD_TICK_KEY='cc_pick_ticks'+DEST_ID;
 var ordSeen=[];try{ordSeen=JSON.parse(localStorage.getItem(ORD_SEEN_KEY)||'[]');}catch(e){}
+var ordTicks={};try{ordTicks=JSON.parse(localStorage.getItem(ORD_TICK_KEY)||'{}')||{};}catch(e){}
 function ordSaveSeen(){try{localStorage.setItem(ORD_SEEN_KEY,JSON.stringify(ordSeen.slice(-800)));}catch(e){}}
+function ordSaveTicks(){try{localStorage.setItem(ORD_TICK_KEY,JSON.stringify(ordTicks));}catch(e){}}
 function ordEsc(s){return String(s==null?'':s).replace(/[<>&]/g,function(c){return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;';});}
 function onPick(){return typeof view!=='undefined'&&view==='pick';}
 var _obm=(typeof BR_META!=='undefined')?BR_META:{0:{short:'Chap',name:'Chapeltown',color:'#fb923c'},1:{short:'City',name:'City Centre',color:'#16a34a'},2:{short:'Roun',name:'Roundhay',color:'#2563eb'}};
+function ordBranchName(k){return k===3?'Warehouse':(_obm[k]?_obm[k].name:'Branch '+k);}
 
-// ---- stock lookup across the already-loaded branch feeds ----
+// ---- stock across the loaded feeds (incl. warehouse=key 3) ----
 function ordIndex(){
   if(!destLoaded)return null;
-  function mapFor(arr){var m={};(arr||[]).forEach(function(p){if(p.bc)m[p.bc]=p;});return m;}
+  function mapFor(arr){var m={};(arr||[]).forEach(function(p){if(p.bc)m[String(p.bc).trim()]=p;});return m;}
   var byKey={};byKey[DEST_ID]=mapFor(destData);
+  if(SOURCES[0]&&srcLoaded[0])byKey[SOURCES[0].si]=mapFor(srcData[0]); // warehouse (si 3)
   if(SOURCES[1]&&srcLoaded[1])byKey[SOURCES[1].si]=mapFor(srcData[1]);
   if(SOURCES[2]&&srcLoaded[2])byKey[SOURCES[2].si]=mapFor(srcData[2]);
   return byKey;
 }
-function ordQtyAt(byKey,bc,k){var x=bc&&byKey[k]&&byKey[k][bc];return x&&typeof x.qty==='number'?x.qty:0;}
-function ordReady(){return !!(destLoaded&&srcLoaded[1]&&srcLoaded[2]);}
-function ordAssignee(o,byKey){
-  var keys=[0,1,2];
-  var full=keys.filter(function(k){return (o.items||[]).every(function(it){return it.barcode?ordQtyAt(byKey,it.barcode,k)>=it.qty:false;});});
-  if(full.length)return full.sort(function(a,b){return a-b;})[0];
-  var best=null,bc=-1;
-  keys.forEach(function(k){var c=(o.items||[]).reduce(function(a,it){return a+(it.barcode?Math.min(it.qty,ordQtyAt(byKey,it.barcode,k)):0);},0);if(c>bc){bc=c;best=k;}});
-  return best;
+function ordQtyAt(byKey,bc,k){var x=bc&&byKey[k]&&byKey[k][String(bc).trim()];return x&&typeof x.qty==='number'?x.qty:0;}
+
+// ---- per-order analysis from THIS branch's viewpoint ----
+function ordAnalyze(o){
+  var byKey=ordIndex()||{}, others=[];
+  if(SOURCES[1])others.push(SOURCES[1].si); if(SOURCES[2])others.push(SOURCES[2].si); others.push(3); // + warehouse
+  others=others.filter(function(k){return k!=null&&k!==DEST_ID;});
+  var rows=(o.items||[]).map(function(it,idx){
+    var here=it.barcode?ordQtyAt(byKey,it.barcode,DEST_ID):0;
+    var need=Math.max(0,it.qty-here), from=null,fromQty=0;
+    if(need>0){others.forEach(function(k){var q=it.barcode?ordQtyAt(byKey,it.barcode,k):0;if(q>fromQty){fromQty=q;from=k;}});}
+    return {it:it,idx:idx,here:here,need:need,from:from};
+  });
+  var missing=rows.filter(function(r){return r.need>0;});
+  return {rows:rows,missing:missing,full:missing.length===0};
 }
-function ordRoute(){var byKey=ordIndex();if(!byKey||!ordReady())return false;ordData.forEach(function(o){o.__as=ordAssignee(o,byKey);o.__forThis=(o.__as===DEST_ID);o.__byKey=byKey;});return true;}
+function ordTickKey(o,idx,bc){return (bc||('i'+idx));}
+function ordItemDone(o,idx,bc){var t=ordTicks[o.id];return !!(t&&t[ordTickKey(o,idx,bc)]);}
+function ordToggle(oid,key){if(!ordTicks[oid])ordTicks[oid]={};ordTicks[oid][key]=!ordTicks[oid][key];if(!ordTicks[oid][key])delete ordTicks[oid][key];ordSaveTicks();if(onPick())renderOrdersInbox();}
+function ordOrderDone(o){var a=(o.items||[]);if(!a.length)return false;for(var i=0;i<a.length;i++){if(!ordItemDone(o,i,a[i].barcode))return false;}return true;}
+
+// ---- enlarge (reuse the app's lightbox) ----
+function ordZoom(bc,nm){try{var u=(typeof imgs!=='undefined'&&imgs[bc])?imgs[bc]:'';if(u&&typeof openImg==='function')openImg(u,nm||'');}catch(e){}}
 
 // ---- ring / notify ----
 function ordEnableAlerts(){
   try{ordAudioCtx=ordAudioCtx||new (window.AudioContext||window.webkitAudioContext)();if(ordAudioCtx.state==='suspended')ordAudioCtx.resume();}catch(e){}
   ordAlertsOn=true;
   try{if('Notification' in window && Notification.permission==='default')Notification.requestPermission();}catch(e){}
-  startOrdPoller();
-  if(onPick())renderOrdersInbox();
+  startOrdPoller();if(onPick())renderOrdersInbox();
 }
 function ordRingLoop(){
   if(!ordRinging)return;
-  try{var c=ordAudioCtx,t=c.currentTime;[[880,0],[660,0.26]].forEach(function(p){var o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=p[0];g.gain.setValueAtTime(0.0001,t+p[1]);g.gain.exponentialRampToValueAtTime(0.35,t+p[1]+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+p[1]+0.24);o.connect(g);g.connect(c.destination);o.start(t+p[1]);o.stop(t+p[1]+0.26);});}catch(e){}
-  try{if(navigator.vibrate)navigator.vibrate([300,140,300]);}catch(e){}
-  ordRingTimer=setTimeout(ordRingLoop,1700);
+  try{var c=ordAudioCtx,t=c.currentTime;[[988,0],[988,0.20],[784,0.42]].forEach(function(p){var o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=p[0];g.gain.setValueAtTime(0.0001,t+p[1]);g.gain.exponentialRampToValueAtTime(0.9,t+p[1]+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+p[1]+0.17);o.connect(g);g.connect(c.destination);o.start(t+p[1]);o.stop(t+p[1]+0.19);});}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([500,150,500,150,500]);}catch(e){}
+  ordRingTimer=setTimeout(ordRingLoop,1250);
 }
 function ordStartRing(){if(!ordAlertsOn||ordRinging||!ordAudioCtx)return;ordRinging=true;ordRingLoop();}
 function ordStopRing(){ordRinging=false;if(ordRingTimer){clearTimeout(ordRingTimer);ordRingTimer=null;}if(onPick())renderOrdersInbox();}
 function ordTestRing(){if(!ordAudioCtx){ordEnableAlerts();}ordRinging=true;ordRingLoop();setTimeout(ordStopRing,1800);}
-function ordNotify(n){try{if('Notification' in window && Notification.permission==='granted'){var t=n+' new order'+(n>1?'s':'')+' — '+_obm[DEST_ID].name;new Notification('🔔 '+t,{body:'Tap to open picking',tag:'cc-order'});}}catch(e){}}
+function ordNotify(n){try{if('Notification' in window && Notification.permission==='granted')new Notification('🔔 '+n+' new order'+(n>1?'s':'')+' — '+_obm[DEST_ID].name,{body:'Open Picking',tag:'cc-order'});}catch(e){}}
 
-// ---- poll ----
+// ---- poll (unfulfilled, not refunded/voided) ----
+function ordKeep(o){return o.fulfillment!=='FULFILLED' && ['REFUNDED','PARTIALLY_REFUNDED','VOIDED','EXPIRED'].indexOf(o.financial)<0;}
 function ordPoll(){
   ordLoading=true;if(onPick())renderOrdersInbox();
   fetch(ORDERS_API,{cache:'no-store'}).then(function(r){ordHttp=r.status;return r.text().then(function(tx){
     ordLoading=false;ordLastAt=Date.now();
     var j=null;try{j=JSON.parse(tx);}catch(e){}
-    if(!r.ok){ordErr='HTTP '+r.status+((j&&j.error)?(' — '+j.error):(tx?(' — '+tx.slice(0,140)):''));if(onPick())renderOrdersInbox();ordUpdateBadge();return;}
+    if(!r.ok){ordErr='HTTP '+r.status+((j&&j.error)?(' — '+j.error):(tx?(' — '+tx.slice(0,140)):''));if(onPick())renderOrdersInbox();return;}
     if(!j){ordErr='Endpoint did not return JSON (is /api/orders deployed?): '+tx.slice(0,120);if(onPick())renderOrdersInbox();return;}
     if(j.error){ordErr=j.error+(j.detail?(' — '+(typeof j.detail==='string'?j.detail:JSON.stringify(j.detail)).slice(0,200)):'');if(onPick())renderOrdersInbox();return;}
-    ordErr='';ordData=(j.orders||[]);
+    ordErr='';ordData=(j.orders||[]).filter(ordKeep);
     var fresh=ordData.filter(function(o){return ordSeen.indexOf(o.id)<0;});
     ordData.forEach(function(o){if(ordSeen.indexOf(o.id)<0)ordSeen.push(o.id);});
     ordSeen=ordSeen.slice(-800);ordSaveSeen();
-    if(!ordPrimed){ordPrimed=true;}
-    else if(fresh.length&&ordAlertsOn){ordStartRing();ordNotify(fresh.length);}
-    ordRoute();ordUpdateBadge();
-    if(onPick())renderOrdersInbox();
+    if(!ordPrimed){ordPrimed=true;}else if(fresh.length&&ordAlertsOn){ordStartRing();ordNotify(fresh.length);}
+    ordUpdateBadge();if(onPick())renderOrdersInbox();
   });}).catch(function(e){ordLoading=false;ordErr='Network error reaching /api/orders: '+((e&&e.message)||e);if(onPick())renderOrdersInbox();});
 }
 function startOrdPoller(){if(ordPollTimer)return;ordPoll();ordPollTimer=setInterval(ordPoll,30000);}
-function ordUpdateBadge(){
-  try{var tab=document.querySelector('.vtab[data-v="pick"]');if(!tab)return;
-    var n=ordReady()?ordData.filter(function(o){return o.__forThis;}).length:0;
-    tab.innerHTML='📦 Picking'+(n?' <span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800">'+n+'</span>':'');
-  }catch(e){}
-}
+function ordActiveCount(){return ordData.filter(function(o){return !ordOrderDone(o);}).length;}
+function ordUpdateBadge(){try{var tab=document.querySelector('.vtab[data-v="pick"]');if(!tab)return;var n=ordActiveCount();tab.innerHTML='📦 Picking'+(n?' <span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800">'+n+'</span>':'');}catch(e){}}
+
+// ---- delivery countdown ----
+function ordDeadlines(){var n=new Date();function at(h,m){var d=new Date(n);d.setHours(h,m,0,0);return d.getTime();}
+  return [{label:'Morning pick by 11:30',at:at(11,30)},{label:'Morning delivery 12:00',at:at(12,0)},{label:'Evening pick by 19:00',at:at(19,0)}];}
+function ordNextDeadline(){var ds=ordDeadlines(),now=Date.now();for(var i=0;i<ds.length;i++)if(ds[i].at>now)return ds[i];return {label:'Evening delivery — after close',at:null};}
+function ordTimerText(){var d=ordNextDeadline();if(!d.at)return '⏱ '+d.label;var s=Math.max(0,Math.floor((d.at-Date.now())/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;var pad=function(x){return (x<10?'0':'')+x;};return '⏱ '+d.label+' — '+(h?h+'h ':'')+pad(m)+'m '+pad(ss)+'s left';}
+function ordTimerColor(){var d=ordNextDeadline();if(!d.at)return '#64748b';var mins=(d.at-Date.now())/60000;return mins<15?'#dc2626':(mins<45?'#b45309':'#16a34a');}
+function startOrdClock(){if(ordClockTimer)return;ordClockTimer=setInterval(function(){var el=document.getElementById('ord-timer');if(el){el.textContent=ordTimerText();el.style.color=ordTimerColor();}},1000);}
 
 // ---- UI ----
-function ordItemsHTML(o){
-  return (o.items||[]).map(function(it){
-    var here=o.__byKey?ordQtyAt(o.__byKey,it.barcode,DEST_ID):0;
-    var enough=it.barcode&&here>=it.qty;
-    var col=enough?'#16a34a':(it.barcode?'#b45309':'#b91c1c');
-    var note=!it.barcode?'no barcode':(enough?'in stock':'here '+here+'/'+it.qty);
-    return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0;border-top:1px solid #f1f1f4">'+
-      '<span style="min-width:0"><b>'+it.qty+'×</b> '+ordEsc(it.title||it.sku||it.barcode||'item')+'</span>'+
-      '<span style="flex:none;color:'+col+';font-weight:700">'+note+'</span></div>';
-  }).join('');
+function ordItemRow(o,r){
+  var it=r.it,done=ordItemDone(o,r.idx,it.barcode),key=ordTickKey(o,r.idx,it.barcode);
+  var imgFn=(typeof imgEl==='function')?imgEl:function(){return '';};
+  var img='<div onclick="ordZoom(\''+ordEsc(it.barcode)+'\',\''+ordEsc((it.title||'').replace(/[\'\\]/g,''))+'\')" style="flex:none;width:56px;height:56px;border-radius:9px;overflow:hidden;background:#f3f3f6;display:flex;align-items:center;justify-content:center;cursor:zoom-in">'+imgFn(it.barcode,56)+'</div>';
+  var tick='<button class="pick-tick" data-o="'+ordEsc(o.id)+'" data-k="'+ordEsc(key)+'" style="flex:none;width:30px;height:30px;border-radius:8px;border:2px solid '+(done?'#16a34a':'#cbd5e1')+';background:'+(done?'#16a34a':'#fff')+';color:#fff;font-weight:900;cursor:pointer;font-size:16px;line-height:1">'+(done?'✓':'')+'</button>';
+  var mid,right;
+  if(ordCompact){
+    mid='<div style="flex:1;min-width:0"><div style="font-family:ui-monospace,Menlo,monospace;font-size:16px;font-weight:700;letter-spacing:.3px'+(it.barcode?'':';color:#b91c1c')+(done?';text-decoration:line-through;color:#94a3b8':'')+'">'+(it.barcode?ordEsc(it.barcode):'no barcode')+'</div>'+
+      (r.need>0?'<div style="font-size:11.5px;color:#b45309;font-weight:700">collect '+r.need+' from '+(r.from!=null?ordBranchName(r.from):'another branch')+'</div>':(done?'<div style="font-size:11.5px;color:#16a34a;font-weight:700">collected</div>':''))+'</div>';
+  } else {
+    mid='<div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'+(done?';text-decoration:line-through;color:#94a3b8':'')+'">'+ordEsc(it.title||it.sku||'item')+'</div>'+
+      '<div style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--sub)">'+(it.barcode?ordEsc(it.barcode):'no barcode')+'</div>'+
+      (r.need>0?'<div style="font-size:11.5px;color:#b45309;font-weight:700">here '+r.here+'/'+it.qty+' · collect '+r.need+' from '+(r.from!=null?ordBranchName(r.from):'another branch')+'</div>':(done?'<div style="font-size:11.5px;color:#16a34a;font-weight:700">collected</div>':'<div style="font-size:11.5px;color:#16a34a;font-weight:700">in stock here</div>'))+'</div>';
+  }
+  right='<div style="flex:none;font-weight:800;font-size:22px;min-width:44px;text-align:right'+(done?';color:#94a3b8':'')+'">x'+it.qty+'</div>';
+  return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid #f1f1f4">'+tick+img+mid+right+'</div>';
 }
 function ordCard(o){
-  var as=(typeof o.__as==='number')?o.__as:null;
-  var asChip=(as!=null)?'<span style="background:'+_obm[as].color+'1f;color:'+_obm[as].color+';border:1px solid '+_obm[as].color+';border-radius:8px;padding:2px 8px;font-weight:800;font-size:12px">Pick: '+_obm[as].name+'</span>':'<span style="color:var(--sub);font-size:12px">'+(ordReady()?'':'stock loading…')+'</span>';
+  var a=ordAnalyze(o),done=ordOrderDone(o);
+  var collectN=a.missing.reduce(function(s,r){return s+r.need;},0);
+  var chip;
+  if(done)chip='<span style="background:#16a34a;color:#fff;border-radius:8px;padding:2px 9px;font-weight:800;font-size:12px">✓ Picked</span>';
+  else if(a.full)chip='<span style="background:#16a34a1f;color:#16a34a;border:1px solid #16a34a;border-radius:8px;padding:2px 9px;font-weight:800;font-size:12px">Full order pick</span>';
+  else chip='<span style="background:#b453091f;color:#b45309;border:1px solid #b45309;border-radius:8px;padding:2px 9px;font-weight:800;font-size:12px">Mixed pick · collect '+collectN+'</span>';
   var when='';try{when=new Date(o.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}catch(e){}
-  var ff=o.fulfillment&&o.fulfillment!=='UNFULFILLED'?' · '+ordEsc(o.fulfillment):'';
-  return '<div class="over-card" style="display:block;'+(o.__forThis?'border:2px solid '+_obm[DEST_ID].color:'')+'">'+
+  return '<div class="over-card" style="display:block;opacity:'+(done?'.6':'1')+';'+(a.full&&!done?'border:2px solid '+_obm[DEST_ID].color:'')+'">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
-      '<div style="font-weight:800;font-size:15px">'+ordEsc(o.name)+' <span style="color:var(--sub);font-weight:600;font-size:12px">'+when+(o.total?' · '+ordEsc(o.currency)+' '+ordEsc(o.total):'')+ff+'</span></div>'+
-      asChip+'</div>'+
-    '<div style="margin-top:6px">'+ordItemsHTML(o)+'</div>'+
+      '<div style="font-weight:800;font-size:15px">'+ordEsc(o.name)+' <span style="color:var(--sub);font-weight:600;font-size:12px">'+when+(o.total?' · '+ordEsc(o.currency)+' '+ordEsc(o.total):'')+'</span></div>'+chip+'</div>'+
+    '<div style="margin-top:4px">'+a.rows.map(function(r){return ordItemRow(o,r);}).join('')+'</div>'+
   '</div>';
 }
-function ordStatusLine(){
-  var t='';if(ordLastAt){try{t=new Date(ordLastAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){}}
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin:0 0 8px">'+
-    '<span>'+(ordLoading?'Checking…':('Endpoint '+(ordHttp?('HTTP '+ordHttp):'—')+' · '+ordData.length+' open'+(t?(' · '+t):'')))+'</span>'+
-    '<button class="ord-refresh" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer">↻ Refresh</button></div>';
-}
+function ordVwBtn(c,label){var on=(ordCompact===c);return '<button class="ord-vw" data-c="'+(c?1:0)+'" style="flex:1;border:1px solid '+(on?'var(--purple,#6d28d9)':'var(--line,#ddd)')+';background:'+(on?'var(--purple,#6d28d9)':'var(--card,#fff)')+';color:'+(on?'#fff':'inherit')+';border-radius:9px;padding:8px;font-weight:700;cursor:pointer">'+label+'</button>';}
+var ordCompact=true;try{ordCompact=localStorage.getItem('cc_pick_compact')!=='0';}catch(e){}
+function ordSetView(v){ordCompact=!!v;try{localStorage.setItem('cc_pick_compact',ordCompact?'1':'0');}catch(e){}if(onPick())renderOrdersInbox();}
+function ordStatusLine(){var t='';if(ordLastAt){try{t=new Date(ordLastAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){}}
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin:0 0 8px"><span>'+(ordLoading?'Checking…':('Endpoint '+(ordHttp?('HTTP '+ordHttp):'—')+' · '+ordData.length+' open'+(t?(' · '+t):'')))+'</span><button class="ord-refresh" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer">↻ Refresh</button></div>';}
 function renderOrdersInbox(){
   var el=document.getElementById('out');if(!el)return;
   var head='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">📦 Picking — '+_obm[DEST_ID].name+'</div>'+
-    '<div class="src-rule" style="color:var(--sub)">New Shopify orders, routed to the branch that has the stock. Orders for this branch are outlined and ring on arrival.</div></div></div>';
+    '<div class="src-rule" style="color:var(--sub)">Unfulfilled Shopify orders. <b>Full order pick</b> = all here; <b>Mixed</b> = collect the rest from other branches. Tap a photo to enlarge, tick each item once picked.</div></div></div>';
+  head+='<div id="ord-timer" style="font-weight:800;font-size:15px;text-align:center;margin:0 0 8px;color:'+ordTimerColor()+'">'+ordTimerText()+'</div>';
   head+=ordStatusLine();
+  head+='<div style="display:flex;gap:6px;margin:0 0 8px">'+ordVwBtn(true,'🖼️ Pictures + barcode')+ordVwBtn(false,'📋 Details')+'</div>';
   if(!ordAlertsOn){
-    head+='<div style="margin:0 0 8px;display:flex;gap:8px"><button class="ord-enable" style="flex:1;border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:14px;cursor:pointer">🔔 Enable order alerts</button>'+
-      '<button class="ord-test" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:11px;padding:11px 14px;font-weight:700;cursor:pointer">Test ring</button></div>'+
-      '<div style="font-size:11px;color:var(--sub);margin:-4px 0 8px">Tap once so the phone can ring — browsers block sound until you do. Orders below load either way.</div>';
+    head+='<div style="margin:0 0 6px;display:flex;gap:8px"><button class="ord-enable" style="flex:1;border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:14px;cursor:pointer">🔔 Enable order alerts</button><button class="ord-test" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:11px;padding:11px 14px;font-weight:700;cursor:pointer">Test ring</button></div>'+
+      '<div style="font-size:11px;color:var(--sub);margin:0 0 8px">Tap once so the phone can ring. (iPhone can\u2019t vibrate from Safari — the loud ring is the alert; Android also vibrates.)</div>';
   } else if(ordRinging){
     head+='<div style="margin:0 0 8px"><button class="ord-stop" style="width:100%;border:none;background:#dc2626;color:#fff;border-radius:11px;padding:12px;font-weight:800;font-size:15px;cursor:pointer">🔕 Stop ringing</button></div>';
-  } else {
-    head+='<div style="margin:0 0 8px;font-size:12px;color:#16a34a;font-weight:700">🔔 Alerts on — you\u2019ll ring when a new order arrives.</div>';
-  }
-  if(ordErr){
-    el.innerHTML=head+'<div class="empty" style="margin-top:6px;text-align:left;line-height:1.5">'+
-      '<b>Couldn\u2019t load orders.</b><br>'+ordEsc(ordErr)+'<br><br>Setup checklist:<br>'+
-      '• <b>api/orders.js</b> deployed to the repo<br>'+
-      '• Vercel env vars <b>SHOPIFY_STORE</b> + <b>SHOPIFY_ADMIN_TOKEN</b> set<br>'+
-      '• the custom app has the <b>read_orders</b> scope<br>'+
-      '• <b>Protected customer data access</b> enabled for the app (Shopify → your app → API access)</div>';
-    wireOrders();return;
-  }
-  if(!ordData.length){
-    el.innerHTML=head+'<div class="empty" style="margin-top:6px">'+(ordLoading?'Checking for orders…':'No open orders right now. New ones appear here automatically.')+'</div>';
-    wireOrders();return;
-  }
-  var mine=ordData.filter(function(o){return o.__forThis;});
-  var others=ordData.filter(function(o){return !o.__forThis;});
+  } else head+='<div style="margin:0 0 8px;font-size:12px;color:#16a34a;font-weight:700">🔔 Alerts on.</div>';
+
+  if(ordErr){el.innerHTML=head+'<div class="empty" style="margin-top:6px;text-align:left;line-height:1.5"><b>Couldn\u2019t load orders.</b><br>'+ordEsc(ordErr)+'<br><br>Check: api/orders.js deployed · SHOPIFY_STORE + SHOPIFY_ADMIN_TOKEN env · read_orders scope · Protected customer data access.</div>';wireOrders();return;}
+  if(!ordData.length){el.innerHTML=head+'<div class="empty" style="margin-top:6px">'+(ordLoading?'Checking for orders…':'No unfulfilled orders right now.')+'</div>';wireOrders();return;}
+
+  var active=ordData.filter(function(o){return !ordOrderDone(o);});
+  var doneL=ordData.filter(ordOrderDone);
+  var fullO=active.filter(function(o){return ordAnalyze(o).full;});
+  var mixO=active.filter(function(o){return !ordAnalyze(o).full;});
   var body='';
-  if(mine.length)body+='<div style="font-weight:800;margin:4px 0 6px;color:'+_obm[DEST_ID].color+'">For this branch to pick ('+mine.length+')</div><div class="card-list">'+mine.map(ordCard).join('')+'</div>';
-  body+='<div style="font-weight:800;margin:12px 0 6px;color:var(--sub)">'+(mine.length?'Other open orders':'Open orders')+' ('+others.length+')</div><div class="card-list">'+others.map(ordCard).join('')+'</div>';
+  if(fullO.length)body+='<div style="font-weight:800;margin:6px 0 6px;color:'+_obm[DEST_ID].color+'">✅ Full order picks ('+fullO.length+')</div><div class="card-list">'+fullO.map(ordCard).join('')+'</div>';
+  if(mixO.length)body+='<div style="font-weight:800;margin:14px 0 6px;color:#b45309">🔀 Mixed picks — collect from other branches ('+mixO.length+')</div><div class="card-list">'+mixO.map(ordCard).join('')+'</div>';
+  if(doneL.length)body+='<div style="font-weight:800;margin:14px 0 6px;color:var(--sub)">✓ Picked ('+doneL.length+')</div><div class="card-list">'+doneL.map(ordCard).join('')+'</div>';
   el.innerHTML=head+body;
-  if(typeof setProg==='function')setProg(0,0,mine.length+' to pick · '+ordData.length+' open');
+  if(typeof setProg==='function')setProg(0,0,active.length+' to pick · '+ordData.length+' open');
   wireOrders();
 }
 function wireOrders(){
@@ -1495,15 +1513,109 @@ function wireOrders(){
   var st=document.querySelector('.ord-stop');if(st)st.addEventListener('click',ordStopRing);
   var rf=document.querySelector('.ord-refresh');if(rf)rf.addEventListener('click',ordPoll);
   var ts=document.querySelector('.ord-test');if(ts)ts.addEventListener('click',ordTestRing);
+  document.querySelectorAll('.ord-vw').forEach(function(b){b.addEventListener('click',function(){ordSetView(this.getAttribute('data-c')==='1');});});
+  document.querySelectorAll('.pick-tick').forEach(function(b){b.addEventListener('click',function(){ordToggle(this.getAttribute('data-o'),this.getAttribute('data-k'));});});
 }
 function renderPick(){
-  var el=document.getElementById('out');
-  if(el)el.innerHTML='<div class="loading"><div class="spin"></div>Loading orders…</div>';
+  var el=document.getElementById('out');if(el)el.innerHTML='<div class="loading"><div class="spin"></div>Loading orders…</div>';
   SOURCES.forEach(function(sc,i){if(!srcLoaded[i]&&typeof loadSrc==='function')loadSrc(i);});
-  startOrdPoller();
-  renderOrdersInbox();
+  startOrdPoller();startOrdClock();renderOrdersInbox();
 }
 try{startOrdPoller();}catch(e){}
+
+
+// ── HOME DASHBOARD (landing page: work-area cards + staff allocation) ──────────────
+// First screen shows a card per work area with its live count, opens that tab on tap, and lets
+// the manager set how many staff are in and allocate each person to a job (Picking / Negatives /
+// Overstock / Ordering). "Suggest" auto-allocates by workload. Also lists the items lowest in
+// stock to reorder. Plan is shared per branch (cc_staff_<branch>).
+var STAFF_KEY='cc_staff'+DEST_ID, __homePinged=false;
+var staffPlan=null;try{staffPlan=JSON.parse(localStorage.getItem(STAFF_KEY)||'null');}catch(e){}
+if(!staffPlan||!staffPlan.rows)staffPlan={n:2,rows:[{name:'',job:'pick'},{name:'',job:'neg'}]};
+function staffSave(){try{localStorage.setItem(STAFF_KEY,JSON.stringify(staffPlan));}catch(e){}if(typeof syncSave==='function')syncSave(STAFF_KEY,staffPlan);}
+function staffBoot(){if(typeof syncLoad!=='function')return;syncLoad(STAFF_KEY).then(function(srv){if(srv&&srv.rows){staffPlan=srv;try{localStorage.setItem(STAFF_KEY,JSON.stringify(staffPlan));}catch(e){}if(typeof view!=='undefined'&&view==='home')renderHome();}}).catch(function(){});}
+
+function homeCounts(){
+  var d=(typeof destData!=='undefined'&&destData)?destData:[];
+  var T=(typeof TARGET!=='undefined'?TARGET:7);
+  var neg=d.filter(function(p){return p.qty<0;}).length;
+  var oos=d.filter(function(p){return p.qty<=0&&p.ls&&p.ls!=='Never';}).length;
+  var low=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&p.qty<T;}).length;
+  var over=null;if(typeof computeOverstockRows==='function'){try{var r=computeOverstockRows();over=r?r.length:null;}catch(e){over=null;}}
+  var pick=(typeof ordActiveCount==='function')?ordActiveCount():null;
+  return {neg:neg,oos:oos,low:low,over:over,pick:pick};
+}
+function homeAreas(){var c=homeCounts();return [
+  {k:'pick', label:'Picking',            icon:'📦', color:'#7c3aed', count:c.pick, view:'pick'},
+  {k:'neg',  label:'Negatives',          icon:'🔴', color:'#dc2626', count:c.neg,  view:'neg'},
+  {k:'oos',  label:'Out of stock',       icon:'🚫', color:'#b45309', count:c.oos,  view:'oos'},
+  {k:'over', label:'Overstock',          icon:'🔄', color:'#2563eb', count:c.over, view:'over'},
+  {k:'order',label:'Ordering · low stock',icon:'🛒', color:'#16a34a', count:c.low,  view:'orders'}
+];}
+function homeJobLabel(k){var a=homeAreas();for(var i=0;i<a.length;i++)if(a[i].k===k)return a[i].label;return k;}
+function homeGo(v){view=v;try{document.querySelectorAll('.vtab').forEach(function(t){t.classList.toggle('on',t.getAttribute('data-v')===v);});}catch(e){}if(typeof renderView==='function')renderView();}
+
+function staffStep(delta){var n=Math.max(0,Math.min(20,(staffPlan.n||0)+delta));var rows=(staffPlan.rows||[]).slice(0,n);while(rows.length<n)rows.push({name:'',job:'pick'});staffPlan={n:n,rows:rows};staffSave();renderHome();}
+function staffSet(i,field,val){if(!staffPlan.rows[i])return;staffPlan.rows[i][field]=val;staffSave();if(field==='job')renderHome();}
+function staffSuggest(){
+  var n=staffPlan.n||0, areas=homeAreas().map(function(a){return {k:a.k,count:(a.count||0)};});
+  var live=areas.filter(function(a){return a.count>0;}); if(!live.length)live=areas;
+  var asg={};live.forEach(function(a){asg[a.k]=0;});
+  var rows=[];
+  for(var i=0;i<n;i++){var best=live[0];live.forEach(function(a){if((a.count/(asg[a.k]+1))>(best.count/(asg[best.k]+1)))best=a;});asg[best.k]++;rows.push({name:(staffPlan.rows[i]&&staffPlan.rows[i].name)||'',job:best.k});}
+  staffPlan={n:n,rows:rows};staffSave();renderHome();
+}
+
+function homeCardHTML(a){
+  var cnt=(a.count==null)?'<span style="opacity:.5">…</span>':a.count;
+  var who=(staffPlan.rows||[]).filter(function(r){return r.job===a.k;}).map(function(r){return r.name||'•';});
+  var whoHTML=who.length?'<div style="margin-top:6px;font-size:11.5px;color:'+a.color+';font-weight:700">👤 '+who.map(ordEsc).join(', ')+'</div>':'<div style="margin-top:6px;font-size:11.5px;color:var(--sub)">no one assigned</div>';
+  return '<div onclick="homeGo(\''+a.view+'\')" style="cursor:pointer;border:1px solid var(--border,#e5e7eb);border-left:5px solid '+a.color+';border-radius:14px;background:var(--card,#fff);padding:13px 14px;display:flex;flex-direction:column;justify-content:space-between;min-height:96px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-weight:800;font-size:14px">'+a.icon+' '+a.label+'</div><div style="font-weight:900;font-size:26px;color:'+a.color+';line-height:1">'+cnt+'</div></div>'+
+    whoHTML+'</div>';
+}
+function staffRowHTML(r,i){
+  var opts=homeAreas().map(function(a){return '<option value="'+a.k+'"'+(r.job===a.k?' selected':'')+'>'+a.icon+' '+a.label+'</option>';}).join('');
+  return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px">'+
+    '<div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--purple,#6d28d9);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px">'+(i+1)+'</div>'+
+    '<input value="'+ordEsc(r.name||'')+'" oninput="staffSet('+i+',\'name\',this.value)" placeholder="Staff name" style="flex:1;min-width:0;border:1px solid var(--border,#ddd);border-radius:9px;padding:9px 10px;font-size:14px">'+
+    '<select onchange="staffSet('+i+',\'job\',this.value)" style="flex:none;border:1px solid var(--border,#ddd);border-radius:9px;padding:9px 8px;font-size:13px;font-weight:700;background:#fff">'+opts+'</select>'+
+  '</div>';
+}
+function homeLowListHTML(){
+  var d=(typeof destData!=='undefined'&&destData)?destData:[];var T=(typeof TARGET!=='undefined'?TARGET:7);
+  var low=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&p.qty<T;}).sort(function(a,b){return a.qty-b.qty;}).slice(0,8);
+  if(!low.length)return '';
+  var imgFn=(typeof imgEl==='function')?imgEl:function(){return '';};
+  var rows=low.map(function(p){return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid #f1f1f4">'+
+    '<div onclick="ordZoom(\''+ordEsc(p.bc)+'\',\''+ordEsc((p.nm||'').replace(/[\'\\]/g,''))+'\')" style="flex:none;width:44px;height:44px;border-radius:8px;overflow:hidden;background:#f3f3f6;display:flex;align-items:center;justify-content:center;cursor:zoom-in">'+imgFn(p.bc,44)+'</div>'+
+    '<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ordEsc(p.nm)+'</div><div style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--sub)">'+ordEsc(p.bc)+'</div></div>'+
+    '<div style="flex:none;font-weight:800;color:#b45309">'+p.qty+' left</div></div>';}).join('');
+  return '<div class="src-card" style="margin-top:14px"><div class="src-hdr" style="display:flex;justify-content:space-between;align-items:center"><div class="src-name">🛒 Lowest in stock — reorder</div>'+
+    '<button onclick="homeGo(\'orders\')" style="border:1px solid var(--purple,#6d28d9);background:#fff;color:var(--purpletxt,#6d28d9);border-radius:9px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Open ordering →</button></div>'+
+    '<div style="padding:0 2px">'+rows+'</div></div>';
+}
+function renderHome(){
+  var el=document.getElementById('out');if(!el)return;
+  if(typeof SOURCES!=='undefined')SOURCES.forEach(function(sc,i){if(!srcLoaded[i]&&typeof loadSrc==='function')loadSrc(i);}); // for overstock count
+  if(typeof startOrdPoller==='function'){try{startOrdPoller();}catch(e){}}                                                    // for picking count
+  var areas=homeAreas();
+  var cards='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+areas.map(homeCardHTML).join('')+'</div>';
+  var planner='<div class="src-card" style="margin-top:14px"><div class="src-hdr"><div class="src-name">👥 Staff on today</div>'+
+    '<div class="src-rule" style="color:var(--sub)">Set how many people are in and give each a job. Suggest allocates by where the work is.</div></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin:4px 0 12px">'+
+      '<button onclick="staffStep(-1)" style="width:38px;height:38px;border-radius:10px;border:1px solid var(--border,#ddd);background:#fff;font-size:20px;font-weight:800;cursor:pointer">−</button>'+
+      '<div style="font-weight:900;font-size:24px;min-width:34px;text-align:center">'+(staffPlan.n||0)+'</div>'+
+      '<button onclick="staffStep(1)" style="width:38px;height:38px;border-radius:10px;border:1px solid var(--border,#ddd);background:#fff;font-size:20px;font-weight:800;cursor:pointer">+</button>'+
+      '<div style="flex:1"></div>'+
+      '<button onclick="staffSuggest()" style="border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer">✨ Suggest</button></div>'+
+    (staffPlan.rows||[]).map(staffRowHTML).join('')+
+    ((staffPlan.n||0)===0?'<div style="color:var(--sub);font-size:13px">Add staff with the + button.</div>':'')+
+    '</div>';
+  el.innerHTML='<div style="font-weight:900;font-size:18px;margin:2px 0 10px">'+_obm[DEST_ID].name+' — today\u2019s board</div>'+cards+planner+homeLowListHTML();
+  if(!__homePinged){__homePinged=true;setTimeout(function(){if(typeof view!=='undefined'&&view==='home')renderHome();},1600);} // catch first orders poll
+}
+try{staffBoot();}catch(e){}
 
 // ── LOW STOCK (parent of From X sub-tabs) ──────────────────
 var lowSubIdx=0;
