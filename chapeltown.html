@@ -377,6 +377,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
   <div class="vtab" data-v="orders">🛒 Order</div>
+  <div class="vtab" data-v="pick">📦 Picking</div>
   <div class="vtab" data-v="fast">⚡ Fast OOS</div>
   <div class="vtab" data-v="whorder">🚚 W/H Order</div>
   <div class="vtab" data-v="shopify">🛍 + Shopify</div>
@@ -910,6 +911,7 @@ function renderView(){
   else if(view==='oos')renderOOS();
   else if(view==='over')renderOverstock();
   else if(view==='orders')renderOrders();
+  else if(view==='pick')renderPick();
   else if(view==='whorder')renderWHOrder();
   else if(view==='shopify')renderShopify();
   else if(view==='map')renderMap();
@@ -1338,6 +1340,149 @@ function renderOrders(){
   ccLoadOrderLibs(function(){ccMountOrders(el);});
   if(typeof setProg==='function')setProg(0,0,'Orders');
 }
+
+
+// ── PICKING / SHOPIFY ORDERS (routes each order to the branch holding the stock; rings on new) ──
+// Polls /api/orders (recent unfulfilled Shopify orders). Each order is routed to a branch by
+// where the stock is (the branch that can fully fill it — every branch page runs the same
+// deterministic calc, so exactly one branch is the picker). When a NEW order arrives the phone
+// RINGS (looping tone + vibrate + browser notification) until acknowledged. Sound needs one tap
+// to enable (browsers block autoplay), so there's an "Enable alerts" button.
+var ORDERS_API='/api/orders';
+var ordData=[], ordErr='', ordAlertsOn=false, ordPrimed=false, ordPollTimer=null, ordRinging=false, ordRingTimer=null, ordAudioCtx=null;
+var ORD_SEEN_KEY='cc_ord_seen'+DEST_ID;
+var ordSeen=[];try{ordSeen=JSON.parse(localStorage.getItem(ORD_SEEN_KEY)||'[]');}catch(e){}
+function ordSaveSeen(){try{localStorage.setItem(ORD_SEEN_KEY,JSON.stringify(ordSeen.slice(-800)));}catch(e){}}
+var _obm=(typeof BR_META!=='undefined')?BR_META:{0:{short:'Chap',name:'Chapeltown',color:'#fb923c'},1:{short:'City',name:'City Centre',color:'#16a34a'},2:{short:'Roun',name:'Roundhay',color:'#2563eb'}};
+
+// ---- stock lookup across the already-loaded branch feeds ----
+function ordIndex(){
+  if(!destLoaded)return null;
+  function mapFor(arr){var m={};(arr||[]).forEach(function(p){if(p.bc)m[p.bc]=p;});return m;}
+  var byKey={};byKey[DEST_ID]=mapFor(destData);
+  if(SOURCES[1]&&srcLoaded[1])byKey[SOURCES[1].si]=mapFor(srcData[1]);
+  if(SOURCES[2]&&srcLoaded[2])byKey[SOURCES[2].si]=mapFor(srcData[2]);
+  return byKey;
+}
+function ordQtyAt(byKey,bc,k){var x=bc&&byKey[k]&&byKey[k][bc];return x&&typeof x.qty==='number'?x.qty:0;}
+function ordReady(){return !!(destLoaded&&srcLoaded[1]&&srcLoaded[2]);}
+// deterministic picker: first branch (Chap,City,Roun) that can fully fill; else best coverage
+function ordAssignee(o,byKey){
+  var keys=[0,1,2];
+  var full=keys.filter(function(k){return (o.items||[]).every(function(it){return it.barcode?ordQtyAt(byKey,it.barcode,k)>=it.qty:false;});});
+  if(full.length)return full.sort(function(a,b){return a-b;})[0];
+  var best=null,bc=-1;
+  keys.forEach(function(k){var c=(o.items||[]).reduce(function(a,it){return a+(it.barcode?Math.min(it.qty,ordQtyAt(byKey,it.barcode,k)):0);},0);if(c>bc){bc=c;best=k;}});
+  return best;
+}
+function ordRoute(){var byKey=ordIndex();if(!byKey||!ordReady())return false;ordData.forEach(function(o){o.__as=ordAssignee(o,byKey);o.__forThis=(o.__as===DEST_ID);o.__byKey=byKey;});return true;}
+
+// ---- ring / notify ----
+function ordEnableAlerts(){
+  try{ordAudioCtx=ordAudioCtx||new (window.AudioContext||window.webkitAudioContext)();if(ordAudioCtx.state==='suspended')ordAudioCtx.resume();}catch(e){}
+  ordAlertsOn=true;
+  try{if('Notification' in window && Notification.permission==='default')Notification.requestPermission();}catch(e){}
+  startOrdPoller();
+  if(typeof view!=='undefined'&&view==='pick')renderOrdersInbox();
+}
+function ordRingLoop(){
+  if(!ordRinging)return;
+  try{var c=ordAudioCtx,t=c.currentTime;[[880,0],[660,0.26]].forEach(function(p){var o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=p[0];g.gain.setValueAtTime(0.0001,t+p[1]);g.gain.exponentialRampToValueAtTime(0.35,t+p[1]+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+p[1]+0.24);o.connect(g);g.connect(c.destination);o.start(t+p[1]);o.stop(t+p[1]+0.26);});}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([300,140,300]);}catch(e){}
+  ordRingTimer=setTimeout(ordRingLoop,1700);
+}
+function ordStartRing(){if(!ordAlertsOn||ordRinging||!ordAudioCtx)return;ordRinging=true;ordRingLoop();}
+function ordStopRing(){ordRinging=false;if(ordRingTimer){clearTimeout(ordRingTimer);ordRingTimer=null;}if(typeof view!=='undefined'&&view==='pick')renderOrdersInbox();}
+function ordNotify(n){try{if('Notification' in window && Notification.permission==='granted'){var t=n+' new order'+(n>1?'s':'')+' — '+_obm[DEST_ID].name;new Notification('🔔 '+t,{body:'Tap to open picking',tag:'cc-order'});}}catch(e){}}
+
+// ---- poll ----
+function ordPoll(){
+  fetch(ORDERS_API,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+    if(!j){return;}
+    if(j.error){ordErr=j.error;if(typeof view!=='undefined'&&view==='pick')renderOrdersInbox();return;}
+    ordErr='';ordData=(j.orders||[]);
+    var fresh=ordData.filter(function(o){return ordSeen.indexOf(o.id)<0;});
+    ordData.forEach(function(o){if(ordSeen.indexOf(o.id)<0)ordSeen.push(o.id);});
+    ordSeen=ordSeen.slice(-800);ordSaveSeen();
+    if(!ordPrimed){ordPrimed=true;}                 // first poll: seed, don't ring for existing orders
+    else if(fresh.length&&ordAlertsOn){ordStartRing();ordNotify(fresh.length);}
+    ordRoute();ordUpdateBadge();
+    if(typeof view!=='undefined'&&view==='pick')renderOrdersInbox();
+  }).catch(function(){});
+}
+function startOrdPoller(){if(ordPollTimer)return;ordPoll();ordPollTimer=setInterval(ordPoll,30000);}
+function ordUpdateBadge(){
+  try{var tab=document.querySelector('.vtab[data-v="pick"]');if(!tab)return;
+    var n=ordReady()?ordData.filter(function(o){return o.__forThis;}).length:0;
+    tab.innerHTML='📦 Picking'+(n?' <span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800">'+n+'</span>':'');
+  }catch(e){}
+}
+
+// ---- UI ----
+function ordItemsHTML(o){
+  return (o.items||[]).map(function(it){
+    var here=o.__byKey?ordQtyAt(o.__byKey,it.barcode,DEST_ID):0;
+    var enough=it.barcode&&here>=it.qty;
+    var col=enough?'#16a34a':(it.barcode?'#b45309':'#b91c1c');
+    var note=!it.barcode?'no barcode':(enough?'in stock':'here '+here+'/'+it.qty);
+    return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:3px 0;border-top:1px solid #f1f1f4">'+
+      '<span style="min-width:0"><b>'+it.qty+'×</b> '+(it.title||it.sku||it.barcode||'item')+'</span>'+
+      '<span style="flex:none;color:'+col+';font-weight:700">'+note+'</span></div>';
+  }).join('');
+}
+function ordCard(o){
+  var as=(typeof o.__as==='number')?o.__as:null;
+  var asChip=(as!=null)?'<span style="background:'+_obm[as].color+'1f;color:'+_obm[as].color+';border:1px solid '+_obm[as].color+';border-radius:8px;padding:2px 8px;font-weight:800;font-size:12px">Pick: '+_obm[as].name+'</span>':'<span style="color:var(--sub);font-size:12px">routing…</span>';
+  var when='';try{when=new Date(o.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}catch(e){}
+  return '<div class="over-card" style="display:block;'+(o.__forThis?'border:2px solid '+_obm[DEST_ID].color:'')+'">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+      '<div style="font-weight:800;font-size:15px">'+o.name+' <span style="color:var(--sub);font-weight:600;font-size:12px">'+when+(o.total?' · '+o.currency+' '+o.total:'')+'</span></div>'+
+      asChip+'</div>'+
+    '<div style="margin-top:6px">'+ordItemsHTML(o)+'</div>'+
+  '</div>';
+}
+function renderOrdersInbox(){
+  var el=document.getElementById('out');
+  if(!el)return;
+  var head='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">📦 Picking — '+_obm[DEST_ID].name+'</div>'+
+    '<div class="src-rule" style="color:var(--sub)">New Shopify orders, routed to the branch that has the stock. Orders for this branch are outlined and ring when they arrive.</div></div></div>';
+  if(!ordAlertsOn){
+    head+='<div style="margin:0 0 8px"><button class="ord-enable" style="width:100%;border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:11px;padding:12px;font-weight:800;font-size:15px;cursor:pointer">🔔 Enable order alerts (tap once)</button>'+
+      '<div style="font-size:11px;color:var(--sub);text-align:center;margin-top:4px">Needed so the phone can ring — browsers block sound until you tap.</div></div>';
+  } else if(ordRinging){
+    head+='<div style="margin:0 0 8px"><button class="ord-stop" style="width:100%;border:none;background:#dc2626;color:#fff;border-radius:11px;padding:12px;font-weight:800;font-size:15px;cursor:pointer">🔕 Stop ringing</button></div>';
+  }
+  if(ordErr){
+    el.innerHTML=head+'<div class="empty" style="margin-top:6px">Couldn\u2019t load orders: '+ordErr+'.<br>Check the app has the Shopify <b>read_orders</b> scope and env vars set.</div>';
+    wireOrders();return;
+  }
+  if(!ordData.length){
+    el.innerHTML=head+'<div class="empty" style="margin-top:6px">No open orders right now. New ones appear here automatically.</div>';
+    wireOrders();return;
+  }
+  var mine=ordData.filter(function(o){return o.__forThis;});
+  var others=ordData.filter(function(o){return !o.__forThis;});
+  var routed=ordRoute()||ordReady();
+  var body='';
+  if(!routed)body+='<div style="font-size:12px;color:var(--sub);margin:0 0 8px">Loading branch stock to route orders…</div>';
+  if(mine.length)body+='<div style="font-weight:800;margin:4px 0 6px;color:'+_obm[DEST_ID].color+'">For this branch to pick ('+mine.length+')</div><div class="card-list">'+mine.map(ordCard).join('')+'</div>';
+  body+='<div style="font-weight:800;margin:12px 0 6px;color:var(--sub)">'+(mine.length?'Other open orders':'Open orders')+' ('+others.length+')</div><div class="card-list">'+others.map(ordCard).join('')+'</div>';
+  el.innerHTML=head+body;
+  if(typeof setProg==='function')setProg(0,0,mine.length+' to pick · '+ordData.length+' open');
+  wireOrders();
+}
+function wireOrders(){
+  var en=document.querySelector('.ord-enable');if(en)en.addEventListener('click',ordEnableAlerts);
+  var st=document.querySelector('.ord-stop');if(st)st.addEventListener('click',ordStopRing);
+}
+function renderPick(){                       // tab entry point
+  var el=document.getElementById('out');
+  if(el)el.innerHTML='<div class="loading"><div class="spin"></div>Loading orders…</div>';
+  SOURCES.forEach(function(sc,i){if(!srcLoaded[i]&&typeof loadSrc==='function')loadSrc(i);}); // need all branch stock to route
+  startOrdPoller();
+  renderOrdersInbox();
+}
+try{startOrdPoller();}catch(e){}            // background poll from load (silent until alerts enabled)
 
 // ── LOW STOCK (parent of From X sub-tabs) ──────────────────
 var lowSubIdx=0;
