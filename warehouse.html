@@ -434,7 +434,7 @@ var IURL='/api/stock-data?branch=shopify-images'; // ShopifyImages tab — updat
 
 var bd=[null,null,null,null],bm=[{},{},{},{}],imgs={},shopifyData={},loaded=0;
 var pkTx={};
-try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
+/* start each page load with a clean checklist — nothing pre-ticked (the Picked log keeps the permanent record) */
 // who is picking + the shared 'picked' audit log
 var pickerName='';try{pickerName=localStorage.getItem('cc_pk_name')||'';}catch(e){}
 function ensurePicker(){if(!pickerName){var n=(typeof prompt==='function')?prompt('Your name (shown in the Picked list):',''):'';if(n&&(''+n).trim()){pickerName=(''+n).trim();try{localStorage.setItem('cc_pk_name',pickerName);}catch(e){}}}return pickerName||'Staff';}
@@ -451,7 +451,7 @@ var whNS={0:{},1:{},2:{}};
 function whNSat(bi,bc){return !!(whNS[bi]&&whNS[bi][bc]);}
 async function loadNS(){try{var r=await Promise.all([syncLoad('cc_whns0'),syncLoad('cc_whns1'),syncLoad('cc_whns2')]);whNS={0:r[0]||{},1:r[1]||{},2:r[2]||{}};}catch(e){}}
 var pickCounts=[0,0,0];
-var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_brandcollapsed')||'{}');}catch(e){}
+var brandCollapsed={};/* never restore collapsed state: every page load shows all brands expanded */
 var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup'||v==='map'||v==='over')?v:'topup';}catch(e){return 'topup';}})();
 var offers={};try{offers=JSON.parse(localStorage.getItem('cc_wh_offers')||'{}');}catch(e){offers={};}
 function saveOffers(){try{localStorage.setItem('cc_wh_offers',JSON.stringify(offers));}catch(e){}}
@@ -545,8 +545,7 @@ async function livePoll(){
     var _sp=await syncLoad('cc_pk_picked');if(mergePicked(_sp)&&whTab==='picked'&&loaded>=4)renderWH();
     var s=await syncLoad('cc_pk_session');pkSession=(s&&s.start)?s:null;
     if(tmr.on)return;                       // this device is the picker — don't pull over its own work
-    var shared=await syncLoad('cc_pk_ticks');
-    if(shared){Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=(shared[k]&&shared[k].slice)?shared[k].slice():shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
+    /* cross-device tick restore disabled: opening the page always shows a clean checklist */
     var sig=pkDoneSig();
     if(sig!==lastDoneSig){lastDoneSig=sig;if((whTab==='topup'||whTab==='oos')&&loaded>=4)renderWH();}
     else if(pkSession&&!document.getElementById('live-bar')&&(whTab==='topup'||whTab==='oos')&&loaded>=4)renderWH();
@@ -684,8 +683,8 @@ function dAgo(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
 function getQty(bi,bc){var p=bm[bi]?bm[bi][bc]:null;return p?p.qty:0;}
 function getLs(bi,bc){var p=bm[bi]?bm[bi][bc]:null;return (p&&p.ls&&p.ls!=='Never'&&p.ls!=='NULL')?p.ls:null;}
 function pkCellSold(item,bi){var lb=item.lsB||[],ls=lb[bi];
-  if(ls){var d=(typeof daysSince==='function')?daysSince(ls):9999;return d<9999?('sold '+d+'d'):('sold '+ls);}
-  if(item.ls&&item.ls!=='Never'&&item.ls!=='NULL'){var dw=(typeof daysSince==='function')?daysSince(item.ls):9999;return dw<9999?('wh '+dw+'d'):('wh '+item.ls);}
+  if(ls)return 'sold '+ls;
+  if(item.ls&&item.ls!=='Never'&&item.ls!=='NULL')return 'wh '+item.ls;
   return 'no sale';}
 function pkSoldTags(item){var bn=['Chap','City','Roun'],col=['#b45309','#16a34a','#2563eb'],lb=item.lsB||[],out='';for(var i=0;i<3;i++){var ls=lb[i];if(ls){var da=(typeof daysSince==='function')?daysSince(ls):9999;out+='<span class="pk-tag pk-tag-sold" style="color:'+col[i]+';border-color:'+col[i]+'55">'+bn[i]+' sold '+ls+(da<9999?' ('+da+'d)':'')+'</span>';}}if(!out){if(item.ls&&item.ls!=='Never'&&item.ls!=='NULL'){var dw=(typeof daysSince==='function')?daysSince(item.ls):9999;out='<span class="pk-tag pk-tag-sold">\ud83d\uddd3 sold '+item.ls+(dw<9999?' ('+dw+'d)':'')+'</span>';}else out='<span class="pk-tag pk-tag-sold" style="opacity:.65">no recent sale</span>';}return out;}
 function imgPH(){return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';}
@@ -1233,7 +1232,7 @@ function renderBrandGroups(all){
     var items=groups[b].slice().sort(function(x,y){return x.nm.localeCompare(y.nm);});
     var cells=0,done=0,pcs=0;
     items.forEach(function(it){var t=pkTx[it.bc]||[false,false,false];for(var k=0;k<3;k++){if(it.sp[k]>0){cells++;pcs+=it.sp[k];if(t[k])done++;}}});
-    var allDone=cells>0&&done===cells, coll=(b in brandCollapsed)?!!brandCollapsed[b]:allDone;
+    var allDone=cells>0&&done===cells, coll=!!brandCollapsed[b];
     var key=b.replace(/"/g,'');
     var locCls=m.isTag?' loc-tag':(m.label==='E'?' loc-e':'');
     html+='<div class="brand-hdr" data-brand="'+key+'">'+
@@ -1386,6 +1385,7 @@ function wireTicks(all){
   });
 }
 function collapseBrandIfDone(rowEl){
+  return; /* auto-collapse on completion disabled — keep everything open */
   if(!rowEl)return;
   var body=rowEl.closest('.brand-body');if(!body)return;
   var rows=body.querySelectorAll('.pk-row');
