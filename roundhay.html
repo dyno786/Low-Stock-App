@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>CC Roundhay</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
@@ -1561,63 +1564,56 @@ function renderPick(){
 try{startOrdPoller();}catch(e){}
 
 
-// ── HOME DASHBOARD (landing page: work-area cards + staff allocation) ──────────────
-// First screen shows a card per work area with its live count, opens that tab on tap, and lets
-// the manager set how many staff are in and allocate each person to a job (Picking / Negatives /
-// Overstock / Ordering). "Suggest" auto-allocates by workload. Also lists the items lowest in
-// stock to reorder. Plan is shared per branch (cc_staff_<branch>).
+// ── HOME DASHBOARD (landing: work-area cards + quick staff task allocation) ──────────────
+// First screen: a card per work area with its live count (tap to open that tab), plus quick
+// "N people" buttons that instantly share the jobs out by workload into a task list.
 var STAFF_KEY='cc_staff'+DEST_ID, __homePinged=false;
 var staffPlan=null;try{staffPlan=JSON.parse(localStorage.getItem(STAFF_KEY)||'null');}catch(e){}
-if(!staffPlan||!staffPlan.rows)staffPlan={n:2,rows:[{name:'',job:'pick'},{name:'',job:'neg'}]};
+if(!staffPlan||typeof staffPlan.n!=='number')staffPlan={n:3};
 function staffSave(){try{localStorage.setItem(STAFF_KEY,JSON.stringify(staffPlan));}catch(e){}if(typeof syncSave==='function')syncSave(STAFF_KEY,staffPlan);}
-function staffBoot(){if(typeof syncLoad!=='function')return;syncLoad(STAFF_KEY).then(function(srv){if(srv&&srv.rows){staffPlan=srv;try{localStorage.setItem(STAFF_KEY,JSON.stringify(staffPlan));}catch(e){}if(typeof view!=='undefined'&&view==='home')renderHome();}}).catch(function(){});}
+function staffBoot(){if(typeof syncLoad!=='function')return;syncLoad(STAFF_KEY).then(function(srv){if(srv&&typeof srv.n==='number'){staffPlan=srv;try{localStorage.setItem(STAFF_KEY,JSON.stringify(staffPlan));}catch(e){}if(typeof view!=='undefined'&&view==='home')renderHome();}}).catch(function(){});}
+function staffPreset(n){staffPlan={n:n};staffSave();renderHome();}
 
 function homeCounts(){
   var d=(typeof destData!=='undefined'&&destData)?destData:[];
   var T=(typeof TARGET!=='undefined'?TARGET:7);
+  var im=(typeof imgs!=='undefined'&&imgs)?imgs:{};
   var neg=d.filter(function(p){return p.qty<0;}).length;
   var oos=d.filter(function(p){return p.qty<=0&&p.ls&&p.ls!=='Never';}).length;
   var low=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&p.qty<T;}).length;
+  var pri=['SYNTHETIC HAIR','HUMAN HAIR'];
+  var miss=d.filter(function(p){return p.qty>0&&pri.indexOf(p.dp)>=0&&!im[p.bc];}).length;
+  var shop=null;if(typeof shopCatOf==='function'){try{shop=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!im[p.bc]&&(typeof shopExistsConfirmed!=='function'||!shopExistsConfirmed(p.bc))&&(typeof isDraftBc!=='function'||!isDraftBc(p.bc));}).length;}catch(e){shop=null;}}
   var over=null;if(typeof computeOverstockRows==='function'){try{var r=computeOverstockRows();over=r?r.length:null;}catch(e){over=null;}}
   var pick=(typeof ordActiveCount==='function')?ordActiveCount():null;
-  return {neg:neg,oos:oos,low:low,over:over,pick:pick};
+  return {neg:neg,oos:oos,low:low,miss:miss,shop:shop,over:over,pick:pick};
 }
 function homeAreas(){var c=homeCounts();return [
-  {k:'pick', label:'Picking',            icon:'📦', color:'#7c3aed', count:c.pick, view:'pick'},
-  {k:'neg',  label:'Negatives',          icon:'🔴', color:'#dc2626', count:c.neg,  view:'neg'},
-  {k:'oos',  label:'Out of stock',       icon:'🚫', color:'#b45309', count:c.oos,  view:'oos'},
-  {k:'over', label:'Overstock',          icon:'🔄', color:'#2563eb', count:c.over, view:'over'},
-  {k:'order',label:'Ordering · low stock',icon:'🛒', color:'#16a34a', count:c.low,  view:'orders'}
+  {k:'pick', label:'Orders to pick',       icon:'📦', color:'#7c3aed', count:c.pick, view:'pick'},
+  {k:'neg',  label:'Negatives',            icon:'🔴', color:'#dc2626', count:c.neg,  view:'neg'},
+  {k:'oos',  label:'Out of stock',         icon:'🚫', color:'#b45309', count:c.oos,  view:'oos'},
+  {k:'over', label:'Overstock to move',    icon:'🔄', color:'#2563eb', count:c.over, view:'over'},
+  {k:'order',label:'To order · low stock', icon:'🛒', color:'#16a34a', count:c.low,  view:'low'},
+  {k:'shop', label:'Add to Shopify',       icon:'🛍', color:'#db2777', count:c.shop, view:'shopify'},
+  {k:'img',  label:'Missing images',       icon:'📸', color:'#0891b2', count:c.miss, view:'imgs'}
 ];}
-function homeJobLabel(k){var a=homeAreas();for(var i=0;i<a.length;i++)if(a[i].k===k)return a[i].label;return k;}
 function homeGo(v){view=v;try{document.querySelectorAll('.vtab').forEach(function(t){t.classList.toggle('on',t.getAttribute('data-v')===v);});}catch(e){}if(typeof renderView==='function')renderView();}
 
-function staffStep(delta){var n=Math.max(0,Math.min(20,(staffPlan.n||0)+delta));var rows=(staffPlan.rows||[]).slice(0,n);while(rows.length<n)rows.push({name:'',job:'pick'});staffPlan={n:n,rows:rows};staffSave();renderHome();}
-function staffSet(i,field,val){if(!staffPlan.rows[i])return;staffPlan.rows[i][field]=val;staffSave();if(field==='job')renderHome();}
-function staffSuggest(){
-  var n=staffPlan.n||0, areas=homeAreas().map(function(a){return {k:a.k,count:(a.count||0)};});
-  var live=areas.filter(function(a){return a.count>0;}); if(!live.length)live=areas;
+// share the jobs out across N people, weighted by how much work each area has
+function staffTasks(){
+  var n=staffPlan.n||0, areas=homeAreas();
+  var live=areas.filter(function(a){return (a.count||0)>0;}); if(!live.length)live=areas.slice(0,Math.max(1,n));
   var asg={};live.forEach(function(a){asg[a.k]=0;});
-  var rows=[];
-  for(var i=0;i<n;i++){var best=live[0];live.forEach(function(a){if((a.count/(asg[a.k]+1))>(best.count/(asg[best.k]+1)))best=a;});asg[best.k]++;rows.push({name:(staffPlan.rows[i]&&staffPlan.rows[i].name)||'',job:best.k});}
-  staffPlan={n:n,rows:rows};staffSave();renderHome();
+  var out=[];
+  for(var i=0;i<n;i++){var best=live[0];live.forEach(function(a){if(((a.count||0)/(asg[a.k]+1))>((best.count||0)/(asg[best.k]+1)))best=a;});asg[best.k]++;out.push(best);}
+  return out;
 }
 
 function homeCardHTML(a){
   var cnt=(a.count==null)?'<span style="opacity:.5">…</span>':a.count;
-  var who=(staffPlan.rows||[]).filter(function(r){return r.job===a.k;}).map(function(r){return r.name||'•';});
-  var whoHTML=who.length?'<div style="margin-top:6px;font-size:11.5px;color:'+a.color+';font-weight:700">👤 '+who.map(ordEsc).join(', ')+'</div>':'<div style="margin-top:6px;font-size:11.5px;color:var(--sub)">no one assigned</div>';
-  return '<div onclick="homeGo(\''+a.view+'\')" style="cursor:pointer;border:1px solid var(--border,#e5e7eb);border-left:5px solid '+a.color+';border-radius:14px;background:var(--card,#fff);padding:13px 14px;display:flex;flex-direction:column;justify-content:space-between;min-height:96px">'+
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-weight:800;font-size:14px">'+a.icon+' '+a.label+'</div><div style="font-weight:900;font-size:26px;color:'+a.color+';line-height:1">'+cnt+'</div></div>'+
-    whoHTML+'</div>';
-}
-function staffRowHTML(r,i){
-  var opts=homeAreas().map(function(a){return '<option value="'+a.k+'"'+(r.job===a.k?' selected':'')+'>'+a.icon+' '+a.label+'</option>';}).join('');
-  return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px">'+
-    '<div style="flex:none;width:26px;height:26px;border-radius:50%;background:var(--purple,#6d28d9);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px">'+(i+1)+'</div>'+
-    '<input value="'+ordEsc(r.name||'')+'" oninput="staffSet('+i+',\'name\',this.value)" placeholder="Staff name" style="flex:1;min-width:0;border:1px solid var(--border,#ddd);border-radius:9px;padding:9px 10px;font-size:14px">'+
-    '<select onchange="staffSet('+i+',\'job\',this.value)" style="flex:none;border:1px solid var(--border,#ddd);border-radius:9px;padding:9px 8px;font-size:13px;font-weight:700;background:#fff">'+opts+'</select>'+
-  '</div>';
+  return '<div onclick="homeGo(\''+a.view+'\')" style="cursor:pointer;border:1px solid var(--border,#e5e7eb);border-left:5px solid '+a.color+';border-radius:14px;background:var(--card,#fff);padding:13px 14px;display:flex;flex-direction:column;justify-content:space-between;min-height:82px">'+
+    '<div style="font-weight:800;font-size:14px">'+a.icon+' '+a.label+'</div>'+
+    '<div style="font-weight:900;font-size:28px;color:'+a.color+';line-height:1;margin-top:6px">'+cnt+'</div></div>';
 }
 function homeLowListHTML(){
   var d=(typeof destData!=='undefined'&&destData)?destData:[];var T=(typeof TARGET!=='undefined'?TARGET:7);
@@ -1629,28 +1625,31 @@ function homeLowListHTML(){
     '<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ordEsc(p.nm)+'</div><div style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--sub)">'+ordEsc(p.bc)+'</div></div>'+
     '<div style="flex:none;font-weight:800;color:#b45309">'+p.qty+' left</div></div>';}).join('');
   return '<div class="src-card" style="margin-top:14px"><div class="src-hdr" style="display:flex;justify-content:space-between;align-items:center"><div class="src-name">🛒 Lowest in stock — reorder</div>'+
-    '<button onclick="homeGo(\'orders\')" style="border:1px solid var(--purple,#6d28d9);background:#fff;color:var(--purpletxt,#6d28d9);border-radius:9px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Open ordering →</button></div>'+
+    '<button onclick="homeGo(\'low\')" style="border:1px solid var(--purple,#6d28d9);background:#fff;color:var(--purpletxt,#6d28d9);border-radius:9px;padding:6px 11px;font-weight:700;font-size:12px;cursor:pointer">Open →</button></div>'+
     '<div style="padding:0 2px">'+rows+'</div></div>';
 }
 function renderHome(){
   var el=document.getElementById('out');if(!el)return;
-  if(typeof SOURCES!=='undefined')SOURCES.forEach(function(sc,i){if(!srcLoaded[i]&&typeof loadSrc==='function')loadSrc(i);}); // for overstock count
-  if(typeof startOrdPoller==='function'){try{startOrdPoller();}catch(e){}}                                                    // for picking count
+  if(typeof loadImgs==='function'&&!window.__homeImgs){window.__homeImgs=1;try{loadImgs().then(function(){if(typeof view!=='undefined'&&view==='home')renderHome();});}catch(e){}}
+  if(typeof SOURCES!=='undefined')SOURCES.forEach(function(sc,i){if(!srcLoaded[i]&&typeof loadSrc==='function')loadSrc(i);});
+  if(typeof startOrdPoller==='function'){try{startOrdPoller();}catch(e){}}
   var areas=homeAreas();
   var cards='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+areas.map(homeCardHTML).join('')+'</div>';
+
+  var presets=[2,3,4,5];
+  var btns=presets.map(function(k){var on=(staffPlan.n===k);return '<button onclick="staffPreset('+k+')" style="flex:1;border:1px solid '+(on?'var(--purple,#6d28d9)':'var(--border,#ddd)')+';background:'+(on?'var(--purple,#6d28d9)':'var(--card,#fff)')+';color:'+(on?'#fff':'inherit')+';border-radius:11px;padding:12px 4px;font-weight:800;font-size:15px;cursor:pointer">'+k+' people</button>';}).join('');
+  var tasks=staffTasks();
+  var taskHTML=tasks.map(function(a,i){return '<div onclick="homeGo(\''+a.view+'\')" style="cursor:pointer;display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--border,#e5e7eb);border-left:5px solid '+a.color+';border-radius:11px;margin-bottom:7px;background:var(--card,#fff)">'+
+    '<div style="flex:none;width:29px;height:29px;border-radius:50%;background:'+a.color+';color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px">'+(i+1)+'</div>'+
+    '<div style="flex:1;min-width:0;font-weight:800;font-size:14px">'+a.icon+' '+a.label+'</div>'+
+    '<div style="flex:none;font-weight:900;font-size:18px;color:'+a.color+'">'+(a.count==null?'…':a.count)+'</div></div>';}).join('');
   var planner='<div class="src-card" style="margin-top:14px"><div class="src-hdr"><div class="src-name">👥 Staff on today</div>'+
-    '<div class="src-rule" style="color:var(--sub)">Set how many people are in and give each a job. Suggest allocates by where the work is.</div></div>'+
-    '<div style="display:flex;align-items:center;gap:10px;margin:4px 0 12px">'+
-      '<button onclick="staffStep(-1)" style="width:38px;height:38px;border-radius:10px;border:1px solid var(--border,#ddd);background:#fff;font-size:20px;font-weight:800;cursor:pointer">−</button>'+
-      '<div style="font-weight:900;font-size:24px;min-width:34px;text-align:center">'+(staffPlan.n||0)+'</div>'+
-      '<button onclick="staffStep(1)" style="width:38px;height:38px;border-radius:10px;border:1px solid var(--border,#ddd);background:#fff;font-size:20px;font-weight:800;cursor:pointer">+</button>'+
-      '<div style="flex:1"></div>'+
-      '<button onclick="staffSuggest()" style="border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer">✨ Suggest</button></div>'+
-    (staffPlan.rows||[]).map(staffRowHTML).join('')+
-    ((staffPlan.n||0)===0?'<div style="color:var(--sub);font-size:13px">Add staff with the + button.</div>':'')+
-    '</div>';
+    '<div class="src-rule" style="color:var(--sub)">Tap how many people are in — jobs are shared out by where the work is.</div></div>'+
+    '<div style="display:flex;gap:8px;margin:4px 0 12px">'+btns+'</div>'+
+    '<div style="font-weight:800;font-size:13px;color:var(--sub);margin:0 0 8px">Task list — '+(staffPlan.n||0)+' people</div>'+taskHTML+'</div>';
+
   el.innerHTML='<div style="font-weight:900;font-size:18px;margin:2px 0 10px">'+_obm[DEST_ID].name+' — today\u2019s board</div>'+cards+planner+homeLowListHTML();
-  if(!__homePinged){__homePinged=true;setTimeout(function(){if(typeof view!=='undefined'&&view==='home')renderHome();},1600);} // catch first orders poll
+  if(!__homePinged){__homePinged=true;setTimeout(function(){if(typeof view!=='undefined'&&view==='home')renderHome();},1600);}
 }
 try{staffBoot();}catch(e){}
 
@@ -3175,10 +3174,10 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
  function setCk(o){try{localStorage.setItem(ckKey(),JSON.stringify(o));}catch(e){}}
  function defPick(){var d=new Date();var doy=Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);return doy%2===0?'full':'urgent';}
 
- window.homeStart=function(){
-   var n=parseInt(document.getElementById('hm-cnt').value)||0;
-   if(n<1){alert('Enter how many staff are in today.');return;}
-   var mgr=document.getElementById('hm-mgr').checked;
+ window.homeStart=function(n){
+   if(n==null){var _c=document.getElementById('hm-cnt');n=_c?(parseInt(_c.value)||0):0;}
+   if(!n||n<1){return;}
+   var mgr=(document.getElementById('hm-mgr')||{}).checked||false;
    var pk=document.getElementById('hm-pick'); var pick=pk?pk.value:defPick();
    setCk({count:n,mgr:mgr,pick:pick}); renderHome();
  };
@@ -3197,13 +3196,33 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
  }
  function counts(){
    var d=(typeof destData!=='undefined'&&destData)?destData:[];
+   var T=(typeof TARGET!=='undefined'?TARGET:7), im=(typeof imgs!=='undefined'&&imgs)?imgs:{};
+   var over=null;try{if(typeof computeOverstockRows==='function'){var r=computeOverstockRows();over=r?r.length:null;}}catch(e){}
+   var shop=null;try{if(typeof shopCatOf==='function'){shop=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!im[p.bc]&&(typeof shopExistsConfirmed!=='function'||!shopExistsConfirmed(p.bc))&&(typeof isDraftBc!=='function'||!isDraftBc(p.bc));}).length;}}catch(e){}
    return {
      neg:d.filter(function(p){return p.qty<0;}).length,
      oos:d.filter(function(p){return p.qty<=0&&p.ls&&p.ls!=='Never';}).length,
-     img:d.filter(function(p){return p.qty>0&&['SYNTHETIC HAIR','HUMAN HAIR'].indexOf(p.dp)>=0&&typeof imgs!=='undefined'&&!imgs[p.bc];}).length,
+     img:d.filter(function(p){return p.qty>0&&['SYNTHETIC HAIR','HUMAN HAIR'].indexOf(p.dp)>=0&&!im[p.bc];}).length,
+     low:d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&p.qty<T;}).length,
+     pick:(typeof ordActiveCount==='function')?ordActiveCount():null,
+     over:over, shop:shop,
      drafts:(typeof isDraftBc==='function')?d.filter(function(p){return p.qty>0&&isDraftBc(p.bc);}).length:null,
      disc:(typeof disc!=='undefined'&&disc)?Object.keys(disc).length:null
    };
+ }
+ function cardsHTML(c){
+   var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+   h+=card('📦','Orders to pick','pick',c.pick,'#7c3aed');
+   h+=card('🔴','Negatives','neg',c.neg,'var(--red)');
+   h+=card('⏱','Out of stock','oos',c.oos,'var(--red)');
+   h+=card('🔄','Overstock to move','over',c.over,'#2563eb');
+   h+=card('🛒','To order · low stock','low',c.low,'#16a34a');
+   h+=card('🛍','Add to Shopify','shopify',c.shop,'#db2777');
+   h+=card('📸','Missing images','imgs',c.img,'var(--amber)');
+   h+=card('🟡','Drafts to activate','shopify',c.drafts,'#92400e');
+   if(typeof disc!=='undefined')h+=card('🚫','Discontinued','disc',c.disc);
+   h+='</div>';
+   return h;
  }
  function card(icon,label,v,val,color){
    return '<button onclick="goView(\''+v+'\')" style="text-align:left;border:1px solid var(--border);border-radius:14px;background:#fff;padding:13px;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-height:86px">'
@@ -3215,33 +3234,26 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
    var el=document.getElementById('out'); if(!el)return;
    if(typeof destData==='undefined'||!destLoaded){el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';return;}
    if(typeof loadDrafts==='function')loadDrafts(function(ch){if(ch&&view==='home')renderHome();});
+   if(typeof loadImgs==='function'&&!window.__homeImgs){window.__homeImgs=1;try{loadImgs().then(function(){if(view==='home')renderHome();});}catch(e){}}
+   if(typeof SOURCES!=='undefined')SOURCES.forEach(function(sc,i){if(!srcLoaded[i]&&typeof loadSrc==='function')loadSrc(i);});
+   if(typeof startOrdPoller==='function'){try{startOrdPoller();}catch(e){}}
+   var c=counts();
    var ck=getCk();
    if(!ck||ck.__edit){
      var isCh=HB==='chapel';
      el.innerHTML='<div style="padding:14px">'
       +'<div style="background:#f3e8ff;border-radius:14px;padding:16px;margin-bottom:14px"><div style="font-size:17px;font-weight:800;color:#5b21b6">Good morning — '+BNAME+'</div><div style="font-size:13px;color:#5b21b6;margin-top:3px">Set today\u2019s team and the jobs get allocated.</div></div>'
-      +'<label style="font-size:13px;font-weight:600;color:var(--sub)">Staff in today (including manager)</label>'
-      +'<input id="hm-cnt" type="number" min="1" max="12" value="'+((ck&&ck.count)||'')+'" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:16px;margin:5px 0 10px">'
+      +cardsHTML(c)+'<div style="font-weight:800;font-size:15px;margin:16px 0 6px">How many people are in today?</div>'
+      +''
       +'<label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:10px"><input id="hm-mgr" type="checkbox" '+((ck&&ck.mgr)?'checked':'')+'>Manager is one of them</label>'
       +(isCh?'<label style="font-size:13px;font-weight:600;color:var(--sub)">Picking mode today</label><select id="hm-pick" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:15px;margin:5px 0 12px"><option value="full" '+(((ck&&ck.pick)||defPick())==='full'?'selected':'')+'>Full pick (all branch top-ups)</option><option value="urgent" '+(((ck&&ck.pick)||defPick())==='urgent'?'selected':'')+'>Urgent OOS only</option></select>':'')
-      +'<button onclick="homeStart()" style="width:100%;padding:13px;background:var(--purple);color:#fff;border:none;border-radius:11px;font-size:15px;font-weight:700">Start the day ›</button></div>';
+      +'<div style="display:flex;gap:8px;margin-top:6px">'+[2,3,4,5,6].map(function(k){return '<button onclick="homeStart('+k+')" style="flex:1;padding:15px 2px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:800;cursor:pointer">'+k+'</button>';}).join('')+'</div><div style="text-align:center;font-size:11px;color:var(--sub);margin-top:6px">people in today</div></div>';
      return;
    }
-   var c=counts(), a=allocate(ck.count,ck.mgr);
+   var a=allocate(ck.count,ck.mgr);
    var h='<div style="padding:12px">';
    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><div style="font-weight:800;font-size:16px">'+BNAME+' — today</div><div style="font-size:12px;color:var(--sub)">'+ck.count+' in'+(ck.mgr?' (incl. manager)':'')+(HB==='chapel'?' · '+(ck.pick==='full'?'Full pick':'Urgent pick')+' day':'')+'</div></div><button onclick="homeEdit()" style="font-size:12px;border:1px solid var(--border);background:#fff;border-radius:9px;padding:6px 10px">Edit</button></div>';
-   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
-   h+=card('📦','Missing & Low Stock','low',null);
-   h+=card('🔴','Negatives','neg',c.neg,'var(--red)');
-   h+=card('⏱','Out of stock','oos',c.oos,'var(--red)');
-   h+=card('🔄','Overstock','over',null);
-   h+=card('🚚','W/H Order','whorder',null);
-   h+=card('🛍','+ Shopify','shopify',null);
-   h+=card('🟡','Drafts to activate','shopify',c.drafts==null?null:c.drafts,'#92400e');
-   h+=card('📸','Images','imgs',c.img,'var(--amber)');
-   if(typeof disc!=='undefined')h+=card('🚫','Discontinued','disc',c.disc==null?null:c.disc);
-   h+=card('🗺️','Map','map',null);
-   h+='</div>';
+   h+=cardsHTML(c);
    h+='<div style="font-weight:800;font-size:14px;margin:16px 0 8px">Today\u2019s jobs</div>';
    a.rows.forEach(function(r){
      h+='<div style="border:1px solid '+(r.crit?'#fecaca':'var(--border)')+';background:'+(r.crit?'#fff5f5':'#fff')+';border-radius:12px;padding:11px;margin-bottom:8px">'
@@ -3271,7 +3283,7 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
  };
 })();
 </script>
-<script>(function(){var order=["home","neg","over","fast","shopify","imgs","low","oos","whorder","disc","map"];var vt=document.getElementById("vtabs");if(!vt)return;var m={};vt.querySelectorAll(".vtab").forEach(function(d){m[d.getAttribute("data-v")]=d;});order.forEach(function(v){if(m[v])vt.appendChild(m[v]);});})();</script>
+<script>(function(){var order=["home","pick","neg","oos","over","low","orders","whorder","shopify","fast","imgs","disc","map"];var vt=document.getElementById("vtabs");if(!vt)return;var m={};vt.querySelectorAll(".vtab").forEach(function(d){m[d.getAttribute("data-v")]=d;});order.forEach(function(v){if(m[v])vt.appendChild(m[v]);});})();</script>
 <script>
 (function(){
   if(typeof renderView!=='function')return;
