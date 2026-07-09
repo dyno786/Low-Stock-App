@@ -1354,6 +1354,8 @@ function renderOrders(){
 // not shown. Tap a photo for full details (variant + per-branch stock). Rings on new orders.
 var ORDERS_API='/api/orders';
 var ordData=[], ordErr='', ordHttp=0, ordLoading=false, ordLastAt=0;
+var ordBy='';try{ordBy=localStorage.getItem('cc_pick_by')||'';}catch(e){}
+var ordPickStart=0;
 var ordAlertsOn=false, ordPrimed=false, ordPollTimer=null, ordClockTimer=null, ordRinging=false, ordRingTimer=null, ordAudioCtx=null;
 var ORD_SEEN_KEY='cc_ord_seen'+DEST_ID, ORD_TICK_KEY='cc_pick_ticks'+DEST_ID;
 var ordSeen=[];try{ordSeen=JSON.parse(localStorage.getItem(ORD_SEEN_KEY)||'[]');}catch(e){}
@@ -1400,7 +1402,7 @@ function ordForBranch(o,byKey){
 }
 function ordTickKey(o,idx,bc){return (bc||('i'+idx));}
 function ordItemDone(o,idx,bc){var t=ordTicks[o.id];return !!(t&&t[ordTickKey(o,idx,bc)]);}
-function ordToggle(oid,key){if(!ordTicks[oid])ordTicks[oid]={};ordTicks[oid][key]=!ordTicks[oid][key];if(!ordTicks[oid][key])delete ordTicks[oid][key];ordSaveTicks();if(onPick())renderOrdersInbox();}
+function ordToggle(oid,key){if(!ordPickStart)ordPickStart=Date.now();if(!ordTicks[oid])ordTicks[oid]={};ordTicks[oid][key]=!ordTicks[oid][key];if(!ordTicks[oid][key])delete ordTicks[oid][key];ordSaveTicks();if(onPick())renderOrdersInbox();}
 function ordBranchDone(o,fb){if(!fb.mine.length)return false;for(var i=0;i<fb.mine.length;i++){if(!ordItemDone(o,fb.mine[i].idx,fb.mine[i].it.barcode))return false;}return true;}
 
 // ---- full details modal (enlarged image + variant + what each branch holds) ----
@@ -1514,13 +1516,79 @@ function ordCard(o,fb){
 function ordVwBtn(c,label){var on=(ordCompact===c);return '<button class="ord-vw" data-c="'+(c?1:0)+'" style="flex:1;border:1px solid '+(on?'var(--purple,#6d28d9)':'var(--line,#ddd)')+';background:'+(on?'var(--purple,#6d28d9)':'var(--card,#fff)')+';color:'+(on?'#fff':'inherit')+';border-radius:9px;padding:8px;font-weight:700;cursor:pointer">'+label+'</button>';}
 function ordStatusLine(){var t='';if(ordLastAt){try{t=new Date(ordLastAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){}}
   return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--sub);margin:0 0 8px"><span>'+(ordLoading?'Checking…':('Endpoint '+(ordHttp?('HTTP '+ordHttp):'—')+' · '+ordData.length+' unfulfilled'+(t?(' · '+t):'')))+'</span><button class="ord-refresh" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer">↻ Refresh</button></div>';}
+function ordScanNorm(s){return (''+(s||'')).trim().replace(/\s+/g,'');}
+function ordBeep(ok){
+  try{ordAudioCtx=ordAudioCtx||new (window.AudioContext||window.webkitAudioContext)();if(ordAudioCtx.state==='suspended')ordAudioCtx.resume();
+    var c=ordAudioCtx,t=c.currentTime,notes=(ok===true)?[[880,0],[1318,0.08]]:((ok==='dup')?[[700,0]]:[[196,0],[150,0.14]]);
+    notes.forEach(function(p){var o=c.createOscillator(),g=c.createGain();o.type=(ok===false)?'sawtooth':'sine';o.frequency.value=p[0];g.gain.setValueAtTime(0.0001,t+p[1]);g.gain.exponentialRampToValueAtTime(0.45,t+p[1]+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+p[1]+0.16);o.connect(g);g.connect(c.destination);o.start(t+p[1]);o.stop(t+p[1]+0.18);});
+  }catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate(ok===true?[60]:((ok==='dup')?[40]:[110,60,110]));}catch(e){}
+}
+function ordScanFeedback(ok,label){
+  ordBeep(ok);
+  var ov=document.getElementById('ord-scan-fb');
+  if(!ov){ov=document.createElement('div');ov.id='ord-scan-fb';ov.style.cssText='position:fixed;left:12px;right:12px;top:12px;z-index:99998;border-radius:14px;display:flex;align-items:center;padding:16px 18px;font-weight:800;font-size:17px;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.3);transition:opacity .2s';document.body.appendChild(ov);}
+  var col=(ok===true)?'#16a34a':((ok==='dup')?'#b45309':'#dc2626');
+  var hd=(ok===true)?'✅ Correct — picked':((ok==='dup')?'☑️ Already picked':'⛔ NOT on picking list');
+  ov.style.background=col;ov.innerHTML='<div><div>'+hd+'</div><div style="font-weight:600;font-size:13px;opacity:.95;margin-top:2px">'+ordEsc(label)+'</div></div>';
+  ov.style.opacity='1';clearTimeout(window.__ordFbT);window.__ordFbT=setTimeout(function(){ov.style.opacity='0';},1400);
+}
+function ordScan(raw){
+  var code=ordScanNorm(raw);if(!code)return;
+  var byKey=ordIndex()||{},hit=null,already=null;
+  for(var i=0;i<ordData.length&&!hit;i++){var o=ordData[i],fb=ordForBranch(o,byKey);
+    for(var j=0;j<fb.mine.length;j++){var r=fb.mine[j];if(ordScanNorm(r.it.barcode)===code){if(ordItemDone(o,r.idx,r.it.barcode)){already={o:o,r:r};}else{hit={o:o,r:r};break;}}}}
+  if(hit){ordToggle(hit.o.id,ordTickKey(hit.o,hit.r.idx,hit.r.it.barcode));ordScanFeedback(true,(hit.r.it.title||'')+'  '+code);}
+  else if(already){ordScanFeedback('dup',(already.r.it.title||'')+'  '+code);}
+  else{ordScanFeedback(false,code);}
+}
+var __ordCamOn=false,__ordScanLib=false,__ordLastScan={c:'',t:0};
+function ccLoadScanLib(cb){if(__ordScanLib||window.Html5Qrcode){cb(true);return;}var sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';sc.onload=function(){__ordScanLib=true;cb(true);};sc.onerror=function(){cb(false);};document.head.appendChild(sc);}
+function ordCam(){
+  ccLoadScanLib(function(ok){
+    if(!ok||!window.Html5Qrcode){alert('Camera scanner unavailable here — use the barcode box (works with a handheld scanner too).');return;}
+    var ov=document.getElementById('ord-cam');
+    if(!ov){ov=document.createElement('div');ov.id='ord-cam';ov.style.cssText='position:fixed;inset:0;z-index:100001;background:#000;display:flex;flex-direction:column';ov.innerHTML='<div id="ord-reader" style="flex:1;min-height:0"></div><button id="ord-cam-x" style="border:none;background:#dc2626;color:#fff;padding:15px;font-weight:800;font-size:16px">Close scanner</button>';document.body.appendChild(ov);document.getElementById('ord-cam-x').addEventListener('click',ordCamStop);}
+    ov.style.display='flex';
+    try{window.__ordQr=new Html5Qrcode('ord-reader');
+      window.__ordQr.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:170}},function(txt){var now=Date.now();if(txt===__ordLastScan.c&&now-__ordLastScan.t<1500)return;__ordLastScan={c:txt,t:now};ordScan(txt);},function(){});
+      __ordCamOn=true;
+    }catch(e){alert('Could not start camera: '+((e&&e.message)||e));}
+  });
+}
+function ordCamStop(){try{if(window.__ordQr){window.__ordQr.stop().then(function(){try{window.__ordQr.clear();}catch(e){}}).catch(function(){});}}catch(e){}var ov=document.getElementById('ord-cam');if(ov)ov.style.display='none';__ordCamOn=false;}
+function ordAskBy(){if(!ordBy){var n=(typeof prompt==='function')?prompt('Who is picking? (your name)',''):'';if(n&&(''+n).trim()){ordBy=(''+n).trim();try{localStorage.setItem('cc_pick_by',ordBy);}catch(e){}}}return ordBy||'Staff';}
+function ordShareText(text){try{if(navigator.share){navigator.share({text:text}).catch(function(){});return;}}catch(e){}window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');}
+function ordSendWA(){
+  var byKey=ordIndex()||{},orders=[];
+  ordData.forEach(function(o){var fb=ordForBranch(o,byKey);if(!fb.mine.length)return;var done=0;fb.mine.forEach(function(r){if(ordItemDone(o,r.idx,r.it.barcode))done++;});orders.push({o:o,fb:fb,done:done,tot:fb.mine.length});});
+  if(!orders.length){alert('No orders for this branch to send.');return;}
+  var by=ordAskBy();
+  if(!confirm('Before sending:\n\u2022 Scanned these OUT on the till?\n\u2022 Checked each BARCODE + PHOTO matches 100%?\n\nTap OK to confirm and send.'))return;
+  var date=new Date().toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  var elp=ordPickStart?Math.max(0,Date.now()-ordPickStart):0;
+  var hm=function(ms){var m=Math.round((ms||0)/60000),h=Math.floor(m/60);m=m%60;return (h>0?h+'h ':'')+m+'m';};
+  var full=0,part=0,none=0;
+  var msg='CC '+_obm[DEST_ID].name+' \u2014 online picking\n'+date+'\nPicked by: '+by+(elp?('\nTime taken: '+hm(elp)):'')+'\n\n';
+  orders.forEach(function(x){
+    var st;if(x.done===x.tot){st='FULLY PICKED';full++;}else if(x.done>0){st='PARTIAL '+x.done+'/'+x.tot;part++;}else{st='NOT PICKED';none++;}
+    msg+=x.o.name+' \u2014 '+st+'\n';
+    x.fb.mine.forEach(function(r){var tk=ordItemDone(x.o,r.idx,r.it.barcode)?'\u2705':'\u2b1c';msg+=tk+' '+r.it.qty+'x '+((r.it.title||'item'))+(r.it.variant?(' ('+r.it.variant+')'):'')+(r.it.barcode?(' \u2014 '+r.it.barcode):'')+'\n';});
+    msg+='\n';
+  });
+  msg+='--------------------\nTotal orders: '+orders.length+'\nFully picked: '+full+'  \u00b7  Partial: '+part+(none?('  \u00b7  Not started: '+none):'')+'\nScanned out on till: Yes  \u00b7  Barcode + photo verified: Yes\n';
+  ordShareText(msg);
+  ordPickStart=0;
+}
 function renderOrdersInbox(){
   var el=document.getElementById('out');if(!el)return;
   var head='<div class="src-card" style="margin-bottom:8px"><div class="src-hdr"><div class="src-name">📦 Picking — '+_obm[DEST_ID].name+'</div>'+
     '<div class="src-rule" style="color:var(--sub)">Only items this branch should pick (priority Roundhay → Chapeltown → City). Tap a photo for details; tick each item as picked.</div></div></div>';
   head+='<div id="ord-timer" style="font-weight:800;font-size:15px;text-align:center;margin:0 0 8px;color:'+ordTimerColor()+'">'+ordTimerText()+'</div>';
   head+=ordStatusLine();
+  head+='<div style="display:flex;gap:6px;margin:0 0 8px"><input id="ord-scan" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Scan or type barcode, then Enter" style="flex:1;min-width:0;border:2px solid var(--purple,#6d28d9);border-radius:11px;padding:12px;font-size:15px;font-family:ui-monospace,Menlo,monospace"><button class="ord-cam" style="border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:11px;padding:0 15px;font-weight:800;font-size:18px;cursor:pointer">📷</button></div>';
   head+='<div style="display:flex;gap:6px;margin:0 0 8px">'+ordVwBtn(true,'🖼️ Pictures + barcode')+ordVwBtn(false,'📋 Details')+'</div>';
+  head+='<button class="ord-wa" style="width:100%;border:none;background:#25D366;color:#fff;border-radius:11px;padding:12px;font-weight:800;font-size:14px;cursor:pointer;margin:0 0 8px">📲 Send picked to WhatsApp</button>';
   if(!ordAlertsOn){head+='<div style="margin:0 0 6px;display:flex;gap:8px"><button class="ord-enable" style="flex:1;border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:14px;cursor:pointer">🔔 Enable order alerts</button><button class="ord-test" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:11px;padding:11px 14px;font-weight:700;cursor:pointer">Test ring</button></div><div style="font-size:11px;color:var(--sub);margin:0 0 8px">Tap once so the phone can ring. (iPhone can\u2019t vibrate from Safari — loud ring is the alert; Android also vibrates.)</div>';}
   else if(ordRinging){head+='<div style="margin:0 0 8px"><button class="ord-stop" style="width:100%;border:none;background:#dc2626;color:#fff;border-radius:11px;padding:12px;font-weight:800;font-size:15px;cursor:pointer">🔕 Stop ringing</button></div>';}
   else head+='<div style="margin:0 0 8px;font-size:12px;color:#16a34a;font-weight:700">🔔 Alerts on.</div>';
@@ -1547,6 +1615,10 @@ function wireOrders(){
   var ts=document.querySelector('.ord-test');if(ts)ts.addEventListener('click',ordTestRing);
   document.querySelectorAll('.ord-vw').forEach(function(b){b.addEventListener('click',function(){ordSetView(this.getAttribute('data-c')==='1');});});
   document.querySelectorAll('.pick-tick').forEach(function(b){b.addEventListener('click',function(){ordToggle(this.getAttribute('data-o'),this.getAttribute('data-k'));});});
+  var _wa=document.querySelector('.ord-wa');if(_wa)_wa.addEventListener('click',ordSendWA);
+  var _sc=document.getElementById('ord-scan');
+  if(_sc){_sc.addEventListener('keydown',function(e){if(e.key==='Enter'||e.keyCode===13){e.preventDefault();var v=this.value;this.value='';ordScan(v);}});if(!__ordCamOn){try{_sc.focus();}catch(e){}}}
+  var _cm=document.querySelector('.ord-cam');if(_cm)_cm.addEventListener('click',ordCam);
 }
 function renderPick(){
   var el=document.getElementById('out');if(el)el.innerHTML='<div class="loading"><div class="spin"></div>Loading orders…</div>';
