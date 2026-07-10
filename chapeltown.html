@@ -1647,7 +1647,7 @@ function homeCounts(){
   var low=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&p.qty<T;}).length;
   var pri=['SYNTHETIC HAIR','HUMAN HAIR'];
   var miss=d.filter(function(p){return p.qty>0&&pri.indexOf(p.dp)>=0&&!im[p.bc];}).length;
-  var shop=null;if(typeof shopCatOf==='function'){try{shop=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!im[p.bc]&&(typeof shopExistsConfirmed!=='function'||!shopExistsConfirmed(p.bc))&&(typeof isDraftBc!=='function'||!isDraftBc(p.bc));}).length;}catch(e){shop=null;}}
+  var shop=null;if(typeof shopCatOf==='function'){try{shop=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!im[p.bc]&&!(typeof shopifyData!=='undefined'&&shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)&&(typeof shopExistsConfirmed!=='function'||!shopExistsConfirmed(p.bc))&&(typeof isDraftBc!=='function'||!isDraftBc(p.bc))&&!(typeof shopListed!=='undefined'&&shopListed[p.bc]);}).length;}catch(e){shop=null;}}
   var over=null;if(typeof computeOverstockRows==='function'){try{var r=computeOverstockRows();over=r?r.length:null;}catch(e){over=null;}}
   var pick=(typeof ordActiveCount==='function')?ordActiveCount():null;
   return {neg:neg,oos:oos,low:low,miss:miss,shop:shop,over:over,pick:pick};
@@ -2057,7 +2057,12 @@ function wireWHO(){
 var SHOP_DEPTS=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2','AFRO BEAUTY PRODUCTS 2','ACCESSORIES','ELECTRICAL','ELECTRICALS'];
 function shopDeptOK(dp){return SHOP_DEPTS.indexOf((''+(dp||'')).trim().toUpperCase())>=0;}
 var SHOP_CATS=[{key:'AFRO BEAUTY PRODUCTS',short:'Afro Beauty',match:['AFRO BEAUTY PRODUCTS']},{key:'AFRO PRODUCTS 2',short:'Afro 2',match:['AFRO PRODUCTS 2','AFRO BEAUTY PRODUCTS 2']},{key:'ACCESSORIES',short:'Accessories',match:['ACCESSORIES']},{key:'ELECTRICAL',short:'Electrical',match:['ELECTRICAL','ELECTRICALS']}];
-var shopCat='ALL';
+var shopCat='ALL', shopQuery='';
+var SHOP_LOCKED=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'];
+var shopDeptSel={};(typeof SHOP_CATS!=='undefined'?SHOP_CATS:[]).forEach(function(c){shopDeptSel[c.key]=1;});
+var shopListed={};try{shopListed=JSON.parse(localStorage.getItem('cc_shop_listed')||'{}')||{};}catch(e){}
+function shopListedBoot(){if(window.__shopListedBoot||typeof syncLoad!=='function')return;window.__shopListedBoot=1;syncLoad('cc_shop_listed').then(function(o){if(o&&typeof o==='object'){Object.keys(o).forEach(function(k){shopListed[k]=1;});try{localStorage.setItem('cc_shop_listed',JSON.stringify(shopListed));}catch(e){}if(view==='shopify')renderShopify();}}).catch(function(){});}
+function shopMarkListed(bc){shopListed[bc]=1;try{localStorage.setItem('cc_shop_listed',JSON.stringify(shopListed));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shop_listed',shopListed);renderShopify();}
 function shopCatOf(dp){dp=(''+(dp||'')).trim().toUpperCase();for(var i=0;i<SHOP_CATS.length;i++){if(SHOP_CATS[i].match.indexOf(dp)>=0)return SHOP_CATS[i].key;}return null;}
 function catShort(k){for(var i=0;i<SHOP_CATS.length;i++){if(SHOP_CATS[i].key===k)return SHOP_CATS[i].short;}return k;}
 var SHOP_COLLECTIONS=null;var SHOP_COLS_LOADING=false;
@@ -2177,38 +2182,43 @@ function renderShopify(){
     return;
   }
   // in-stock items in the 4 categories that are NOT yet on the website (no Shopify image)
-  var all=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!imgs[p.bc]&&!shopExistsConfirmed(p.bc)&&!isDraftBc(p.bc);});
+  var all=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!imgs[p.bc]&&!(shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)&&!shopExistsConfirmed(p.bc)&&!isDraftBc(p.bc)&&!shopListed[p.bc];});
   var draftItems=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopDraftInfo(p.bc);});
   var draftHTML=draftItems.length?shopDraftSection(draftItems):'';
   var counts={};SHOP_CATS.forEach(function(c){counts[c.key]=0;});
   all.forEach(function(p){var k=shopCatOf(p.dp);if(k)counts[k]++;});
   var present=SHOP_CATS.filter(function(c){return counts[c.key]>0;});
-  if(shopCat!=='ALL' && (counts[shopCat]===undefined||counts[shopCat]===0))shopCat='ALL';
   var head='<div class="shop-head"><div class="shop-title">🛍 List to Shopify</div>'+
-    '<div class="shop-sub">'+all.length+' in-stock items not yet on the website. Pick a category, then tap <b>+ Shopify</b>.</div></div>';
+    '<div class="shop-sub">'+all.length+' in-stock items not yet on the website. Pick a category, then tap <b>+ Shopify</b>.</div></div>'+'<div style="padding:2px 10px 8px"><input id="shop-search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search barcode or name\u2026" style="width:100%;box-sizing:border-box;border:2px solid var(--purple,#6d28d9);border-radius:11px;padding:11px 12px;font-size:15px;font-family:ui-monospace,Menlo,monospace"></div>';
   if(!all.length){el.innerHTML=head+draftHTML+'<div class="shop-empty">Nothing to list — every in-stock item in these categories already has a photo online. 🎉</div>';setProg(1,0,'All listed');return;}
-  var tabs='<div class="over-subtabs shop-subtabs">';
-  tabs+='<div class="over-subtab'+(shopCat==='ALL'?' on':'')+'" data-cat="ALL"><div class="over-sub-name">All</div><div class="over-sub-cnt">'+all.length+'</div></div>';
-  present.forEach(function(c){
-    tabs+='<div class="over-subtab'+(shopCat===c.key?' on':'')+'" data-cat="'+c.key+'"><div class="over-sub-name">'+c.short+'</div><div class="over-sub-cnt">'+counts[c.key]+'</div></div>';
+  SHOP_LOCKED.forEach(function(k){shopDeptSel[k]=1;});
+  var tabs='<div class="shop-subtabs" style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 10px 8px">';
+  SHOP_CATS.forEach(function(c){
+    var locked=SHOP_LOCKED.indexOf(c.key)>=0; if(!counts[c.key] && !locked)return;
+    var on=!!shopDeptSel[c.key];
+    tabs+='<label class="shop-dept'+(locked?' locked':'')+'" data-cat="'+c.key+'" style="display:inline-flex;align-items:center;gap:6px;border:1.5px solid '+(on?'var(--purple,#6d28d9)':'var(--border,#ddd)')+';background:'+(on?'var(--purplebg,#f3e8ff)':'#fff')+';border-radius:10px;padding:6px 10px;font-weight:700;font-size:13px;cursor:'+(locked?'default':'pointer')+'"><input type="checkbox" '+(on?'checked':'')+(locked?' disabled':'')+' style="pointer-events:none;accent-color:var(--purple,#6d28d9)">'+c.short+' <span style="color:var(--sub)">'+(counts[c.key]||0)+'</span></label>';
   });
   tabs+='</div>';
-  var items=all.filter(function(p){return shopCat==='ALL'||shopCatOf(p.dp)===shopCat;});
+  var _sq=(shopQuery||'').trim().toLowerCase();
+  var items=_sq?all.filter(function(p){return (((p.bc||'')+' '+(p.nm||'')).toLowerCase().indexOf(_sq)>=0);}):all.filter(function(p){return !!shopDeptSel[shopCatOf(p.dp)];});
   items.sort(function(a,b){return (shopCatOf(a.dp)||'').localeCompare(shopCatOf(b.dp)||'')||a.nm.localeCompare(b.nm);});
-  setProg(1,0,(shopCat==='ALL'?all.length+' items to list':counts[shopCat]+' in '+catShort(shopCat)));
+  setProg(1,0,items.length+' items to list');
   var html=head+draftHTML+tabs,curK='';
   items.forEach(function(p){
     var k=shopCatOf(p.dp);
-    if(shopCat==='ALL' && k!==curK){curK=k;html+='<div class="shop-dp">'+shopEsc(catShort(k))+'</div>';}
+    if(!_sq && k!==curK){curK=k;html+='<div class="shop-dp">'+shopEsc(catShort(k))+'</div>';}
     html+='<div class="shop-row">'+
       '<div class="shop-imgw">'+imgEl(p.bc,44)+'</div>'+
       '<div class="shop-info"><div class="shop-nm">'+shopEsc(p.nm)+(p.sz?' · '+shopEsc(p.sz):'')+'</div>'+
         '<div class="shop-bc">'+p.bc+(p.pr>0?' · £'+p.pr.toFixed(2):'')+' · '+p.qty+' in stock</div></div>'+
-      '<button class="shop-add" data-bc="'+p.bc+'">+ Shopify</button>'+
+      '<button class="shop-add" data-bc="'+p.bc+'">+ Shopify</button>'+'<button class="shop-onsite" data-bc="'+p.bc+'" title="Already on Shopify \u2014 hide" style="border:1px solid var(--border,#ddd);background:#fff;color:var(--sub);border-radius:9px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap">on site</button>'+
     '</div>';
   });
   el.innerHTML=html;
-  el.querySelectorAll('.shop-subtabs .over-subtab').forEach(function(t){t.addEventListener('click',function(){shopCat=this.getAttribute('data-cat');renderShopify();});});
+  el.querySelectorAll('.shop-dept').forEach(function(t){if(t.classList.contains('locked'))return;t.addEventListener('click',function(){var k=this.getAttribute('data-cat');if(shopDeptSel[k])delete shopDeptSel[k];else shopDeptSel[k]=1;renderShopify();});});
+  el.querySelectorAll('.shop-onsite').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();shopMarkListed(this.getAttribute('data-bc'));});});
+  shopListedBoot();
+  var _ss=document.getElementById('shop-search');if(_ss){_ss.value=shopQuery;_ss.addEventListener('input',function(){shopQuery=this.value;renderShopify();});if(shopQuery){try{_ss.focus();var _L=_ss.value.length;_ss.setSelectionRange(_L,_L);}catch(e){}}}
   verifyExists(all.map(function(p){return p.bc;}),function(changed){if(changed&&view==='shopify')renderShopify();});
 }
 
@@ -3266,7 +3276,7 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
    var d=(typeof destData!=='undefined'&&destData)?destData:[];
    var T=(typeof TARGET!=='undefined'?TARGET:7), im=(typeof imgs!=='undefined'&&imgs)?imgs:{};
    var over=null;try{if(typeof computeOverstockRows==='function'){var r=computeOverstockRows();over=r?r.length:null;}}catch(e){}
-   var shop=null;try{if(typeof shopCatOf==='function'){shop=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!im[p.bc]&&(typeof shopExistsConfirmed!=='function'||!shopExistsConfirmed(p.bc))&&(typeof isDraftBc!=='function'||!isDraftBc(p.bc));}).length;}}catch(e){}
+   var shop=null;try{if(typeof shopCatOf==='function'){shop=d.filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp)&&!im[p.bc]&&!(typeof shopifyData!=='undefined'&&shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)&&(typeof shopExistsConfirmed!=='function'||!shopExistsConfirmed(p.bc))&&(typeof isDraftBc!=='function'||!isDraftBc(p.bc))&&!(typeof shopListed!=='undefined'&&shopListed[p.bc]);}).length;}}catch(e){}
    return {
      neg:d.filter(function(p){return p.qty<0;}).length,
      oos:d.filter(function(p){return p.qty<=0&&p.ls&&p.ls!=='Never';}).length,
