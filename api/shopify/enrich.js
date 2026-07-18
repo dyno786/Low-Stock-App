@@ -4,19 +4,22 @@
 // - Picks Shopify standard product attributes from allowed values (_taxonomy.js).
 // - Places the product into the correct smart collections using the store's REAL tag rules and
 //   matches the exact vendor name for vendor-driven collections (_collections.js).
-// OpenAI (OPENAI_API_KEY). 1) Responses API w/ web search, 2) Chat Completions fallback. ENV: OPENAI_MODEL.
+// AI provider: OpenAI/ChatGPT (OPENAI_API_KEY, OPENAI_MODEL) is tried FIRST; if it errors or is out of
+// quota it falls back to Anthropic Claude (ANTHROPIC_API_KEY, ANTHROPIC_MODEL). Either key alone also works.
 
 import { attrOptionsText, categoryFor, categoryOptionsText } from './_taxonomy.js';
 import { fetchCollectionMenu, collectionOptionsText, validCollectionTags, canonicalVendor } from './_collections.js';
 
 export const config = { maxDuration: 60 };
 
-const KEY = process.env.OPENAI_API_KEY;
+const OKEY = process.env.OPENAI_API_KEY;
+const AKEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
+const AMODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
-  if (!KEY) { res.status(500).json({ error: 'Missing OPENAI_API_KEY' }); return; }
+  if (!OKEY && !AKEY) { res.status(500).json({ error: 'Missing ANTHROPIC_API_KEY or OPENAI_API_KEY' }); return; }
 
   let body = {};
   try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); } catch (e) {}
@@ -133,52 +136,67 @@ export default async function handler(req, res) {
     return out;
   }
 
-  // 1) Responses API with web search (real research by barcode)
-  try {
-    const r = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + KEY },
-      body: JSON.stringify({
-        model: MODEL,
-        tools: [{ type: 'web_search_preview' }],
-        instructions: instructions,
-        input: ask,
-        max_output_tokens: 1400
-      })
-    });
-    if (r.ok) {
-      const j = await r.json();
-      let text = j.output_text;
-      if (!text && Array.isArray(j.output)) {
-        text = j.output.map(o => (o.content || []).map(c => c.text || '').join('')).join('');
-      }
-      const parsed = parseJSON(text);
-      if (parsed && parsed.title) { res.status(200).json(finalize(parsed)); return; }
-    }
-  } catch (e) { /* fall through to chat */ }
+  let lastErr = '';
 
-  // 2) Fallback: Chat Completions, guaranteed JSON, no web tool
-  try {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + KEY },
-      body: JSON.stringify({
-        model: MODEL,
-        response_format: { type: 'json_object' },
-        max_tokens: 1400,
-        messages: [
-          { role: 'system', content: instructions },
-          { role: 'user', content: ask }
-        ]
-      })
-    });
-    const j = await r.json();
-    if (j.error) { res.status(502).json({ error: j.error.message || 'OpenAI error' }); return; }
-    const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
-    const parsed = parseJSON(text);
-    if (parsed && parsed.title) { res.status(200).json(finalize(parsed)); return; }
-    res.status(502).json({ error: 'Could not parse AI response' });
-  } catch (e) {
-    res.status(500).json({ error: String((e && e.message) || e) });
+  // 1) OpenAI (ChatGPT) — tried FIRST
+  if (OKEY) {
+    // Responses API with web search
+    try {
+      const r = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OKEY },
+        body: JSON.stringify({ model: MODEL, tools: [{ type: 'web_search_preview' }], instructions: instructions, input: ask, max_output_tokens: 1400 })
+      });
+      if (r.ok) {
+        const j = await r.json();
+        let text = j.output_text;
+        if (!text && Array.isArray(j.output)) text = j.output.map(o => (o.content || []).map(c => c.text || '').join('')).join('');
+        const parsed = parseJSON(text);
+        if (parsed && parsed.title) { res.status(200).json(finalize(parsed)); return; }
+      } else {
+        try { const ej = await r.json(); lastErr = (ej.error && ej.error.message) || ('OpenAI ' + r.status); } catch (e) { lastErr = 'OpenAI ' + r.status; }
+      }
+    } catch (e) {}
+    // Chat Completions fallback (guaranteed JSON)
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OKEY },
+        body: JSON.stringify({ model: MODEL, response_format: { type: 'json_object' }, max_tokens: 1400,
+          messages: [{ role: 'system', content: instructions }, { role: 'user', content: ask }] })
+      });
+      const j = await r.json();
+      if (j.error) { lastErr = j.error.message || 'OpenAI error'; }
+      else {
+        const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+        const parsed = parseJSON(text);
+        if (parsed && parsed.title) { res.status(200).json(finalize(parsed)); return; }
+        lastErr = lastErr || 'Could not parse AI response';
+      }
+    } catch (e) { lastErr = lastErr || String((e && e.message) || e); }
   }
+
+  // 2) Anthropic (Claude) — used when OpenAI is full/errored, or if it's the only key set
+  if (AKEY) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': AKEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: AMODEL, max_tokens: 1500, system: instructions,
+          messages: [{ role: 'user', content: ask + '\n\nReturn ONLY the JSON object — no prose, no markdown fences.' }]
+        })
+      });
+      const j = await r.json();
+      if (j && j.error) { lastErr = (j.error && j.error.message) || 'Anthropic error'; }
+      else {
+        const text = (j && Array.isArray(j.content)) ? j.content.map(c => c.text || '').join('') : '';
+        const parsed = parseJSON(text);
+        if (parsed && parsed.title) { res.status(200).json(finalize(parsed)); return; }
+        lastErr = lastErr || 'Could not parse Claude response';
+      }
+    } catch (e) { lastErr = lastErr || String((e && e.message) || e); }
+  }
+
+  res.status(502).json({ error: lastErr || 'AI unavailable — set OPENAI_API_KEY or ANTHROPIC_API_KEY.' });
 }
