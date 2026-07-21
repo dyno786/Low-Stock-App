@@ -18,6 +18,7 @@ const MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 const AMODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
 
 export default async function handler(req, res) {
+  if (req.method === 'GET') { res.status(200).json({ ok: true, providers: { openai: !!OKEY, anthropic: !!AKEY }, anthropicModel: AMODEL }); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
   if (!OKEY && !AKEY) { res.status(500).json({ error: 'Missing ANTHROPIC_API_KEY or OPENAI_API_KEY' }); return; }
 
@@ -198,5 +199,6 @@ export default async function handler(req, res) {
     } catch (e) { lastErr = lastErr || String((e && e.message) || e); }
   }
 
+  if (!AKEY && lastErr) { res.status(502).json({ error: 'OpenAI failed and Claude fallback is not active on this deployment (ANTHROPIC_API_KEY not visible — redeploy after adding it). ' + lastErr }); return; }
   res.status(502).json({ error: lastErr || 'AI unavailable — set OPENAI_API_KEY or ANTHROPIC_API_KEY.' });
 }
