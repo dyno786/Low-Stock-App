@@ -2088,6 +2088,9 @@ var shopCat='ALL', shopQuery='';
 var SHOP_LOCKED=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'];
 var shopDeptSel={};(typeof SHOP_CATS!=='undefined'?SHOP_CATS:[]).forEach(function(c){shopDeptSel[c.key]=1;});
 var shopListed={};try{shopListed=JSON.parse(localStorage.getItem('cc_shop_listed')||'{}')||{};}catch(e){}
+var shopLocalDrafts={};try{shopLocalDrafts=JSON.parse(localStorage.getItem('cc_shop_localdrafts')||'{}')||{};}catch(e){}
+function shopAddLocalDraft(bc,admin){shopLocalDrafts[bc]={admin:admin||''};try{localStorage.setItem('cc_shop_localdrafts',JSON.stringify(shopLocalDrafts));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shop_localdrafts',shopLocalDrafts);renderShopify();}
+function shopLocalDraftsBoot(){if(window.__sldBoot||typeof syncLoad!=='function')return;window.__sldBoot=1;syncLoad('cc_shop_localdrafts').then(function(o){if(o&&typeof o==='object'){Object.keys(o).forEach(function(k){if(!shopLocalDrafts[k])shopLocalDrafts[k]=o[k];});try{localStorage.setItem('cc_shop_localdrafts',JSON.stringify(shopLocalDrafts));}catch(e){}if(view==='shopify')renderShopify();}}).catch(function(){});}
 var shopState='noton';
 function shopListedBoot(){if(window.__shopListedBoot||typeof syncLoad!=='function')return;window.__shopListedBoot=1;syncLoad('cc_shop_listed').then(function(o){if(o&&typeof o==='object'){Object.keys(o).forEach(function(k){shopListed[k]=1;});try{localStorage.setItem('cc_shop_listed',JSON.stringify(shopListed));}catch(e){}if(view==='shopify')renderShopify();}}).catch(function(){});}
 function shopMarkListed(bc){shopListed[bc]=1;try{localStorage.setItem('cc_shop_listed',JSON.stringify(shopListed));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shop_listed',shopListed);renderShopify();}
@@ -2127,8 +2130,8 @@ var __existsTried={};     // bc -> 1 once queried (avoid refetch loops)
 function shopExistsConfirmed(bc){return !!(existsCheck[bc]&&existsCheck[bc].exists);}
 var draftSet={},__draftsTried=false;
 function isDraftBc(bc){return !!(draftSet&&draftSet[bc]);}
-function shopDraftInfo(bc){return (draftSet&&draftSet[bc])||null;}
-function isShopDraft(bc){return !!(shopDraftInfo(bc)||(existsCheck[bc]&&existsCheck[bc].status==='DRAFT'));}
+function shopDraftInfo(bc){return (draftSet&&draftSet[bc])||(shopLocalDrafts[bc]?{admin:shopLocalDrafts[bc].admin}:null);}
+function isShopDraft(bc){var ec=existsCheck[bc];if(ec&&ec.exists&&ec.status&&ec.status!=='DRAFT')return false;return !!(shopDraftInfo(bc)||(ec&&ec.status==='DRAFT'));}
 function loadDrafts(cb){if(__draftsTried){if(cb)cb(false);return;}__draftsTried=true;fetch('/api/shopify/drafts').then(function(r){return r.ok?r.json():null;}).then(function(j){var d=j&&j.drafts;if(d&&typeof d==='object'){draftSet=d;if(cb)cb(true);else if(typeof renderView==='function')renderView();}else if(cb)cb(false);}).catch(function(){if(cb)cb(false);});}
 function shopDraftSection(items){var byDp={},order=[];items.forEach(function(p){var d=(p.dp||'Other');if(!byDp[d]){byDp[d]=[];order.push(d);}byDp[d].push(p);});order.sort(function(a,b){return a.localeCompare(b);});var body=order.map(function(d){var rows=byDp[d].map(function(p){var e=shopDraftInfo(p.bc)||{};return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid #fde68a"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+shopEsc(p.nm)+'</div><div style="font-size:11px;color:var(--sub)">'+p.bc+' \u00b7 '+p.qty+' in stock</div></div><a href="'+shopEscAttr(e.admin||'#')+'" target="_blank" style="font-size:12px;font-weight:800;padding:6px 11px;border-radius:9px;background:#d97706;color:#fff;text-decoration:none;white-space:nowrap">Activate \u203a</a></div>';}).join('');return '<div style="padding:6px 12px;font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.3px;background:#fdf2d6;border-top:1px solid #fde68a">'+shopEsc(d)+' \u00b7 '+byDp[d].length+'</div>'+rows;}).join('');return '<div style="border:1px solid #fde68a;border-radius:12px;background:#fffbeb;margin:10px 0;overflow:hidden"><div style="padding:10px 12px;font-weight:800;color:#92400e;font-size:13px">\u26a0 '+items.length+' item'+(items.length===1?'':'s')+' on Shopify as DRAFT \u2014 activate to publish</div>'+body+'</div>';}
 (function(){try{localStorage.removeItem('cc_shop_exists');}catch(e){}})();
@@ -2250,7 +2253,7 @@ function wireShopCommon(el){
   el.querySelectorAll('.shop-onsite').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();shopMarkListed(this.getAttribute('data-bc'));});});
   el.querySelectorAll('.shop-check').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();shopCheckOne(this.getAttribute('data-bc'));});});
   var _ss=document.getElementById('shop-search');if(_ss){_ss.value=shopQuery;_ss.addEventListener('input',function(){shopQuery=this.value;renderShopify();});if(shopQuery){try{_ss.focus();var _L=_ss.value.length;_ss.setSelectionRange(_L,_L);}catch(e){}}}
-  shopListedBoot();
+  shopListedBoot();shopLocalDraftsBoot();
 }
 function shopStoreSearch(term){var st=window.__shopStore;if(!st){alert('Open Shopify and search:\n'+term);return;}window.open('https://'+st+'/admin/products?query='+encodeURIComponent(term),'_blank');}
 function shopCheckOne(bc){
@@ -2346,8 +2349,8 @@ function submitShop(p){
   }).then(function(j){
     go.disabled=false;
     if(!j||j.error){st.innerHTML='<span class="sm-err">Error: '+shopEsc((j&&j.error)||'unknown')+'</span>';return;}
-    if(j.exists){st.innerHTML='Already on Shopify \u2713 <a href="'+shopEscAttr(j.productUrl)+'" target="_blank">open</a>';return;}
-    if(j.created){st.innerHTML='Done \u2705 Draft created. <a href="'+shopEscAttr(j.productUrl)+'" target="_blank">open in Shopify</a>'+(j.imageWarning?' <span class="sm-err">(add image manually)</span>':'');return;}
+    if(j.exists){shopAddLocalDraft(p.bc,j.productUrl);st.innerHTML='Already on Shopify \u2713 <a href="'+shopEscAttr(j.productUrl)+'" target="_blank">open</a>';return;}
+    if(j.created){shopAddLocalDraft(p.bc,j.productUrl);st.innerHTML='Done \u2705 Draft created. <a href="'+shopEscAttr(j.productUrl)+'" target="_blank">open in Shopify</a>'+(j.imageWarning?' <span class="sm-err">(add image manually)</span>':'');return;}
     st.textContent='Unexpected response.';
   }).catch(function(e){go.disabled=false;st.innerHTML='<span class="sm-err">Failed: '+shopEsc(String(e))+'</span>';});
 }
