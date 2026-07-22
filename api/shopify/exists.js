@@ -50,16 +50,19 @@ function chunk(arr, n) { const out = []; for (let i = 0; i < arr.length; i += n)
 // Build a Shopify product search across many barcodes in one query.
 // e.g.  barcode:'34285634124' OR barcode:'5056538302760'
 function barcodeQuery(barcodes) {
-  return barcodes.map((b) => `barcode:'${b.replace(/'/g, "")}'`).join(" OR ");
+  return barcodes.map((b) => `barcode:'${b.replace(/'/g, "")}' OR sku:'${b.replace(/'/g, "")}'`).join(" OR ");
 }
 
-const PRODUCTS_QUERY = `
+const VARIANTS_QUERY = `
   query ($q: String!) {
-    products(first: 250, query: $q) {
+    productVariants(first: 250, query: $q) {
       edges { node {
-        id title status handle onlineStoreUrl
-        featuredImage { url }
-        variants(first: 100) { edges { node { barcode } } }
+        barcode
+        sku
+        product {
+          id title status handle onlineStoreUrl
+          featuredImage { url }
+        }
       } }
     }
   }`;
@@ -82,10 +85,12 @@ export default async function handler(req, res) {
     const results = {};
     // Batch to keep each search query a sane length (~30 barcodes per request).
     for (const group of chunk(barcodes, 30)) {
-      const data = await shopifyGraphQL(PRODUCTS_QUERY, { q: barcodeQuery(group) });
-      const edges = (data && data.products && data.products.edges) || [];
+      const data = await shopifyGraphQL(VARIANTS_QUERY, { q: barcodeQuery(group) });
+      const edges = (data && data.productVariants && data.productVariants.edges) || [];
       for (const e of edges) {
-        const p = e.node;
+        const v = e.node;
+        const p = v && v.product;
+        if (!p) continue;
         const idNum = String(p.id).split("/").pop();
         const info = {
           exists: true,
@@ -96,15 +101,14 @@ export default async function handler(req, res) {
           productUrl: p.onlineStoreUrl || null,
           adminUrl: STORE ? `https://${STORE}/admin/products/${idNum}` : null,
         };
-        const vs = (p.variants && p.variants.edges) || [];
-        for (const v of vs) {
-          const bc = clean(v.node && v.node.barcode);
-          if (bc && group.includes(bc) && !results[bc]) results[bc] = info;
-        }
+        const bc = clean(v.barcode);
+        const sku = clean(v.sku);
+        if (bc && group.includes(bc) && !results[bc]) results[bc] = info;
+        if (sku && group.includes(sku) && !results[sku]) results[sku] = info;
       }
     }
     const missing = barcodes.filter((b) => !results[b]);
-    return res.status(200).json({ results, missing });
+    return res.status(200).json({ results, missing, store: STORE });
   } catch (err) {
     return res.status(500).json({ error: String((err && err.message) || err) });
   }
