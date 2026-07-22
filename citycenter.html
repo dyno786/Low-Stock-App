@@ -2088,6 +2088,15 @@ var shopLocalDrafts={};try{shopLocalDrafts=JSON.parse(localStorage.getItem('cc_s
 function shopAddLocalDraft(bc,admin){shopLocalDrafts[bc]={admin:admin||''};try{localStorage.setItem('cc_shop_localdrafts',JSON.stringify(shopLocalDrafts));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shop_localdrafts',shopLocalDrafts);renderShopify();}
 function shopLocalDraftsBoot(){if(window.__sldBoot||typeof syncLoad!=='function')return;window.__sldBoot=1;syncLoad('cc_shop_localdrafts').then(function(o){if(o&&typeof o==='object'){Object.keys(o).forEach(function(k){if(!shopLocalDrafts[k])shopLocalDrafts[k]=o[k];});try{localStorage.setItem('cc_shop_localdrafts',JSON.stringify(shopLocalDrafts));}catch(e){}if(view==='shopify')renderShopify();}}).catch(function(){});}
 var shopState='noton';
+var shopCustomDepts=[];try{shopCustomDepts=JSON.parse(localStorage.getItem('cc_shop_depts')||'[]')||[];}catch(e){}
+function saveShopDepts(){try{localStorage.setItem('cc_shop_depts',JSON.stringify(shopCustomDepts));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shop_depts',shopCustomDepts);}
+function shopDeptsBoot(){if(window.__sdBoot||typeof syncLoad!=='function')return;window.__sdBoot=1;syncLoad('cc_shop_depts').then(function(o){if(Array.isArray(o)){var ch=false;o.forEach(function(d){if(shopCustomDepts.indexOf(d)<0){shopCustomDepts.push(d);ch=true;}});if(ch){try{localStorage.setItem('cc_shop_depts',JSON.stringify(shopCustomDepts));}catch(e){}if(view==='shopify')renderShopify();}}}).catch(function(){});}
+function shopCatOfX(dp){var c=(typeof shopCatOf==='function')?shopCatOf(dp):null;if(c)return c;if(dp&&shopCustomDepts.indexOf(dp)>=0)return dp;return null;}
+var shopNoAdd={};try{shopNoAdd=JSON.parse(localStorage.getItem('cc_shop_noadd')||'{}')||{};}catch(e){}
+function saveNoAdd(){try{localStorage.setItem('cc_shop_noadd',JSON.stringify(shopNoAdd));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shop_noadd',shopNoAdd);}
+function shopNoAddBoot(){if(window.__naBoot||typeof syncLoad!=='function')return;window.__naBoot=1;syncLoad('cc_shop_noadd').then(function(o){if(o&&typeof o==='object'){var ch=false;Object.keys(o).forEach(function(k){if(!shopNoAdd[k]){shopNoAdd[k]=o[k];ch=true;}});if(ch){try{localStorage.setItem('cc_shop_noadd',JSON.stringify(shopNoAdd));}catch(e){}if(view==='shopify')renderShopify();}}}).catch(function(){});}
+function shopMarkNoAdd(bc){var p=(typeof destByBc==='function')?destByBc(bc):null;shopNoAdd[bc]={nm:(p&&p.nm)||'',ts:Date.now()};saveNoAdd();renderShopify();}
+function shopUnblock(bc){delete shopNoAdd[bc];saveNoAdd();renderShopify();}
 function shopListedBoot(){if(window.__shopListedBoot||typeof syncLoad!=='function')return;window.__shopListedBoot=1;syncLoad('cc_shop_listed').then(function(o){if(o&&typeof o==='object'){Object.keys(o).forEach(function(k){shopListed[k]=1;});try{localStorage.setItem('cc_shop_listed',JSON.stringify(shopListed));}catch(e){}if(view==='shopify')renderShopify();}}).catch(function(){});}
 function shopMarkListed(bc){shopListed[bc]=1;try{localStorage.setItem('cc_shop_listed',JSON.stringify(shopListed));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shop_listed',shopListed);renderShopify();}
 function shopCatOf(dp){dp=(''+(dp||'')).trim().toUpperCase();for(var i=0;i<SHOP_CATS.length;i++){if(SHOP_CATS[i].match.indexOf(dp)>=0)return SHOP_CATS[i].key;}return null;}
@@ -2208,35 +2217,56 @@ function renderShopify(){
     loadImgs().then(function(){renderShopify();});
     return;
   }
-  var base=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOf(p.dp);});
-  var notOn=base.filter(function(p){return !imgs[p.bc]&&!(shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)&&!shopExistsConfirmed(p.bc)&&!isShopDraft(p.bc)&&!shopListed[p.bc];});
-  var noImg=base.filter(function(p){return !imgs[p.bc]&&((shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)||shopExistsConfirmed(p.bc))&&!isShopDraft(p.bc)&&!shopListed[p.bc];});
-  var drafts=base.filter(function(p){return isShopDraft(p.bc)&&!shopListed[p.bc];});
-  var STATES=[{k:'noton',short:'Not on Shopify',list:notOn},{k:'noimg',short:'No image',list:noImg},{k:'draft',short:'Deactivated',list:drafts}];
+  shopCustomDepts.forEach(function(d){if(shopDeptSel[d]===undefined)shopDeptSel[d]=1;});
+  var base=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOfX(p.dp);});
+  var notOn=base.filter(function(p){return !imgs[p.bc]&&!(shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)&&!shopExistsConfirmed(p.bc)&&!isShopDraft(p.bc)&&!shopListed[p.bc]&&!shopNoAdd[p.bc];});
+  var noImg=base.filter(function(p){return !imgs[p.bc]&&((shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)||shopExistsConfirmed(p.bc))&&!isShopDraft(p.bc)&&!shopListed[p.bc]&&!shopNoAdd[p.bc];});
+  var drafts=base.filter(function(p){return isShopDraft(p.bc)&&!shopListed[p.bc]&&!shopNoAdd[p.bc];});
+  var blockedList=Object.keys(shopNoAdd).map(function(bc){var pp=(typeof destByBc==='function')?destByBc(bc):null;return {bc:bc,nm:(pp&&pp.nm)||shopNoAdd[bc].nm||bc,dp:(pp&&pp.dp)||'',pr:(pp&&pp.pr)||0,qty:(pp&&pp.qty)||0,sz:(pp&&pp.sz)||''};});
+  var STATES=[{k:'noton',short:'Not on Shopify',list:notOn},{k:'noimg',short:'No image',list:noImg},{k:'draft',short:'Deactivated',list:drafts},{k:'blocked',short:'Do not add',list:blockedList}];
   if(!STATES.some(function(x){return x.k===shopState;}))shopState='noton';
   var cur=STATES.filter(function(x){return x.k===shopState;})[0];
   var head='<div class="shop-head"><div class="shop-title">🛍 Shopify</div></div>';
   var st='<div class="over-subtabs shop-subtabs">';
   STATES.forEach(function(x){st+='<div class="over-subtab'+(shopState===x.k?' on':'')+'" data-state="'+x.k+'"><div class="over-sub-name">'+x.short+'</div><div class="over-sub-cnt">'+x.list.length+'</div></div>';});
   st+='</div>';
-  var dep='<div style="padding:4px 10px 4px;font-size:11px;color:var(--sub)">Departments — tap to show / hide</div><div class="shop-depts" style="display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 10px">';
-  SHOP_CATS.forEach(function(c){var on=!!shopDeptSel[c.key];dep+='<button type="button" class="shop-dept" data-cat="'+shopEscAttr(c.key)+'" style="border:1.5px solid '+(on?'var(--purple,#6d28d9)':'var(--border,#ddd)')+';background:'+(on?'var(--purple,#6d28d9)':'#fff')+';color:'+(on?'#fff':'inherit')+';border-radius:20px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent">'+(on?'✓ ':'')+shopEsc(c.short)+'</button>';});
+  // per-department counts for the CURRENT tab
+  var deptCounts={};cur.list.forEach(function(p){var k=shopCatOfX(p.dp);if(k)deptCounts[k]=(deptCounts[k]||0)+1;});
+  var allDepts=[];SHOP_CATS.forEach(function(c){allDepts.push({key:c.key,short:c.short,custom:false});});shopCustomDepts.forEach(function(d){allDepts.push({key:d,short:d,custom:true});});
+  var dep='<div style="padding:4px 10px 4px;font-size:11px;color:var(--sub)">Departments — tap to show / hide</div><div class="shop-depts" style="display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 6px">';
+  allDepts.forEach(function(c){var on=!!shopDeptSel[c.key];var n=deptCounts[c.key]||0;
+    dep+='<span style="display:inline-flex;align-items:stretch">';
+    dep+='<button type="button" class="shop-dept" data-cat="'+shopEscAttr(c.key)+'" style="border:1.5px solid '+(on?'var(--purple,#6d28d9)':'var(--border,#ddd)')+';background:'+(on?'var(--purple,#6d28d9)':'#fff')+';color:'+(on?'#fff':'inherit')+';border-radius:'+(c.custom?'20px 0 0 20px':'20px')+';padding:9px 13px;font-weight:700;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent">'+(on?'✓ ':'')+shopEsc(c.short)+' ('+n+')</button>';
+    if(c.custom)dep+='<button type="button" class="shop-dept-del" data-dp="'+shopEscAttr(c.key)+'" title="Remove department" style="border:1.5px solid var(--border,#ddd);border-left:none;background:#fff;color:#dc2626;border-radius:0 20px 20px 0;padding:0 10px;font-weight:800;font-size:13px;cursor:pointer">✕</button>';
+    dep+='</span>';
+  });
+  // departments present in the data but not covered yet -> tap to add
+  var uncovered={};(destData||[]).forEach(function(p){if(p.bc&&p.nm&&p.qty>0&&p.dp&&!shopCatOfX(p.dp))uncovered[p.dp]=(uncovered[p.dp]||0)+1;});
+  var unc=Object.keys(uncovered).sort(function(a,b){return uncovered[b]-uncovered[a];});
+  if(unc.length){dep+='<div style="width:100%;font-size:11px;color:var(--sub);margin:6px 0 0">Add a department:</div>';
+    unc.forEach(function(dp){dep+='<button type="button" class="shop-dept-add" data-dp="'+shopEscAttr(dp)+'" style="border:1.5px dashed var(--purple,#6d28d9);background:#fff;color:var(--purple,#6d28d9);border-radius:20px;padding:9px 13px;font-weight:700;font-size:13px;cursor:pointer">+ '+shopEsc(dp)+' ('+uncovered[dp]+')</button>';});
+  }
   dep+='</div>';
   var srch='<div style="padding:2px 10px 8px"><input id="shop-search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search barcode or name…" style="width:100%;box-sizing:border-box;border:2px solid var(--purple,#6d28d9);border-radius:11px;padding:11px 12px;font-size:15px;font-family:ui-monospace,Menlo,monospace"></div>';
   var _sq=(shopQuery||'').trim().toLowerCase();
-  var items=cur.list.filter(function(p){if(!shopDeptSel[shopCatOf(p.dp)])return false;if(_sq&&(((p.bc||'')+' '+(p.nm||'')).toLowerCase().indexOf(_sq)<0))return false;return true;});
-  items.sort(function(a,b){return (shopCatOf(a.dp)||'').localeCompare(shopCatOf(b.dp)||'')||a.nm.localeCompare(b.nm);});
+  var items=cur.list.filter(function(p){if(shopState!=='blocked'&&!shopDeptSel[shopCatOfX(p.dp)])return false;if(_sq&&(((p.bc||'')+' '+(p.nm||'')).toLowerCase().indexOf(_sq)<0))return false;return true;});
+  items.sort(function(a,b){return (shopCatOfX(a.dp)||'').localeCompare(shopCatOfX(b.dp)||'')||a.nm.localeCompare(b.nm);});
   setProg(1,0,items.length+' '+cur.short.toLowerCase());
-  var subT={noton:'In-stock items not on the website — tap + Shopify to list, or Check to test the barcode.',noimg:'On Shopify but no photo — tap Check, then Open to add one.',draft:'Deactivated / draft on Shopify — tap Check, then Open to reactivate.'}[shopState];
+  var subT={noton:'In-stock items not on the website — tap + Shopify to list, or Check to test the barcode.',noimg:'On Shopify but no photo — tap Check, then Open to add one.',draft:'Deactivated / draft on Shopify — tap Check, then Open to reactivate.',blocked:'Never-add list (all branches). These will never show under + Shopify. Tap Allow again to re-enable.'}[shopState];
   var html=head+st+dep+srch+'<div class="shop-sub" style="padding:0 10px 8px">'+subT+'</div>';
   if(!items.length){html+='<div class="shop-empty">Nothing here'+(_sq?(' for "'+shopEsc(shopQuery)+'"'):'')+'. 🎉</div>';el.innerHTML=html;wireShopCommon(el);verifyExists(cur.list.map(function(p){return p.bc;}),function(ch){if(ch&&view==='shopify')renderShopify();});return;}
   var curK='';
   items.forEach(function(p){
-    var k=shopCatOf(p.dp);if(!_sq&&k!==curK){curK=k;html+='<div class="shop-dp">'+shopEsc(catShort(k))+'</div>';}
+    var k=shopCatOfX(p.dp);if(!_sq&&k!==curK){curK=k;html+='<div class="shop-dp">'+shopEsc(catShort(k))+'</div>';}
     var acts='';
-    if(shopState==='noton')acts+='<button class="shop-add" data-bc="'+p.bc+'">+ Shopify</button>';
-    acts+='<button class="shop-check" data-bc="'+p.bc+'" style="border:1px solid var(--purple,#6d28d9);background:#fff;color:var(--purpletxt,#6d28d9);border-radius:9px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap">Check</button>';
-    if(shopState==='noton')acts+='<button class="shop-onsite" data-bc="'+p.bc+'" title="Already on Shopify — hide" style="border:1px solid var(--border,#ddd);background:#fff;color:var(--sub);border-radius:9px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap">on site</button>';
+    if(shopState==='blocked'){
+      acts+='<button class="shop-allow" data-bc="'+p.bc+'" style="border:1px solid #16a34a;background:#16a34a;color:#fff;border-radius:9px;padding:6px 11px;font-size:12px;font-weight:800;cursor:pointer">Allow again</button>';
+    } else {
+      if(shopState==='noton')acts+='<button class="shop-add" data-bc="'+p.bc+'">+ Shopify</button>';
+      acts+='<button class="shop-check" data-bc="'+p.bc+'" style="border:1px solid var(--purple,#6d28d9);background:#fff;color:var(--purpletxt,#6d28d9);border-radius:9px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap">Check</button>';
+      if(shopState==='noton')acts+='<button class="shop-onsite" data-bc="'+p.bc+'" title="Already on Shopify — hide" style="border:1px solid var(--border,#ddd);background:#fff;color:var(--sub);border-radius:9px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap">on site</button>';
+      acts+='<button class="shop-noadd" data-bc="'+p.bc+'" title="Never list on Shopify (all branches)" style="border:1px solid #dc2626;background:#fff;color:#dc2626;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;white-space:nowrap">🚫 no add</button>';
+    }
     html+='<div class="shop-row"><div class="shop-imgw">'+imgEl(p.bc,44)+'</div><div class="shop-info"><div class="shop-nm">'+shopEsc(p.nm)+(p.sz?' · '+shopEsc(p.sz):'')+'</div><div class="shop-bc"><span style="font-family:ui-monospace,Menlo,monospace">'+p.bc+'</span> <button class="shop-copy" data-bc="'+p.bc+'" title="Copy barcode" style="border:1px solid var(--border,#ddd);background:#fff;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:700;cursor:pointer;vertical-align:middle">copy</button>'+(p.pr>0?' · £'+p.pr.toFixed(2):'')+' · '+p.qty+' in stock</div><div class="shop-st" id="shopst-'+p.bc+'" style="font-size:12px;margin-top:3px"></div></div><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center">'+acts+'</div></div>';
   });
   el.innerHTML=html;
@@ -2246,11 +2276,15 @@ function renderShopify(){
 function wireShopCommon(el){
   el.querySelectorAll('.shop-subtabs [data-state]').forEach(function(t){t.addEventListener('click',function(){shopState=this.getAttribute('data-state');renderShopify();});});
   el.querySelectorAll('.shop-dept').forEach(function(t){t.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var k=this.getAttribute('data-cat');if(shopDeptSel[k])delete shopDeptSel[k];else shopDeptSel[k]=1;renderShopify();});});
+  el.querySelectorAll('.shop-dept-add').forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var dp=this.getAttribute('data-dp');if(shopCustomDepts.indexOf(dp)<0){shopCustomDepts.push(dp);shopDeptSel[dp]=1;saveShopDepts();}renderShopify();});});
+  el.querySelectorAll('.shop-dept-del').forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var dp=this.getAttribute('data-dp');shopCustomDepts=shopCustomDepts.filter(function(x){return x!==dp;});delete shopDeptSel[dp];saveShopDepts();renderShopify();});});
   el.querySelectorAll('.shop-onsite').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();shopMarkListed(this.getAttribute('data-bc'));});});
+  el.querySelectorAll('.shop-noadd').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();if(confirm('Never add this to Shopify — on all branches?'))shopMarkNoAdd(this.getAttribute('data-bc'));});});
+  el.querySelectorAll('.shop-allow').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();shopUnblock(this.getAttribute('data-bc'));});});
   el.querySelectorAll('.shop-check').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();shopCheckOne(this.getAttribute('data-bc'));});});
   el.querySelectorAll('.shop-copy').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();shopCopyBc(this.getAttribute('data-bc'),this);});});
   var _ss=document.getElementById('shop-search');if(_ss){_ss.value=shopQuery;_ss.addEventListener('input',function(){shopQuery=this.value;renderShopify();});if(shopQuery){try{_ss.focus();var _L=_ss.value.length;_ss.setSelectionRange(_L,_L);}catch(e){}}}
-  shopListedBoot();shopLocalDraftsBoot();
+  shopListedBoot();shopLocalDraftsBoot();shopDeptsBoot();shopNoAddBoot();
 }
 function shopCopyBc(bc,btn){
   var ok=function(){if(btn){var o=btn.textContent;btn.textContent='✓ copied';setTimeout(function(){try{btn.textContent=o;}catch(e){}},1200);}};
