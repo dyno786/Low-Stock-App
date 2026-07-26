@@ -22,11 +22,12 @@ body{font-family:'Poppins',system-ui,sans-serif;background:#0b0c0f;color:var(--i
 .item .p{font-size:11px;color:var(--muted);margin-top:2px}.oos{color:#c9885f}
 .main{display:grid;grid-template-columns:1.05fr .95fr;overflow:hidden}
 .preview{display:flex;flex-direction:column;align-items:center;padding:20px;overflow:auto;background:radial-gradient(900px 500px at 50% -10%,#1a1c22,#0b0c0f)}
-.seg{display:flex;gap:5px;background:var(--panel2);padding:4px;border-radius:10px;margin-bottom:16px}
-.seg button{border:0;background:transparent;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 18px;border-radius:7px;cursor:pointer}
+.bar{display:flex;gap:14px;align-items:center;margin-bottom:14px;flex-wrap:wrap;justify-content:center}
+.seg{display:flex;gap:5px;background:var(--panel2);padding:4px;border-radius:10px}
+.seg button{border:0;background:transparent;color:var(--muted);font-family:inherit;font-size:12px;font-weight:600;padding:7px 15px;border-radius:7px;cursor:pointer}
 .seg button.on{background:var(--blue);color:#fff}
-.frame{width:460px;height:460px;border-radius:16px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);flex:0 0 auto}
-.scaler{transform:scale(.4259);transform-origin:top left}
+.frame{border-radius:16px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);flex:0 0 auto;position:relative}
+.scaler{transform-origin:top left}
 .es{color:var(--muted);text-align:center;margin-top:100px;font-size:13.5px;max-width:280px}
 .es b{color:var(--ink);display:block;font-size:16px;margin-bottom:6px}
 .pv{display:flex;gap:10px;margin-top:16px}
@@ -45,36 +46,70 @@ label{display:block;font-size:10.5px;font-weight:600;color:var(--muted);text-tra
 .copybtn{position:absolute;top:6px;right:6px;font-size:11px;padding:5px 10px;border-radius:7px;border:0;background:var(--blue);color:#fff;cursor:pointer;font-family:inherit;font-weight:600}
 .copybtn.done{background:#2e7d32}
 .warn{background:#3a2a12;border:1px solid #6b4a1e;color:#e7b877;font-size:11.5px;padding:8px 10px;border-radius:8px;margin-top:12px}
-.card{width:1080px;height:1080px;position:relative;overflow:hidden;font-family:'Poppins',sans-serif;color:#fff}
+
+/* ============ CARD (canvas). --cw/--ch set per size ============ */
+.card{width:var(--cw);height:var(--ch);position:relative;overflow:hidden;font-family:'Poppins',sans-serif;color:#fff}
 .card .bg{position:absolute;inset:0;background:linear-gradient(150deg,var(--g1),var(--g2) 42%,var(--g3) 78%,var(--g4))}
 .card .photo{position:absolute;inset:0;background-size:cover;background-position:center;mix-blend-mode:overlay;opacity:.95}
 .card .photo.plain{mix-blend-mode:normal;opacity:1}
 .card .tint{position:absolute;inset:0;background:linear-gradient(150deg,rgba(247,150,60,.20),rgba(176,19,102,.32))}
 .card .vig{position:absolute;inset:0;background:linear-gradient(to top,rgba(110,8,64,.62),transparent 45%)}
-.mark{position:absolute;top:44px;left:50px;height:112px;filter:drop-shadow(0 3px 10px rgba(0,0,0,.45)) drop-shadow(0 0 22px rgba(255,255,255,.3))}
-.mark.right{left:auto;right:50px}
-.eyebrow{position:absolute;top:250px;left:60px;background:var(--red);font-family:'Oswald',sans-serif;font-weight:600;font-size:24px;letter-spacing:2px;text-transform:uppercase;padding:8px 18px;border-radius:6px}
-.pname{position:absolute;top:312px;left:60px;width:560px;font-weight:800;font-size:52px;line-height:1.06;text-shadow:0 3px 16px rgba(90,0,50,.4)}
-.rule{position:absolute;left:62px;width:120px;height:6px;background:#fff;border-radius:3px}
-.bullets{position:absolute;left:60px;width:540px;display:flex;flex-direction:column;gap:22px}
-.bl{display:flex;gap:16px;align-items:flex-start}
-.chk{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(198,40,40,.45)}
-.chk svg{width:20px;height:20px}
-.bl p{margin:0;font-size:26px;line-height:1.25;font-weight:500}
-.pimg{position:absolute;right:26px;bottom:140px;width:440px;height:640px;object-fit:contain;object-position:bottom right;filter:drop-shadow(0 22px 38px rgba(70,0,40,.5))}
-.price{position:absolute;top:250px;right:60px;width:186px;height:186px;border-radius:50%;background:var(--red);border:5px solid #fff;box-shadow:0 12px 30px rgba(120,0,50,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-8deg)}
-.price .l{font-family:'Oswald',sans-serif;font-size:19px;letter-spacing:2px;opacity:.9}
-.price .v{font-weight:800;font-size:52px;line-height:.95}
-.cta{position:absolute;bottom:118px;left:60px;background:var(--blue);font-family:'Oswald',sans-serif;font-weight:600;font-size:30px;letter-spacing:1.5px;text-transform:uppercase;padding:16px 34px;border-radius:12px;box-shadow:0 10px 26px rgba(31,68,165,.45)}
-.foot{position:absolute;bottom:46px;left:0;right:0;text-align:center;font-size:24px;font-weight:600;letter-spacing:1px}
-.cc{position:absolute;left:62px;right:62px;bottom:150px}
-.cc .head{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;font-size:78px;line-height:.98;text-shadow:0 4px 20px rgba(80,0,45,.5)}
-.cc .sb{font-family:'Oswald',sans-serif;font-weight:500;text-transform:uppercase;font-size:31px;margin-top:18px;text-shadow:0 2px 12px rgba(80,0,45,.5)}
-.swipe{position:absolute;right:52px;bottom:44px;display:flex;align-items:center;gap:10px;font-family:'Oswald',sans-serif;font-size:23px;letter-spacing:2px;text-transform:uppercase}
-.swipe svg{width:36px;height:36px}
-.cph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.75);font-size:26px;text-align:center;padding:0 120px}
-@media(max-width:1000px){.app{grid-template-columns:1fr}.side{max-height:38vh;border-right:0;border-bottom:1px solid var(--line)}
-.main{grid-template-columns:1fr}.editor{border-left:0;border-top:1px solid var(--line)}.frame{width:330px;height:330px}.scaler{transform:scale(.30555)}}
+.mark{position:absolute;filter:drop-shadow(0 3px 10px rgba(0,0,0,.45)) drop-shadow(0 0 22px rgba(255,255,255,.3))}
+.eyebrow{position:absolute;background:var(--red);font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:2px;text-transform:uppercase;border-radius:6px}
+.pname{position:absolute;font-weight:800;line-height:1.06;text-shadow:0 3px 16px rgba(90,0,50,.4)}
+.rule{position:absolute;height:6px;background:#fff;border-radius:3px}
+.bullets{position:absolute;display:flex;flex-direction:column}
+.bl{display:flex;align-items:flex-start}
+.chk{flex:0 0 auto;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(198,40,40,.45)}
+.bl p{margin:0;font-weight:500}
+.pimg{position:absolute;object-fit:contain;filter:drop-shadow(0 22px 38px rgba(70,0,40,.5))}
+.price{position:absolute;border-radius:50%;background:var(--red);border:5px solid #fff;box-shadow:0 12px 30px rgba(120,0,50,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-8deg)}
+.price .l{font-family:'Oswald',sans-serif;letter-spacing:2px;opacity:.9}
+.price .v{font-weight:800;line-height:.95}
+.cta{position:absolute;background:var(--blue);font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;border-radius:12px;box-shadow:0 10px 26px rgba(31,68,165,.45)}
+.foot{position:absolute;left:0;right:0;text-align:center;font-weight:600;letter-spacing:1px}
+.cc{position:absolute}
+.cc .head{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;line-height:.98;text-shadow:0 4px 20px rgba(80,0,45,.5)}
+.cc .sb{font-family:'Oswald',sans-serif;font-weight:500;text-transform:uppercase;text-shadow:0 2px 12px rgba(80,0,45,.5)}
+.swipe{position:absolute;display:flex;align-items:center;gap:10px;font-family:'Oswald',sans-serif;letter-spacing:2px;text-transform:uppercase}
+.cph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.75);text-align:center;padding:0 120px}
+
+/* ---- SQUARE 1080x1080 ---- */
+.sq .mark{top:44px;left:50px;height:112px}.sq .mark.right{left:auto;right:50px}
+.sq .eyebrow{top:250px;left:60px;font-size:24px;padding:8px 18px}
+.sq .pname{top:312px;left:60px;width:560px;font-size:52px}
+.sq .rule{left:62px;width:120px}
+.sq .bullets{left:60px;width:540px;gap:22px}
+.sq .chk{width:40px;height:40px;margin-top:1px}.sq .chk svg{width:20px;height:20px}
+.sq .bl{gap:16px}.sq .bl p{font-size:26px;line-height:1.25}
+.sq .pimg{right:26px;bottom:140px;width:440px;height:640px;object-position:bottom right}
+.sq .price{top:250px;right:60px;width:186px;height:186px}.sq .price .l{font-size:19px}.sq .price .v{font-size:48px}
+.sq .cta{bottom:118px;left:60px;font-size:30px;padding:16px 34px}
+.sq .foot{bottom:46px;font-size:24px}
+.sq .cc{left:62px;right:62px;bottom:150px}.sq .cc .head{font-size:78px}.sq .cc .sb{font-size:31px;margin-top:18px}
+.sq .swipe{right:52px;bottom:44px;font-size:23px}.sq .swipe svg{width:36px;height:36px}
+.sq .cph{font-size:26px}
+
+/* ---- STORY 1080x1920 (tall) ---- */
+.st .mark{top:80px;left:60px;height:130px}.st .mark.right{left:auto;right:60px}
+.st .eyebrow{top:470px;left:70px;font-size:30px;padding:10px 22px}
+.st .pname{top:548px;left:70px;width:760px;font-size:66px}
+.st .rule{left:72px;width:150px;height:7px}
+.st .bullets{left:70px;width:760px;gap:30px}
+.st .chk{width:50px;height:50px;margin-top:2px}.st .chk svg{width:26px;height:26px}
+.st .bl{gap:20px}.st .bl p{font-size:34px;line-height:1.28}
+.st .pimg{left:50%;transform:translateX(-50%);bottom:300px;width:620px;height:760px;object-position:bottom center}
+.st .price{top:1120px;right:90px;width:230px;height:230px}.st .price .l{font-size:24px}.st .price .v{font-size:62px}
+.st .cta{bottom:230px;left:50%;transform:translateX(-50%);font-size:40px;padding:22px 60px}
+.st .foot{bottom:120px;font-size:32px}
+.st .cc{left:80px;right:80px;bottom:360px}.st .cc .head{font-size:104px}.st .cc .sb{font-size:40px;margin-top:26px}
+.st .swipe{left:0;right:0;bottom:70px;justify-content:center;font-size:30px}.st .swipe svg{width:44px;height:44px}
+.st .cph{font-size:34px;padding:0 160px}
+/* story product photo sits behind text lower down; keep bullets clear of it via layout above */
+.st.hasprod .bullets{width:620px}
+
+@media(max-width:1000px){.app{grid-template-columns:1fr}.side{max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}
+.main{grid-template-columns:1fr}.editor{border-left:0;border-top:1px solid var(--line)}}
 </style></head><body>
 <div class="app">
 <aside class="side"><div class="top">
@@ -82,12 +117,15 @@ label{display:block;font-size:10.5px;font-weight:600;color:var(--muted);text-tra
 <input class="search" id="q" placeholder="Search products, brands, types…"><div class="count" id="count"></div></div>
 <div class="list" id="list"></div></aside>
 <div class="main"><div class="preview">
+<div class="bar">
 <div class="seg" id="seg"><button data-m="product" class="on">Product card</button><button data-m="cover">Picture slide</button></div>
-<div class="frame" id="frame" style="display:none"><div class="scaler"><div class="card" id="card">
+<div class="seg" id="sizeSeg"><button data-s="sq" class="on">Square 1:1</button><button data-s="st">Story 9:16</button></div>
+</div>
+<div class="frame" id="frame" style="display:none"><div class="scaler" id="scaler"><div class="card sq" id="card">
 <div class="bg"></div><div class="photo" id="vph"></div><div class="tint"></div><div class="vig"></div>
 <img class="mark" id="vmark" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADPCAMAAAB4BBzfAAAMQGlDQ1BJQ0MgUHJvZmlsZQAAeJyVVwdYU8kWnluSkEBoAQSkhN4EESkBpITQQu9NVEISIJQYA0HFXhYVXLuogA1dFVGw0uyInUWx9wURFWVdLNiVNymg677yvfm+ufPff87858y5M/feAUDtJEckykXVAcgTFohjgvzoSckpdNJzQAA6QBk4ARcON1/EjIoKA7AMtX8v724CRNpes5dq/bP/vxYNHj+fCwASBXE6L5+bB/EhAPBKrkhcAABRyptNLRBJMaxASwwDhHixFGfKcaUUp8vxPplNXAwL4lYAlFQ4HHEmAKpXIE8v5GZCDdV+iB2FPIEQADU6xN55eZN5EKdBbA1tRBBL9RnpP+hk/k0zfViTw8kcxvK5yIqSvyBflMuZ/n+m43+XvFzJkA9LWFWyxMEx0jnDvN3OmRwqxSoQ9wnTIyIh1oT4g4Ans4cYpWRJguPl9qgBN58FcwafNEAdeRz/UIgNIA4U5kaEKfj0DEEgG2K4QtBpggJ2HMS6EC/m5wfEKmy2iCfHKHyh9RliFlPBn+eIZX6lvh5KcuKZCv3XWXy2Qh9TLcqKS4SYArF5oSAhAmJViB3yc2JDFTbjirJYEUM2YkmMNH5ziGP4wiA/uT5WmCEOjFHYl+TlD80X25IlYEco8IGCrLhgeX6wVi5HFj+cC3aFL2TGD+nw85PChubC4/sHyOeOPeML42MVOh9EBX4x8rE4RZQbpbDHTfm5QVLeFGLn/MJYxVg8oQAuSLk+niEqiIqTx4kXZXNCouTx4CtAGGABf0AHEljTwWSQDQTtfQ198E7eEwg4QAwyAR/YK5ihEYmyHiG8xoIi8CdEfJA/PM5P1ssHhZD/OszKr/YgQ9ZbKBuRA55AnAdCQS68l8hGCYe9JYDHkBH8wzsHVi6MNxdWaf+/54fY7wwTMmEKRjLkka42ZEkMIPoTg4mBRBtcH/fGPfEwePWF1Qln4O5D8/huT3hC6CA8ItwgdBLuTBLMF/8UZTjohPqBilyk/5gL3BJquuB+uBdUh8q4Dq4P7HFn6IeJ+0DPLpBlKeKWZoX+k/bfZvDD01DYkR3JKHkE2Zds/fNIVVtVl2EVaa5/zI881vThfLOGe372z/oh+zzYhv5siS3GDmLnsFPYBewo1gDo2AmsEWvDjknx8Op6LFtdQ95iZPHkQB3BP/wNPVlpJvMdaxx7Hb/I+wr406TvaMCaLJouFmRmFdCZ8IvAp7OFXIdRdCdHJ1cApN8X+evrTbTsu4HotH3nFvwBgNeJwcHBI9+5kBMA7HeD27/pO2fNgJ8OZQDON3El4kI5h0svBPiWUIM7TQ8YATNgDefjBFyBJ/AFASAERII4kAwmwuiz4DoXg6lgJpgHikEpWAHWgnKwGWwDu8BecAA0gKPgFDgLLoEr4Aa4B1dPD3gB+sE78BlBEBJCRWiIHmKMWCB2iBPCQLyRACQMiUGSkTQkExEiEmQmsgApRVYh5chWpBrZjzQhp5ALSAdyB+lCepHXyCcUQ1VQLdQQtURHowyUiYaicegENBOdghahC9Fl6Hq0Ct2D1qOn0EvoDbQTfYEOYABTxnQwE8weY2AsLBJLwTIwMTYbK8HKsCqsFmuGz/ka1on1YR9xIk7D6bg9XMHBeDzOxafgs/GleDm+C6/HW/FreBfej38jUAkGBDuCB4FNSCJkEqYSigllhB2Ew4QzcC/1EN4RiUQdohXRDe7FZGI2cQZxKXEjsY54kthB7CYOkEgkPZIdyYsUSeKQCkjFpA2kPaQTpKukHtIHJWUlYyUnpUClFCWh0nylMqXdSseVrio9VfpMVidbkD3IkWQeeTp5OXk7uZl8mdxD/kzRoFhRvChxlGzKPMp6Si3lDOU+5Y2ysrKpsrtytLJAea7yeuV9yueVu5Q/qmiq2KqwVFJVJCrLVHaqnFS5o/KGSqVaUn2pKdQC6jJqNfU09SH1gypN1UGVrcpTnaNaoVqvelX1pRpZzUKNqTZRrUitTO2g2mW1PnWyuqU6S52jPlu9Qr1J/Zb6gAZNY4xGpEaexlKN3RoXNJ5pkjQtNQM0eZoLNbdpntbspmE0MxqLxqUtoG2nnaH1aBG1rLTYWtlapVp7tdq1+rU1tZ21E7SnaVdoH9Pu1MF0LHXYOrk6y3UO6NzU+TTCcARzBH/EkhG1I66OeK87UtdXl69bolune0P3kx5dL0AvR2+lXoPeA31c31Y/Wn+q/ib9M/p9I7VGeo7kjiwZeWDkXQPUwNYgxmCGwTaDNoMBQyPDIEOR4QbD04Z9RjpGvkbZRmuMjhv1GtOMvY0FxmuMTxg/p2vTmfRc+np6K73fxMAk2ERistWk3eSzqZVpvOl80zrTB2YUM4ZZhtkasxazfnNj83DzmeY15nctyBYMiyyLdRbnLN5bWlkmWi6ybLB8ZqVrxbYqsqqxum9NtfaxnmJdZX3dhmjDsMmx2WhzxRa1dbHNsq2wvWyH2rnaCew22nWMIoxyHyUcVTXqlr2KPdO+0L7GvstBxyHMYb5Dg8PL0eajU0avHH1u9DdHF8dcx+2O98ZojgkZM39M85jXTrZOXKcKp+tjqWMDx84Z2zj2lbOdM995k/NtF5pLuMsilxaXr65urmLXWtdeN3O3NLdKt1sMLUYUYynjvDvB3c99jvtR948erh4FHgc8/vK098zx3O35bJzVOP647eO6vUy9OF5bvTq96d5p3lu8O31MfDg+VT6PfM18eb47fJ8ybZjZzD3Ml36OfmK/w37vWR6sWayT/ph/kH+Jf3uAZkB8QHnAw0DTwMzAmsD+IJegGUEngwnBocErg2+xDdlcdjW7P8QtZFZIa6hKaGxoeeijMNswcVhzOBoeEr46/H6ERYQwoiESRLIjV0c+iLKKmhJ1JJoYHRVdEf0kZkzMzJhzsbTYSbG7Y9/F+cUtj7sXbx0viW9JUEtITahOeJ/on7gqsTNpdNKspEvJ+smC5MYUUkpCyo6UgfEB49eO70l1SS1OvTnBasK0CRcm6k/MnXhsktokzqSDaYS0xLTdaV84kZwqzkA6O70yvZ/L4q7jvuD58tbwevle/FX8pxleGasynmV6Za7O7M3yySrL6hOwBOWCV9nB2Zuz3+dE5uzMGcxNzK3LU8pLy2sSagpzhK2TjSZPm9whshMVizqneExZO6VfHCrekY/kT8hvLNCCP/JtEmvJL5KuQu/CisIPUxOmHpymMU04rW267fQl058WBRb9NgOfwZ3RMtNk5ryZXbOYs7bORmanz26ZYzZn4ZyeuUFzd82jzMuZ9/t8x/mr5r9dkLigeaHhwrkLu38J+qWmWLVYXHxrkeeizYvxxYLF7UvGLtmw5FsJr+RiqWNpWemXpdylF38d8+v6XweXZSxrX+66fNMK4grhipsrfVbuWqWxqmhV9+rw1fVr6GtK1rxdO2nthTLnss3rKOsk6zrXh61v3GC+YcWGL+VZ5Tcq/CrqKg0ql1S+38jbeHWT76bazYabSzd/2iLYcntr0Nb6Ksuqsm3EbYXbnmxP2H7uN8Zv1Tv0d5Tu+LpTuLNzV8yu1mq36urdBruX16A1kprePal7ruz139tYa1+7tU6nrnQf2CfZ93x/2v6bB0IPtBxkHKw9ZHGo8jDtcEk9Uj+9vr8hq6GzMbmxoymkqaXZs/nwEYcjO4+aHK04pn1s+XHK8YXHB08UnRg4KTrZdyrzVHfLpJZ7p5NOX2+Nbm0/E3rm/NnAs6fPMc+dOO91/ugFjwtNFxkXGy65Xqpvc2k7/LvL74fbXdvrL7tdbrzifqW5Y1zH8as+V09d87929jr7+qUbETc6bsbfvH0r9Vbnbd7tZ3dy77y6W3j387259wn3Sx6oPyh7aPCw6g+bP+o6XTuPdfl3tT2KfXSvm9v94nH+4y89C59Qn5Q9NX5a/czp2dHewN4rz8c/73khevG5r/hPjT8rX1q/PPSX719t/Un9Pa/ErwZfL32j92bnW+e3LQNRAw/f5b37/L7kg96HXR8ZH899Svz09PPUL6Qv67/afG3+Fvrt/mDe4KCII+bIfgUwWNGMDABe7wSAmgwADZ7PKOPl5z9ZQeRnVhkC/wnLz4iyAv9cauH/e3Qf/Lu5BcC+7fD4BfXVUgGIogIQ5w7QsWOH69BZTXaulBaiugRujq/peeng3xT5mfOHuH9ugVTVGfzc/gucXn1prbI4EQAAAH5QTFRFGUCkAAAA+/v8uSwkFjqf/v7+yGRfl6rSwC8mUW6z2p6cYCtbcozF8uLkt8Xh3JyavE1IbYa8uUI736yr/wAAOjN6f39/z3FqhSpE0IJ8XXnC/39/wUQ7fwAA/6qq5cC8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAe9AnQAAACB0Uk5T/gD//v4O7f////n+/1r/ofn/92wB/QKy/u3/AvQCA/+GdA2WAAAfTklEQVR42tVdiWKjOBJVTIEQxhgfudPd//+Xo/tCJ+Akw+7OdmccIx6vSnULPf3A1bLr5eXP3f9Z5LI+dkcvL+3d+dH3Xej7cfr76SB0oteNXudhGN7fO+d6pz8bzvRfsg+5uKG/348Y+l6gXgyLGETn8+tr112vjbrevEv9/Hr96rrX8/l8k6jx73m5t9+KGPoumO53wyV0RhSjWcBzFNcz6AvJS/39WX6EQ3ftOGoGsafvQwx9B1J/NWSn80Aflj00MgChokt8loHGfn2mXyMg41/992/7/wdLPoyQunP3xZ6TPq4LUSlcFmzPArKGInZTiD2eYY8Eq/20+DQLmJ5rkUkRTUB27RBHTAL2PwTr3n7+EUjdzq8zV03PsI5IGcy4XF7n7nwSgL08Di/0GOG7i/9DZ6ag3rhyEs/G/we74GVvBBwwKpOPJRh6kPQx2XvtuOhxaEBxaldeCcjABux8E0A9QuPvDRbnFEOquwqgLELtjpb6SkUyocQ6pcF2p9euYHGbkyM1c6QSNsB+aGnKah1GDQtE8dpfHNHupLpRpN6O9gv/5kvg1b0qff/7wJK8vzE9dXwWqgR+BCyhHYU8SnH8XWAxnc7FT+upnyKVUWIML6rvGVx/dpJGtJP8LZGCHwELHE3G1Nf5tJuy3w4WX4qAykLK2AvfL4S2un+m9Hrl1sS9/XGw2j8MqvfO2vx+SFdFvANOr47TC7U/ChZn1Y2aVMcfBCiPINVe3cCU/UblhbZtgO3pxuUP/WKogFurzXU4bd0a0VZWcagA7e/H7CyYwJTXaZvuQuuhalvNqt8shGaTPDYzZ1f7vWBxVp0lVIB+ylIoZ5bYnClcXNX/ab8PLKqsqAWqWYXQ7yYXWOEJDtdq1YXWSeBpWKj13y2JBjAK1+20zkqtBoua69QEnYVah/8DQr5QPlO7a53qQitoRfX68YcM9H0MCWqmvlJmVe+LdWC1L09CWaH/5aWUvVZd9weC1Yo98AhuwK0uJQO/QG8JuE615KoAi7qBjFZH49gXPLgMQNi55l/gOgq0rudKzYUqaIXa87XQtTE5CvkuR4zQOB3YhflaH2AcVH5SkusRYL0YWlUtjPEJAB/sC5NdGbb2e5hJz4KD7c5gWdoKqpQpIiOCDzQ6YB0I/FjAyw/fdKdyUUTFtELcXoAKrBgeFJmJ0spjFhXLCU94H7BW4g6KXLdizYXKeCVFEGq0AxAPI31N6CL4tQtWhKwDHZRFz9zFdiew2k8qgjOzrSrXdEhe23kllSI+jLD617UR0e4CFldXTZU6FhERksRqrN0SQ0kj/h2HAwJFk1WgM2+xLTFQS5h1eq0JGwvvnmp2nMJqgrVys/wpxutMZPMVTUNNrpfNYCl1VWnKpJFao69AEWmx3zLdCOszJaAUF8qKIspidZsbUE5C8QIOuWuNgQRodH+F74NAd4tpC7Gg2EBFWayaN6hLm7InyBFrqt7u6S9cDhfwKEGm6cLuRah3MG5BC5WoeZQxr87KEK1UWjlm4UoDHphdOy1+4n7nJrSe82ihNK8GbV1BFatHaoqSFL/GcvjlFwpjwyZkYIMVgrlUXrCsDgPLixD/pplPq5lFeeXEGGrAQoQvhiTEsO47DRd1BsJzODmxyHgR26OBYFE+Hrk1/VBzvSW5FQfrLrBaEyEw0Riyz25IvSOiv/JDrOgDTy5W+CB+MAngBFQfI7EjaTp54SthkCZEEi2UiIl2PCIKK3WA2OnHCFiXKscJYR3DwNxEAzT5Cmt0v16gRfSrIYSg1JtXrmIKLRTXV52OHsM66yVFrbqdkBxUnTMRvwv+FoKx/zIu2NwbX1RoCEICYO9MKbRQBqsNQaeEz4NRlXBTOhEJFsOEStZ4ISRjnES9LK3GyEiQU3Mu0EKVzKJYvVOsoGIfDJlNEANLcAMgkgx1TDb2dyweUu6AQuDQdFhzYTRiTAhQC02RDewksdgT23KwWmVfVeUAlqH5GFjpgCfIrgIr1n9hdCJK+MR3InLYcFliy/GygnBxewvF7PbjLmHfpeWYsh4lTMSK4ouXTjB/OCzAF44n3gSWtyCi7QvgaIW9ahTDqrI2FBxTz75IUHNE970PIjd/VcwhrUzCmTSyf44ET4edr4krf3lHihYKpfdDYLWnL11zVUgv+WrYhwm5jCMex5Ft1mGnGgfAku/VSMdE7Ut6jfSrEf1GS2Wz38aH3a8RLD8xKIgoYLifukbZyuSy9PMhuLdj+tnQC59wsUW6UHFi+yOXhRRP044yeJBBbks+jiy+1ebBoh96baSmmGyPSwqJ51VJ9lnP82/QV5jwY8wvpzeYFm97PJClhjmEovvmvv/qBJAuZlRvUD7WsQ+hhSIbIVOq6tuIsH51LIFq23E0nhoZsVptN5vecHHNnQOa1T8HoIKqJiNLlqKBlxbThfgovcuGa/u+XeRlLX0JQCaAKDUnvF1P7T0DlsZqoRSwH3cRGpjI3W7oJEy9teJe/8WsnCVYwbI1QGilZWCHvhL6L0LiZodhhwVM7La9/a6y1BICSGw7WWyJbRqsl/bUxcyjBfOJTMg7C+5mPo2hU931BrGrWjgTRBgFQuJOJEgssggseIwSrem9ohIj8bvsV3feVJcBLKQXnpvXhSCiiHIv3m0kpXqxqMEXEEk4tfAv+RFqPmt3iP1EkG1yXwoZpxxSvf2lzn07l2MhwAYlIsjfxSJKHi2FUNiGpBwpviK9mAmLSz0ofdmuVM7io9zaoII3NI2glrwl0dI4XhI31veN0mbo1E3ljfUnxevomkHrUSfbIXez43xqE2BRIbzyHD0qMvvkinsmYdqyQ9YsC6P6O80va92YGQUD/ckg4k/S5zOyh1MouM+fw9T5/EVg1XS6SGVhejO8FmoLOcTiQsh+rwSqmT05W8g8GJd0GQKRT9wZYeT4il9ivKJ/Zu6iBHbMaQAbqkPZMtWdOWzv4uf8x8xmg1h2FhaCiBZCiPLZZLlkSXD5cpXz7vlIJvw3XMWqe/OW5bdcKVhY2Qqk5L6lUFniaOhFNRyFkP1giEdseTbRS48hx82ZjzLkCpeit9urJWOWFUaLBgLLOPNI4V5SMoQCSd1YihX9bzeU250Wwo5lQ8FK5s/Ac3uQG+8zQabckiWpB23ZgTCa3IJvs8cR7g8MSuOKf/QarMmYCyP9yxTUA4N53vc6j8Z/TX0vwUqkz4DtiLcgs9pWxbAgHrQzSxYi2NkhKhEaXyTOhBxi5T5Zukv8P/vHPzt6wzcYEkBrNrp6ONReg9L0hmI9hTwOFt8T3xxqIZPMESaWVD04Tave0xpIh9yn0bXvgBc+TJa3GZBFzyEK7i+DVtPF2sq4NNjct7fEsEsnZsEztgxYlFjPRoai953N7d69MLFSdRMBP/Spf3LR1LSVyOBEJIIpoc485VwdrBKertTq1tXlstjM2DLFSMgyG0wgOaplB+vNDEt3QUrv5LsPVoyCb3vzglmY5eZlnOGC41j1K3jF8m7Cius8tLps6RM054UYcrPhObDfhzSsv3NPVlRVq2kSrqWSvkFn2xAcrFGmmMMaoDOqph4r6Vkx52loasGi5sPTpw8WNRusjO0oLXKezx2XWDlrnhaMHKk8RssgObkGj1kjq5S/8G0VB1W7nv63JsQ+sTrDiT3I4FgPebAotYxDjWxigROxJDoCflFYmfvMTuRS55E0WGpjC+8zPloDh/cwRiINs0PCddFQujRh8NpfVgIW01oOWHdPY7GHJlZT48WXwcbLKxGZBlSBAxIHS7npyNVZ9JaYqivl9YR1e78WKxbv5ZnayVFcVDyyYIHZEJEhlp3uQzZWEi0jgoE1Y6OPbOlcul1WWt/eDRlYBOHLFDOBVysszX7C+YXtL+yydQQUlKP2pzlYf3UYK9LjwURjNksOrvni51ymVAWxDM5I45Bu4VRh4Yhd10cIXSmH7CFstKRTCrkM37OmFlI21jHYPoV0RthZ8xB+eaii+EOi1ecsp8H26ob1YBFOrRHcFy8jabkNsRU4oaVXGMh8emZ3F3t5C+onFsKDpAqFtG/VZD9WZmtxE5TrLfPW82AxD7Hl1SJIqPevI3Lb1B0mTt5OH315fotOvFhGRkY7qQOjySsvSLAthapqcYxLPkj80qVAKvggFPy5iXbSC+/DWXMXVaKTn+GIFkxw0o1aIIaoI9o3e2gsqeFl+STSHm6BVcqCD53weZCQwmgTE2gCGD82+oJRZTUkZeKQFOzBCap0h01iKLdDqQGEuXXNl9WBUfGIp3RYliKGFkxKyUoPJb5m7P1pRLm9RuARxcEyt/tN6l28Nm1VqbfUU7J+QNZ6UHKIhJEVL7ZkbyEaT4lTnlW74GxZiWBtzxd9SFlYNWHkqAnPuw7AVVs8VpqVRGnFI2pktV2TtIc8X72guA4zDZHvkRP7OM8sonRgtGk2EuugnDis85WdNoezF5VDprQQ/Y/YC8OPxkwsr4qgqKjOSsTF6SXqHoeYiM1+aGKjFPKYItFdipwEXRFY0ptGJjgDUWIV7YVak/oGKaR2GkAqdZiMB60MN7gRN8qmiwiaS2trVuG/vDfNAzVIWaQRsEaPWDljRxUvXkzvfV5tDYo2TgmyF9fsNmLFWWx0M3c3uryhZRVsPSFW3nAMVhojgX/n7Eh9U4QV32TKWjF47GyQ8muVoA6LtNXqEkhVRD8KO1n5JRO/b1Gvhwg9MLDmI8Q6Dohnj2ZesGQGq9EnBe3nMGKsyoYxZuEmq8aoq2J0PlAqyDSCG4QsbLwTSgs5YT/PJbSsxmTAwa2XZuVWmJSQ26pqEHFGuwpsmYitp5TJrqncE9hRO96PVdhHTS2tF7T0dezmLiebU6g6EKDCrjsTppBEHpnIUG4R3xvtV+l3Vg0sm55ABgQw+IXkZfXYx4Z6PEj4OlFXF3kp7wJpIIByNoOl3J3tgAdogftNfnZxrsdqFH12qoEayyCbv0+XFGSLIhHkBJR9sLAJoij9ngVrLG+M0szSeUcigvCXpRSuAOsyii4D8e1KRUCoH6tMwyOm3yMmVsB6z4NFoKZH1ST/xdIJn/dw8LMwKwPKWOznWM1NcOcrASowBfUn3l4ZWLfoLBCxF9aBVdWnrMufdX298GvHFS8p+uJYoGicxg9CNrW4HSVYzzG/kDBjx1t0mflXBZYcQDCy9A6WW/x1D7B4pRol63jYOBNOpi0Q3wwhtrP7+e70Dj6Rj8rWZ0zwqAsklTG9DHSsNbNYRIFMzK/f2K+lwBqaaDBzClS8ZAowKnvGgPfjYiv0KyztIVVoU5fTQV5D4crr2N0oWN0bpKIz/hsusxrK+xSxp48Vo3dhlmosR4C2jjZ7bjhY0SNfkIg1VbhoBKo67vwBd5PYHyBUw/W+CqwJ1rd5u+tNggUh1ZERhwnqmoQDdQ1YtKsuKqnWBh12m5THDC3UzsdUQLmvAGuqHC4TLMac7KTPNqN0P7B4VfxAwboe487IPx+sPiUOBOom1kSKMZEKNe8A1j6T8srAGpbM6tL2aJ3pEK1cvTbNDlGHA97xXDIOVnNM2qTFYE31J2DGS6KDYI3k8mMaqwCsgM5qljGsCzeUcLWNlSgfX4Cla9b5rUZSbDjsC9Y16kcvwVqWZhEZFcJcvcM+vArshqIsCQiRPS/fSywthnMSrOUbfvf3PzXfClVPecr1cPgaHhEt7CUSifcc4SzA6o6Jx/laLrpbuDfg1lUW3nysA0v7DjiyN/jTtHjIeE+wmJ0VcXdEwKRrktuSMi85DS91YCW79N4DynJwC7VddCan3omwic6w4/lu2oJvot/nh5X6ZtkOYQqTLrtprENoG1aUxnqkwOQWTBNbkWrK78WtIwcrGnVYOrS9n99BzpGrVWB9JMH6FwCrsQIJniSOrok7PuDMwOP1JuNZEaP1IguCYnKIoS6QXWSPhhNh2oc3mtFKpIG3ZSDYfXo6j2fxSGnChG8SKh4DQitnGufACinL+aBb7BxJVgl4I4h4/8M7FVip7TDSeGolGqhArfDA0pthGCxKrcke04WU/aIvoprv9j8TSMTgw6UOkdosL6Y16qnZ1WBlbPAYpZ2cDLY0lBvzwXtLIc/fS7CishLalqwIwEWV4tfvxYec0upD1LINTQn4aB0tqi0KsvdB6CJvGIn+QdSV5tTSk57wITaWbhtYgREzmlpuW9Voly98yFmAeGcVLzPSLYpvhyKw3C9WfXWm57hTpcuqUrLzW8KN+m5VoxA6m0QMLMG3bNmhVVcFJWCJWoe47SAtrT6sPTRcmE/hqUrMQXbWTVBpMQVAvJkRo70bwyiHHYzZhA6gmrcrqmheVElp0Jcew0pLzdoQj8zmClglRmWgZdGaI9Q6eErrw64XEONfpaGVXojM5ENZCcvbqyxmi+V3AIVzB+wHs3QqiGpohrosSn4IevAt9Y2907EvmbxBEqwybESF5wnaQ04y0Sxe+afH1iX2Qz+oJc0HcSNQOgJU2rTkTRWMuwkRixeIEH1iLuDJ8//gQ6n2XOkVSM1ZNJle1pR6reSBmNZ1ySsliIYkk2YWKT1EIK/i+5wgqjl4bkWA6nMEgkmyVnostslktTI7/UTKIQSS6zD5tfvqz53etDlaKumrmoDTKszPgw1vqIxaYhYLCgzbNa/3ol7W4eA25C6T4cM8l5iJqg5edRumqdWH7WkiKxCJrlOQMZJLPjlta60umAjpwoI4H2Ll2HIJqoUWR4xT0MbLwLEvamYVHRaidyfe6zYprdUHvB5F+Uk0zBEvOo+SzRVEx2MiZQERanUxtFjlGkv+C/0+WgWYC2tBlsGLJjrIVa/o3h3dFRZ34kKvWE7OssccepHdMdc3ILk1RAv7wmZLb2mAwGLJJNxocliAZWkBNYnjWuIZma4w1W8Y60eRDmLI62l0zT2vaF+WkqV2ZSUoQyLfPPdhSXyPoqVterfTI+A/DPIJsh0WYPcbPsVK4Q1hw+a0hRbHZXFSAhpxdA6GmuLTyS54HNofhzCludDi8BBdVfG3zIaZabLkYDro8hrLDCswPdLJzu+w0yPupl5eOAVBoqVyZFKtmY2IFgfCNoPbGOaMr8AodNQaUaFn7JsFcMHC2FfzoZTWLZ6wYnXfJx25wHxbjRaWZg2OFd/Zo+m1xWhGWl2ttq0yf1qGa3Xlkj/bjKjxeY5Ox3zTGU0tdEHnDohcRXtvzSyac2pYPt9kwljJzmWSGFC22No1VMOV68JOp7dwSW7avu/FPmVIxf/kERnExL1Bz08XvZBycuBQdkgLH8/2aY9X6cJYgU4FRBxq+Y7H0MjtZQ5d+UL87c5iS501VlCWybcVJnbdKwm5IDAepxEcXYUMWfsiXjnq3YyEOsdPHQdLyfexTdEaXBsDS3ts2MgXJ4gqAohQMxx+UPcdl+eGqB0aJjtSKE+IUN0I88Gaap5Ey4w5QoG5bMvtwIz3CK1ZjpKdol0O1pkNiI/mEbMw+95SeRAvq4lwixnzAbgAsDJaRut4ZqJeUd9bKq+gF8ufcqSs+ESMjD3Iv2swWpOsnryQ0ZzYJec9DZ1K2F61CQAp3zqq5aWXhD0df2Hl9URPmVVIWdNdh0OhDFJiXb35WU6SJzw8RPoHMTWvxv+GmlunA2YnWkikhlkPWVZ7A+RyPu8Ry6VXCXLeemCOKJtYq+FE5MR68QrUZNdeEHLKjMpRB+QsJ7OZ0WypVvmJr7oJ6q7CGUTD7M2Q9F9NVZDZmS49jebICPIhPENvErb1ji6sTQXlXejQzD+ltVI+pch6zXHNlRmiLWbs946eW4ytjzZeR83iprFprQasW87X8D5blRris8ImxhlvDMLTJK0ZWgnVpfwEn1dytGwfHeuvhtkbZOeg1gjvqJPo/e6CRrEe+hK7bx+gP7fDULbuByA8p1RNwI2PDgGdwQqu2sKLLpwfkTCI4xm6ZmH9c6h8WkEcLGmZXWPMUm9P3xixP/leR68mwE/2ppMUw8gEXDlbOc4rubUsBiQ37lz8vm9yl4CK2OmVdBoDqRNIhrmJS2Mf3arV+QydjByZuSFpMfTHdi+mdueSIXIQ5zBHFZdcXN/3ekD3QgAPBKA8nyiHL045uJzAhHNfFtl4VwXopKTMRh6YfIvPg78WHJUpJhjZRx70EcSCgvLvIDb1eLVhaPaVjFNgb0fNs1ir0sHqQDw4VQApezQ2D94+aSAPFzb7W+PRJ3oOzrXT5zfUpap16kjBJfHqI3j13ivqBjfajUuKA0VDZu4MC1SGlzznZTDn3PQeZo4gqDNkxrR5gpIzP5D2AuzDfozMh45H8nfJC5/chHPpTQgcJuOcjvIpT0cpSeSCwYu96XmOEuuLrlcMQJxGM3YCoKJsy/LijPci3lR3jRurkeOcJh2UhJLIe/rcnZLku8LMPnPmnzzJiV+dPGLJEoCCTHkYLOzKDP8Wew66OMlpVlfHzpSK1cd7ijAVbeiS5+6YE50gUx9grZt1OY8Fx/SQ8LHhJdWTyInhmT/n7ovZ2aQo0W2OUDyIlzvRSZ6QAqiq2lcfSfQx4uRgmLWlSIu5GuDfdxRnSIkL81PyPtR5STg9NCeeV82dFVZ9dK2HWKqstgj+ULSVQDL5mLgI0qfkVeVSUOg4p8T5hmtLL/FGsHBQYQGUKAVwi0Qg1wsVmyPJCTfnzzeUJ2c+V9MqaVRWgEXCxErcFVZXgMUHjUH4nNHYmazrTnCHxBILi03xXk2DBWBFBbH0TFaj5NetMiqIpZW5kd9LePiRQ3ULwJogaEGWn/ZrzpFeB9alcF2lcriaWSWtwS61QLuEp6eXtviEchmtgf26AQis+/XVvRK5hpfAt0slGD3PPQQWQ2sosuTLwZrW/v7q2n+YDiuUFps6PUewCoOl0Fqj5cNKCxcLtX+m8HorpgSswC7VXGNYRcASkcDjivlcEFRaI6xl5voeHLjUSiFf/dsXCiMVB0uhhWoHmoWYhet6XKdqJ2kH00HpdlYx89TWgvXJ0drFdoCqndVRzBta4RZHeE8pYski/rcUVlGwWLpHcKva4Jq27WfOQ6KdwGK5/KVc2vECkSRMYpUAi5ryUhI3sr8WLEsOt/RY2gsh+tBGHNGH3LJtvpJYpcCSe2JtW/1GsJwd4mMPsGTMX5T+4bAQikDDfEoglQGLcWuo5dbCcB43cHPTZFEkx4voqkAgBPl7B1j+YHdK8ioDFkPr3LzVMYNsH5o45aJzhddIvINM7J5Qr5usAKsMWNxPLM34RMBa7dUFq5HXRo50rcfFfodgpVNfMzKYB4uhdZqbY/mqfbBqpVA8A0Fo9zEWphRID93ValK0yLUbweJovVbETp1NaMXmD4moy3aolt1kQrVfz20WqgKw2HfISHN1QAqjsuM0woFieAhYy3A+U1eo1RVrm8Dixvz5qzlCffTugkj9yABYGRyqeBXO4Qwlqr0YLCGK0lMsWI/X61T/7tGjqAWBszwBNedCrMrAYiYEVVxvYEfbSxxhvGXvfwy5wMSipQhSdXUvwqoQLKG4ZqW5oDRqgOFBm9o+0lgjghVgCXJZrmJR0RD+nUhZUF3Pp6dirMrB4ueKSXIl23k1WBgB/E6wJGJiF7wXY1UB1lP7h5MrV12owJp+MVK8c6L5OleIYCVYluaCPFh4BAS/VWUJWp3apyqs6sDiJhcll8yToUBVmup614E1+C3o2GOPKFQz82/uVU9fCZYkV6fItfR0NVgTgV+p1oGboc1wqtJW68B6au+UXGcdcF72SKgY+q8CS3uEvHWJK/anWqhWgCXIdRquWha9OjMZBMHod22Gup2VmaGnp3parQPrqW1Z8QhXXchX4rrF8ldugcJiP62i1UqwxK1YVHAZulFgEdh/+uUeW+B1PVRrwUrCpWY8wi+RPVADmxRULyuxWg0W1/R8Y7TMLrBDpT9uNDhnUjJWze+8Vrtd/cjrwZKa/tZ9yeANODrrt/jQYg3PVFcNG6HaBtYTr6k/IZtdejdEvwAstaajUutP7RastoHFbs6EEb1SH+go69IFs/BvwYrJn4Tq3m572K1gKVV/spQXD2j9CrCAk+q6E1R7gMWp3bZ0a+wYvcygoZ93DBWp6AL/bIdqF7AkuxS9nkXX1gg/ZCoYU12Tar2x8AiwGLP4P2+vEi/0gGH/mTia02xx5KRC7Xatvj9YHLAXSa+5eWN4rTisYbM3YyH1etsXqX3BUnAxvAS/vj+gBSCQ6m6icuGl3fP5dgVLay/BL25OfKtj83x8Y/EXiVTb7vxwe4PFlvgp8eL663iEyhnVK5P9nFJXpaf2R+ohYClTlet7LpBvR10kDltyqFZNB7gj1zhQVE2dZaPu/RFQPQgsvtxPJAnGAWs0YOD0WkIqfx/1X5zh84JRGqjPxwD1SLBkekNYFacb6mauw5TWt2tavDLYVAIffF3OCDXP1Jo6CePl/jikHgyWEUjGMIYYGyuAPMgCdILlJFZHjwPV5Eemy69dd75JnJSx9/8FSzzC3z8KMUS1vpzEIDArr1oTnz0KNjHr4PV81jh9Phyo7wFLMexuwDuf0asaFfXGHl/BFrme+WeOckYLh+mm0bnfvwWobwRLwvRy/yPx4nLJQHtl0yvM1A+BnbjezPCPKxup8cpAOnH1xNH5c3/5Lpi+HyyJ2N9PS0IZaBS22w2d+dgP73ofhuFM/+1JYmTA+fu3/e6lfz9YGqSXl8APg5e74JeXFrXtTyz76T8zR7xlkgs7AQAAAABJRU5ErkJggg==" alt="">
 <div id="pb"><div class="eyebrow" id="vey"></div><div class="pname" id="vpn"></div><div class="rule" id="vru"></div>
-<div class="bullets" id="vbu"></div><img class="pimg" id="vpi" crossorigin="anonymous" alt="">
+<div class="bullets" id="vbu"></div><img class="pimg" id="vpi" alt="">
 <div class="price"><div class="l">ONLY</div><div class="v" id="vpr"></div></div><div class="cta" id="vct"></div></div>
 <div id="cb" style="display:none"><div class="cph" id="vcph">Upload a photo for this slide →</div>
 <div class="cc"><div class="head" id="vhd"></div><div class="sb" id="vsb"></div></div>
@@ -102,7 +140,9 @@ label{display:block;font-size:10.5px;font-weight:600;color:var(--muted);text-tra
 <label>Eyebrow (brand tag)</label><input type="text" id="f-ey">
 <label>Product name</label><textarea id="f-pn" rows="2"></textarea>
 <div class="row2"><div><label>Price</label><input type="text" id="f-pr"></div><div><label>Call to action</label><input type="text" id="f-ct"></div></div>
-<label>Bullet points (one per line)</label><textarea id="f-bu" rows="5"></textarea></div>
+<label>Bullet points (one per line)</label><textarea id="f-bu" rows="5"></textarea>
+<label>Product photo <span id="imgstat" style="text-transform:none;letter-spacing:0;color:var(--muted)"></span></label>
+<label class="file"><span id="ipn">Replace photo (auto-cuts white bg)</span><input type="file" id="ipf" accept="image/*"><span class="clr" id="ipc" style="display:none">reset</span></label></div>
 <div class="grp" data-f="cover" style="display:none">
 <label>Headline</label><textarea id="f-hd" rows="2"></textarea>
 <label>Sub-line</label><textarea id="f-sb" rows="2"></textarea>
@@ -117,9 +157,48 @@ label{display:block;font-size:10.5px;font-weight:600;color:var(--muted);text-tra
 <script>
 const C=[{"t":"Moco De Gorilla Snot Gel Gamer 9.52 Oz","v":"Moco De Gorila","y":"Hair Styling Gel","p":"5.69","i":"moco-galams.jpg?v=1784388347","n":0,"b":["Premium hair styling gel designed for maximum hold and control","Delivers long-lasting definition without flaking or stiffness","Long-lasting hold and definition","Generous 9.52oz size"]},{"t":"Mekako Exfoliating Shower Gel, Lightening, Softening - 420 ml","v":"Mekako","y":"Body Wash & Shower Gels","p":"8.99","i":"61pJw9b9a0L._AC_SY879.jpg?v=1784387143","n":0,"b":["Cleanses deeply while leaving skin smooth and radiant","Cleanses and refreshes deeply","Leaves skin soft and smooth","Generous 420ml size"]},{"t":"MEKAKO Prestige Shower Gel with Collagen - 420 ml","v":"Mekako","y":"Body Wash & Shower Gels","p":"8.39","i":"61_y8UXtInL._AC_SY879.jpg?v=1784386925","n":0,"b":["Cleanses and refreshes deeply","Leaves skin soft and smooth","Rich, luxurious lather","Generous 420ml size"]},{"t":"Impulse Tease Body Spray, 75ml","v":"Impulse","y":"Deodorant & Fragrance","p":"2.39","i":"51b6K5a42NL._AC_SX679.jpg?v=1784384807","n":0,"b":["Long-lasting captivating scent","Keeps you fresh all day","Perfect for on the go","Generous 75ml size"]},{"t":"Impulse Body Spray True Love 75 ml","v":"Impulse","y":"Deodorant","p":"2.39","i":"4c765c6ab87a3a67_png_15038181-36ba-4713-b790-0a780e542939.webp?v=1784383870","n":0,"b":["Brings a captivating fragrance to your daily routine","Delivers a burst of romantic floral scent that lasts","Long-lasting captivating scent","Generous 75ml size"]},{"t":"Hollywood Beauty Cocoa Butter Oil Spray 3 Fl Oz","v":"Hollywood Beauty","y":"100% Pure Oil","p":"5.99","i":"s-l1600_39_9f1e11f9-39c0-4da2-9130-f52d4c8cc80d.webp?v=1784383496","n":0,"b":["Easy spray application for all-over hydration","100% nourishing for hair and skin","Absorbs fast, never greasy","Generous 3floz size"]},{"t":"Hollywood Beauty Carrot Oil 60 ml","v":"Hollywood Beauty","y":"100% Pure Oil","p":"3.89","i":"71Pkmi1CE5L._AC_SX679.jpg?v=1784383296","n":0,"b":["100% nourishing for hair and skin","Absorbs fast, never greasy","Seals in moisture and boosts shine","Generous 60ml size"]},{"t":"Hollywood Beauty Olive Oil 59 ml","v":"Hollywood Beauty","y":"100% Pure Oil","p":"3.89","i":"71HIX-5hg-L._AC_SX679.jpg?v=1784383164","n":4,"b":["This 59 ml bottle absorbs quickly for a healthy glow","100% nourishing for hair and skin","Absorbs fast, never greasy","Generous 59ml size"]},{"t":"Ghost Bond Supreme Poly and Lace Adhesive No Shine, 1.3 Oz","v":"Ghost Bond","y":"Wig Glue & Tape","p":"19.39","i":"s-l1600_34_350de907-8cfb-4286-bcf5-4e7220b46627.webp?v=1784382696","n":1,"b":["Sweat and water resistant for all-day security","Strong, long-lasting hold","Clean, no-shine finish","Generous 1.3oz size"]},{"t":"GHOST BOND Platinum Lace Hair Bonding Glue (1.3oz)","v":"Ghost Bond","y":"Wig Glue & Tape","p":"19.29","i":"98479a21-b21e-4fe3-81a5-66f81571f9d5.webp?v=1784376392","n":2,"b":["Strong, long-lasting hold","Clean, no-shine finish","Professional-grade formula","Generous 1.3oz size"]},{"t":"GHOST BOND Classic Lace Hair Bonding Glue (1.3oz)","v":"Ghost Bond","y":"Wig Glue & Tape","p":"16.89","i":"356b502a-a901-4c7f-9c2f-8219db19fcd1.webp?v=1784375678","n":0,"b":["Strong, long-lasting hold","Clean, no-shine finish","Professional-grade formula","Generous 1.3oz size"]},{"t":"KeraCare Curl Essence Moisturizing Oil Cocktail 4oz","v":"KeraCare","y":"100% Pure Oil","p":"6.99","i":"51IjGtlvN9L._AC_SX679.jpg?v=1784375465","n":7,"b":["100% nourishing for hair and skin","Absorbs fast, never greasy","Seals in moisture and boosts shine","Generous 4oz size"]},{"t":"55H+ Efficacite Extreme Lotion, 500ml","v":"55H+","y":"Body Lotion","p":"40.39","i":"s-l1600_32_6dbd2d16-caa1-4714-b24a-87a8c6866bbc.webp?v=1784375273","n":3,"b":["Delivers extended moisture and a brightened, even skin tone","Deep, long-lasting hydration","Lightweight, non-greasy finish","Generous 500ml size"]},{"t":"Glysolid Aloe Vera Body Lotion 500ml","v":"Glysolid","y":"Body Lotion","p":"5.79","i":"s-l1600_31_caf39af4-446c-4022-a0d1-65d83eb2f915.webp?v=1784375013","n":7,"b":["Enriched with aloe vera for a soothing, refreshing feel","Deep, long-lasting hydration","Lightweight, non-greasy finish","Generous 500ml size"]},{"t":"Jergens Baby Calming Lotion Shea Butter & Lavender 16.8 Fl Oz","v":"Jergens","y":"Body Lotion","p":"10.49","i":"51IZXx4Zq7L._SX679.jpg?v=1784374640","n":0,"b":["Offers 24-hour moisturisation","Soothes dry skin with a gentle calming lavender scent","Deep, long-lasting hydration","Generous 16.8floz size"]},{"t":"Lola Ela E Carioca Hair Protein Repair Detangler & Leave In 16.91Oz","v":"Lola From Rio","y":"Hair Treatment","p":"15.89","i":"899572814787__66792.jpg?v=1784374320","n":4,"b":["Deeply nourishes and repairs","Leaves hair soft and manageable","Detangles and reduces breakage","Generous 16.91oz size"]},{"t":"Glysoled Glycerin Cream for Skin, Hand, Feet & Body 400ml","v":"Glysolid","y":"Cream","p":"5.99","i":"513_wAqV2FL._AC_SX679.jpg?v=1784372900","n":0,"b":["This 400ml jar deeply hydrates rough, dry areas","Deep, long-lasting hydration","Lightweight, non-greasy finish","Generous 400ml size"]},{"t":"Absolute New York Jamaican Black Castor Oil Biotin 120ml","v":"Absolute New York","y":"100% Pure Oil","p":"9.89","i":"51blWB5Uw7L._AC_SY741.jpg?v=1784372076","n":11,"b":["Supports growth, thickness and a healthy scalp","100% nourishing for hair and skin","Absorbs fast, never greasy","Generous 120ml size"]},{"t":"Hollywood Beauty Jojoba Premium Oil 59.2 ml","v":"Hollywood Beauty","y":"100% Pure Oil","p":"3.84","i":"hollywood-be-jojobaOil_2oz-copy.jpg?v=1784371743","n":3,"b":["Versatile multi-purpose oil for hair, scalp, skin and nails","Lightweight and fast-absorbing for daily nourishment","100% nourishing for hair and skin","Generous 59.2ml size"]},{"t":"Luster's Pink Glosser 355ml","v":"Luster's Pink","y":"Hair Styling","p":"7.69","i":"glosser-1.png?v=1784371497","n":12,"b":["Tames frizz and flyaways for a healthy, glossy finish","Long-lasting hold and definition","Adds shine without flaking","Generous 355ml size"]},{"t":"Ingrams Camphor Cream Regular 450mL","v":"Ingram","y":"Cream","p":"13.19","i":"INGCR500.jpg?v=1784371141","n":5,"b":["Classic moisturising cream formulated to soothe and nourish skin","This 450mL jar hydrates dry skin and refreshes tired areas","Deep, long-lasting hydration","Generous 450ml size"]},{"t":"Luster's Pink Repair & Strengthening Oil Moisturizing Lotion 12 oz","v":"Luster's Pink","y":"Hair Lotion","p":"7.69","i":"21Kl7jinRKL.jpg?v=1784370989","n":3,"b":["Moisturises dry, brittle hair","Strengthens and reduces breakage","Leaves hair soft and shiny","Generous 12oz size"]},{"t":"Beauty Formulas Charcoal Nose Pore 6 Strips","v":"Beauty Formulas","y":"Nose Strips","p":"2.19","i":"81Ek6Fz0gIL._AC_SY879.jpg?v=1784296775","n":4,"b":["Brightens and evens skin tone","Lightweight and fast-absorbing","Smoother, clearer-looking skin"]},{"t":"Benjamins Bay Rum 8 Oz","v":"Benjamins","y":"Bay Rum","p":"5.49","i":"Benjamins-Bay-Rum-8oz-1.avif?v=1784296462","n":12,"b":["Delivers a warm, spiced aromatic finish","Long-lasting captivating scent","Keeps you fresh all day","Generous 8oz size"]},{"t":"Benjamins Bay Rum Mentholated 250ml","v":"Benjamins","y":"Body Wash","p":"2.74","i":"s-l960_8de610f7-3bb1-47fd-bf04-d0df6e29f8ec.webp?v=1784296287","n":2,"b":["Cleanses and refreshes deeply","Leaves skin soft and smooth","Rich, luxurious lather","Generous 250ml size"]},{"t":"Clear Essence Lemon Plus Vitamin C Serum 15ml","v":"Clear Essence","y":"Face Serum","p":"8.79","i":"3bfb7acaf943b4144a2abd302bf53906_8139c538-5fb4-4ddf-99b3-0580e7c26ca1.webp?v=1784296068","n":22,"b":["Targets dark spots and evens skin tone","Brightens and evens skin tone","Lightweight and fast-absorbing","Generous 15ml size"]},{"t":"Belle Batana Oil for Hair Growth 120ML","v":"Belle","y":"100% Pure Oil","p":"10.99","i":"61hiB7n75dL._AC_SX679.jpg?v=1784295514","n":3,"b":["100% nourishing for hair and skin","Absorbs fast, never greasy","Seals in moisture and boosts shine","Generous 120ml size"]},{"t":"African Pride Moisture Miracle Aloe & Coconut Deep Conditioner 12Oz","v":"African Pride","y":"Deep Conditioner","p":"6.04","i":"41PFeQlSULL._AC.jpg?v=1784291372","n":10,"b":["Strengthening, hydrating treatment for natural hair","Paraben-free formula","Deeply nourishes and repairs","Generous 12oz size"]},{"t":"As I Am Born Curly Defining Jelly 8oz","v":"As I Am","y":"Hair Styling Gel","p":"8.79","i":"41ZekB17O9L._AC_SX679.jpg?v=1784291146","n":12,"b":["Long-lasting hold and definition","Adds shine without flaking","Tames frizz and flyaways","Generous 8oz size"]},{"t":"As I Am Born Curly Leave-In Detangler 8oz","v":"As I Am","y":"Kids Conditioner","p":"7.69","i":"41aqSS2zpML._AC_SX679.jpg?v=1784290947","n":1,"b":["Gentle enough for kids' delicate hair","Deeply nourishes and repairs","Leaves hair soft and manageable","Generous 8oz size"]},{"t":"Beauty Ambition Marula Oil 100% Natural 150ml","v":"Beauty Ambition","y":"100% Pure Oil","p":"8.79","i":"61_pqmDgQJL._AC_SY879.jpg?v=1784290004","n":7,"b":["Rich in antioxidants for a radiant finish","100% nourishing for hair and skin","Absorbs fast, never greasy","Generous 150ml size"]},{"t":"BMB Super Citrus Glue Remover For Lace Front Wigs 2 Fl.Oz","v":"BMB","y":"Wig Accessories","p":"5.49","i":"51HvCd4XWXL._AC_PIbundle-10_TopRight_0_0_SH20.jpg?v=1784289234","n":3,"b":["Strong, long-lasting hold","Clean, no-shine finish","Professional-grade formula","Generous 2floz size"]},{"t":"Blue Moon Beauty Super Lace Releaser 2 Oz","v":"Blue Moon Beauty","y":"Wig Remover Spray","p":"5.49","i":"41asDALflvL.jpg?v=1784288951","n":3,"b":["Strong, long-lasting hold","Clean, no-shine finish","Professional-grade formula","Generous 2oz size"]},{"t":"Clear Essence Anti-Aging Skin Toner Astringent AHA 236ml","v":"Clear Essence","y":"Face Toner","p":"16.49","i":"61fdOvUWtLL._AC_SX679.jpg?v=1784288367","n":22,"b":["Brightens and evens skin tone","Lightweight and fast-absorbing","Smoother, clearer-looking skin","Generous 236ml size"]},{"t":"Burkia 100% Natural Pure Peppermint Oil 250ml","v":"Burkia","y":"100% Pure Oil","p":"7.69","i":"s-l1600_30_c77400e2-c71c-4ca7-a6e0-d83a50747651.webp?v=1784287590","n":6,"b":["Pure peppermint oil in its most concentrated form","100% nourishing for hair and skin","Absorbs fast, never greasy","Generous 250ml size"]},{"t":"Burkia Vitamin E Oil 100% Natural 250ml","v":"Burkia","y":"100% Pure Oil","p":"7.69","i":"s-l1600_29_397e1c2a-d7ef-4800-88df-4ae9f2613f17.webp?v=1784287362","n":1,"b":["100% nourishing for hair and skin","Absorbs fast, never greasy","Seals in moisture and boosts shine","Generous 250ml size"]},{"t":"Burkia Aloe Vera Oil 100% Natural 250ml","v":"Burkia","y":"100% Pure Oil","p":"7.69","i":"Burkia_Aloe_Vera_Oil_250ml_100_Natural_Hair_Skin_Nourishing_Oil.webp?v=1784286344","n":3,"b":["Pure, natural nourishing oil for both hair and skin","Soothes, hydrates and revitalises for a healthy, refreshed feel","100% nourishing for hair and skin","Generous 250ml size"]},{"t":"Burkia 100% Natural Lavender Oil 250ml","v":"Burkia","y":"100% Pure Oil","p":"7.69","i":"s-l1600_28_94294fed-f90c-4d2d-9cf6-a65a32d9f432.webp?v=1784227076","n":4,"b":["100% nourishing for hair and skin","Absorbs fast, never greasy","Seals in moisture and boosts shine","Generous 250ml size"]},{"t":"Natural By Burkia Carrot Oil 100% 250ml","v":"Burkia","y":"100% Pure Oil","p":"7.69","i":"s-l1600_27_a4a3fcbd-f761-4362-af27-ff79fa882347.webp?v=1784226484","n":5,"b":["Pure carrot oil in its most natural form","100% nourishing for hair and skin","Absorbs fast, never greasy","Generous 250ml size"]},{"t":"American Dream Skin Brightening Papaya Butter Body Lotion 750ml","v":"American Dream","y":"Body Lotion","p":"8.79","i":"61WZbSpS_uL._AC_SY879.jpg?v=1784226087","n":11,"b":["Deep, long-lasting hydration","Lightweight, non-greasy finish","Softens and smooths dry skin","Generous 750ml size"]},{"t":"Daggett & Ramsdell Knee and Elbow Wrinkle Relief Cream 4oz","v":"Daggett & Ramsdell","y":"Cream","p":"8.24","i":"71CAE8txeZL._AC_SX679.jpg?v=1784225241","n":3,"b":["Deep, long-lasting hydration","Lightweight, non-greasy finish","Softens and smooths dry skin","Generous 4oz size"]},{"t":"Fair & White Original Lemon Energy Exfoliating Shower Gel 1000ml","v":"Fair & White","y":"Body Wash & Shower Gels","p":"10.99","i":"Fair-White-Original-Lemon-Energy-Fresh-Exfoliating-Shower-Gel-940ml.webp?v=1784223056","n":3,"b":["Gently buffs skin while refreshing with a zesty lemon scent","Cleanses and refreshes deeply","Leaves skin soft and smooth","Generous 1000ml size"]},{"t":"Fair & White Exclusive Exfoliating Soap 7oz","v":"Fair & White","y":"Soap","p":"7.69","i":"61bNPvHE1kL._SX679.jpg?v=1784222398","n":35,"b":["Combines cleansing and brightening for smoother skin","Cleanses and refreshes deeply","Leaves skin soft and smooth","Generous 7oz size"]},{"t":"Fair & White So White Skin Perfector Gel 30ml","v":"Fair & White","y":"Skin Care","p":"9.89","i":"61Q-yy7QOkL._AC_SX679.jpg?v=1784219160","n":20,"b":["Brightens and evens skin tone","Lightweight and fast-absorbing","Smoother, clearer-looking skin","Generous 30ml size"]},{"t":"Cherish Yanky Twist Crochet Hair 12\"","v":"Cherish Braids","y":"Hair Extensions","p":"10.99","i":"s-l1600_24_26f266c3-92c5-40c4-99ef-42e68b7620de.webp?v=1784218034","n":0,"b":["Offers a bold, textured look in a convenient 12 inch length","Pre-looped synthetic hair for quick, protective crochet styles","Soft, natural-looking texture"]},{"t":"Cherish Ultimate Comfort Bohemian Bulk Hair 3x 20\"","v":"Cherish Braids","y":"Hair Extensions","p":"13.19","i":"CBBOVP201B.webp?v=1784215985","n":14,"b":["Offers effortless length and volume in one convenient pack","Soft, natural-looking texture for boho braid styles","Quick, protective styling"]},{"t":"Carmex Lime Click Stick 4.25 g","v":"Carmex","y":"Lip Balm","p":"3.29","i":"516zDClCG2L._AC_SX679.jpg?v=1784140287","n":26,"b":["Moisturises and soothes dry, chapped lips with a zesty twist","Moisturises dry, chapped lips","Smooth, refreshing glide","Generous 4.25g size"]},{"t":"Curalene Vapour Rub 3.5Oz","v":"Curalene","y":"Vapour Rub","p":"3.84","i":"CuraleneVapourRub0.jpg?v=1784139987","n":11,"b":["Delivers a cooling, comforting sensation","Soothing, cooling relief","Comforting classic formula","Generous 3.5oz size"]},{"t":"Carotone Whitening Body Lotion 500ml","v":"Carotone","y":"Body Lotion","p":"12.09","i":"whitening-body-lotion-500ml-carotone.jpg?v=1784139488","n":8,"b":["Deep, long-lasting hydration","Lightweight, non-greasy finish","Softens and smooths dry skin","Generous 500ml size"]},{"t":"Cantu Guava Scalp Relief Shampoo 13.5oz","v":"Cantu","y":"Shampoo","p":"6.59","i":"61pWTEaTW6L._AC_SY879.jpg?v=1784139300","n":2,"b":["Cleanses without stripping","Soothes and refreshes the scalp","Leaves hair soft and manageable","Generous 13.5oz size"]}], PFX="https://cdn.shopify.com/s/files/1/0605/2118/5501/files/";
 const G={sunset:['#f7b15a','#ef7b45','#d53e7d','#b01366'],ember:['#ffb347','#ff6a3d','#c81d5a','#7a1147'],berry:['#ff9a8b','#ff6a9c','#c724b1','#6a1b9a'],night:['#f79d5c','#c9457f','#7b2a9e','#241a52']};
+const SIZES={sq:{w:1080,h:1080,cls:'sq'},st:{w:1080,h:1920,cls:'st'}};
 const $=i=>document.getElementById(i), esc=s=>s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
-let cur=null,mode='product',photo=null;
-const img=p=>PFX+p.i;
+let cur=null,mode='product',size='sq',photo=null,prodImg=null;
+const imgurl=p=>PFX+p.i;
+
+function applySize(){const s=SIZES[size],c=$('card');
+ c.style.setProperty('--cw',s.w+'px');c.style.setProperty('--ch',s.h+'px');
+ c.classList.remove('sq','st');c.classList.add(s.cls);
+ // fit preview: max 460 wide / 620 tall
+ const maxW=460,maxH=620,sc=Math.min(maxW/s.w,maxH/s.h);
+ $('scaler').style.transform='scale('+sc+')';
+ $('frame').style.width=(s.w*sc)+'px';$('frame').style.height=(s.h*sc)+'px';}
+
+function removeWhite(im){
+ const sc=Math.min(1,900/Math.max(im.naturalWidth,im.naturalHeight));
+ const w=Math.max(1,Math.round(im.naturalWidth*sc)),h=Math.max(1,Math.round(im.naturalHeight*sc));
+ const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+ const cx=cv.getContext('2d');cx.drawImage(im,0,0,w,h);
+ let d;try{d=cx.getImageData(0,0,w,h)}catch(e){return null}
+ const px=d.data,N=w*h,vis=new Uint8Array(N),st=[];
+ const white=i=>{const o=i*4;return px[o]>236&&px[o+1]>236&&px[o+2]>236&&px[o+3]>8};
+ const seed=(x,y)=>{const i=y*w+x;if(!vis[i]&&white(i)){vis[i]=1;st.push(i)}};
+ for(let x=0;x<w;x++){seed(x,0);seed(x,h-1)}for(let y=0;y<h;y++){seed(0,y);seed(w-1,y)}
+ while(st.length){const i=st.pop(),x=i%w,y=(i/w)|0;px[i*4+3]=0;
+  if(x+1<w)seed(x+1,y);if(x-1>=0)seed(x-1,y);if(y+1<h)seed(x,y+1);if(y-1>=0)seed(x,y-1);}
+ const a=new Uint8ClampedArray(N);for(let i=0;i<N;i++)a[i]=px[i*4+3];
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(a[i]>0){let e=false;
+  if(x+1<w&&a[i+1]===0)e=true;if(x-1>=0&&a[i-1]===0)e=true;if(y+1<h&&a[i+w]===0)e=true;if(y-1>=0&&a[i-w]===0)e=true;
+  if(e)px[i*4+3]=Math.min(px[i*4+3],200);}}
+ cx.putImageData(d,0,0);
+ let mnx=w,mny=h,mxx=0,mxy=0,any=false;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(px[(y*w+x)*4+3]>12){any=true;if(x<mnx)mnx=x;if(x>mxx)mxx=x;if(y<mny)mny=y;if(y>mxy)mxy=y;}}
+ if(!any)return null;const pad=6;mnx=Math.max(0,mnx-pad);mny=Math.max(0,mny-pad);mxx=Math.min(w-1,mxx+pad);mxy=Math.min(h-1,mxy+pad);
+ const cw=mxx-mnx+1,ch=mxy-mny+1,o=document.createElement('canvas');o.width=cw;o.height=ch;
+ o.getContext('2d').drawImage(cv,mnx,mny,cw,ch,0,0,cw,ch);return o.toDataURL('image/png');
+}
+function loadImg(src,cross){return new Promise((res,rej)=>{const im=new Image();if(cross)im.crossOrigin='anonymous';im.onload=()=>res(im);im.onerror=rej;im.src=src;});}
+async function setProductPhoto(src,cross){$('imgstat').textContent='· processing…';
+ try{const im=await loadImg(src,cross);const du=removeWhite(im);prodImg=du||src;$('vpi').src=prodImg;
+  $('imgstat').textContent=du?'· white background removed ✓':'· shown as-is';}
+ catch(e){prodImg=src;$('vpi').src=src;$('imgstat').textContent='· could not process';}}
+
 function head(p){const s=(p.y+' '+p.t).toLowerCase();
  if(/shower gel|soap|body wash/.test(s))return"Feel fresh\nfrom the first pour.";
  if(/oil/.test(s))return"Feed your hair\nwhat it's missing.";
@@ -133,8 +212,7 @@ function head(p){const s=(p.y+' '+p.t).toLowerCase();
  return"Just landed\nin store.";}
 function tags(p){const s=(p.y+' '+p.t).toLowerCase(),t=['cchairandbeauty','beautysupply','beautysupplyuk','afrohaircare','leedsbusiness'];
  const a=(...x)=>x.forEach(i=>{if(!t.includes(i))t.push(i)});
- if(/shower gel|soap|body wash/.test(s))a('bodycare','showergel','skincare');
- else if(/oil/.test(s))a('hairoil','naturaloil','hairgrowth');
+ if(/shower gel|soap|body wash/.test(s))a('bodycare','showergel','skincare');else if(/oil/.test(s))a('hairoil','naturaloil','hairgrowth');
  if(/lotion|cream|butter/.test(s))a('bodycare','moisturiser');
  if(/shampoo|conditioner|treatment|detangler/.test(s))a('haircare','curlyhair','naturalhair');
  if(/styling|jelly|glosser/.test(s))a('hairstyling','curlygirl');
@@ -142,31 +220,28 @@ function tags(p){const s=(p.y+' '+p.t).toLowerCase(),t=['cchairandbeauty','beaut
  if(/serum|toner|strip/.test(s))a('skincare','glowingskin');
  if(/braid|extension|crochet/.test(s))a('braidinghair','protectivestyles');
  if(/spray|rum|deodorant/.test(s))a('fragrance','bodyspray');
- const v=p.v.toLowerCase().replace(/[^a-z0-9]/g,'');if(v.length>2)a(v);
- return t.slice(0,11).map(x=>'#'+x).join(' ');}
+ const v=p.v.toLowerCase().replace(/[^a-z0-9]/g,'');if(v.length>2)a(v);return t.slice(0,11).map(x=>'#'+x).join(' ');}
 function hsh(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return h}
 function cap(p){const hk=['✨ NEW IN','🌟 JUST LANDED','🔥 NOW IN STOCK','💛 NEW ARRIVAL'][Math.abs(hsh(p.t))%4];
  return hk+' — '+p.t+'\n\n'+p.b.map(x=>'✔️ '+x).join('\n')+'\n\n💷 Only £'+(+p.p).toFixed(2)+' · Shop now at cchairandbeauty.com 🛒\n📦 UK delivery straight to your door\n\n'+tags(p);}
-function list(f){f=(f||'').toLowerCase().trim();
- const it=C.filter(p=>!f||(p.t+' '+p.v+' '+p.y).toLowerCase().includes(f));
+function list(f){f=(f||'').toLowerCase().trim();const it=C.filter(p=>!f||(p.t+' '+p.v+' '+p.y).toLowerCase().includes(f));
  $('count').textContent=it.length+' of '+C.length+' products';
  $('list').innerHTML=it.map(p=>{const i=C.indexOf(p);return `<div class="item ${cur===p?'on':''}" data-i="${i}">
- <img src="${img(p)}&width=90" loading="lazy" crossorigin="anonymous"><div><div class="n">${esc(p.t)}</div>
+ <img src="${imgurl(p)}&width=90" loading="lazy"><div><div class="n">${esc(p.t)}</div>
  <div class="p">£${(+p.p).toFixed(2)}${p.n<=0?' <span class="oos">· out of stock</span>':''}</div></div></div>`}).join('');
  [...$('list').children].forEach(e=>e.onclick=()=>sel(+e.dataset.i));}
 function sel(i){const p=C[i];if(!p)return;cur=p;
  $('f-ey').value=p.v.toUpperCase();$('f-pn').value=p.t;$('f-pr').value='£'+(+p.p).toFixed(2);
  $('f-ct').value='Shop Now';$('f-bu').value=p.b.join('\n');$('f-cap').value=cap(p);
  $('f-hd').value=head(p);$('f-sb').value='New in at CC Hair & Beauty · £'+(+p.p).toFixed(2);
- $('ow').style.display=p.n<=0?'block':'none';
- $('frame').style.display='';$('pv').style.display='flex';$('es').style.display='none';
- $('eb').style.display='block';$('eh').style.display='none';
- const im=$('vpi');im.crossOrigin='anonymous';im.src=img(p)+'&width=760';
- draw();list($('q').value);}
+ $('ow').style.display=p.n<=0?'block':'none';$('ipn').textContent='Replace photo (auto-cuts white bg)';$('ipc').style.display='none';
+ $('frame').style.display='';$('pv').style.display='flex';$('es').style.display='none';$('eb').style.display='block';$('eh').style.display='none';
+ prodImg=null;$('vpi').removeAttribute('src');setProductPhoto(imgurl(p)+'&width=800',true);draw();list($('q').value);}
 function draw(){const g=G[$('f-gr').value]||G.sunset,c=$('card');
  c.style.setProperty('--g1',g[0]);c.style.setProperty('--g2',g[1]);c.style.setProperty('--g3',g[2]);c.style.setProperty('--g4',g[3]);
  $('pb').style.display=mode==='product'?'':'none';$('cb').style.display=mode==='cover'?'':'none';
  $('vmark').classList.toggle('right',mode==='cover');
+ c.classList.toggle('hasprod',mode==='product');
  const ph=$('vph');
  if(mode==='cover'&&photo){ph.style.backgroundImage="url('"+photo+"')";ph.className='photo'+($('f-bd').value==='plain'?' plain':'');$('vcph').style.display='none'}
  else{ph.style.backgroundImage='none';ph.className='photo';$('vcph').style.display=mode==='cover'?'flex':'none'}
@@ -175,26 +250,40 @@ function draw(){const g=G[$('f-gr').value]||G.sunset,c=$('card');
   const L=$('f-bu').value.split('\n').map(s=>s.trim()).filter(Boolean).slice(0,4);
   const k='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   $('vbu').innerHTML=L.map(t=>'<div class="bl"><div class="chk">'+k+'</div><p>'+esc(t)+'</p></div>').join('');
-  const nb=312+$('vpn').offsetHeight;$('vru').style.top=(nb+22)+'px';$('vbu').style.top=(nb+52)+'px';
+  const nameTop=(size==='st'?548:312),gap1=(size==='st'?26:22),gap2=(size==='st'?62:52);
+  const nb=nameTop+$('vpn').offsetHeight;$('vru').style.top=(nb+gap1)+'px';$('vbu').style.top=(nb+gap2)+'px';
  }else{$('vhd').innerHTML=esc($('f-hd').value).replace(/\n/g,'<br>');$('vsb').innerHTML=esc($('f-sb').value).replace(/\n/g,'<br>');}}
 $('seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.m;
  [...$('seg').children].forEach(x=>x.classList.toggle('on',x===b));
  document.querySelectorAll('.grp').forEach(g=>g.style.display=g.dataset.f===mode?'':'none');
  $('et').textContent=mode==='product'?'Post details':'Slide details';draw()};
+$('sizeSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;size=b.dataset.s;
+ [...$('sizeSeg').children].forEach(x=>x.classList.toggle('on',x===b));applySize();draw()};
 ['f-ey','f-pn','f-pr','f-ct','f-bu','f-gr','f-hd','f-sb','f-bd'].forEach(i=>{$(i).oninput=draw;$(i).onchange=draw});
 $('phf').onchange=()=>{const f=$('phf').files[0];if(!f)return;const r=new FileReader();
  r.onload=()=>{photo=r.result;$('phn').textContent=f.name.slice(0,20);$('phc').style.display='inline';draw()};r.readAsDataURL(f)};
 $('phc').onclick=e=>{e.preventDefault();e.stopPropagation();photo=null;$('phf').value='';$('phn').textContent='Upload photo';$('phc').style.display='none';draw()};
+$('ipf').onchange=()=>{const f=$('ipf').files[0];if(!f)return;const r=new FileReader();
+ r.onload=async()=>{$('ipn').textContent=f.name.slice(0,20);$('ipc').style.display='inline';await setProductPhoto(r.result,false);};r.readAsDataURL(f)};
+$('ipc').onclick=e=>{e.preventDefault();e.stopPropagation();$('ipf').value='';if(cur){$('ipn').textContent='Replace photo (auto-cuts white bg)';$('ipc').style.display='none';setProductPhoto(imgurl(cur)+'&width=800',true);}};
 $('cp').onclick=async()=>{try{await navigator.clipboard.writeText($('f-cap').value);const b=$('cp');
  b.textContent='Copied ✓';b.classList.add('done');setTimeout(()=>{b.textContent='Copy';b.classList.remove('done')},1600)}
  catch(e){$('f-cap').select();document.execCommand('copy')}};
-async function cv(){await document.fonts.ready;return html2canvas($('card'),{width:1080,height:1080,scale:2,backgroundColor:null,useCORS:true,imageTimeout:15000})}
+async function fontsReady(){try{await Promise.all([document.fonts.load('700 78px "Oswald"'),document.fonts.load('600 30px "Oswald"'),
+ document.fonts.load('800 52px "Poppins"'),document.fonts.load('500 26px "Poppins"')]);}catch(e){}await document.fonts.ready;}
+async function cv(){await fontsReady();const s=SIZES[size];const clone=$('card').cloneNode(true);
+ clone.style.transform='none';clone.style.margin='0';
+ const box=document.createElement('div');box.style.cssText='position:fixed;left:-14000px;top:0;width:'+s.w+'px;height:'+s.h+'px;overflow:hidden;background:transparent';
+ box.appendChild(clone);document.body.appendChild(box);
+ try{return await html2canvas(clone,{width:s.w,height:s.h,scale:2,backgroundColor:null,useCORS:true,imageTimeout:20000,windowWidth:s.w,windowHeight:s.h});}
+ finally{document.body.removeChild(box);}}
 $('dl').onclick=async()=>{const b=$('dl');b.disabled=true;b.textContent='Rendering…';
  try{const c=await cv();const a=document.createElement('a');
- a.download=cur.t.replace(/[^a-z0-9]+/gi,'-').toLowerCase().slice(0,40)+'-'+mode+'.png';a.href=c.toDataURL('image/png');a.click()}
+ a.download=cur.t.replace(/[^a-z0-9]+/gi,'-').toLowerCase().slice(0,36)+'-'+mode+'-'+size+'.png';a.href=c.toDataURL('image/png');a.click()}
  catch(e){alert('Export snag: '+e.message+'. Try "Open image".')}b.disabled=false;b.textContent='Download PNG'};
 $('op').onclick=async()=>{const b=$('op');b.disabled=true;b.textContent='Rendering…';
  try{const c=await cv();const w=window.open('');w.document.write('<img src="'+c.toDataURL('image/png')+'" style="max-width:100%">')}
  catch(e){alert('Could not render: '+e.message)}b.disabled=false;b.textContent='Open image'};
-$('q').oninput=e=>list(e.target.value);list('');
+$('q').oninput=e=>list(e.target.value);
+applySize();list('');
 </script></body></html>
