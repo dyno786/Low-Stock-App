@@ -91,22 +91,20 @@ label{display:block;font-size:10.5px;font-weight:600;color:var(--muted);text-tra
 .sq .cph{font-size:26px}
 
 /* ---- STORY 1080x1920 (tall) ---- */
-.st .mark{top:80px;left:60px;height:130px}.st .mark.right{left:auto;right:60px}
-.st .eyebrow{top:470px;left:70px;font-size:30px;padding:10px 22px}
-.st .pname{top:548px;left:70px;width:760px;font-size:66px}
+.st .mark{top:70px;left:60px;height:120px}.st .mark.right{left:auto;right:60px}
+.st .eyebrow{top:300px;left:70px;font-size:30px;padding:10px 22px}
+.st .pname{top:374px;left:70px;width:940px;font-size:60px}
 .st .rule{left:72px;width:150px;height:7px}
-.st .bullets{left:70px;width:760px;gap:30px}
+.st .bullets{left:70px;width:900px;gap:24px}
 .st .chk{width:50px;height:50px;margin-top:2px}.st .chk svg{width:26px;height:26px}
 .st .bl{gap:20px}.st .bl p{font-size:34px;line-height:1.28}
-.st .pimg{left:50%;transform:translateX(-50%);bottom:300px;width:620px;height:760px;object-position:bottom center}
-.st .price{top:1120px;right:90px;width:230px;height:230px}.st .price .l{font-size:24px}.st .price .v{font-size:62px}
+.st .pimg{left:50%;transform:translateX(-50%);bottom:360px;width:500px;height:600px;object-position:bottom center}
+.st .price{top:980px;right:80px;width:205px;height:205px}.st .price .l{font-size:22px}.st .price .v{font-size:56px}
 .st .cta{bottom:230px;left:50%;transform:translateX(-50%);font-size:40px;padding:22px 60px}
 .st .foot{bottom:120px;font-size:32px}
 .st .cc{left:80px;right:80px;bottom:360px}.st .cc .head{font-size:104px}.st .cc .sb{font-size:40px;margin-top:26px}
 .st .swipe{left:0;right:0;bottom:70px;justify-content:center;font-size:30px}.st .swipe svg{width:44px;height:44px}
 .st .cph{font-size:34px;padding:0 160px}
-/* story product photo sits behind text lower down; keep bullets clear of it via layout above */
-.st.hasprod .bullets{width:620px}
 
 @media(max-width:1000px){.app{grid-template-columns:1fr}.side{max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}
 .main{grid-template-columns:1fr}.editor{border-left:0;border-top:1px solid var(--line)}}
@@ -250,7 +248,7 @@ function draw(){const g=G[$('f-gr').value]||G.sunset,c=$('card');
   const L=$('f-bu').value.split('\n').map(s=>s.trim()).filter(Boolean).slice(0,4);
   const k='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   $('vbu').innerHTML=L.map(t=>'<div class="bl"><div class="chk">'+k+'</div><p>'+esc(t)+'</p></div>').join('');
-  const nameTop=(size==='st'?548:312),gap1=(size==='st'?26:22),gap2=(size==='st'?62:52);
+  const nameTop=(size==='st'?374:312),gap1=(size==='st'?26:22),gap2=(size==='st'?62:52);
   const nb=nameTop+$('vpn').offsetHeight;$('vru').style.top=(nb+gap1)+'px';$('vbu').style.top=(nb+gap2)+'px';
  }else{$('vhd').innerHTML=esc($('f-hd').value).replace(/\n/g,'<br>');$('vsb').innerHTML=esc($('f-sb').value).replace(/\n/g,'<br>');}}
 $('seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;mode=b.dataset.m;
