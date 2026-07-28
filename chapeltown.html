@@ -2219,7 +2219,10 @@ function renderShopify(){
     return;
   }
   shopCustomDepts.forEach(function(d){if(shopDeptSel[d]===undefined)shopDeptSel[d]=1;});
-  var base=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOfX(p.dp);});
+  var _rhIdx=-1;for(var _ri=0;_ri<SOURCES.length;_ri++){if(SOURCES[_ri].si===2){_rhIdx=_ri;break;}}
+  var _rhMap=null;
+  if(DEST_ID!==2&&_rhIdx>=0){if(!srcLoaded[_rhIdx]){loadSrc(_rhIdx);}else{_rhMap={};(srcData[_rhIdx]||[]).forEach(function(p){if(p.bc&&p.qty>0)_rhMap[p.bc]=1;});}}
+  var base=(destData||[]).filter(function(p){return p.bc&&p.nm&&p.qty>0&&shopCatOfX(p.dp)&&!(_rhMap&&_rhMap[p.bc]);});
   var notOn=base.filter(function(p){return !imgs[p.bc]&&!(shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)&&!shopExistsConfirmed(p.bc)&&!isShopDraft(p.bc)&&!shopListed[p.bc]&&!shopNoAdd[p.bc];});
   var noImg=base.filter(function(p){return !imgs[p.bc]&&((shopifyData[p.bc]&&shopifyData[p.bc].on_shopify)||shopExistsConfirmed(p.bc))&&!isShopDraft(p.bc)&&!shopListed[p.bc]&&!shopNoAdd[p.bc];});
   var drafts=base.filter(function(p){return isShopDraft(p.bc)&&!shopListed[p.bc]&&!shopNoAdd[p.bc];});
@@ -2253,7 +2256,7 @@ function renderShopify(){
     dep+='</div>';
   }
   dep+='</div>';
-  var srch='<div style="padding:2px 10px 8px"><input id="shop-search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search barcode or name…" style="width:100%;box-sizing:border-box;border:2px solid var(--purple,#6d28d9);border-radius:11px;padding:11px 12px;font-size:15px;font-family:ui-monospace,Menlo,monospace"></div>';
+  var srch='<div style="padding:2px 10px 8px"><input id="shop-search" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search barcode…" style="width:100%;box-sizing:border-box;border:2px solid var(--purple,#6d28d9);border-radius:11px;padding:11px 12px;font-size:15px;font-family:ui-monospace,Menlo,monospace"></div>';
   var _sq=(shopQuery||'').trim().toLowerCase();
   var items=cur.list.filter(function(p){if(shopState!=='blocked'&&!shopDeptSel[shopCatOfX(p.dp)])return false;if(_sq&&(((p.bc||'')+' '+(p.nm||'')).toLowerCase().indexOf(_sq)<0))return false;return true;});
   items.sort(function(a,b){return (shopCatOfX(a.dp)||'').localeCompare(shopCatOfX(b.dp)||'')||a.nm.localeCompare(b.nm);});
