@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>CC — Out of Stock by Brand</title>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{--red:#c81e1e;--purple:#6d28d9;--purplebg:#f3e8ff;--green:#16a34a;--amber:#b45309;--border:#e5e5ea;--sub:#6b7280;--bg:#f2f2f5;--card:#fff;--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:var(--font);background:var(--bg);color:#111;padding-bottom:40px}
+  header{background:var(--red);color:#fff;padding:15px 16px 12px}
+  header h1{margin:0;font-size:18px;font-weight:800}
+  header p{margin:4px 0 0;font-size:12.5px;opacity:.92}
+  .wrap{padding:12px;max-width:1100px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:12px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .seg{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .seg button{border:none;background:#fff;padding:9px 12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--sub)}
+  .seg button.on{background:var(--purple);color:#fff}
+  input.t,select.t{border:1.5px solid var(--border);border-radius:10px;padding:9px 11px;font-size:14px;font-family:var(--font)}
+  .btn{border:none;border-radius:10px;padding:11px 14px;font-weight:800;font-size:14px;cursor:pointer;color:#fff}
+  .btn.x{background:var(--green)}.btn.p{background:var(--red)}.btn.g{background:var(--purple)}
+  .sum{font-size:13px;color:var(--sub)}
+  .sum b{color:#111}
+  .brand-h{font-weight:800;font-size:15px;margin:14px 4px 6px;display:flex;justify-content:space-between;align-items:center}
+  .brand-h .c{font-size:12px;color:var(--sub);font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+  th{background:#faf9fc;color:var(--sub);font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0}
+  td.nm{white-space:normal;min-width:150px;font-weight:600}
+  td.bc{font-family:ui-monospace,Menlo,monospace;color:var(--sub)}
+  .q{font-weight:700;text-align:center}
+  .q.zero{color:var(--sub)}.q.neg{color:var(--red)}.q.pos{color:var(--green)}
+  .days{font-weight:800;text-align:center}
+  .days.hi{color:var(--red)}.days.mid{color:var(--amber)}
+  .muted{color:var(--sub);font-size:13px}
+  .tablewrap{overflow-x:auto;border-radius:10px}
+  .loading{text-align:center;padding:40px;color:var(--sub)}
+  .spin{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:s 1s linear infinite;margin:0 auto 10px}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>📋 Out of Stock — by Brand</h1>
+  <p>Items with no stock across all stores + warehouse, sorted by days. Export to Excel or PDF for ordering.</p>
+</header>
+<div class="wrap">
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <span class="muted" style="font-weight:700">Show:</span>
+      <div class="seg" id="scope">
+        <button data-s="all" class="on">Out everywhere (incl. warehouse)</button>
+        <button data-s="stores">Out at all stores</button>
+      </div>
+      <button class="btn g" id="refresh">↻ Refresh</button>
+    </div>
+    <div class="row">
+      <input class="t" id="search" placeholder="Search brand / name / barcode…" style="flex:1;min-width:160px">
+      <label class="muted">Min days out <input class="t" id="mindays" type="number" min="0" value="0" style="width:70px"></label>
+      <select class="t" id="sort">
+        <option value="days">Sort: most days out</option>
+        <option value="brand">Sort: brand A–Z</option>
+        <option value="name">Sort: product name</option>
+      </select>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn x" id="exp-xls">⬇ Export Excel</button>
+      <button class="btn p" id="exp-pdf">⬇ Export PDF</button>
+      <span class="sum" id="summary" style="margin-left:auto"></span>
+    </div>
+  </div>
+  <div id="out"><div class="loading"><div class="spin"></div>Loading all branches + warehouse…</div></div>
+</div>
+
+<script>
+var FEEDS=[
+  {k:'wh',   label:'Warehouse', url:'/api/stock-data?branch=warehouse'},
+  {k:'chap', label:'Chapeltown',url:'/api/stock-data?branch=chapy'},
+  {k:'city', label:'City',      url:'/api/stock-data?branch=city'},
+  {k:'roun', label:'Roundhay',  url:'/api/stock-data?branch=roundhay'}
+];
+var SCOPE='all', SORT='days', SEARCH='', MINDAYS=0;
+var combined={}; // bc -> {nm,dp,sz,pr,brand, qty:{wh,chap,city,roun}, ls:{...}}
+var loaded=false;
+
+function cl(v){return (v==null?'':(''+v)).trim();}
+function esc(s){return (''+(s==null?'':s)).replace(/[<>&]/g,function(c){return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;';});}
+function pD(s){if(!s||s==='Never'||s==='NULL')return null;var p=s.split('/');if(p.length===3){var d=new Date(+p[2],+p[1]-1,+p[0]);return isNaN(d)?null:d;}return null;}
+function dAgo(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
+function brandOf(nm){var t=(nm||'').trim().split(/\s+/);if(!t.length)return '—';var b=t[0].toUpperCase();
+  // if first token is very short or numeric, use first two words for a better brand name
+  if(b.length<=2||/^\d+/.test(b)){b=(t[0]+' '+(t[1]||'')).trim().toUpperCase();}
+  return b||'—';}
+
+function parseFeed(text){
+  return Papa.parse(text,{header:true,skipEmptyLines:true}).data.map(function(r){
+    return {bc:cl(r['Barcode']),nm:cl(r['ProductName']),sz:cl(r['Size']),qty:parseInt(r['StockQty'])||0,
+            pr:parseFloat(r['Price'])||0,dp:cl(r['Department']),ls:cl(r['LastSold'])};
+  }).filter(function(p){return p.bc&&p.nm;});
+}
+
+async function loadAll(){
+  loaded=false;combined={};
+  document.getElementById('out').innerHTML='<div class="loading"><div class="spin"></div>Loading all branches + warehouse…</div>';
+  await Promise.all(FEEDS.map(async function(F){
+    try{var r=await fetch(F.url);var rows=parseFeed(await r.text());
+      rows.forEach(function(p){
+        var c=combined[p.bc];
+        if(!c){c=combined[p.bc]={bc:p.bc,nm:p.nm,dp:p.dp,sz:p.sz,pr:p.pr,qty:{wh:0,chap:0,city:0,roun:0},ls:{}};}
+        c.qty[F.k]=p.qty;
+        if(p.ls&&p.ls!=='Never'&&p.ls!=='NULL')c.ls[F.k]=p.ls;
+        if(p.pr>0&&!c.pr)c.pr=p.pr;
+        if(!c.nm&&p.nm)c.nm=p.nm;
+      });
+    }catch(e){}
+  }));
+  // finalise: brand + best (most recent) last-sold + days
+  Object.keys(combined).forEach(function(bc){
+    var c=combined[bc];c.brand=brandOf(c.nm);
+    var best=null,bestLs='';
+    ['wh','chap','city','roun'].forEach(function(k){var d=dAgo(c.ls[k]);if(d!=null&&(best==null||d<best)){best=d;bestLs=c.ls[k];}});
+    c.days=best; c.lastSold=bestLs||'Never';
+  });
+  loaded=true;render();
+}
+
+function rowsFor(){
+  var arr=Object.keys(combined).map(function(k){return combined[k];});
+  // filter: out of stock
+  arr=arr.filter(function(c){
+    var storesOut=(c.qty.chap<=0&&c.qty.city<=0&&c.qty.roun<=0);
+    if(!storesOut)return false;
+    if(SCOPE==='all'&&c.qty.wh>0)return false; // must also be out of the warehouse
+    return true;
+  });
+  if(SEARCH){var q=SEARCH.toLowerCase();arr=arr.filter(function(c){return ((c.brand+' '+c.nm+' '+c.bc).toLowerCase().indexOf(q)>=0);});}
+  if(MINDAYS>0)arr=arr.filter(function(c){return (c.days!=null&&c.days>=MINDAYS);});
+  arr.sort(function(a,b){
+    if(SORT==='brand')return a.brand.localeCompare(b.brand)||(( b.days||0)-(a.days||0));
+    if(SORT==='name')return a.nm.localeCompare(b.nm);
+    return (b.days==null?-1:b.days)-(a.days==null?-1:a.days); // most days first
+  });
+  return arr;
+}
+
+function qcell(v){var cls=v<0?'neg':(v>0?'pos':'zero');return '<td class="q '+cls+'">'+v+'</td>';}
+function daysCell(d){if(d==null)return '<td class="days">—</td>';var cls=d>=30?'hi':(d>=7?'mid':'');return '<td class="days '+cls+'">'+d+'</td>';}
+
+function render(){
+  if(!loaded)return;
+  var arr=rowsFor();
+  var brands={};arr.forEach(function(c){(brands[c.brand]=brands[c.brand]||[]).push(c);});
+  var bkeys=Object.keys(brands).sort(function(a,b){
+    if(SORT==='brand'||SORT==='name')return a.localeCompare(b);
+    return brands[b].length-brands[a].length; // by size when sorting by days
+  });
+  document.getElementById('summary').innerHTML='<b>'+arr.length+'</b> items out · <b>'+bkeys.length+'</b> brands';
+  if(!arr.length){document.getElementById('out').innerHTML='<div class="card muted">Nothing out of stock for this filter. 🎉</div>';return;}
+  var h='';
+  bkeys.forEach(function(bk){
+    var items=brands[bk];
+    h+='<div class="brand-h"><span>'+esc(bk)+'</span><span class="c">'+items.length+' item'+(items.length>1?'s':'')+'</span></div>';
+    h+='<div class="tablewrap"><table><thead><tr><th>Product</th><th>Barcode</th><th>Dept</th><th>Chap</th><th>City</th><th>Roun</th><th>WH</th><th>Days out</th><th>Last sold</th><th>£</th></tr></thead><tbody>';
+    items.forEach(function(c){
+      h+='<tr><td class="nm">'+esc(c.nm)+(c.sz?' · '+esc(c.sz):'')+'</td><td class="bc">'+esc(c.bc)+'</td><td class="muted">'+esc(c.dp||'')+'</td>'
+        +qcell(c.qty.chap)+qcell(c.qty.city)+qcell(c.qty.roun)+qcell(c.qty.wh)
+        +daysCell(c.days)+'<td class="muted">'+esc(c.lastSold)+'</td><td>'+(c.pr>0?'£'+c.pr.toFixed(2):'')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+  });
+  document.getElementById('out').innerHTML=h;
+}
+
+/* ---------- exports ---------- */
+function exportRows(){
+  return rowsFor().map(function(c){return {
+    Brand:c.brand, Product:c.nm, Size:c.sz||'', Barcode:c.bc, Department:c.dp||'',
+    Chapeltown:c.qty.chap, City:c.qty.city, Roundhay:c.qty.roun, Warehouse:c.qty.wh,
+    DaysOut:(c.days==null?'':c.days), LastSold:c.lastSold, Price:(c.pr>0?c.pr:'')
+  };});
+}
+function stamp(){var d=new Date();return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
+function scopeLabel(){return SCOPE==='all'?'out everywhere (incl. warehouse)':'out at all stores';}
+
+function exportXLS(){
+  try{
+    var rows=exportRows();
+    if(!rows.length){alert('Nothing to export.');return;}
+    var ws=XLSX.utils.json_to_sheet(rows);
+    var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Out of stock');
+    XLSX.writeFile(wb,'CC-out-of-stock-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  }catch(e){alert('Excel export failed: '+(e&&e.message||e));}
+}
+function exportPDF(){
+  try{
+    var arr=rowsFor();if(!arr.length){alert('Nothing to export.');return;}
+    var jsPDF=window.jspdf.jsPDF, doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    doc.setFontSize(14);doc.setTextColor(200,30,30);doc.text('CC Hair & Beauty — Out of Stock by Brand',14,13);
+    doc.setFontSize(9);doc.setTextColor(90);doc.text(arr.length+' items · '+scopeLabel()+' · '+stamp(),14,19);
+    var body=arr.map(function(c){return [c.brand,c.nm+(c.sz?(' · '+c.sz):''),c.bc,c.dp||'',c.qty.chap,c.qty.city,c.qty.roun,c.qty.wh,(c.days==null?'—':c.days),c.lastSold,(c.pr>0?('£'+c.pr.toFixed(2)):'')];});
+    doc.autoTable({startY:23,head:[['Brand','Product','Barcode','Dept','Chap','City','Roun','WH','Days','Last sold','£']],body:body,
+      styles:{fontSize:7,cellPadding:1.5},headStyles:{fillColor:[109,40,217]},
+      columnStyles:{0:{fontStyle:'bold',cellWidth:24},1:{cellWidth:60},8:{halign:'center',fontStyle:'bold'}},
+      didParseCell:function(d){if(d.section==='body'&&d.column.index===8){var v=parseInt(d.cell.raw);if(v>=30)d.cell.styles.textColor=[200,30,30];else if(v>=7)d.cell.styles.textColor=[180,69,9];}}});
+    doc.save('CC-out-of-stock-'+new Date().toISOString().slice(0,10)+'.pdf');
+  }catch(e){alert('PDF export failed: '+(e&&e.message||e));}
+}
+
+/* ---------- wiring ---------- */
+document.querySelectorAll('#scope button').forEach(function(b){b.addEventListener('click',function(){SCOPE=this.dataset.s;document.querySelectorAll('#scope button').forEach(function(x){x.classList.toggle('on',x===b);});render();});});
+document.getElementById('search').addEventListener('input',function(){SEARCH=this.value;render();});
+document.getElementById('mindays').addEventListener('input',function(){MINDAYS=parseInt(this.value)||0;render();});
+document.getElementById('sort').addEventListener('change',function(){SORT=this.value;render();});
+document.getElementById('refresh').addEventListener('click',loadAll);
+document.getElementById('exp-xls').addEventListener('click',exportXLS);
+document.getElementById('exp-pdf').addEventListener('click',exportPDF);
+loadAll();
+</script>
+</body>
+</html>
