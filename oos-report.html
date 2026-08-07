@@ -58,6 +58,8 @@
         <button data-s="all" class="on">Out everywhere (incl. warehouse)</button>
         <button data-s="stores">Out at all stores</button>
       </div>
+      <span class="muted" style="font-weight:700;margin-left:6px">Group:</span>
+      <div class="seg" id="groupby"><button data-g="dept" class="on">Department</button><button data-g="brand">Brand</button></div>
       <button class="btn g" id="refresh">↻ Refresh</button>
     </div>
     <div class="row">
@@ -85,7 +87,8 @@ var FEEDS=[
   {k:'city', label:'City',      url:'/api/stock-data?branch=city'},
   {k:'roun', label:'Roundhay',  url:'/api/stock-data?branch=roundhay'}
 ];
-var SCOPE='all', SORT='days', SEARCH='', MINDAYS=0;
+var SCOPE='all', SORT='days', SEARCH='', MINDAYS=0, GROUPBY='dept';
+var __enrichTried={};
 var combined={}; // bc -> {nm,dp,sz,pr,brand, qty:{wh,chap,city,roun}, ls:{...}}
 var loaded=false;
 
@@ -127,7 +130,25 @@ async function loadAll(){
     ['wh','chap','city','roun'].forEach(function(k){var d=dAgo(c.ls[k]);if(d!=null&&(best==null||d<best)){best=d;bestLs=c.ls[k];}});
     c.days=best; c.lastSold=bestLs||'Never';
   });
-  loaded=true;render();
+  try{var ri=await fetch('/api/stock-data?branch=shopify-images');Papa.parse(await ri.text(),{header:true,skipEmptyLines:true}).data.forEach(function(row){var bc=(row['Barcode']||'').trim();if(!bc)return;var url=(row['ImageURL']||'').trim();var c=combined[bc];if(c&&url&&url.indexOf('http')===0){c.img=url;c.onShopify=true;}});}catch(e){}
+  loaded=true;render();enrichNames();
+}
+async function enrichNames(){
+  var bcs=Object.keys(combined).filter(function(bc){var c=combined[bc];return (c.qty.chap<=0&&c.qty.city<=0&&c.qty.roun<=0)&&!__enrichTried[bc];});
+  bcs=bcs.slice(0,400);bcs.forEach(function(bc){__enrichTried[bc]=1;});
+  if(!bcs.length)return;
+  var batches=[];for(var i=0;i<bcs.length;i+=40)batches.push(bcs.slice(i,i+40));
+  var idx=0,active=0,dirty=false;
+  function fin(){active--;if(dirty){render();dirty=false;}pump();}
+  function pump(){
+    if(idx>=batches.length){if(active===0&&dirty)render();return;}
+    var group=batches[idx++];active++;
+    fetch('/api/shopify/exists',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({barcodes:group})})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(j){if(j&&j.results){Object.keys(j.results).forEach(function(bc){var info=j.results[bc]||{};var c=combined[bc];if(c&&info.exists){if(info.title)c.shopName=info.title;if(info.imageUrl&&!c.img)c.img=info.imageUrl;c.onShopify=true;c.shopStatus=info.status||'';dirty=true;}});}})
+      .catch(function(){}).then(fin);
+  }
+  var conc=Math.min(3,batches.length);for(var k=0;k<conc;k++)pump();
 }
 
 function rowsFor(){
@@ -149,13 +170,16 @@ function rowsFor(){
   return arr;
 }
 
+function groupOf(c){return GROUPBY==='dept'?((c.dp||'').trim()||'Uncategorised'):c.brand;}
+function dispName(c){return c.shopName||c.nm;}
+function imgThumb(c){return c.img?'<img src="'+c.img+'" width="30" height="30" loading="lazy" onerror="this.style.display=\'none\'" style="object-fit:cover;border-radius:5px;vertical-align:middle;margin-right:7px">':'';}
 function qcell(v){var cls=v<0?'neg':(v>0?'pos':'zero');return '<td class="q '+cls+'">'+v+'</td>';}
 function daysCell(d){if(d==null)return '<td class="days">—</td>';var cls=d>=30?'hi':(d>=7?'mid':'');return '<td class="days '+cls+'">'+d+'</td>';}
 
 function render(){
   if(!loaded)return;
   var arr=rowsFor();
-  var brands={};arr.forEach(function(c){(brands[c.brand]=brands[c.brand]||[]).push(c);});
+  var brands={};arr.forEach(function(c){var g=groupOf(c);(brands[g]=brands[g]||[]).push(c);});
   var bkeys=Object.keys(brands).sort(function(a,b){
     if(SORT==='brand'||SORT==='name')return a.localeCompare(b);
     return brands[b].length-brands[a].length; // by size when sorting by days
@@ -168,7 +192,7 @@ function render(){
     h+='<div class="brand-h"><span>'+esc(bk)+'</span><span class="c">'+items.length+' item'+(items.length>1?'s':'')+'</span></div>';
     h+='<div class="tablewrap"><table><thead><tr><th>Product</th><th>Barcode</th><th>Dept</th><th>Chap</th><th>City</th><th>Roun</th><th>WH</th><th>Days out</th><th>Last sold</th><th>£</th></tr></thead><tbody>';
     items.forEach(function(c){
-      h+='<tr><td class="nm">'+esc(c.nm)+(c.sz?' · '+esc(c.sz):'')+'</td><td class="bc">'+esc(c.bc)+'</td><td class="muted">'+esc(c.dp||'')+'</td>'
+      h+='<tr><td class="nm">'+imgThumb(c)+esc(dispName(c))+(c.sz?' · '+esc(c.sz):'')+'</td><td class="bc">'+esc(c.bc)+'</td><td class="muted">'+esc(c.dp||'')+'</td>'
         +qcell(c.qty.chap)+qcell(c.qty.city)+qcell(c.qty.roun)+qcell(c.qty.wh)
         +daysCell(c.days)+'<td class="muted">'+esc(c.lastSold)+'</td><td>'+(c.pr>0?'£'+c.pr.toFixed(2):'')+'</td></tr>';
     });
@@ -180,7 +204,7 @@ function render(){
 /* ---------- exports ---------- */
 function exportRows(){
   return rowsFor().map(function(c){return {
-    Brand:c.brand, Product:c.nm, Size:c.sz||'', Barcode:c.bc, Department:c.dp||'',
+    Department:c.dp||'', Brand:c.brand, Product:dispName(c), Size:c.sz||'', Barcode:c.bc,
     Chapeltown:c.qty.chap, City:c.qty.city, Roundhay:c.qty.roun, Warehouse:c.qty.wh,
     DaysOut:(c.days==null?'':c.days), LastSold:c.lastSold, Price:(c.pr>0?c.pr:'')
   };});
@@ -203,8 +227,8 @@ function exportPDF(){
     var jsPDF=window.jspdf.jsPDF, doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
     doc.setFontSize(14);doc.setTextColor(200,30,30);doc.text('CC Hair & Beauty — Out of Stock by Brand',14,13);
     doc.setFontSize(9);doc.setTextColor(90);doc.text(arr.length+' items · '+scopeLabel()+' · '+stamp(),14,19);
-    var body=arr.map(function(c){return [c.brand,c.nm+(c.sz?(' · '+c.sz):''),c.bc,c.dp||'',c.qty.chap,c.qty.city,c.qty.roun,c.qty.wh,(c.days==null?'—':c.days),c.lastSold,(c.pr>0?('£'+c.pr.toFixed(2)):'')];});
-    doc.autoTable({startY:23,head:[['Brand','Product','Barcode','Dept','Chap','City','Roun','WH','Days','Last sold','£']],body:body,
+    var body=arr.map(function(c){return [(c.dp||''),dispName(c)+(c.sz?(' · '+c.sz):''),c.bc,c.brand,c.qty.chap,c.qty.city,c.qty.roun,c.qty.wh,(c.days==null?'—':c.days),c.lastSold,(c.pr>0?('£'+c.pr.toFixed(2)):'')];});
+    doc.autoTable({startY:23,head:[['Dept','Product','Barcode','Brand','Chap','City','Roun','WH','Days','Last sold','£']],body:body,
       styles:{fontSize:7,cellPadding:1.5},headStyles:{fillColor:[109,40,217]},
       columnStyles:{0:{fontStyle:'bold',cellWidth:24},1:{cellWidth:60},8:{halign:'center',fontStyle:'bold'}},
       didParseCell:function(d){if(d.section==='body'&&d.column.index===8){var v=parseInt(d.cell.raw);if(v>=30)d.cell.styles.textColor=[200,30,30];else if(v>=7)d.cell.styles.textColor=[180,69,9];}}});
@@ -217,6 +241,7 @@ document.querySelectorAll('#scope button').forEach(function(b){b.addEventListene
 document.getElementById('search').addEventListener('input',function(){SEARCH=this.value;render();});
 document.getElementById('mindays').addEventListener('input',function(){MINDAYS=parseInt(this.value)||0;render();});
 document.getElementById('sort').addEventListener('change',function(){SORT=this.value;render();});
+document.querySelectorAll('#groupby button').forEach(function(b){b.addEventListener('click',function(){GROUPBY=this.dataset.g;document.querySelectorAll('#groupby button').forEach(function(x){x.classList.toggle('on',x===b);});render();});});
 document.getElementById('refresh').addEventListener('click',loadAll);
 document.getElementById('exp-xls').addEventListener('click',exportXLS);
 document.getElementById('exp-pdf').addEventListener('click',exportPDF);
