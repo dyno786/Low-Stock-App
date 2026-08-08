@@ -65,9 +65,23 @@
     </div>
     <div class="row">
       <input class="t" id="search" placeholder="Search brand / name / barcode…" style="flex:1;min-width:160px">
-      <label class="muted">Min days out <input class="t" id="mindays" type="number" min="0" value="0" style="width:70px"></label>
+      <label class="muted">Out for
+        <select class="t" id="outfor">
+          <option value="0">Any time</option>
+          <option value="7">≥ 1 week</option>
+          <option value="14">≥ 2 weeks</option>
+          <option value="30">≥ 1 month</option>
+          <option value="60">≥ 2 months</option>
+          <option value="90">≥ 3 months</option>
+          <option value="180">≥ 6 months</option>
+          <option value="365">≥ 1 year</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <span id="custom-wrap" style="display:none">≥ <input class="t" id="customnum" type="number" min="0" value="1" style="width:60px"> <select class="t" id="customunit"><option value="1">days</option><option value="7">weeks</option><option value="30">months</option></select></span>
       <select class="t" id="sort">
         <option value="days">Sort: longest out of stock</option>
+        <option value="daysasc">Sort: shortest out of stock</option>
         <option value="brand">Sort: brand A–Z</option>
         <option value="name">Sort: product name</option>
       </select>
@@ -169,9 +183,11 @@ function rowsFor(){
   if(SEARCH){var q=SEARCH.toLowerCase();arr=arr.filter(function(c){return ((c.brand+' '+c.nm+' '+c.bc).toLowerCase().indexOf(q)>=0);});}
   if(MINDAYS>0)arr=arr.filter(function(c){return (c.days!=null&&c.days>=MINDAYS);});
   arr.sort(function(a,b){
-    if(SORT==='brand')return a.brand.localeCompare(b.brand)||(( b.days||0)-(a.days||0));
+    if(SORT==='brand')return a.brand.localeCompare(b.brand)||((b.days||0)-(a.days||0));
     if(SORT==='name')return a.nm.localeCompare(b.nm);
-    return (b.days==null?-1:b.days)-(a.days==null?-1:a.days); // most days first
+    var av=(a.days==null?-1:a.days), bv=(b.days==null?-1:b.days);
+    if(SORT==='daysasc')return (av<0?1e9:av)-(bv<0?1e9:bv); // shortest first, unknowns last
+    return bv-av; // longest first
   });
   return arr;
 }
@@ -266,7 +282,15 @@ function exportPDF(){
 /* ---------- wiring ---------- */
 document.querySelectorAll('#scope button').forEach(function(b){b.addEventListener('click',function(){SCOPE=this.dataset.s;document.querySelectorAll('#scope button').forEach(function(x){x.classList.toggle('on',x===b);});render();});});
 document.getElementById('search').addEventListener('input',function(){SEARCH=this.value;render();});
-var _md=document.getElementById('mindays');['input','change'].forEach(function(ev){_md.addEventListener(ev,function(){MINDAYS=parseInt(this.value)||0;render();});});
+function applyOutFor(){
+  var of=document.getElementById('outfor'), cw=document.getElementById('custom-wrap');
+  if(of.value==='custom'){cw.style.display='inline';MINDAYS=(parseInt(document.getElementById('customnum').value)||0)*(parseInt(document.getElementById('customunit').value)||1);}
+  else{cw.style.display='none';MINDAYS=parseInt(of.value)||0;}
+  render();
+}
+document.getElementById('outfor').addEventListener('change',applyOutFor);
+['input','change'].forEach(function(ev){document.getElementById('customnum').addEventListener(ev,applyOutFor);});
+document.getElementById('customunit').addEventListener('change',applyOutFor);
 document.getElementById('sort').addEventListener('change',function(){SORT=this.value;render();});
 document.querySelectorAll('#groupby button').forEach(function(b){b.addEventListener('click',function(){GROUPBY=this.dataset.g;document.querySelectorAll('#groupby button').forEach(function(x){x.classList.toggle('on',x===b);});render();});});
 document.getElementById('refresh').addEventListener('click',loadAll);
