@@ -39,6 +39,7 @@
   .days{font-weight:800;text-align:center}
   .days.hi{color:var(--red)}.days.mid{color:var(--amber)}
   .muted{color:var(--sub);font-size:13px}
+  .lnk{border:none;background:none;color:var(--purple);font-weight:700;font-size:12px;cursor:pointer;padding:0}
   .tablewrap{overflow-x:auto;border-radius:10px}
   .loading{text-align:center;padding:40px;color:var(--sub)}
   .spin{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:s 1s linear infinite;margin:0 auto 10px}
@@ -48,7 +49,7 @@
 <body>
 <header>
   <h1>📋 Out of Stock — by Brand</h1>
-  <p>Items with no stock across all stores + warehouse, sorted by days. Export to Excel or PDF for ordering.</p>
+  <p>Items with no stock across all stores + warehouse. “Days out of stock” = days since it last sold (a product can’t sell once it’s at 0, so the last sale marks when it ran out). Export to Excel or PDF.</p>
 </header>
 <div class="wrap">
   <div class="card">
@@ -66,7 +67,7 @@
       <input class="t" id="search" placeholder="Search brand / name / barcode…" style="flex:1;min-width:160px">
       <label class="muted">Min days out <input class="t" id="mindays" type="number" min="0" value="0" style="width:70px"></label>
       <select class="t" id="sort">
-        <option value="days">Sort: most days out</option>
+        <option value="days">Sort: longest out of stock</option>
         <option value="brand">Sort: brand A–Z</option>
         <option value="name">Sort: product name</option>
       </select>
@@ -77,6 +78,7 @@
       <span class="sum" id="summary" style="margin-left:auto"></span>
     </div>
   </div>
+  <div class="card" id="deptbar" style="display:none"></div>
   <div id="out"><div class="loading"><div class="spin"></div>Loading all branches + warehouse…</div></div>
 </div>
 
@@ -88,6 +90,7 @@ var FEEDS=[
   {k:'roun', label:'Roundhay',  url:'/api/stock-data?branch=roundhay'}
 ];
 var SCOPE='all', SORT='days', SEARCH='', MINDAYS=0, GROUPBY='dept';
+var deptSel={'AFRO BEAUTY PRODUCTS':1,'AFRO PRODUCTS 2':1}, deptsOpen=false, deptInit=false;
 var __enrichTried={};
 var combined={}; // bc -> {nm,dp,sz,pr,brand, qty:{wh,chap,city,roun}, ls:{...}}
 var loaded=false;
@@ -151,15 +154,18 @@ async function enrichNames(){
   var conc=Math.min(3,batches.length);for(var k=0;k<conc;k++)pump();
 }
 
-function rowsFor(){
-  var arr=Object.keys(combined).map(function(k){return combined[k];});
-  // filter: out of stock
-  arr=arr.filter(function(c){
+function deptKey(c){return (c.dp||'').trim()||'Uncategorised';}
+function oosBase(){
+  return Object.keys(combined).map(function(k){return combined[k];}).filter(function(c){
     var storesOut=(c.qty.chap<=0&&c.qty.city<=0&&c.qty.roun<=0);
     if(!storesOut)return false;
-    if(SCOPE==='all'&&c.qty.wh>0)return false; // must also be out of the warehouse
+    if(SCOPE==='all'&&c.qty.wh>0)return false;
     return true;
   });
+}
+function rowsFor(){
+  var arr=oosBase();
+  if(Object.keys(deptSel).length)arr=arr.filter(function(c){return deptSel[deptKey(c)];});
   if(SEARCH){var q=SEARCH.toLowerCase();arr=arr.filter(function(c){return ((c.brand+' '+c.nm+' '+c.bc).toLowerCase().indexOf(q)>=0);});}
   if(MINDAYS>0)arr=arr.filter(function(c){return (c.days!=null&&c.days>=MINDAYS);});
   arr.sort(function(a,b){
@@ -176,8 +182,29 @@ function imgThumb(c){return c.img?'<img src="'+c.img+'" width="30" height="30" l
 function qcell(v){var cls=v<0?'neg':(v>0?'pos':'zero');return '<td class="q '+cls+'">'+v+'</td>';}
 function daysCell(d){if(d==null)return '<td class="days">—</td>';var cls=d>=30?'hi':(d>=7?'mid':'');return '<td class="days '+cls+'">'+d+'</td>';}
 
+function renderDeptBar(){
+  if(!loaded)return;
+  var base=oosBase();
+  var counts={};base.forEach(function(c){var k=deptKey(c);counts[k]=(counts[k]||0)+1;});
+  var depts=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
+  if(!deptInit){deptInit=true;var anyPre=depts.some(function(d){return deptSel[d];});if(!anyPre){deptSel={};depts.forEach(function(d){deptSel[d]=1;});}}
+  var sel=depts.filter(function(d){return deptSel[d];}).length;
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><button id="dept-toggle" style="border:none;background:none;font-weight:800;font-size:14px;cursor:pointer;padding:0">Departments \u00b7 '+sel+' selected '+(deptsOpen?'\u25b2':'\u25bc')+'</button><span><button id="dept-afro" class="lnk">Afro only</button> \u00b7 <button id="dept-all" class="lnk">All</button> \u00b7 <button id="dept-none" class="lnk">None</button></span></div>';
+  if(deptsOpen){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">';
+    depts.forEach(function(d){var on=!!deptSel[d];h+='<button class="dchip" data-d="'+esc(d)+'" style="border:1.5px solid '+(on?'var(--purple)':'var(--border)')+';background:'+(on?'var(--purple)':'#fff')+';color:'+(on?'#fff':'#111')+';border-radius:20px;padding:8px 13px;font-weight:700;font-size:12.5px;cursor:pointer">'+(on?'\u2713 ':'')+esc(d)+' ('+counts[d]+')</button>';});
+    h+='</div>';
+  }
+  var bar=document.getElementById('deptbar');bar.innerHTML=h;bar.style.display='block';
+  var tg=document.getElementById('dept-toggle');if(tg)tg.onclick=function(){deptsOpen=!deptsOpen;renderDeptBar();};
+  var af=document.getElementById('dept-afro');if(af)af.onclick=function(){deptSel={};['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'].forEach(function(d){deptSel[d]=1;});renderDeptBar();render();};
+  var al=document.getElementById('dept-all');if(al)al.onclick=function(){deptSel={};depts.forEach(function(d){deptSel[d]=1;});renderDeptBar();render();};
+  var nn=document.getElementById('dept-none');if(nn)nn.onclick=function(){deptSel={};renderDeptBar();render();};
+  document.querySelectorAll('#deptbar .dchip').forEach(function(b){b.onclick=function(){var d=this.getAttribute('data-d');if(deptSel[d])delete deptSel[d];else deptSel[d]=1;renderDeptBar();render();};});
+}
 function render(){
   if(!loaded)return;
+  renderDeptBar();
   var arr=rowsFor();
   var brands={};arr.forEach(function(c){var g=groupOf(c);(brands[g]=brands[g]||[]).push(c);});
   var bkeys=Object.keys(brands).sort(function(a,b){
@@ -190,7 +217,7 @@ function render(){
   bkeys.forEach(function(bk){
     var items=brands[bk];
     h+='<div class="brand-h"><span>'+esc(bk)+'</span><span class="c">'+items.length+' item'+(items.length>1?'s':'')+'</span></div>';
-    h+='<div class="tablewrap"><table><thead><tr><th>Product</th><th>Barcode</th><th>Dept</th><th>Chap</th><th>City</th><th>Roun</th><th>WH</th><th>Days out</th><th>Last sold</th><th>£</th></tr></thead><tbody>';
+    h+='<div class="tablewrap"><table><thead><tr><th>Product</th><th>Barcode</th><th>Dept</th><th>Chap</th><th>City</th><th>Roun</th><th>WH</th><th>Days out of stock</th><th>Last sold</th><th>£</th></tr></thead><tbody>';
     items.forEach(function(c){
       h+='<tr><td class="nm">'+imgThumb(c)+esc(dispName(c))+(c.sz?' · '+esc(c.sz):'')+'</td><td class="bc">'+esc(c.bc)+'</td><td class="muted">'+esc(c.dp||'')+'</td>'
         +qcell(c.qty.chap)+qcell(c.qty.city)+qcell(c.qty.roun)+qcell(c.qty.wh)
@@ -206,7 +233,7 @@ function exportRows(){
   return rowsFor().map(function(c){return {
     Department:c.dp||'', Brand:c.brand, Product:dispName(c), Size:c.sz||'', Barcode:c.bc,
     Chapeltown:c.qty.chap, City:c.qty.city, Roundhay:c.qty.roun, Warehouse:c.qty.wh,
-    DaysOut:(c.days==null?'':c.days), LastSold:c.lastSold, Price:(c.pr>0?c.pr:'')
+    'Days out of stock':(c.days==null?'':c.days), LastSold:c.lastSold, Price:(c.pr>0?c.pr:'')
   };});
 }
 function stamp(){var d=new Date();return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
@@ -239,7 +266,7 @@ function exportPDF(){
 /* ---------- wiring ---------- */
 document.querySelectorAll('#scope button').forEach(function(b){b.addEventListener('click',function(){SCOPE=this.dataset.s;document.querySelectorAll('#scope button').forEach(function(x){x.classList.toggle('on',x===b);});render();});});
 document.getElementById('search').addEventListener('input',function(){SEARCH=this.value;render();});
-document.getElementById('mindays').addEventListener('input',function(){MINDAYS=parseInt(this.value)||0;render();});
+var _md=document.getElementById('mindays');['input','change'].forEach(function(ev){_md.addEventListener(ev,function(){MINDAYS=parseInt(this.value)||0;render();});});
 document.getElementById('sort').addEventListener('change',function(){SORT=this.value;render();});
 document.querySelectorAll('#groupby button').forEach(function(b){b.addEventListener('click',function(){GROUPBY=this.dataset.g;document.querySelectorAll('#groupby button').forEach(function(x){x.classList.toggle('on',x===b);});render();});});
 document.getElementById('refresh').addEventListener('click',loadAll);
