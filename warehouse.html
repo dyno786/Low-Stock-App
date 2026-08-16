@@ -987,11 +987,34 @@ function renderPickedHTML(){
 function wirePicked(el){var b=document.getElementById('pk-clear-log');if(b)b.addEventListener('click',function(){if(confirm('Clear the picked log for everyone?')){pickedLog=[];savePicked();renderWH();}});}
 var orderDept='AFRO BEAUTY PRODUCTS', orderTopN=20, orderNames={};
 var orderQty={};try{orderQty=JSON.parse(localStorage.getItem('cc_wh_order')||'{}')||{};}catch(e){}
+var salesMap={};try{salesMap=JSON.parse(localStorage.getItem('cc_wh_sales')||'{}')||{};}catch(e){}
+function importSales(file){
+  var nm=(file.name||'').toLowerCase();
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var rows;
+    try{
+      if(nm.endsWith('.xlsx')||nm.endsWith('.xls')){var wb=XLSX.read(e.target.result,{type:'binary'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);}
+      else{rows=Papa.parse(e.target.result,{header:true,skipEmptyLines:true}).data;}
+    }catch(err){alert('Could not read the file: '+err.message);return;}
+    if(!rows||!rows.length){alert('The file has no rows.');return;}
+    var keys=Object.keys(rows[0]);
+    var bcK=keys.filter(function(k){return /bar\s*code|^ean$|^upc$/i.test(k);})[0];
+    var qK=keys.filter(function(k){return /qty\s*sold|sold\s*qty|units?\s*sold|quantity\s*sold/i.test(k);})[0]||keys.filter(function(k){return /^sold$/i.test(k);})[0];
+    if(!bcK||!qK){alert('Could not find a Barcode and a Qty Sold column.\nColumns found: '+keys.join(', '));return;}
+    var map={};rows.forEach(function(r){var bc=(''+(r[bcK]||'')).trim();var q=parseInt((''+(r[qK]||'')).replace(/[^0-9\-]/g,''))||0;if(bc)map[bc]=(map[bc]||0)+q;});
+    if(!Object.keys(map).length){alert('No barcodes/quantities found in that file.');return;}
+    salesMap=map;try{localStorage.setItem('cc_wh_sales',JSON.stringify(map));}catch(e){}
+    alert('Imported sales for '+Object.keys(map).length+' products. Now ranked by units sold.');
+    renderWH();
+  };
+  if(nm.endsWith('.xlsx')||nm.endsWith('.xls'))reader.readAsBinaryString(file);else reader.readAsText(file);
+}
 function saveOrderQty(){try{localStorage.setItem('cc_wh_order',JSON.stringify(orderQty));}catch(e){}}
 function ordEsc(s){return (''+(s==null?'':s)).replace(/[<>&]/g,function(c){return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;';});}
 function orderAllProducts(){var m={};for(var i=0;i<4;i++){(bd[i]||[]).forEach(function(p){if(!p.bc||!p.nm)return;var c=m[p.bc];if(!c){c=m[p.bc]={bc:p.bc,nm:p.nm,sz:p.sz||'',dp:p.dp||'',wh:0};}if(i===3)c.wh=p.qty||0;if(!c.dp&&p.dp)c.dp=p.dp;if(!c.sz&&p.sz)c.sz=p.sz;});}Object.keys(m).forEach(function(bc){var best=9999;for(var bi=0;bi<3;bi++){var ls=getLs(bi,bc);var d=ls?daysSince(ls):9999;if(d<best)best=d;}m[bc].rank=best;});return m;}
 function orderDepts(){var m=orderAllProducts(),d={};Object.keys(m).forEach(function(bc){var dp=(m[bc].dp||'').trim()||'Uncategorised';d[dp]=(d[dp]||0)+1;});return d;}
-function orderList(){var m=orderAllProducts();var arr=Object.keys(m).map(function(k){return m[k];}).filter(function(p){return ((p.dp||'').trim()||'Uncategorised')===orderDept;});arr.sort(function(a,b){return a.rank-b.rank || a.nm.localeCompare(b.nm);});if(orderTopN>0)arr=arr.slice(0,orderTopN);return arr;}
+function orderList(){var m=orderAllProducts();var arr=Object.keys(m).map(function(k){return m[k];}).filter(function(p){return ((p.dp||'').trim()||'Uncategorised')===orderDept;});var hasSales=Object.keys(salesMap).length>0;arr.sort(function(a,b){if(hasSales)return (salesMap[b.bc]||0)-(salesMap[a.bc]||0)||a.nm.localeCompare(b.nm);return a.rank-b.rank||a.nm.localeCompare(b.nm);});if(orderTopN>0)arr=arr.slice(0,orderTopN);return arr;}
 function ordName(p){return orderNames[p.bc]||p.nm;}
 function renderOrder(){
   var depts=orderDepts();var dkeys=Object.keys(depts).sort(function(a,b){return depts[b]-depts[a];});
@@ -1004,12 +1027,14 @@ function renderOrder(){
   h+='<div style="font-size:12px;color:var(--sub);margin-bottom:4px">Show top (by most recent sale)</div><div style="display:flex;gap:6px;margin-bottom:10px">';
   [20,40,60,100,0].forEach(function(n){var on=orderTopN===n;h+='<button class="ord-topn" data-n="'+n+'" style="flex:1;padding:9px 0;border:1.5px solid '+(on?'var(--purple)':'var(--border)')+';background:'+(on?'var(--purple)':'#fff')+';color:'+(on?'#fff':'inherit')+';border-radius:9px;font-weight:800;cursor:pointer">'+(n===0?'All':n)+'</button>';});
   h+='</div>';
+  var hasSales=Object.keys(salesMap).length>0;
+  h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><input type="file" id="ord-sales" accept=".csv,.xlsx,.xls" style="display:none"><button class="ord-import" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);border-radius:9px;padding:9px 12px;font-weight:800;cursor:pointer">📥 Import top sellers</button><span style="font-size:11.5px;color:var(--sub)">'+(hasSales?('✅ Ranked by units sold · '+Object.keys(salesMap).length+' products'):'Ranked by most recent sale — import your sales report to rank by units sold')+'</span></div>';
   var ordered=Object.keys(orderQty).filter(function(bc){return orderQty[bc]>0;}).length;
   h+='<div style="display:flex;gap:6px;margin-bottom:6px"><button class="ord-wa" style="flex:1;border:none;background:#25D366;color:#fff;border-radius:10px;padding:11px;font-weight:800;cursor:pointer">📲 WhatsApp</button><button class="ord-xls" style="flex:1;border:none;background:#16a34a;color:#fff;border-radius:10px;padding:11px;font-weight:800;cursor:pointer">Excel</button><button class="ord-pdf" style="flex:1;border:none;background:#c81e1e;color:#fff;border-radius:10px;padding:11px;font-weight:800;cursor:pointer">PDF</button></div>';
   h+='<div style="font-size:12px;color:var(--sub);margin-bottom:8px">'+ordered+' product'+(ordered===1?'':'s')+' with a qty · quantities are in dozens</div>';
   if(!list.length)h+='<div style="color:var(--sub)">No products in this department.</div>';
-  list.forEach(function(p){var doz=orderQty[p.bc]||0;var recent=(p.rank<9999)?(p.rank+'d ago'):'—';
-    h+='<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #f1f1f4"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+ordEsc(ordName(p))+(p.sz?(' · '+ordEsc(p.sz)):'')+'</div><div style="font-size:11px;color:var(--sub);font-family:ui-monospace,monospace">'+p.bc+' · WH '+p.wh+' · sold '+recent+'</div></div><div style="display:flex;align-items:center;gap:6px"><button class="ord-m" data-bc="'+p.bc+'" style="width:34px;height:34px;border:1px solid var(--border);background:#fff;border-radius:8px;font-weight:800;font-size:18px;cursor:pointer">−</button><div style="min-width:52px;text-align:center"><div style="font-weight:800;font-size:15px">'+doz+'</div><div style="font-size:9px;color:var(--sub)">doz</div></div><button class="ord-p" data-bc="'+p.bc+'" style="width:34px;height:34px;border:1px solid var(--border);background:#fff;border-radius:8px;font-weight:800;font-size:18px;cursor:pointer">+</button></div></div>';
+  list.forEach(function(p){var doz=orderQty[p.bc]||0;var recent=(p.rank<9999)?(p.rank+'d ago'):'—';var soldInfo=hasSales?('sold '+(salesMap[p.bc]||0)):('last '+recent);
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #f1f1f4"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+ordEsc(ordName(p))+(p.sz?(' · '+ordEsc(p.sz)):'')+'</div><div style="font-size:11px;color:var(--sub);font-family:ui-monospace,monospace">'+p.bc+' · WH '+p.wh+' · '+soldInfo+'</div></div><div style="display:flex;align-items:center;gap:6px"><button class="ord-m" data-bc="'+p.bc+'" style="width:34px;height:34px;border:1px solid var(--border);background:#fff;border-radius:8px;font-weight:800;font-size:18px;cursor:pointer">−</button><div style="min-width:52px;text-align:center"><div style="font-weight:800;font-size:15px">'+doz+'</div><div style="font-size:9px;color:var(--sub)">doz</div></div><button class="ord-p" data-bc="'+p.bc+'" style="width:34px;height:34px;border:1px solid var(--border);background:#fff;border-radius:8px;font-weight:800;font-size:18px;cursor:pointer">+</button></div></div>';
   });
   return h+'</div>';
 }
@@ -1018,6 +1043,7 @@ function wireOrder(el){
   el.querySelectorAll('.ord-topn').forEach(function(b){b.addEventListener('click',function(){orderTopN=+this.dataset.n;renderWH();});});
   el.querySelectorAll('.ord-p').forEach(function(b){b.addEventListener('click',function(){var bc=this.dataset.bc;orderQty[bc]=(orderQty[bc]||0)+1;saveOrderQty();renderWH();});});
   el.querySelectorAll('.ord-m').forEach(function(b){b.addEventListener('click',function(){var bc=this.dataset.bc;orderQty[bc]=Math.max(0,(orderQty[bc]||0)-1);if(!orderQty[bc])delete orderQty[bc];saveOrderQty();renderWH();});});
+  var imp=el.querySelector('.ord-import'),fi=document.getElementById('ord-sales');if(imp&&fi){imp.addEventListener('click',function(){fi.click();});fi.addEventListener('change',function(){if(this.files&&this.files[0])importSales(this.files[0]);});}
   var wa=el.querySelector('.ord-wa');if(wa)wa.addEventListener('click',orderWA);
   var xl=el.querySelector('.ord-xls');if(xl)xl.addEventListener('click',orderXLS);
   var pf=el.querySelector('.ord-pdf');if(pf)pf.addEventListener('click',orderPDF);
