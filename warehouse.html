@@ -993,6 +993,10 @@ function saveTopSellers(){try{localStorage.setItem('cc_wh_topsellers',JSON.strin
 function topSellersBoot(){if(window.__tsBoot||typeof syncLoad!=='function')return;window.__tsBoot=1;syncLoad('cc_wh_topsellers').then(function(o){if(Array.isArray(o)&&o.length){topSellers=o;try{localStorage.setItem('cc_wh_topsellers',JSON.stringify(o));}catch(e){}if(whTab==='order')renderWH();}}).catch(function(){});}
 var orderTags=['top100','warehouse'];try{var _t=JSON.parse(localStorage.getItem('cc_wh_tags')||'null');if(Array.isArray(_t))orderTags=_t;}catch(e){}
 var tagData={},tagLoading={};
+var orderTagsSel={};try{orderTagsSel=JSON.parse(localStorage.getItem('cc_wh_tagsel')||'{}')||{};}catch(e){}
+var orderSort='default';try{orderSort=localStorage.getItem('cc_wh_ordsort')||'default';}catch(e){}
+function saveTagSel(){try{localStorage.setItem('cc_wh_tagsel',JSON.stringify(orderTagsSel));}catch(e){}}
+function orderTagsSelected(){return Object.keys(orderTagsSel).filter(function(t){return orderTagsSel[t]&&orderTags.indexOf(t)>=0;});}
 function saveTags(){try{localStorage.setItem('cc_wh_tags',JSON.stringify(orderTags));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_tags',orderTags);}
 function tagsBoot(){if(window.__tgBoot||typeof syncLoad!=='function')return;window.__tgBoot=1;syncLoad('cc_wh_tags').then(function(o){if(Array.isArray(o)){orderTags=o;try{localStorage.setItem('cc_wh_tags',JSON.stringify(o));}catch(e){}if(whTab==='order')renderWH();}}).catch(function(){});}
 function loadTag(tag){if(tagData[tag]||tagLoading[tag])return;tagLoading[tag]=1;fetch('/api/shopify/tagged?tag='+encodeURIComponent(tag)).then(function(r){return r.ok?r.json():null;}).then(function(j){tagLoading[tag]=false;tagData[tag]=(j&&j.products)||[];(tagData[tag]||[]).forEach(function(t){if(t.image)orderImgs[t.barcode]=t.image;});if(whTab==='order')renderWH();}).catch(function(){tagLoading[tag]=false;tagData[tag]=[];if(whTab==='order')renderWH();});}
@@ -1025,10 +1029,13 @@ function saveOrderQty(){try{localStorage.setItem('cc_wh_order',JSON.stringify(or
 function ordEsc(s){return (''+(s==null?'':s)).replace(/[<>&]/g,function(c){return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;';});}
 function orderAllProducts(){var m={};for(var i=0;i<4;i++){(bd[i]||[]).forEach(function(p){if(!p.bc||!p.nm)return;var c=m[p.bc];if(!c){c=m[p.bc]={bc:p.bc,nm:p.nm,sz:p.sz||'',dp:p.dp||'',wh:0};}if(i===3)c.wh=p.qty||0;if(!c.dp&&p.dp)c.dp=p.dp;if(!c.sz&&p.sz)c.sz=p.sz;});}Object.keys(m).forEach(function(bc){var best=9999;for(var bi=0;bi<3;bi++){var ls=getLs(bi,bc);var d=ls?daysSince(ls):9999;if(d<best)best=d;}m[bc].rank=best;});return m;}
 function orderDepts(){var m=orderAllProducts(),d={};Object.keys(m).forEach(function(bc){var dp=(m[bc].dp||'').trim()||'Uncategorised';d[dp]=(d[dp]||0)+1;});return d;}
-function orderList(){var m=orderAllProducts();
-  if(orderDept.indexOf('TAG:')===0){var tag=orderDept.slice(4);var td=tagData[tag];if(!td){loadTag(tag);return [];}var seen={},ta=[];td.forEach(function(t){if(seen[t.barcode])return;seen[t.barcode]=1;var p=m[t.barcode]||{};ta.push({bc:t.barcode,nm:t.title||p.nm||t.barcode,sz:t.size||p.sz||'',dp:p.dp||'',wh:p.wh||0,rank:9999,img:t.image});});return orderTopN>0?ta.slice(0,orderTopN):ta;}
-  if(orderDept===TOPSELL){var a=topSellers.map(function(bc){return m[bc]||{bc:bc,nm:'(not found in stock)',sz:'',dp:'',wh:0,rank:9999};});return orderTopN>0?a.slice(0,orderTopN):a;}
-  var arr=Object.keys(m).map(function(k){return m[k];}).filter(function(p){return ((p.dp||'').trim()||'Uncategorised')===orderDept;});var hasSales=Object.keys(salesMap).length>0;arr.sort(function(a,b){if(hasSales)return (salesMap[b.bc]||0)-(salesMap[a.bc]||0)||a.nm.localeCompare(b.nm);return a.rank-b.rank||a.nm.localeCompare(b.nm);});if(orderTopN>0)arr=arr.slice(0,orderTopN);return arr;}
+function orderList(){var m=orderAllProducts();var arr;var tsel=orderTagsSelected();
+  if(tsel.length){var seen={};arr=[];tsel.forEach(function(tag){var td=tagData[tag];if(!td){loadTag(tag);return;}td.forEach(function(t){if(seen[t.barcode])return;seen[t.barcode]=1;var p=m[t.barcode]||{};arr.push({bc:t.barcode,nm:t.title||p.nm||t.barcode,sz:t.size||p.sz||'',dp:p.dp||'',wh:p.wh||0,rank:9999,img:t.image});});});}
+  else if(orderDept===TOPSELL){arr=topSellers.map(function(bc){return m[bc]||{bc:bc,nm:'(not found in stock)',sz:'',dp:'',wh:0,rank:9999};});}
+  else{arr=Object.keys(m).map(function(k){return m[k];}).filter(function(p){return ((p.dp||'').trim()||'Uncategorised')===orderDept;});var hasSales=Object.keys(salesMap).length>0;arr.sort(function(a,b){if(hasSales)return (salesMap[b.bc]||0)-(salesMap[a.bc]||0)||a.nm.localeCompare(b.nm);return a.rank-b.rank||a.nm.localeCompare(b.nm);});}
+  if(orderSort==='stocklow')arr.sort(function(a,b){return (a.wh||0)-(b.wh||0)||a.nm.localeCompare(b.nm);});
+  else if(orderSort==='stockhigh')arr.sort(function(a,b){return (b.wh||0)-(a.wh||0)||a.nm.localeCompare(b.nm);});
+  if(orderTopN>0)arr=arr.slice(0,orderTopN);return arr;}
 function ordName(p){return orderNames[p.bc]||p.nm;}
 function renderOrder(){
   var depts=orderDepts();var dkeys=Object.keys(depts).sort(function(a,b){return depts[b]-depts[a];});
@@ -1036,20 +1043,30 @@ function renderOrder(){
   if(orderDept!==TOPSELL&&dkeys.indexOf(orderDept)<0&&dkeys.length)orderDept=dkeys[0];
   var list=orderList();
   var h='<div style="padding:11px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:800;font-size:15px">🧾 Department order</div>'+(orderDept===TOPSELL?'<button class="ord-edit" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">✏️ Edit list</button>':'<button class="ord-tags" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">🏷 Edit tags</button>')+'</div>';
-  h+='<label style="font-size:12px;color:var(--sub)">Department</label><select id="ord-dept" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:15px;margin:4px 0 10px">';
-  h+='<option value="TOPSELL"'+(orderDept===TOPSELL?' selected':'')+'>⭐ Top sellers ('+topSellers.length+')</option>';
-  orderTags.forEach(function(tg){var cnt=tagData[tg]?tagData[tg].length:'…';h+='<option value="TAG:'+tg.replace(/"/g,'')+'"'+(orderDept==='TAG:'+tg?' selected':'')+'>🏷 '+ordEsc(tg)+' ('+cnt+')</option>';});
-  dkeys.forEach(function(d){h+='<option value="'+d.replace(/"/g,'&quot;')+'"'+(d===orderDept?' selected':'')+'>'+ordEsc(d)+' ('+depts[d]+')</option>';});
-  h+='</select>';
-  h+='<div style="font-size:12px;color:var(--sub);margin-bottom:4px">Show top (by most recent sale)</div><div style="display:flex;gap:6px;margin-bottom:10px">';
+  var tsel=orderTagsSelected();
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-size:12px;color:var(--sub)">Shopify tags — tick to show only these</span><button class="ord-tags" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:5px 9px;font-size:11.5px;font-weight:700;cursor:pointer">🏷 Edit tags</button></div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+  orderTags.forEach(function(tg){var on=!!orderTagsSel[tg];var cnt=tagData[tg]?tagData[tg].length:'…';h+='<button class="ord-tagchip" data-tag="'+tg.replace(/"/g,'')+'" style="border:1.5px solid '+(on?'var(--purple)':'var(--border)')+';background:'+(on?'var(--purple)':'#fff')+';color:'+(on?'#fff':'inherit')+';border-radius:20px;padding:8px 13px;font-weight:700;font-size:13px;cursor:pointer">'+(on?'✓ ':'')+'🏷 '+ordEsc(tg)+' ('+cnt+')</button>';});
+  if(!orderTags.length)h+='<span style="font-size:12px;color:var(--sub)">No tags yet — tap Edit tags (e.g. top100, warehouse)</span>';
+  h+='</div>';
+  if(!tsel.length){
+    h+='<label style="font-size:12px;color:var(--sub)">Or a list / department</label><select id="ord-dept" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:15px;margin:4px 0 10px">';
+    h+='<option value="TOPSELL"'+(orderDept===TOPSELL?' selected':'')+'>⭐ Top sellers ('+topSellers.length+')</option>';
+    dkeys.forEach(function(d){h+='<option value="'+d.replace(/"/g,'&quot;')+'"'+(d===orderDept?' selected':'')+'>'+ordEsc(d)+' ('+depts[d]+')</option>';});
+    h+='</select>';
+  } else { h+='<div style="font-size:12.5px;color:var(--purple);font-weight:800;margin:2px 0 10px">Showing tagged only: '+tsel.map(function(t){return ordEsc(t);}).join(', ')+'</div>'; }
+  h+='<div style="font-size:12px;color:var(--sub);margin-bottom:4px">Show top</div><div style="display:flex;gap:6px;margin-bottom:10px">';
   [20,40,60,100,0].forEach(function(n){var on=orderTopN===n;h+='<button class="ord-topn" data-n="'+n+'" style="flex:1;padding:9px 0;border:1.5px solid '+(on?'var(--purple)':'var(--border)')+';background:'+(on?'var(--purple)':'#fff')+';color:'+(on?'#fff':'inherit')+';border-radius:9px;font-weight:800;cursor:pointer">'+(n===0?'All':n)+'</button>';});
+  h+='</div>';
+  h+='<div style="font-size:12px;color:var(--sub);margin-bottom:4px">Sort</div><div style="display:flex;gap:6px;margin-bottom:10px">';
+  [['default','Default'],['stocklow','Stock low\u2192high'],['stockhigh','Stock high\u2192low']].forEach(function(o){var on=orderSort===o[0];h+='<button class="ord-sort" data-s="'+o[0]+'" style="flex:1;padding:9px 4px;border:1.5px solid '+(on?'var(--purple)':'var(--border)')+';background:'+(on?'var(--purple)':'#fff')+';color:'+(on?'#fff':'inherit')+';border-radius:9px;font-weight:800;font-size:12px;cursor:pointer">'+o[1]+'</button>';});
   h+='</div>';
   var hasSales=Object.keys(salesMap).length>0;
   h+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><input type="file" id="ord-sales" accept=".csv,.xlsx,.xls" style="display:none"><button class="ord-import" style="border:1.5px solid var(--purple);background:#fff;color:var(--purple);border-radius:9px;padding:9px 12px;font-weight:800;cursor:pointer">📥 Import top sellers</button><span style="font-size:11.5px;color:var(--sub)">'+(hasSales?('✅ Ranked by units sold · '+Object.keys(salesMap).length+' products'):'Ranked by most recent sale — import your sales report to rank by units sold')+'</span></div>';
   var ordered=Object.keys(orderQty).filter(function(bc){return orderQty[bc]>0;}).length;
   h+='<div style="display:flex;gap:6px;margin-bottom:6px"><button class="ord-wa" style="flex:1;border:none;background:#25D366;color:#fff;border-radius:10px;padding:11px;font-weight:800;cursor:pointer">📲 WhatsApp</button><button class="ord-xls" style="flex:1;border:none;background:#16a34a;color:#fff;border-radius:10px;padding:11px;font-weight:800;cursor:pointer">Excel</button><button class="ord-pdf" style="flex:1;border:none;background:#c81e1e;color:#fff;border-radius:10px;padding:11px;font-weight:800;cursor:pointer">PDF</button></div>';
   h+='<div style="font-size:12px;color:var(--sub);margin-bottom:8px">'+ordered+' product'+(ordered===1?'':'s')+' with a qty · quantities are in dozens</div>';
-  if(!list.length)h+='<div style="color:var(--sub)">No products in this department.</div>';
+  if(!list.length){var ts2=orderTagsSelected();if(ts2.length){var loading=ts2.some(function(t){return !tagData[t];});h+='<div style="color:var(--sub);padding:8px 0">'+(loading?'Loading tagged products from Shopify\u2026':('No products found on Shopify for tag'+(ts2.length>1?'s':'')+' "'+ts2.join('", "')+'". Check the tag spelling/case in Shopify, and that api/shopify/tagged.js is deployed.'))+'</div>';}else h+='<div style="color:var(--sub);padding:8px 0">No products in this list.</div>';}
   list.forEach(function(p){var doz=orderQty[p.bc]||0;var recent=(p.rank<9999)?(p.rank+'d ago'):'—';var soldInfo=hasSales?('sold '+(salesMap[p.bc]||0)):('last '+recent);
     h+='<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #f1f1f4">'+((p.img||orderImgs[p.bc])?('<img src="'+(p.img||orderImgs[p.bc])+'" width="36" height="36" loading="lazy" onerror="this.style.display=\'none\'" style="object-fit:cover;border-radius:6px;flex:0 0 auto">'):'')+'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+ordEsc(ordName(p))+(p.sz?(' · '+ordEsc(p.sz)):'')+'</div><div style="font-size:11px;color:var(--sub);font-family:ui-monospace,monospace">'+p.bc+' · WH '+p.wh+' · '+soldInfo+'</div></div><div style="display:flex;align-items:center;gap:6px"><button class="ord-m" data-bc="'+p.bc+'" style="width:34px;height:34px;border:1px solid var(--border);background:#fff;border-radius:8px;font-weight:800;font-size:18px;cursor:pointer">−</button><div style="min-width:52px;text-align:center"><div style="font-weight:800;font-size:15px">'+doz+'</div><div style="font-size:9px;color:var(--sub)">doz</div></div><button class="ord-p" data-bc="'+p.bc+'" style="width:34px;height:34px;border:1px solid var(--border);background:#fff;border-radius:8px;font-weight:800;font-size:18px;cursor:pointer">+</button></div></div>';
   });
@@ -1057,6 +1074,8 @@ function renderOrder(){
 }
 function wireOrder(el){
   var ds=document.getElementById('ord-dept');if(ds)ds.addEventListener('change',function(){orderDept=(this.value==='TOPSELL')?TOPSELL:this.value;renderWH();});
+  el.querySelectorAll('.ord-tagchip').forEach(function(b){b.addEventListener('click',function(){var tg=this.getAttribute('data-tag');if(orderTagsSel[tg])delete orderTagsSel[tg];else{orderTagsSel[tg]=1;loadTag(tg);}saveTagSel();renderWH();});});
+  el.querySelectorAll('.ord-sort').forEach(function(b){b.addEventListener('click',function(){orderSort=this.dataset.s;try{localStorage.setItem('cc_wh_ordsort',orderSort);}catch(e){}renderWH();});});
   var ed=el.querySelector('.ord-edit');if(ed)ed.addEventListener('click',function(){var v=prompt('Paste barcodes (one per line or space/comma separated), in best-seller order:',topSellers.join('\n'));if(v!=null){var arr=v.split(/[\s,]+/).map(function(x){return x.trim();}).filter(Boolean);if(arr.length){topSellers=arr;saveTopSellers();orderDept=TOPSELL;renderWH();}}});
   var et=el.querySelector('.ord-tags');if(et)et.addEventListener('click',editTags);
   orderTags.forEach(function(tg){loadTag(tg);});
