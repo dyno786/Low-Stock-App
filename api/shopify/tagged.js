@@ -71,7 +71,7 @@ export default async function handler(req, res) {
             .map((o) => o.value)
             .filter((v) => v && v !== "Default Title")
             .join(" ")) || "";
-          products.push({ barcode: bc, title: p.title, image: img, size, status: p.status, productId: String(p.id||''), variantTitle: (ve.node.selectedOptions||[]).map(function(o){return o.value;}).filter(function(v){return v&&v!=='Default Title';}).join(' ') });
+          products.push({ barcode: bc, title: p.title, image: img, size, status: p.status, productId: String(p.id||''), variantTitle: (ve.node.selectedOptions||[]).map(function(o){return o.value;}).filter(function(v){return v&&v!=='Default Title';}).join(' '), options: (ve.node.selectedOptions||[]).map(function(o){return {name:o.name,value:o.value};}) });
         });
       });
       hasNext = conn.pageInfo && conn.pageInfo.hasNextPage;
