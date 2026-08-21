@@ -1386,6 +1386,39 @@ function renderOrders(){
 var ORDERS_API='/api/orders';
 var ordData=[], ordErr='', ordHttp=0, ordLoading=false, ordLastAt=0;
 var ordBy='';try{ordBy=localStorage.getItem('cc_pick_by')||'';}catch(e){}
+var ordShowLog=false;
+var ORD_LOG_KEY='cc_pick_log'+DEST_ID;
+var ordPickLog=[];try{ordPickLog=JSON.parse(localStorage.getItem(ORD_LOG_KEY)||'[]')||[];}catch(e){}
+function ordLogPick(it,o){ordPickLog.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),by:ordBy||'Staff',br:_obm[DEST_ID].name,bc:it.barcode||'',title:it.title||'',variant:it.variant||'',qty:it.qty||1,order:o.name||'',ts:Date.now()});try{localStorage.setItem(ORD_LOG_KEY,JSON.stringify(ordPickLog.slice(-3000)));}catch(e){}ordLogSync();}
+var ordSharedLog=[];
+function ordLogAll(){var m={};ordSharedLog.forEach(function(e){if(e&&e.id)m[e.id]=e;});ordPickLog.forEach(function(e){if(e&&e.id)m[e.id]=e;});return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return a.ts-b.ts;});}
+function ordLogSync(){if(typeof syncLoad!=='function')return;syncLoad('cc_pick_log').then(function(srv){var m={};(Array.isArray(srv)?srv:[]).forEach(function(e){if(e&&e.id)m[e.id]=e;});ordPickLog.forEach(function(e){if(e&&e.id)m[e.id]=e;});var arr=Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return a.ts-b.ts;}).slice(-800);ordSharedLog=arr;if(typeof syncSave==='function')syncSave('cc_pick_log',arr);if(onPick()&&ordShowLog)renderOrdersInbox();}).catch(function(){});}
+function ordLogBoot(){if(typeof syncLoad!=='function')return;syncLoad('cc_pick_log').then(function(srv){if(Array.isArray(srv)){ordSharedLog=srv;if(onPick()&&ordShowLog)renderOrdersInbox();}}).catch(function(){});}
+function ordReportIssue(){var n=(typeof prompt==='function')?prompt('Damage / issue with this item? (note)',''):'';if(n!=null&&(''+n).trim()&&ordPickLog.length){ordPickLog[ordPickLog.length-1].condition=(''+n).trim();try{localStorage.setItem(ORD_LOG_KEY,JSON.stringify(ordPickLog.slice(-3000)));}catch(e){}ordLogSync();var d=document.getElementById('ord-big');if(d)d.style.display='none';if(onPick())renderOrdersInbox();}}
+function ordHint(msg){var ov=document.getElementById('ord-hint');if(!ov){ov=document.createElement('div');ov.id='ord-hint';ov.style.cssText='position:fixed;left:12px;right:12px;bottom:16px;z-index:99997;background:#111827;color:#fff;border-radius:12px;padding:13px 16px;font-weight:800;font-size:14px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.35);transition:opacity .2s';document.body.appendChild(ov);}ov.textContent=msg;ov.style.opacity='1';clearTimeout(window.__ordHintT);window.__ordHintT=setTimeout(function(){ov.style.opacity='0';},1700);}
+function ordLogHTML(){var all=ordLogAll();if(!all.length)return '<div class="empty" style="margin:0 0 8px">No picks logged yet.</div>';var rows=all.slice(-140).reverse().map(function(e){var d=new Date(e.ts);var when=d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});return '<div style="display:flex;gap:8px;padding:7px 0;border-top:1px solid #f1f1f4;font-size:12.5px"><div style="flex:1;min-width:0"><b>'+ordEsc(e.by)+'</b>'+(e.br?(' \u00b7 '+ordEsc(e.br)):'')+' \u00b7 '+e.qty+'\u00d7 '+ordEsc(e.title||e.bc)+(e.variant?(' ('+ordEsc(e.variant)+')'):'')+(e.condition?(' <span style="color:#dc2626;font-weight:800">\u26a0 '+ordEsc(e.condition)+'</span>'):'')+'<div style="color:var(--sub);font-size:11px">'+ordEsc(e.order)+' \u00b7 '+ordEsc(e.bc)+'</div></div><div style="color:var(--sub);white-space:nowrap">'+when+'</div></div>';}).join('');return '<div class="src-card" style="margin:0 0 8px;padding:8px 12px">'+rows+'<div style="text-align:right;margin-top:6px"><button class="ord-log-clear" style="border:1px solid var(--border,#ddd);background:#fff;color:#c81e1e;border-radius:8px;padding:6px 10px;font-weight:700;font-size:11px;cursor:pointer">Clear local log</button></div></div>';}
+function ordBigResult(kind,info){
+  ordBeep(kind==='ok'?true:(kind==='dup'?'dup':false));
+  var ov=document.getElementById('ord-big');
+  if(!ov){ov=document.createElement('div');ov.id='ord-big';ov.style.cssText='position:fixed;inset:0;z-index:100002;display:none;align-items:center;justify-content:center;padding:18px';ov.addEventListener('click',function(){ov.style.display='none';});document.body.appendChild(ov);}
+  var bg=(kind==='ok')?'#16a34a':(kind==='dup'?'#b45309':'#dc2626');
+  var inner;
+  if(kind==='bad'){
+    inner='<div style="font-size:110px;font-weight:900;line-height:1">\u2715</div><div style="font-size:26px;font-weight:900">WRONG ITEM</div><div style="font-size:15px;opacity:.95;margin-top:6px">Not on any order for this branch \u2014 do NOT pack</div><div style="font-family:ui-monospace,monospace;font-size:16px;margin-top:10px;background:#0003;border-radius:8px;padding:7px 12px;display:inline-block">'+ordEsc(info.bc||'')+'</div>';
+  } else {
+    var mark=(kind==='dup')?'\u2713 ALREADY PICKED':'\u2713 CORRECT';
+    inner=(info.img?('<img src="'+ordEsc(info.img)+'" style="width:100%;max-height:42vh;object-fit:contain;background:#0003;border-radius:14px">'):'')
+      +'<div style="font-size:30px;font-weight:900;margin-top:8px">'+mark+'</div>'
+      +'<div style="font-size:18px;font-weight:800;margin-top:6px">'+ordEsc(info.title||'')+'</div>'
+      +(info.variant?'<div style="font-size:14px;opacity:.92">'+ordEsc(info.variant)+'</div>':'')
+      +'<div style="font-family:ui-monospace,monospace;font-size:14px;margin-top:6px;opacity:.95">'+ordEsc(info.bc||'')+'</div>'
+      +'<div style="font-size:32px;font-weight:900;margin-top:10px;background:#0003;border-radius:12px;padding:6px 18px;display:inline-block">PICK '+info.qty+'</div>'
+      +'<div style="font-size:14px;margin-top:8px;opacity:.95">'+ordEsc(info.order||'')+'</div>';
+  }
+  ov.innerHTML='<div style="max-width:440px;width:100%;background:'+bg+';color:#fff;border-radius:20px;padding:22px;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,.45)">'+inner+(kind!=='bad'?'<div style="margin-top:12px"><button onclick="event.stopPropagation();ordReportIssue()" style="border:1px solid #ffffff88;background:#00000022;color:#fff;border-radius:9px;padding:8px 14px;font-weight:800;font-size:13px;cursor:pointer">\u26a0 Report damage / issue</button></div>':'')+'<div style="font-size:12px;opacity:.85;margin-top:14px">tap to close'+(info.by?(' \u00b7 '+ordEsc(info.by)):'')+'</div></div>';
+  ov.style.display='flex';
+  clearTimeout(window.__ordBigT);window.__ordBigT=setTimeout(function(){ov.style.display='none';},kind==='bad'?3600:2600);
+}
 var ordPickStart=0;
 var ordAlertsOn=false, ordPrimed=false, ordPollTimer=null, ordClockTimer=null, ordRinging=false, ordRingTimer=null, ordAudioCtx=null;
 var ORD_SEEN_KEY='cc_ord_seen'+DEST_ID, ORD_TICK_KEY='cc_pick_ticks'+DEST_ID;
@@ -1517,7 +1550,7 @@ function ordItemRow(o,r){
   var it=r.it,done=ordItemDone(o,r.idx,it.barcode),key=ordTickKey(o,r.idx,it.barcode);
   var imgFn=(typeof imgEl==='function')?imgEl:function(){return '';};
   var img='<div onclick="ordDetails(\''+ordAttr(o.id)+'\','+r.idx+')" style="flex:none;width:56px;height:56px;border-radius:9px;overflow:hidden;background:#f3f3f6;display:flex;align-items:center;justify-content:center;cursor:zoom-in">'+imgFn(it.barcode,56)+'</div>';
-  var tick='<button class="pick-tick" data-o="'+ordAttr(o.id)+'" data-k="'+ordAttr(key)+'" style="flex:none;width:30px;height:30px;border-radius:8px;border:2px solid '+(done?'#16a34a':'#cbd5e1')+';background:'+(done?'#16a34a':'#fff')+';color:#fff;font-weight:900;cursor:pointer;font-size:16px;line-height:1">'+(done?'✓':'')+'</button>';
+  var tick='<button class="pick-tick" data-o="'+ordAttr(o.id)+'" data-k="'+ordAttr(key)+'" data-bc="'+(it.barcode?'1':'')+'" style="flex:none;width:30px;height:30px;border-radius:8px;border:2px solid '+(done?'#16a34a':'#cbd5e1')+';background:'+(done?'#16a34a':'#fff')+';color:#fff;font-weight:900;cursor:pointer;font-size:16px;line-height:1">'+(done?'✓':'')+'</button>';
   var short=r.here<it.qty, acol=done?'#16a34a':(short?'#b45309':'#16a34a'), note=done?'collected':(short?('only '+r.here+' here / '+it.qty+' needed'):'in stock here');
   var strike=done?';text-decoration:line-through;color:#94a3b8':'';
   var mid;
@@ -1566,12 +1599,14 @@ function ordScanFeedback(ok,label){
 }
 function ordScan(raw){
   var code=ordScanNorm(raw);if(!code)return;
+  if(!ordBy){ordAskBy();}
   var byKey=ordIndex()||{},hit=null,already=null;
   for(var i=0;i<ordData.length&&!hit;i++){var o=ordData[i],fb=ordForBranch(o,byKey);
     for(var j=0;j<fb.mine.length;j++){var r=fb.mine[j];if(ordScanNorm(r.it.barcode)===code){if(ordItemDone(o,r.idx,r.it.barcode)){already={o:o,r:r};}else{hit={o:o,r:r};break;}}}}
-  if(hit){ordToggle(hit.o.id,ordTickKey(hit.o,hit.r.idx,hit.r.it.barcode));ordScanFeedback(true,(hit.r.it.title||'')+'  '+code);}
-  else if(already){ordScanFeedback('dup',(already.r.it.title||'')+'  '+code);}
-  else{ordScanFeedback(false,code);}
+  var _im=function(bc){return (typeof imgs!=='undefined'&&imgs[bc])?imgs[bc]:'';};
+  if(hit){var _it=hit.r.it;ordToggle(hit.o.id,ordTickKey(hit.o,hit.r.idx,_it.barcode));ordLogPick(_it,hit.o);ordBigResult('ok',{img:_im(_it.barcode),title:_it.title,variant:_it.variant,bc:code,qty:_it.qty,order:hit.o.name,by:ordBy});}
+  else if(already){var _ia=already.r.it;ordBigResult('dup',{img:_im(_ia.barcode),title:_ia.title,variant:_ia.variant,bc:code,qty:_ia.qty,order:already.o.name,by:ordBy});}
+  else{ordBigResult('bad',{bc:code,by:ordBy});}
 }
 var __ordCamOn=false,__ordScanLib=false,__ordLastScan={c:'',t:0};
 function ccLoadScanLib(cb){if(__ordScanLib||window.Html5Qrcode){cb(true);return;}var sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';sc.onload=function(){__ordScanLib=true;cb(true);};sc.onerror=function(){cb(false);};document.head.appendChild(sc);}
@@ -1617,9 +1652,12 @@ function renderOrdersInbox(){
     '<div class="src-rule" style="color:var(--sub)">Only items this branch should pick (priority Roundhay → Chapeltown → City). Tap a photo for details; tick each item as picked.</div></div></div>';
   head+='<div id="ord-timer" style="font-weight:800;font-size:15px;text-align:center;margin:0 0 8px;color:'+ordTimerColor()+'">'+ordTimerText()+'</div>';
   head+=ordStatusLine();
+  head+='<div style="display:flex;gap:6px;align-items:center;margin:0 0 8px;background:'+(ordBy?'#eef2ff':'#fef2f2')+';border:1px solid '+(ordBy?'#c7d2fe':'#fecaca')+';border-radius:11px;padding:9px 12px"><div style="flex:1;font-weight:800;font-size:14px">'+(ordBy?('\ud83d\udc64 Picker: '+ordEsc(ordBy)):'\u26a0\ufe0f Enter your name before picking')+'</div><button class="ord-name" style="border:1px solid var(--purple,#6d28d9);background:#fff;color:var(--purple,#6d28d9);border-radius:9px;padding:7px 11px;font-weight:800;font-size:12px;cursor:pointer">'+(ordBy?'Change':'Set name')+'</button></div>';
   head+='<div style="display:flex;gap:6px;margin:0 0 8px"><input id="ord-scan" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Scan or type barcode, then Enter" style="flex:1;min-width:0;border:2px solid var(--purple,#6d28d9);border-radius:11px;padding:12px;font-size:15px;font-family:ui-monospace,Menlo,monospace"><button class="ord-cam" style="border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:11px;padding:0 15px;font-weight:800;font-size:18px;cursor:pointer">📷</button></div>';
   head+='<div style="display:flex;gap:6px;margin:0 0 8px">'+ordVwBtn(true,'🖼️ Pictures + barcode')+ordVwBtn(false,'📋 Details')+'</div>';
   head+='<button class="ord-wa" style="width:100%;border:none;background:#25D366;color:#fff;border-radius:11px;padding:12px;font-weight:800;font-size:14px;cursor:pointer;margin:0 0 8px">📲 Send picked to WhatsApp</button>';
+  head+='<button class="ord-log" style="width:100%;border:1px solid var(--border,#ddd);background:#fff;border-radius:11px;padding:10px;font-weight:800;font-size:13px;cursor:pointer;margin:0 0 8px">\ud83d\udccb Pick log ('+ordPickLog.length+')'+(ordShowLog?' \u25b2':' \u25bc')+'</button>';
+  if(ordShowLog)head+=ordLogHTML();
   if(!ordAlertsOn){head+='<div style="margin:0 0 6px;display:flex;gap:8px"><button class="ord-enable" style="flex:1;border:none;background:var(--purple,#6d28d9);color:#fff;border-radius:11px;padding:11px;font-weight:800;font-size:14px;cursor:pointer">🔔 Enable order alerts</button><button class="ord-test" style="border:1px solid var(--line,#ddd);background:var(--card,#fff);border-radius:11px;padding:11px 14px;font-weight:700;cursor:pointer">Test ring</button></div><div style="font-size:11px;color:var(--sub);margin:0 0 8px">Tap once so the phone can ring. (iPhone can\u2019t vibrate from Safari — loud ring is the alert; Android also vibrates.)</div>';}
   else if(ordRinging){head+='<div style="margin:0 0 8px"><button class="ord-stop" style="width:100%;border:none;background:#dc2626;color:#fff;border-radius:11px;padding:12px;font-weight:800;font-size:15px;cursor:pointer">🔕 Stop ringing</button></div>';}
   else head+='<div style="margin:0 0 8px;font-size:12px;color:#16a34a;font-weight:700">🔔 Alerts on.</div>';
@@ -1645,11 +1683,14 @@ function wireOrders(){
   var rf=document.querySelector('.ord-refresh');if(rf)rf.addEventListener('click',ordPoll);
   var ts=document.querySelector('.ord-test');if(ts)ts.addEventListener('click',ordTestRing);
   document.querySelectorAll('.ord-vw').forEach(function(b){b.addEventListener('click',function(){ordSetView(this.getAttribute('data-c')==='1');});});
-  document.querySelectorAll('.pick-tick').forEach(function(b){b.addEventListener('click',function(){ordToggle(this.getAttribute('data-o'),this.getAttribute('data-k'));});});
+  document.querySelectorAll('.pick-tick').forEach(function(b){b.addEventListener('click',function(){var oid=this.getAttribute('data-o'),k=this.getAttribute('data-k');var isDone=!!(ordTicks[oid]&&ordTicks[oid][k]);if(this.getAttribute('data-bc')==='1'&&!isDone){ordHint('Scan the barcode to pick this item');return;}ordToggle(oid,k);});});
   var _wa=document.querySelector('.ord-wa');if(_wa)_wa.addEventListener('click',ordSendWA);
   var _sc=document.getElementById('ord-scan');
   if(_sc){_sc.addEventListener('keydown',function(e){if(e.key==='Enter'||e.keyCode===13){e.preventDefault();var v=this.value;this.value='';ordScan(v);}});if(!__ordCamOn){try{_sc.focus();}catch(e){}}}
   var _cm=document.querySelector('.ord-cam');if(_cm)_cm.addEventListener('click',ordCam);
+  var _nm=document.querySelector('.ord-name');if(_nm)_nm.addEventListener('click',function(){var n=prompt('Your name (picker/packer):',ordBy||'');if(n!=null&&(''+n).trim()){ordBy=(''+n).trim();try{localStorage.setItem('cc_pick_by',ordBy);}catch(e){}renderOrdersInbox();}});
+  var _lg=document.querySelector('.ord-log');if(_lg)_lg.addEventListener('click',function(){ordShowLog=!ordShowLog;if(ordShowLog)ordLogBoot();renderOrdersInbox();});
+  var _lc=document.querySelector('.ord-log-clear');if(_lc)_lc.addEventListener('click',function(){if(confirm('Clear the pick log on this device?')){ordPickLog=[];try{localStorage.setItem(ORD_LOG_KEY,'[]');}catch(e){}renderOrdersInbox();}});
 }
 function renderPick(){
   var el=document.getElementById('out');if(el)el.innerHTML='<div class="loading"><div class="spin"></div>Loading orders…</div>';
