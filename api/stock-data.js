@@ -29,6 +29,15 @@ const BRANCHES = [
 ];
 
 function splitCSVLine(line){var out=[],cur='',q=false;for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else{q=!q;}}else if(c===','&&!q){out.push(cur);cur='';}else{cur+=c;}}out.push(cur);return out;}
+function trimBranch(csv){
+  var lines=csv.split(/\r?\n/);
+  if(lines.length<2)return csv;
+  var h=splitCSVLine(lines[0]);var qi=h.indexOf('StockQty'),li=h.indexOf('LastSold');
+  if(qi<0)return csv;
+  var kept=[lines[0]];
+  for(var i=1;i<lines.length;i++){var ln=lines[i];if(!ln||!ln.trim())continue;var f=splitCSVLine(ln);var q=parseInt(f[qi]);var sold=li>=0?((f[li]||'').trim()):'';var hasSold=sold&&sold!=='Never'&&sold!=='NULL';if((!isNaN(q)&&q!==0)||hasSold)kept.push(ln);}
+  return kept.join('\n');
+}
 function trimInStock(csv){
   var lines=csv.split(/\r?\n/);
   if(lines.length<2)return csv;
@@ -67,6 +76,7 @@ export default async function handler(req) {
     });
     let csv = await res.text();
     if (branch === 'warehouse') { try { csv = trimInStock(csv); } catch(e) {} }
+    else if (branch === 'chapy' || branch === 'city' || branch === 'roundhay') { try { csv = trimBranch(csv); } catch(e) {} }
 
     return new Response(csv, {
       status: 200,
