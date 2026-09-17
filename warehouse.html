@@ -470,7 +470,7 @@ function sentBoot(){if(window.__sentBoot||typeof syncLoad!=='function')return;wi
 async function loadNS(){try{var r=await Promise.all([syncLoad('cc_whns0'),syncLoad('cc_whns1'),syncLoad('cc_whns2')]);whNS={0:r[0]||{},1:r[1]||{},2:r[2]||{}};}catch(e){}}
 var pickCounts=[0,0,0];
 var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_brandcollapsed')||'{}');}catch(e){}
-var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup'||v==='map'||v==='over'||v==='picked'||v==='order'||v==='held')?v:'topup';}catch(e){return 'topup';}})();
+var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup'||v==='map'||v==='over'||v==='picked'||v==='order'||v==='held'||v==='ticked')?v:'topup';}catch(e){return 'topup';}})();
 var offers={};try{offers=JSON.parse(localStorage.getItem('cc_wh_offers')||'{}');}catch(e){offers={};}
 function saveOffers(){try{localStorage.setItem('cc_wh_offers',JSON.stringify(offers));}catch(e){}}
 var ovMin=50,ovSlow=false;
@@ -1058,6 +1058,17 @@ function saveOrderQty(){try{localStorage.setItem('cc_wh_order',JSON.stringify(or
 function ordEsc(s){return (''+(s==null?'':s)).replace(/[<>&]/g,function(c){return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;';});}
 function renderHeldHTML(){var w=holdHours()*3600000,now=Date.now(),rows=[];Object.keys(whSent).forEach(function(k){var t=whSent[k];if(!t||(now-t)>=w)return;var pp=k.split('|');var bc=pp[0],bi=+pp[1];var it=(typeof findItem==='function')?findItem(bc):null;rows.push({k:k,bc:bc,bi:bi,nm:it?it.nm:bc,sz:it?it.sz:'',left:w-(now-t)});});rows.sort(function(a,b){return a.left-b.left;});var h='<div style="padding:11px"><div style="font-weight:800;font-size:15px;margin-bottom:6px">🕓 Sent — on hold ('+rows.length+')</div><div style="font-size:12px;color:var(--sub);margin-bottom:10px">Packed to a branch and hidden from the pick list for '+holdHours()+'h — branches take 1–2 days to book stock in. They come back automatically after that if still low. Change the window in ⚙ settings.</div>';if(!rows.length)h+='<div class="empty">Nothing on hold.</div>';rows.forEach(function(r){var hrs=Math.ceil(r.left/3600000);h+='<div style="display:flex;gap:8px;align-items:center;padding:9px 0;border-top:1px solid #f1f1f4"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+escP(r.nm)+(r.sz?(' · '+escP(r.sz)):'')+'</div><div style="font-size:11px;color:var(--sub);font-family:ui-monospace,monospace">'+r.bc+' · '+((BR[r.bi]&&BR[r.bi].name)||('branch '+r.bi))+'</div></div><div style="text-align:right;min-width:56px"><div style="font-weight:800;color:var(--purple)">'+hrs+'h</div><div style="font-size:9px;color:var(--sub)">returns in</div></div><button class="held-back" data-k="'+escP(r.k)+'" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;margin-left:8px">Return now</button></div>';});return h+'</div>';}
 function wireHeld(el){el.querySelectorAll('.held-back').forEach(function(b){b.addEventListener('click',function(){var k=this.getAttribute('data-k');delete whSent[k];saveSent();renderWH();});});}
+function tickedCount(){var n=0;Object.keys(pkTx).forEach(function(bc){var a=pkTx[bc];if(a)for(var i=0;i<3;i++)if(a[i])n++;});return n;}
+function untick(bc,bi){if(pkTx[bc])pkTx[bc][bi]=false;try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}if(typeof syncSave==='function')syncSave('cc_pk_ticks',pkTx);if(typeof unmarkSent==='function')unmarkSent(bc,bi);var it=(typeof findItem==='function')?findItem(bc):null;sheetLog({action:'unticked',barcode:bc,product:it?it.nm:'',qty:0,branch:(BR[bi]&&BR[bi].name)||('branch '+bi)});renderWH();}
+function renderTickedHTML(){
+  var rows=[];Object.keys(pkTx).forEach(function(bc){var a=pkTx[bc];if(!a)return;for(var bi=0;bi<3;bi++){if(a[bi]){var it=(typeof findItem==='function')?findItem(bc):null;rows.push({bc:bc,bi:bi,nm:it?it.nm:bc,sz:it?it.sz:''});}}});
+  rows.sort(function(a,b){return a.nm.localeCompare(b.nm)|| (a.bi-b.bi);});
+  var h='<div style="padding:11px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:800;font-size:15px">\u2611 Ticked ('+rows.length+')</div>'+(rows.length?'<button class="untick-all" style="border:1px solid #fca5a5;background:#fff;color:#dc2626;border-radius:8px;padding:6px 10px;font-weight:800;font-size:12px;cursor:pointer">Untick all</button>':'')+'</div><div style="font-size:12px;color:var(--sub);margin-bottom:10px">Everything you\u2019ve packed. Tap Untick to send it back to the Top-up list.</div>';
+  if(!rows.length)h+='<div class="empty">Nothing ticked yet.</div>';
+  rows.forEach(function(r){h+='<div style="display:flex;gap:8px;align-items:center;padding:9px 0;border-top:1px solid #f1f1f4"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+escP(r.nm)+(r.sz?(' \u00b7 '+escP(r.sz)):'')+'</div><div style="font-size:11px;color:var(--sub);font-family:ui-monospace,monospace">'+r.bc+' \u00b7 '+((BR[r.bi]&&BR[r.bi].name)||('branch '+r.bi))+'</div></div><button class="untick-btn" data-bc="'+escP(r.bc)+'" data-bi="'+r.bi+'" style="border:1px solid #fca5a5;background:#fff;color:#dc2626;border-radius:8px;padding:7px 12px;font-weight:800;font-size:12px;cursor:pointer">Untick</button></div>';});
+  return h+'</div>';
+}
+function wireTicked(el){el.querySelectorAll('.untick-btn').forEach(function(b){b.addEventListener('click',function(){untick(this.getAttribute('data-bc'),+this.getAttribute('data-bi'));});});var ua=el.querySelector('.untick-all');if(ua)ua.addEventListener('click',function(){if(!confirm('Untick everything you\'ve packed and send it all back to the pick list?'))return;Object.keys(pkTx).forEach(function(bc){var a=pkTx[bc];if(a)for(var bi=0;bi<3;bi++){if(a[bi]){a[bi]=false;if(typeof unmarkSent==='function')unmarkSent(bc,bi);}}});try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}if(typeof syncSave==='function')syncSave('cc_pk_ticks',pkTx);renderWH();});}
 function orderAllProducts(){var m={};for(var i=0;i<4;i++){(bd[i]||[]).forEach(function(p){if(!p.bc||!p.nm)return;var c=m[p.bc];if(!c){c=m[p.bc]={bc:p.bc,nm:p.nm,sz:p.sz||'',dp:p.dp||'',wh:0};}if(i===3)c.wh=p.qty||0;if(!c.dp&&p.dp)c.dp=p.dp;if(!c.sz&&p.sz)c.sz=p.sz;});}Object.keys(m).forEach(function(bc){var best=9999;for(var bi=0;bi<3;bi++){var ls=getLs(bi,bc);var d=ls?daysSince(ls):9999;if(d<best)best=d;}m[bc].rank=best;});return m;}
 function orderDepts(){var m=orderAllProducts(),d={};Object.keys(m).forEach(function(bc){var dp=(m[bc].dp||'').trim()||'Uncategorised';d[dp]=(d[dp]||0)+1;});return d;}
 function orderList(){var m=orderAllProducts();var arr;var tsel=orderTagsSelected();
@@ -1170,6 +1181,7 @@ function renderWH(){
     '<button class="wh-tab'+(whTab==='map'?' active':'')+'" data-tab="map">🗺 Map</button>'+
     '<button class="wh-tab'+(whTab==='picked'?' active':'')+'" data-tab="picked">✅ Picked <span class="wh-tab-n">'+pickedLog.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='held'?' active':'')+'" data-tab="held">🕓 Sent <span class="wh-tab-n">'+heldCount()+'</span></button>'+
+    '<button class="wh-tab'+(whTab==='ticked'?' active':'')+'" data-tab="ticked">☑ Ticked <span class="wh-tab-n">'+tickedCount()+'</span></button>'+
     '<button class="wh-tab'+(whTab==='order'?' active':'')+'" data-tab="order">🧾 Order</button>'+
     '<button class="wh-gear" id="wh-gear" title="Settings">⚙</button>'+
   '</div>';
@@ -1177,6 +1189,11 @@ function renderWH(){
   if(whTab==='held'){
     el.innerHTML=tabBar+renderHeldHTML();
     wireTabsBar();wireHeld(el);
+    return;
+  }
+  if(whTab==='ticked'){
+    el.innerHTML=tabBar+renderTickedHTML();
+    wireTabsBar();wireTicked(el);
     return;
   }
   if(whTab==='map'){
