@@ -439,7 +439,8 @@ var pkTx={};
 try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
 // who is picking + the shared 'picked' audit log
 var pickerName='';try{pickerName=localStorage.getItem('cc_pk_name')||'';}catch(e){}
-function sheetUrl(){try{return localStorage.getItem('cc_wh_sheet_url')||'';}catch(e){return '';}}
+var DEFAULT_SHEET_URL='https://script.google.com/macros/s/AKfycbzOKY7WTRVudsLbsug5LfcETAqLaq3NFDf8vweCPsfjdVCQJOamOeCb4W24EDfK7Wuc/exec';
+function sheetUrl(){try{var u=localStorage.getItem('cc_wh_sheet_url');if(u&&u.trim())return u.trim();}catch(e){}return DEFAULT_SHEET_URL;}
 function sheetLog(row){var u=sheetUrl();if(!u)return;try{row.ts=new Date().toISOString();row.by=pickerName||'Staff';row.device='Warehouse';fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(row)}).catch(function(){});}catch(e){}}
 function saveCfg(){if(typeof syncSave==='function')try{syncSave('cc_wh_set',{minPick:minPick,minMode:minMode,sheetUrl:sheetUrl(),hold:holdHours()});}catch(e){}}
 var __cfgT;function cfgDebounce(){clearTimeout(__cfgT);__cfgT=setTimeout(saveCfg,800);}
