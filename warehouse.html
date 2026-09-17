@@ -441,9 +441,9 @@ try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
 var pickerName='';try{pickerName=localStorage.getItem('cc_pk_name')||'';}catch(e){}
 function sheetUrl(){try{return localStorage.getItem('cc_wh_sheet_url')||'';}catch(e){return '';}}
 function sheetLog(row){var u=sheetUrl();if(!u)return;try{row.ts=new Date().toISOString();row.by=pickerName||'Staff';row.device='Warehouse';fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(row)}).catch(function(){});}catch(e){}}
-function saveCfg(){if(typeof syncSave==='function')try{syncSave('cc_wh_cfg',{sheetUrl:sheetUrl(),hold:holdHours()});}catch(e){}}
+function saveCfg(){if(typeof syncSave==='function')try{syncSave('cc_wh_set',{minPick:minPick,minMode:minMode,sheetUrl:sheetUrl(),hold:holdHours()});}catch(e){}}
 var __cfgT;function cfgDebounce(){clearTimeout(__cfgT);__cfgT=setTimeout(saveCfg,800);}
-function cfgBoot(){if(window.__cfgBoot||typeof syncLoad!=='function')return;window.__cfgBoot=1;syncLoad('cc_wh_cfg').then(function(o){if(o&&typeof o==='object'){var ch=false;if(o.sheetUrl&&o.sheetUrl!==sheetUrl()){try{localStorage.setItem('cc_wh_sheet_url',o.sheetUrl);}catch(e){}ch=true;}if(typeof o.hold!=='undefined'&&String(o.hold)!==String(holdHours())){try{localStorage.setItem('cc_wh_hold',String(o.hold));}catch(e){}ch=true;}if(ch){var a=document.getElementById('set-sheet');if(a)a.value=sheetUrl();var b=document.getElementById('set-hold');if(b)b.value=holdHours();}}}).catch(function(){});}
+function cfgBoot(){if(window.__cfgBoot||typeof syncLoad!=='function')return;window.__cfgBoot=1;syncLoad('cc_wh_set').then(function(o){if(o&&typeof o==='object'){var ch=false;if(o.sheetUrl&&o.sheetUrl!==sheetUrl()){try{localStorage.setItem('cc_wh_sheet_url',o.sheetUrl);}catch(e){}ch=true;}if(typeof o.hold!=='undefined'&&String(o.hold)!==String(holdHours())){try{localStorage.setItem('cc_wh_hold',String(o.hold));}catch(e){}ch=true;}if(ch){var a=document.getElementById('set-sheet');if(a)a.value=sheetUrl();var b=document.getElementById('set-hold');if(b)b.value=holdHours();}}}).catch(function(){});}
 function forceSaveTicks(){try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}try{localStorage.setItem('cc_wh_order',JSON.stringify(orderQty));}catch(e){}if(typeof syncSave==='function'){try{syncSave('cc_pk_ticks',pkTx);}catch(e){}}}
 try{document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')forceSaveTicks();});window.addEventListener('pagehide',forceSaveTicks);}catch(e){}
 function ensurePicker(){if(!pickerName){var n=(typeof prompt==='function')?prompt('Your name (shown in the Picked list):',''):'';if(n&&(''+n).trim()){pickerName=(''+n).trim();try{localStorage.setItem('cc_pk_name',pickerName);}catch(e){}}}return pickerName||'Staff';}
@@ -524,7 +524,7 @@ var minPick=2, minMode='branch';   // 'branch' = each branch must reach minPick;
 try{var _mp=parseInt(localStorage.getItem('cc_pk_minqty'));if(!isNaN(_mp)&&_mp>=1)minPick=_mp;var _mm=localStorage.getItem('cc_pk_minmode');if(_mm==='total'||_mm==='branch')minMode=_mm;}catch(e){}
 function saveSettings(){
   try{localStorage.setItem('cc_pk_minqty',String(minPick));localStorage.setItem('cc_pk_minmode',minMode);}catch(e){}
-  if(typeof syncSave==='function')syncSave('cc_wh_set',{minPick:minPick,minMode:minMode});
+  if(typeof syncSave==='function')syncSave('cc_wh_set',{minPick:minPick,minMode:minMode,sheetUrl:sheetUrl(),hold:holdHours()});
 }
 
 // ── PICK-TIME ESTIMATE (self-calibrating) ──────────────────
@@ -681,7 +681,7 @@ async function doSync(){
   if(shared){Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
   try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
   var st=await syncLoad('cc_wh_set');
-  if(st&&typeof st==='object'){if(st.minPick>=1)minPick=st.minPick|0;if(st.minMode==='total'||st.minMode==='branch')minMode=st.minMode;try{localStorage.setItem('cc_pk_minqty',String(minPick));localStorage.setItem('cc_pk_minmode',minMode);}catch(e){}}
+  if(st&&typeof st==='object'){if(st.minPick>=1)minPick=st.minPick|0;if(st.minMode==='total'||st.minMode==='branch')minMode=st.minMode;try{localStorage.setItem('cc_pk_minqty',String(minPick));localStorage.setItem('cc_pk_minmode',minMode);}catch(e){}if(st.sheetUrl){try{localStorage.setItem('cc_wh_sheet_url',st.sheetUrl);}catch(e){}}if(typeof st.hold!=='undefined'){try{localStorage.setItem('cc_wh_hold',String(st.hold));}catch(e){}}}
   var ss=await syncLoad('cc_pk_session');pkSession=(ss&&ss.start)?ss:null;
   if(pkSession&&pkSession.last&&!tmr.on&&(Date.now()-pkSession.last)>IDLE_MS){
     var sms=Math.max(0,pkSession.last-pkSession.start),scells=pkSession.done||0;
