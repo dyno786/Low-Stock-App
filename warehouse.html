@@ -1919,8 +1919,7 @@ async function runSysCheck(){
   document.getElementById('sc-content').innerHTML=html;
 }
 
-(function(){function _w(){var _sp=document.getElementById('sc-panel');if(_sp)_sp.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_w);else _w();})();
-document.getElementById('sc-recheck').addEventListener('click',runSysCheck);
+(function(){function _w(){var _sp=document.getElementById('sc-panel');if(_sp)_sp.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});var _rc=document.getElementById('sc-recheck');if(_rc)_rc.addEventListener('click',runSysCheck);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_w);else _w();})();
 </script>
 
 <!-- SYSTEM CHECK PANEL -->
