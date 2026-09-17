@@ -28,6 +28,16 @@ const BRANCHES = [
   { id: 'warehouse-log', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR7w_JR_xjlsZTD4-WMWoxotOPHDGg7Kgj7yvGGtJLZUL8apgHzBTOQxM7eBNu2VVirn6ehnlNR4vC6/pub?gid=59104254&single=true&output=csv' },
 ];
 
+function splitCSVLine(line){var out=[],cur='',q=false;for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else{q=!q;}}else if(c===','&&!q){out.push(cur);cur='';}else{cur+=c;}}out.push(cur);return out;}
+function trimInStock(csv){
+  var lines=csv.split(/\r?\n/);
+  if(lines.length<2)return csv;
+  var qi=splitCSVLine(lines[0]).indexOf('StockQty');
+  if(qi<0)return csv;
+  var kept=[lines[0]];
+  for(var i=1;i<lines.length;i++){var ln=lines[i];if(!ln||!ln.trim())continue;var q=parseInt(splitCSVLine(ln)[qi]);if(!isNaN(q)&&q>0)kept.push(ln);}
+  return kept.join('\n');
+}
 export default async function handler(req) {
   const cors = {
     'Access-Control-Allow-Origin': '*',
@@ -55,7 +65,8 @@ export default async function handler(req) {
     const res = await fetch(target.url, {
       headers: { 'User-Agent': 'CC-Stock-App/1.0' }
     });
-    const csv = await res.text();
+    let csv = await res.text();
+    if (branch === 'warehouse') { try { csv = trimInStock(csv); } catch(e) {} }
 
     return new Response(csv, {
       status: 200,
