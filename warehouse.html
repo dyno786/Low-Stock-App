@@ -419,6 +419,8 @@ var SHOW_DIST=false;       // set true to show the distribution % + estimate car
 var SHOW_TIMER_BAR=false;  // false = time picks silently (no on-screen timer for staff)
 var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
+window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
+if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
