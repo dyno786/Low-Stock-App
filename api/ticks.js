@@ -1,5 +1,5 @@
-// api/ticks.js — Shared tick state using Upstash Redis
-// Supports all variable names Vercel might inject from Upstash integration
+// api/ticks.js — Shared tick state via Upstash Redis (REST command API)
+// Fixes the previous double-encoding bug (values were stored char-by-char).
 
 export const config = { runtime: 'edge' };
 
@@ -12,33 +12,49 @@ export default async function handler(req) {
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
   };
+  if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers: cors });
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: cors });
-  }
-
-  // Use whichever variable name Vercel injected
   const REDIS_URL   = process.env.KV_REST_API_URL   || process.env.KV_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const REDIS_TOKEN = process.env.KV_REST_API_TOKEN  || process.env.UPSTASH_REDIS_REST_TOKEN;
-
+  const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!REDIS_URL || !REDIS_TOKEN) {
     return new Response(JSON.stringify({ fallback: true, hint: 'missing env vars' }), { status: 200, headers: cors });
   }
 
-  const auth = { Authorization: `Bearer ${REDIS_TOKEN}` };
+  // Run a Redis command via the Upstash REST command API: body = ["SET","key","value",...]
+  const cmd = async (arr) => {
+    const r = await fetch(REDIS_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(arr),
+    });
+    return r.json();
+  };
+
+  const url = new URL(req.url);
 
   if (req.method === 'GET') {
-    const url = new URL(req.url);
+    // Admin: wipe a corrupted key ->  /api/ticks?del=cc_pk_ticks
+    const del = url.searchParams.get('del');
+    if (del) {
+      if (!ALLOWED_KEYS.includes(del)) return new Response(JSON.stringify({ error: 'Invalid key' }), { status: 400, headers: cors });
+      try { await cmd(['DEL', del]); return new Response(JSON.stringify({ ok: true, deleted: del }), { status: 200, headers: cors }); }
+      catch (e) { return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: cors }); }
+    }
+
     const key = url.searchParams.get('key');
     if (!key || !ALLOWED_KEYS.includes(key)) {
       return new Response(JSON.stringify({ error: 'Invalid key' }), { status: 400, headers: cors });
     }
     try {
-      const res = await fetch(`${REDIS_URL}/get/${key}`, { headers: auth });
-      const data = await res.json();
-      const value = data.result ? JSON.parse(data.result) : null;
+      const data = await cmd(['GET', key]);
+      let value = null;
+      if (data && data.result != null) {
+        // Parse once (new format). If still a JSON string (legacy double-encoded), parse again.
+        try { value = JSON.parse(data.result); } catch { value = data.result; }
+        if (typeof value === 'string') { try { value = JSON.parse(value); } catch {} }
+      }
       return new Response(JSON.stringify({ data: value }), { status: 200, headers: cors });
-    } catch(e) {
+    } catch (e) {
       return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: cors });
     }
   }
@@ -50,16 +66,16 @@ export default async function handler(req) {
       if (!key || !ALLOWED_KEYS.includes(key)) {
         return new Response(JSON.stringify({ error: 'Invalid key' }), { status: 400, headers: cors });
       }
-      const res = await fetch(`${REDIS_URL}/set/${key}`, {
-        method: 'POST',
-        headers: { ...auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify(JSON.stringify(value))
-      });
-      // 30 day expiry
-      await fetch(`${REDIS_URL}/expire/${key}/2592000`, { method: 'POST', headers: auth });
-      const data = await res.json();
-      return new Response(JSON.stringify({ ok: data.result === 'OK' }), { status: 200, headers: cors });
-    } catch(e) {
+      // null/undefined value = delete the key
+      if (value === null || value === undefined) {
+        await cmd(['DEL', key]);
+        return new Response(JSON.stringify({ ok: true, deleted: key }), { status: 200, headers: cors });
+      }
+      // SET with 30-day expiry, atomically. Single JSON encode (the fix).
+      const data = await cmd(['SET', key, JSON.stringify(value), 'EX', 2592000]);
+      const ok = data && (data.result === 'OK' || data.result === 1 || data.result === 'true');
+      return new Response(JSON.stringify({ ok: !!ok }), { status: 200, headers: cors });
+    } catch (e) {
       return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: cors });
     }
   }
