@@ -421,6 +421,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
+var WH_VER='build 9';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -582,10 +583,10 @@ async function livePoll(){
     if(!all)return;
     var _rs=all.cc_pk_reset;
     if(_rs&&_rs>pkResetTs){pkResetTs=_rs;try{localStorage.setItem('cc_pk_reset',String(_rs));localStorage.setItem('cc_pk_ticks','{}');}catch(e){}pkTx={};tmr.on=false;tmr.done=false;try{clearInterval(tmr.iv);}catch(e){}pkSession=null;if(loaded>=4)renderWH();}
-    if(mergePicked(all.cc_pk_picked)&&whTab==='picked'&&loaded>=4)renderWH();
     var sess=all.cc_pk_session;pkSession=(sess&&sess.start)?sess:null;
     // idle = this device hasn't ticked in the last 5s -> safe to MIRROR Redis exactly
     var idle=(Date.now()-(window.__pkWrite||0))>5000 && !tmr.on;
+    if(Array.isArray(all.cc_pk_picked)){if(idle){pickedLog=all.cc_pk_picked.slice(-2000);savePickedLocal();if(whTab==='picked'&&loaded>=4)renderWH();}else if(mergePicked(all.cc_pk_picked)&&whTab==='picked'&&loaded>=4)renderWH();}
     var rawShared=all.cc_pk_ticks;
     var shared=cleanPk(rawShared);
     if(pkCorrupt(rawShared)){try{if(typeof syncSave==='function')syncSave('cc_pk_ticks',shared);}catch(e){}}
@@ -810,7 +811,7 @@ async function loadVendors(){
 }
 function parseStock(t){return Papa.parse(t,{header:true,skipEmptyLines:true}).data.map(function(row){var ls=cl(row['LastSold']);return{bc:cl(row['Barcode']),nm:cl(row['ProductName']),sz:cl(row['Size']),qty:parseInt(row['StockQty'])||0,prc:parseFloat(row['Price'])||0,mx:parseInt(row['MaxStock'])||0,dp:cl(row['Department']),ls:(ls&&ls!=='NULL')?ls:'Never'};}).filter(function(p){return p.bc&&p.nm;});}
 function whAllReady(){return !!(bd[0]&&bd[1]&&bd[2]&&bd[3]);}
-function whSetStime(){var _t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});var _st=document.getElementById('stime');if(_st)_st.textContent=whAllReady()?('live \u00b7 '+_t):('loading '+loaded+'/4\u2026');}
+function whSetStime(){var _t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});var _st=document.getElementById('stime');if(_st)_st.textContent=(whAllReady()?('live \u00b7 '+_t):('loading '+loaded+'/4\u2026'))+' \u00b7 '+WH_VER;}
 async function loadBranch(i){
   var CACHE=(i===3)?'cc_wh_raw3':null;
   // Warehouse feed is ~1.8MB: show cached copy instantly, refresh in background
