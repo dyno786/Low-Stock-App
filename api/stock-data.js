@@ -76,7 +76,7 @@ export default async function handler(req) {
     });
     let csv = await res.text();
     if (branch === 'warehouse') { try { csv = trimInStock(csv); } catch(e) {} }
-    else if (branch === 'chapy' || branch === 'city' || branch === 'roundhay') { try { csv = trimBranch(csv); } catch(e) {} }
+    // branch feeds are left FULL so NEG/OOS counts stay exact; the app caches them for speed
 
     return new Response(csv, {
       status: 200,
