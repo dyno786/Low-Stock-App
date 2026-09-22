@@ -29,6 +29,8 @@ const BRANCHES = [
 ];
 
 function splitCSVLine(line){var out=[],cur='',q=false;for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else{q=!q;}}else if(c===','&&!q){out.push(cur);cur='';}else{cur+=c;}}out.push(cur);return out;}
+async function _gzipB64(text){var cs=new CompressionStream('gzip');var comp=new Response(text).body.pipeThrough(cs);var buf=new Uint8Array(await new Response(comp).arrayBuffer());var bin='',CH=0x8000;for(var i=0;i<buf.length;i+=CH)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+CH));return btoa(bin);}
+async function _b64Gunzip(b64){var binn=atob(b64);var bytes=new Uint8Array(binn.length);for(var i=0;i<binn.length;i++)bytes[i]=binn.charCodeAt(i);var ds=new DecompressionStream('gzip');var stream=new Response(bytes).body.pipeThrough(ds);return await new Response(stream).text();}
 function trimBranch(csv){
   var lines=csv.split(/\r?\n/);
   if(lines.length<2)return csv;
@@ -70,22 +72,33 @@ export default async function handler(req) {
     ? 's-maxage=60, stale-while-revalidate=120'
     : 's-maxage=300, stale-while-revalidate=1800';
 
-  try {
-    const res = await fetch(target.url, {
-      headers: { 'User-Agent': 'CC-Stock-App/1.0' }
-    });
-    let csv = await res.text();
-    if (branch === 'warehouse') { try { csv = trimInStock(csv); } catch(e) {} }
-    // branch feeds are left FULL so NEG/OOS counts stay exact; the app caches them for speed
+  const REDIS_URL   = process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL;
+  const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const CACHED = ['chapy','city','roundhay','warehouse'];
+  const rcmd = async (arr) => (await fetch(REDIS_URL, { method:'POST', headers:{Authorization:`Bearer ${REDIS_TOKEN}`,'Content-Type':'application/json'}, body: JSON.stringify(arr) })).json();
 
-    return new Response(csv, {
-      status: 200,
-      headers: {
-        ...cors,
-        'Content-Type': 'text/csv',
-        'Cache-Control': cacheHeader,
+  // 1) Serve the shared Redis snapshot first: fast + identical on every device
+  if (REDIS_URL && REDIS_TOKEN && CACHED.includes(branch)) {
+    try {
+      const gr = await rcmd(['GET', 'stock:' + branch]);
+      if (gr && gr.result) {
+        let csv = await _b64Gunzip(gr.result);
+        if (branch === 'warehouse') { try { csv = trimInStock(csv); } catch(e) {} }
+        return new Response(csv, { status: 200, headers: { ...cors, 'Content-Type': 'text/csv', 'Cache-Control': cacheHeader, 'X-Stock-Source': 'redis' } });
       }
-    });
+    } catch(e) { /* fall through to live fetch */ }
+  }
+
+  // 2) Fallback: live fetch from Google (and self-seed Redis so next reads are fast + shared)
+  try {
+    const res = await fetch(target.url, { headers: { 'User-Agent': 'CC-Stock-App/1.0' } });
+    const raw = await res.text();
+    if (REDIS_URL && REDIS_TOKEN && CACHED.includes(branch)) {
+      try { const b64 = await _gzipB64(raw); await rcmd(['SET','stock:'+branch,b64,'EX',7200]); await rcmd(['SET','stockts:'+branch,String(Date.now()),'EX',7200]); } catch(e) {}
+    }
+    let csv = raw;
+    if (branch === 'warehouse') { try { csv = trimInStock(csv); } catch(e) {} }
+    return new Response(csv, { status: 200, headers: { ...cors, 'Content-Type': 'text/csv', 'Cache-Control': cacheHeader, 'X-Stock-Source': 'live' } });
   } catch(e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: cors });
   }
