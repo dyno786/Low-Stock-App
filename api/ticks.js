@@ -41,6 +41,23 @@ export default async function handler(req) {
       catch (e) { return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: cors }); }
     }
 
+    // Multi-get: /api/ticks?keys=cc_pk_ticks,cc_wh_sent  -> one request, one Redis command
+    const keysParam = url.searchParams.get('keys');
+    if (keysParam) {
+      const ks = keysParam.split(',').map(x => x.trim()).filter(k => ALLOWED_KEYS.includes(k));
+      if (!ks.length) return new Response(JSON.stringify({ error: 'Invalid keys' }), { status: 400, headers: cors });
+      try {
+        const data = await cmd(['MGET', ...ks]);
+        const out = {};
+        (Array.isArray(data.result) ? data.result : []).forEach((raw, i) => {
+          let v = null;
+          if (raw != null) { try { v = JSON.parse(raw); } catch { v = raw; } if (typeof v === 'string') { try { v = JSON.parse(v); } catch {} } }
+          out[ks[i]] = v;
+        });
+        return new Response(JSON.stringify({ data: out }), { status: 200, headers: cors });
+      } catch (e) { return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: cors }); }
+    }
+
     const key = url.searchParams.get('key');
     if (!key || !ALLOWED_KEYS.includes(key)) {
       return new Response(JSON.stringify({ error: 'Invalid key' }), { status: 400, headers: cors });
