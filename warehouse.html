@@ -439,6 +439,9 @@ var IURL='/api/stock-data?branch=shopify-images'; // ShopifyImages tab — updat
 var bd=[null,null,null,null],bm=[{},{},{},{}],imgs={},shopifyData={},loaded=0;
 var pkTx={};
 try{pkTx=JSON.parse(localStorage.getItem('cc_pk_ticks')||'{}');}catch(e){}
+function cleanPk(o){var out={};if(o&&typeof o==='object'&&!Array.isArray(o)){Object.keys(o).forEach(function(k){var v=o[k];if(Array.isArray(v))out[k]=[!!v[0],!!v[1],!!v[2]];});}return out;}
+function pkCorrupt(o){if(!o||typeof o!=='object'||Array.isArray(o))return !!o&&typeof o==='object';var ks=Object.keys(o);if(!ks.length)return false;var bad=0;ks.forEach(function(k){if(!Array.isArray(o[k]))bad++;});return bad>0;}
+pkTx=cleanPk(pkTx);try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
 // who is picking + the shared 'picked' audit log
 var pickerName='';try{pickerName=localStorage.getItem('cc_pk_name')||'';}catch(e){}
 var DEFAULT_SHEET_URL='https://script.google.com/macros/s/AKfycbzOKY7WTRVudsLbsug5LfcETAqLaq3NFDf8vweCPsfjdVCQJOamOeCb4W24EDfK7Wuc/exec';
@@ -583,7 +586,9 @@ async function livePoll(){
     var sess=all.cc_pk_session;pkSession=(sess&&sess.start)?sess:null;
     // idle = this device hasn't ticked in the last 5s -> safe to MIRROR Redis exactly
     var idle=(Date.now()-(window.__pkWrite||0))>5000 && !tmr.on;
-    var shared=all.cc_pk_ticks;
+    var rawShared=all.cc_pk_ticks;
+    var shared=cleanPk(rawShared);
+    if(pkCorrupt(rawShared)){try{if(typeof syncSave==='function')syncSave('cc_pk_ticks',shared);}catch(e){}}
     if(shared&&typeof shared==='object'){
       if(idle){pkTx=shared;try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}}
       else{Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=(shared[k]&&shared[k].slice)?shared[k].slice():shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
@@ -691,7 +696,7 @@ function fmt(ms){var s=Math.floor((ms||0)/1000),m=Math.floor(s/60),h=Math.floor(
 
 // ── SYNC ───────────────────────────────────────────────────
 var syncOk=true,syncPend=null;
-async function syncLoadMulti(keys){try{var r=await fetch('/api/ticks?keys='+encodeURIComponent(keys.join(',')),{signal:AbortSignal.timeout(4500)});var d=await r.json();if(d&&d.fallback){syncOk=false;return null;}return (d&&d.data)||null;}catch(e){syncOk=false;return null;}}
+async function syncLoadMulti(keys){try{var r=await fetch('/api/ticks?keys='+encodeURIComponent(keys.join(',')),{signal:AbortSignal.timeout(4500)});var d=await r.json();if(d&&d.data&&typeof d.data==='object'&&!Array.isArray(d.data)){syncOk=true;return d.data;}}catch(e){}/* fallback: endpoint has no MGET yet -> read each key individually */var out={},got=false;for(var i=0;i<keys.length;i++){try{var v=await syncLoad(keys[i]);out[keys[i]]=v;got=true;}catch(e){out[keys[i]]=null;}}return got?out:null;}
 async function syncLoad(k){
   try{var r=await fetch('/api/ticks?key='+k,{signal:AbortSignal.timeout(3000)});var d=await r.json();if(d.fallback){syncOk=false;return null;}var v=d.data;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){}}return v||null;}
   catch(e){syncOk=false;return null;}
@@ -708,7 +713,7 @@ function syncSave(k,v){
 function setSyncTxt(t){var el=document.getElementById('sync-txt');if(!el)return;el.textContent=t;clearTimeout(el._t);el._t=setTimeout(function(){el.textContent='';},3000);}
 async function doSync(){
   setSyncTxt('Syncing…');
-  var shared=await syncLoad('cc_pk_ticks');
+  var shared=cleanPk(await syncLoad('cc_pk_ticks'));
   if(shared){Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
   try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
   var st=await syncLoad('cc_wh_set');
@@ -721,7 +726,7 @@ async function doSync(){
   }
   await loadMap();
   setSyncTxt(syncOk?'✓ Synced':'Offline — local only');
-  try{if(!Object.keys(pkTx).length&&typeof syncLoad==='function'){var _shx=await syncLoad('cc_pk_ticks');if(_shx&&Object.keys(_shx).length){pkTx=_shx;try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}}}}catch(e){}
+  try{if(!Object.keys(pkTx).length&&typeof syncLoad==='function'){var _shx=cleanPk(await syncLoad('cc_pk_ticks'));if(_shx&&Object.keys(_shx).length){pkTx=_shx;try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}}}}catch(e){}
   livePoll();livePollStart();liveTickStart();
   if(loaded>=4)renderWH();
 }
