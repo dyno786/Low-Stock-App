@@ -474,6 +474,15 @@ function whHeld(bi,bc){var t=whSent[bc+'|'+bi];return !!(t&&(Date.now()-t)<holdH
 function markSent(bc,bi){whSent[bc+'|'+bi]=Date.now();saveSent();}
 function unmarkSent(bc,bi){delete whSent[bc+'|'+bi];saveSent();}
 function heldCount(){var w=holdHours()*3600000,now=Date.now(),n=0;Object.keys(whSent).forEach(function(k){if(whSent[k]&&(now-whSent[k])<w)n++;});return n;}
+function pruneStale(){
+  if(window.__pruned)return;
+  if(loaded<4||!(typeof bm!=='undefined'&&bm[3]&&Object.keys(bm[3]).length))return;
+  window.__pruned=1;var wm=bm[3],ch=false,w=holdHours()*3600000,now=Date.now();
+  Object.keys(pkTx).forEach(function(bc){if(!wm[bc]){delete pkTx[bc];ch=true;}});
+  Object.keys(whSent).forEach(function(k){if(!whSent[k]||(now-whSent[k])>w){delete whSent[k];ch=true;}});
+  Object.keys(whTickMeta).forEach(function(k){if(!wm[(k.split('|')[0])]){delete whTickMeta[k];ch=true;}});
+  if(ch){try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}if(typeof syncSave==='function'){syncSave('cc_pk_ticks',pkTx);syncSave('cc_wh_sent',whSent);syncSave('cc_wh_tickmeta',whTickMeta);}}
+}
 function sentBoot(){if(window.__sentBoot||typeof syncLoad!=='function')return;window.__sentBoot=1;syncLoad('cc_wh_sent').then(function(o){if(o&&typeof o==='object'){var ch=false;Object.keys(o).forEach(function(k){if(!whSent[k]||o[k]>whSent[k]){whSent[k]=o[k];ch=true;}});if(ch){try{localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));}catch(e){}if(loaded>=4)renderWH();}}}).catch(function(){});}
 async function loadNS(){try{var r=await Promise.all([syncLoad('cc_whns0'),syncLoad('cc_whns1'),syncLoad('cc_whns2')]);whNS={0:r[0]||{},1:r[1]||{},2:r[2]||{}};}catch(e){}}
 var pickCounts=[0,0,0];
@@ -565,20 +574,31 @@ function liveTickStart(){
 }
 async function livePoll(){
   try{
-    if(typeof syncLoad!=='function')return;
-    var _rs=await syncLoad('cc_pk_reset');
+    if(typeof syncLoadMulti!=='function')return;
+    var all=await syncLoadMulti(['cc_pk_reset','cc_pk_picked','cc_pk_session','cc_pk_ticks','cc_wh_sent','cc_wh_tickmeta']);
+    if(!all)return;
+    var _rs=all.cc_pk_reset;
     if(_rs&&_rs>pkResetTs){pkResetTs=_rs;try{localStorage.setItem('cc_pk_reset',String(_rs));localStorage.setItem('cc_pk_ticks','{}');}catch(e){}pkTx={};tmr.on=false;tmr.done=false;try{clearInterval(tmr.iv);}catch(e){}pkSession=null;if(loaded>=4)renderWH();}
-    var _sp=await syncLoad('cc_pk_picked');if(mergePicked(_sp)&&whTab==='picked'&&loaded>=4)renderWH();
-    var s=await syncLoad('cc_pk_session');pkSession=(s&&s.start)?s:null;
-    if(tmr.on)return;                       // this device is the picker — don't pull over its own work
-    var shared=await syncLoad('cc_pk_ticks');
-    if(shared){Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=(shared[k]&&shared[k].slice)?shared[k].slice():shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
+    if(mergePicked(all.cc_pk_picked)&&whTab==='picked'&&loaded>=4)renderWH();
+    var sess=all.cc_pk_session;pkSession=(sess&&sess.start)?sess:null;
+    // idle = this device hasn't ticked in the last 5s -> safe to MIRROR Redis exactly
+    var idle=(Date.now()-(window.__pkWrite||0))>5000 && !tmr.on;
+    var shared=all.cc_pk_ticks;
+    if(shared&&typeof shared==='object'){
+      if(idle){pkTx=shared;try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}}
+      else{Object.keys(shared).forEach(function(k){if(!pkTx[k])pkTx[k]=(shared[k]&&shared[k].slice)?shared[k].slice():shared[k];else for(var i=0;i<3;i++){if(shared[k][i])pkTx[k][i]=true;}});}
+    }
+    if(idle){
+      if(all.cc_wh_sent&&typeof all.cc_wh_sent==='object'){whSent=all.cc_wh_sent;try{localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));}catch(e){}}
+      if(all.cc_wh_tickmeta&&typeof all.cc_wh_tickmeta==='object'){whTickMeta=all.cc_wh_tickmeta;try{localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}}
+    }
     var sig=pkDoneSig();
-    if(sig!==lastDoneSig){lastDoneSig=sig;if((whTab==='topup'||whTab==='oos')&&loaded>=4)renderWH();}
-    else if(pkSession&&!document.getElementById('live-bar')&&(whTab==='topup'||whTab==='oos')&&loaded>=4)renderWH();
+    if(sig!==lastDoneSig){lastDoneSig=sig;if(loaded>=4)renderWH();}
+    else if((whTab==='ticked'||whTab==='held')&&loaded>=4)renderWH();
   }catch(e){}
 }
-function livePollStart(){if(livePollIv)clearInterval(livePollIv);livePollIv=setInterval(livePoll,12000);}
+function livePollStart(){if(livePollIv)clearInterval(livePollIv);livePollIv=setInterval(livePoll,8000);}
+try{document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'){if(livePollIv){clearInterval(livePollIv);livePollIv=0;}}else{try{livePoll();}catch(e){}livePollStart();}});}catch(e){}
 function pushPickLog(sess){
   try{
     fetch('/api/ticks?key=cc_pk_log',{signal:AbortSignal.timeout(4000)}).then(function(r){return r.json();}).then(function(d){
@@ -671,11 +691,13 @@ function fmt(ms){var s=Math.floor((ms||0)/1000),m=Math.floor(s/60),h=Math.floor(
 
 // ── SYNC ───────────────────────────────────────────────────
 var syncOk=true,syncPend=null;
+async function syncLoadMulti(keys){try{var r=await fetch('/api/ticks?keys='+encodeURIComponent(keys.join(',')),{signal:AbortSignal.timeout(4500)});var d=await r.json();if(d&&d.fallback){syncOk=false;return null;}return (d&&d.data)||null;}catch(e){syncOk=false;return null;}}
 async function syncLoad(k){
   try{var r=await fetch('/api/ticks?key='+k,{signal:AbortSignal.timeout(3000)});var d=await r.json();if(d.fallback){syncOk=false;return null;}var v=d.data;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){}}return v||null;}
   catch(e){syncOk=false;return null;}
 }
 function syncSave(k,v){
+  if(k==='cc_pk_ticks'||k==='cc_wh_sent'||k==='cc_wh_tickmeta')window.__pkWrite=Date.now();
   if(!syncOk)return;
   if(syncPend)clearTimeout(syncPend);
   syncPend=setTimeout(function(){
@@ -845,7 +867,8 @@ function buildPickList(){
     var c=[getQty(0,p.bc),getQty(1,p.bc),getQty(2,p.bc)];
     var need=[Math.max(0,T-c[0]),Math.max(0,T-c[1]),Math.max(0,T-c[2])];
     if(whNSat(0,p.bc))need[0]=0;if(whNSat(1,p.bc))need[1]=0;if(whNSat(2,p.bc))need[2]=0;
-    if(whHeld(0,p.bc))need[0]=0;if(whHeld(1,p.bc))need[1]=0;if(whHeld(2,p.bc))need[2]=0;
+    var held=[whHeld(0,p.bc),whHeld(1,p.bc),whHeld(2,p.bc)];
+    var heldUntil=[held[0]?((whSent[p.bc+'|0']||0)+holdHours()*3600000):0,held[1]?((whSent[p.bc+'|1']||0)+holdHours()*3600000):0,held[2]?((whSent[p.bc+'|2']||0)+holdHours()*3600000):0];
     if(need[0]+need[1]+need[2]<=0)return;
     var sp;
     if(whQty[p.bc]){
@@ -862,9 +885,10 @@ function buildPickList(){
     if(whNSat(0,p.bc))sp[0]=0;if(whNSat(1,p.bc))sp[1]=0;if(whNSat(2,p.bc))sp[2]=0;
     if(whHeld(0,p.bc))sp[0]=0;if(whHeld(1,p.bc))sp[1]=0;if(whHeld(2,p.bc))sp[2]=0;
     // min-pick rule: don't bother picking tiny amounts
-    if(minMode==='branch'){for(var mb=0;mb<3;mb++){if(sp[mb]>0&&sp[mb]<minPick)sp[mb]=0;}if(sp[0]+sp[1]+sp[2]<=0)return;}
-    else{if(sp[0]+sp[1]+sp[2]<minPick)return;}
-    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,st:st,bq:c,sp:sp,tgts:tgts,ls:p.ls,lsB:[getLs(0,p.bc),getLs(1,p.bc),getLs(2,p.bc)]};
+    var anyHeld=held[0]||held[1]||held[2];
+    if(minMode==='branch'){for(var mb=0;mb<3;mb++){if(sp[mb]>0&&sp[mb]<minPick)sp[mb]=0;}if(sp[0]+sp[1]+sp[2]<=0&&!anyHeld)return;}
+    else{if(sp[0]+sp[1]+sp[2]<minPick&&!anyHeld)return;}
+    var item={bc:p.bc,nm:p.nm,sz:p.sz,dp:p.dp||'General',prc:p.prc,wh:p.qty,st:st,bq:c,sp:sp,tgts:tgts,ls:p.ls,lsB:[getLs(0,p.bc),getLs(1,p.bc),getLs(2,p.bc)],held:held,heldUntil:heldUntil};
     if(st.type==='dead')dead.push(item);else normal.push(item);
   });
   dead.sort(function(a,b){return a.nm.localeCompare(b.nm);});
@@ -1188,6 +1212,7 @@ function enrichOrderNames(){var list=orderList();var bcs=list.map(function(p){re
 function renderWH(){
   var el=document.getElementById('out');
   if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
+  pruneStale();
   var L=buildPickList(),allItems=L.dead.concat(L.normal);
   var oosList=allItems.filter(function(it){return Math.min(it.bq[0],it.bq[1],it.bq[2])<=0;});
   var overList=(bd[3]||[]).filter(function(p){return p.qty>=ovMin&&(!ovSlow||daysSince(p.ls)>=90);}).map(function(p){return {bc:p.bc,nm:p.nm,sz:p.sz,prc:p.prc,qty:p.qty,days:daysSince(p.ls)};}).sort(function(a,b){return b.qty-a.qty;});
@@ -1495,6 +1520,7 @@ function mkRow(item){
     '<div class="pk-strip">';
   for(var bi=0;bi<3;bi++){
     if(whNSat(bi,item.bc)){html+='<div class="pk-cell-ns" data-bi="'+bi+'"><div class="pc-bl">'+BN[bi]+'</div><div class="pc-ns-x">✕</div><div class="pc-ns-lbl">not stocked</div></div>';continue;}
+    if(item.held&&item.held[bi]){var _hu=item.heldUntil?item.heldUntil[bi]:0;var _hh=Math.max(1,Math.ceil((_hu-Date.now())/3600000));html+='<div class="pk-cell-ns" data-bi="'+bi+'" style="border-style:dashed;opacity:.65"><div class="pc-bl">'+BN[bi]+'</div><div class="pc-ns-x" style="color:var(--purpletxt,#6d28d9);font-size:15px">🕓</div><div class="pc-ns-lbl">sent · '+_hh+'h left</div></div>';continue;}
     var take=item.sp[bi],has=item.bq[bi],tgt=item.tgts[bi],ticked=(item.sp[bi]>0)&&!!(t[bi]);
     var badge=has<=0?'<div class="pc-badge pc-badge-out">OUT</div>':(has<tgt?'<div class="pc-badge pc-badge-low">LOW</div>':'');
     var hasLbl=has>=tgt?'has '+has+' ✓':'has '+has+' → '+tgt;
