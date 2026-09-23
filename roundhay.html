@@ -543,7 +543,13 @@ function dAgo(s){var d=pD(s);return d?Math.floor((Date.now()-d)/86400000):null;}
 function imgEl(bc,sz){sz=sz||52;if(imgs[bc])return '<img src="'+imgs[bc]+'" loading="lazy" onerror="this.style.display=\"none\"" style="width:'+sz+'px;height:'+sz+'px;object-fit:cover">';return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';}
 function dayTag(days,r,a){if(days===null)return '';var c=days>=(r||30)?'itag-day-red':days>=(a||7)?'itag-day':'itag-info';return '<span class="itag '+c+'">'+days+'d OOS</span>';}
 function getQty(bc){var p=destData?destData.find(function(x){return x.bc===bc;}):null;return p?p.qty:0;}
-function calcWH(bc,whQty){var dq=getQty(bc);var need=Math.max(0,TARGET-dq);if(need<=0||dq>=TARGET)return 0;return Math.min(need,whQty);}
+var shelfCaps={};try{shelfCaps=JSON.parse(localStorage.getItem('cc_shelf_caps')||'{}')||{};}catch(e){shelfCaps={};}
+if(!shelfCaps||typeof shelfCaps!=='object'||Array.isArray(shelfCaps))shelfCaps={};
+function shelfCap(bc){var v=shelfCaps[bc+'|'+DEST_ID];return (typeof v==='number'&&v>0)?v:0;}
+function setShelfCap(bc,v){var k=bc+'|'+DEST_ID;if(v&&v>0)shelfCaps[k]=v;else delete shelfCaps[k];try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shelf_caps',shelfCaps);}
+window.setShelfPrompt=function(bc){var cur=shelfCap(bc);var p=prompt('How many fit on the shelf here for this item?\nTop-up fills to this number. Blank or 0 to clear.',cur||'');if(p==null)return;var v=parseInt(p);setShelfCap(bc,(isNaN(v)||v<0)?0:v);if(typeof renderView==='function')renderView();};
+(function(){if(typeof syncLoad!=='function')return;syncLoad('cc_shelf_caps').then(function(o){if(o&&typeof o==='object'&&!Array.isArray(o)){shelfCaps=o;try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(typeof renderView==='function')renderView();}}).catch(function(){});})();
+function calcWH(bc,whQty){var tg=shelfCap(bc)||TARGET;var dq=getQty(bc);var need=Math.max(0,tg-dq);if(need<=0||dq>=tg)return 0;return Math.min(need,whQty);}
 // ── SCANNABLE BARCODE POPUP ──────────────────────────────────
 // Tap any barcode (item-bc/neg-bc/oos-bc/img-bc) → fullscreen modal
 // shows a real scannable EAN-13/Code-128 SVG for the handheld scanner.
@@ -1566,6 +1572,7 @@ function ordItemRow(o,r){
   var right='<div style="flex:none;font-weight:800;font-size:22px;min-width:44px;text-align:right'+strike+'">x'+it.qty+'</div>';
   return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid #f1f1f4">'+tick+img+mid+right+'</div>';
 }
+function ordNoteHTML(o){var parts=[];if(o.note&&(''+o.note).trim())parts.push(ordEsc((''+o.note).trim()));if(o.attrs&&o.attrs.length)o.attrs.forEach(function(a){if(a&&a.v&&(''+a.v).trim())parts.push('<b>'+ordEsc(a.k)+':</b> '+ordEsc((''+a.v).trim()));});if(!parts.length)return '';return '<div style="margin-top:6px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:8px 10px;font-size:12.5px;color:#92400e;font-weight:700;line-height:1.4">📝 Message: '+parts.join(' \u00b7 ')+'</div>';}
 function ordCard(o,fb){
   var done=ordBranchDone(o,fb);
   var when='';try{when=new Date(o.createdAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}catch(e){}
@@ -1574,6 +1581,7 @@ function ordCard(o,fb){
   return '<div class="over-card" style="display:block;opacity:'+(done?'.6':'1')+';'+(!done?'border-left:4px solid '+_obm[DEST_ID].color:'')+'">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:800;font-size:15px">'+ordEsc(o.name)+' <span style="color:var(--sub);font-weight:600;font-size:12px">'+when+(o.total?' · '+ordEsc(o.currency)+' '+ordEsc(o.total):'')+'</span>'+elsewhere+'</div>'+chip+'</div>'+
     ordTagsHTML(o)+
+    ordNoteHTML(o)+
     '<div style="margin-top:4px">'+fb.mine.map(function(r){return ordItemRow(o,r);}).join('')+'</div>'+
   '</div>';
 }
@@ -1916,8 +1924,9 @@ function renderCollect(srcIdx){
           '<div class="item-name">'+item.nm+(item.sz?' · '+item.sz:'')+'</div>'+
           '<div class="item-bc">'+item.bc+'</div>'+
           '<div class="item-tags">'+(dtag?dtag:'')+
+            '<span class="itag itag-info" style="cursor:pointer;background:#f5f3ff;color:var(--purpletxt)" onclick="event.stopPropagation();setShelfPrompt(\''+item.bc+'\')">📏 '+(shelfCap(item.bc)?('fits '+shelfCap(item.bc)):'set shelf')+'</span>'+
             '<span class="itag '+(item.isWH?'itag-wh':'itag-src')+'">'+sc.short+':'+item.srcQty+'</span>'+
-            (item.isWH?'<span class="itag itag-info">'+item.destQty+'→tgt'+TARGET+'</span>':'<span class="itag itag-out">Here:0</span>')+
+            (item.isWH?'<span class="itag itag-info">'+item.destQty+'→tgt'+(shelfCap(item.bc)||TARGET)+'</span>':'<span class="itag itag-out">Here:0</span>')+
             (item.pr>0?'<span class="itag itag-info">£'+item.pr.toFixed(2)+'</span>':'')+
           '</div>'+
         '</div>'+
