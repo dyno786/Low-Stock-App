@@ -391,6 +391,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="sync-txt" id="sync-txt"></div>
   <button class="sync-btn" id="sync-btn">↺ Sync now</button>
 </div>
+<div id="sess-bar" style="display:none"></div>
 
 <div class="timer-bar" id="timer-bar">
   <div class="timer-row" id="timer-row"><span class="timer-txt">⏱ 0s</span></div>
@@ -421,7 +422,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
-var WH_VER='build 11';
+var WH_VER='build 12';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -455,7 +456,7 @@ function forceSaveTicks(){try{localStorage.setItem('cc_pk_ticks',JSON.stringify(
 try{document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')forceSaveTicks();});window.addEventListener('pagehide',forceSaveTicks);}catch(e){}
 var whTickMeta={};try{whTickMeta=JSON.parse(localStorage.getItem('cc_wh_tickmeta')||'{}')||{};}catch(e){}
 function saveTickMeta(){try{localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_tickmeta',whTickMeta);}
-function tickMeta(bc,bi){whTickMeta[bc+'|'+bi]={by:(pickerName||'Staff'),ts:Date.now()};saveTickMeta();}
+function tickMeta(bc,bi){whTickMeta[bc+'|'+bi]={by:(pickerName||'Staff'),ts:Date.now()};saveTickMeta();try{sessTouch();}catch(e){}}
 function clearTickMeta(bc,bi){if(whTickMeta[bc+'|'+bi]){delete whTickMeta[bc+'|'+bi];saveTickMeta();}}
 function tickMetaBoot(){if(window.__tmBoot||typeof syncLoad!=='function')return;window.__tmBoot=1;syncLoad('cc_wh_tickmeta').then(function(o){if(o&&typeof o==='object'){var ch=false;Object.keys(o).forEach(function(k){var cur=whTickMeta[k];if(!cur||((o[k]&&o[k].ts||0)>(cur.ts||0))){whTickMeta[k]=o[k];ch=true;}});if(ch){try{localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}if(whTab==='ticked')renderWH();}}}).catch(function(){});}
 function tickWhen(ts){if(!ts)return '';var d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
@@ -472,22 +473,23 @@ var whQty={};try{whQty=JSON.parse(localStorage.getItem('cc_wh_qty')||'{}');}catc
 var whNS={0:{},1:{},2:{}};
 function whNSat(bi,bc){return !!(whNS[bi]&&whNS[bi][bc]);}
 var whSent={};try{whSent=JSON.parse(localStorage.getItem('cc_wh_sent')||'{}')||{};}catch(e){}
-function holdHours(){try{var h=parseInt(localStorage.getItem('cc_wh_hold'));return (!isNaN(h)&&h>=0)?h:48;}catch(e){return 48;}}
-function saveSent(){var w=holdHours()*3600000,now=Date.now();Object.keys(whSent).forEach(function(k){if(!whSent[k]||(now-whSent[k])>w*3)delete whSent[k];});try{localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_sent',whSent);}
-function whHeld(bi,bc){var t=whSent[bc+'|'+bi];return !!(t&&(Date.now()-t)<holdHours()*3600000);}
-function markSent(bc,bi){whSent[bc+'|'+bi]=Date.now();saveSent();}
+function holdHours(){try{var h=parseInt(localStorage.getItem('cc_wh_hold'));return (!isNaN(h)&&h>=0)?h:24;}catch(e){return 24;}}
+function sentTs(rec){return rec?((typeof rec==='object')?(rec.ts||0):rec):0;}
+function saveSent(){var w=holdHours()*3600000,now=Date.now();Object.keys(whSent).forEach(function(k){if(!whSent[k]||(now-sentTs(whSent[k]))>w*3)delete whSent[k];});try{localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_sent',whSent);}
+function whHeld(bi,bc){var rec=whSent[bc+'|'+bi];if(!rec)return false;var t=sentTs(rec);if(!t||(Date.now()-t)>=holdHours()*3600000)return false;var q0=(typeof rec==='object'&&rec.qty!=null)?rec.qty:null;if(q0!=null&&getQty(bi,bc)<q0)return false;return true;}
+function markSent(bc,bi){whSent[bc+'|'+bi]={ts:Date.now(),qty:getQty(bi,bc)};saveSent();}
 function unmarkSent(bc,bi){delete whSent[bc+'|'+bi];saveSent();}
-function heldCount(){var w=holdHours()*3600000,now=Date.now(),n=0;Object.keys(whSent).forEach(function(k){if(whSent[k]&&(now-whSent[k])<w)n++;});return n;}
+function heldCount(){var w=holdHours()*3600000,now=Date.now(),n=0;Object.keys(whSent).forEach(function(k){if(whSent[k]&&(now-sentTs(whSent[k]))<w)n++;});return n;}
 function pruneStale(){
   if(window.__pruned)return;
   if(loaded<4||!(typeof bm!=='undefined'&&bm[3]&&Object.keys(bm[3]).length))return;
   window.__pruned=1;var wm=bm[3],ch=false,w=holdHours()*3600000,now=Date.now();
   Object.keys(pkTx).forEach(function(bc){if(!wm[bc]){delete pkTx[bc];ch=true;}});
-  Object.keys(whSent).forEach(function(k){if(!whSent[k]||(now-whSent[k])>w){delete whSent[k];ch=true;}});
+  Object.keys(whSent).forEach(function(k){if(!whSent[k]||(now-sentTs(whSent[k]))>w){delete whSent[k];ch=true;}});
   Object.keys(whTickMeta).forEach(function(k){if(!wm[(k.split('|')[0])]){delete whTickMeta[k];ch=true;}});
   if(ch){try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}if(typeof syncSave==='function'){syncSave('cc_pk_ticks',pkTx);syncSave('cc_wh_sent',whSent);syncSave('cc_wh_tickmeta',whTickMeta);}}
 }
-function sentBoot(){if(window.__sentBoot||typeof syncLoad!=='function')return;window.__sentBoot=1;syncLoad('cc_wh_sent').then(function(o){if(o&&typeof o==='object'){var ch=false;Object.keys(o).forEach(function(k){if(!whSent[k]||o[k]>whSent[k]){whSent[k]=o[k];ch=true;}});if(ch){try{localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));}catch(e){}if(loaded>=4)renderWH();}}}).catch(function(){});}
+function sentBoot(){if(window.__sentBoot||typeof syncLoad!=='function')return;window.__sentBoot=1;syncLoad('cc_wh_sent').then(function(o){if(o&&typeof o==='object'){var ch=false;Object.keys(o).forEach(function(k){if(!whSent[k]||sentTs(o[k])>sentTs(whSent[k])){whSent[k]=o[k];ch=true;}});if(ch){try{localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));}catch(e){}if(loaded>=4)renderWH();}}}).catch(function(){});}
 async function loadNS(){try{var r=await Promise.all([syncLoad('cc_whns0'),syncLoad('cc_whns1'),syncLoad('cc_whns2')]);whNS={0:r[0]||{},1:r[1]||{},2:r[2]||{}};}catch(e){}}
 var pickCounts=[0,0,0];
 var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_brandcollapsed')||'{}');}catch(e){}
@@ -557,6 +559,42 @@ function pkHist(){try{var a=JSON.parse(localStorage.getItem('cc_pk_times')||'[]'
 function estMins(cells){return cells>0?Math.max(1,Math.round(cells*loadSecPer()/60)):0;}
 // ── LIVE PICK SESSION (so another device can watch progress) ──
 var pkSession=null, livePollIv=null, liveTickIv=null, lastDoneSig=-1, sessPend=null;
+// ---- Persistent picking sessions: Start -> stays open until Finish; per-person; join/switch ----
+var whSessions={};try{whSessions=JSON.parse(localStorage.getItem('cc_pk_sessions')||'{}')||{};}catch(e){whSessions={};}
+if(!whSessions||typeof whSessions!=='object'||Array.isArray(whSessions))whSessions={};
+var curSessId='';try{curSessId=localStorage.getItem('cc_pk_cursess')||'';}catch(e){}
+var sessPushPend=null;
+function sessValid(o){return o&&typeof o==='object'&&!Array.isArray(o);}
+function sessSaveLocal(){try{localStorage.setItem('cc_pk_sessions',JSON.stringify(whSessions));localStorage.setItem('cc_pk_cursess',curSessId||'');}catch(e){}}
+function sessPush(){sessSaveLocal();window.__pkWrite=Date.now();if(typeof syncSave==='function')syncSave('cc_pk_sessions',whSessions);}
+function sessPushDeb(){if(sessPushPend)clearTimeout(sessPushPend);sessPushPend=setTimeout(function(){sessPushPend=null;sessPush();},2000);}
+function openSessions(){return Object.keys(whSessions).map(function(k){return whSessions[k];}).filter(function(x){return x&&!x.finished;}).sort(function(a,b){return (b.start||0)-(a.start||0);});}
+function curSession(){var x=curSessId?whSessions[curSessId]:null;return (x&&!x.finished)?x:null;}
+function sessStart(){var by=ensurePicker();var id='S'+Date.now()+Math.random().toString(36).slice(2,5);whSessions[id]={id:id,by:by,start:Date.now(),last:Date.now(),finished:false};curSessId=id;sessPush();renderWH();}
+function sessJoin(id){if(whSessions[id]&&!whSessions[id].finished){curSessId=id;sessSaveLocal();renderWH();}}
+function sessFinish(){var x=curSession();if(!x)return;x.finished=true;x.end=Date.now();curSessId='';sessPush();renderWH();}
+function sessTouch(){var x=curSession();if(x){x.last=Date.now();sessSaveLocal();sessPushDeb();}}
+function sessChooser(){var o=openSessions();if(!o.length){sessStart();return;}var lines=o.map(function(s,i){return (i+1)+') '+(s.by||'picker')+' — '+Math.floor((Date.now()-(s.start||0))/60000)+'m';}).join('\n');var p=(typeof prompt==='function')?prompt('Join which session?\n'+lines+'\n\nType a number, or "new" for a new one:',''):null;if(p==null)return;if((''+p).toLowerCase().indexOf('new')===0){sessStart();return;}var idx=parseInt(p)-1;if(idx>=0&&idx<o.length)sessJoin(o[idx].id);}
+function renderSessBar(){
+  var el=document.getElementById('sess-bar');if(!el)return;el.style.display='block';
+  var s=curSession();
+  if(s){
+    var m=Math.floor((Date.now()-(s.start||0))/60000);
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#ecfdf5;border-bottom:1px solid #d1fae5"><span style="font-weight:800;color:#065f46;font-size:13px">🟢 '+escP(s.by||'Picker')+'</span><span style="font-size:12px;color:#047857">picking · '+m+'m</span><span style="flex:1"></span>'+(openSessions().length>1?'<button id="sess-switch" style="border:1px solid #a7f3d0;background:#fff;border-radius:8px;padding:5px 9px;font-size:12px;font-weight:700;cursor:pointer">⇄ Switch</button>':'')+'<button id="sess-finish" style="border:1px solid #10b981;background:#10b981;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer">✓ Finish</button></div>';
+    var fb=document.getElementById('sess-finish');if(fb)fb.addEventListener('click',function(){if(confirm('Finish '+(s.by||'this')+"'s session? Everything picked is saved."))sessFinish();});
+    var sw=document.getElementById('sess-switch');if(sw)sw.addEventListener('click',sessChooser);
+  } else {
+    var o=openSessions();
+    if(o.length){
+      var btns=o.map(function(x){var mm=Math.floor((Date.now()-(x.start||0))/60000);return '<button class="sess-join" data-id="'+x.id+'" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">↳ Join '+escP(x.by||'picker')+' · '+mm+'m</button>';}).join('');
+      el.innerHTML='<div style="padding:8px 12px;background:#f5f3ff;border-bottom:1px solid #ddd6fe;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-weight:700;font-size:12px;color:#5b21b6">Session:</span>'+btns+'<button id="sess-new" style="border:1px solid var(--purple);background:var(--purple);color:#fff;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:800;cursor:pointer">▶ Start new</button></div>';
+      el.querySelectorAll('.sess-join').forEach(function(b){b.addEventListener('click',function(){sessJoin(this.getAttribute('data-id'));});});
+    } else {
+      el.innerHTML='<div style="padding:8px 12px;background:#f5f3ff;border-bottom:1px solid #ddd6fe;display:flex;gap:8px;align-items:center"><span style="font-weight:700;font-size:12px;color:#5b21b6">No picking session</span><span style="flex:1"></span><button id="sess-new" style="border:1px solid var(--purple);background:var(--purple);color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer">▶ Start session</button></div>';
+    }
+    var nb=document.getElementById('sess-new');if(nb)nb.addEventListener('click',sessStart);
+  }
+}
 var IDLE_MS=5*60*1000;   // a run with no ticks for this long is auto-finished & logged
 function pushSession(obj){try{fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_pk_session',value:obj})}).catch(function(){});}catch(e){}}
 function pushSessionDebounced(){if(sessPend)clearTimeout(sessPend);sessPend=setTimeout(function(){sessPend=null;if(pkSession)pushSession(pkSession);},1500);}
@@ -573,13 +611,13 @@ function liveTickStart(){
   if(liveTickIv)clearInterval(liveTickIv);
   liveTickIv=setInterval(function(){
     var t=document.getElementById('live-time');if(t&&pkSession&&pkSession.start)t.textContent='⏱ '+fmt(Date.now()-pkSession.start);
-    if(tmr.on&&tmr.start&&tmr.last&&(Date.now()-tmr.last)>IDLE_MS&&typeof tmrFinish==='function')tmrFinish();  // auto-log an abandoned run
+    if(!curSession()&&tmr.on&&tmr.start&&tmr.last&&(Date.now()-tmr.last)>IDLE_MS&&typeof tmrFinish==='function')tmrFinish();  // auto-log only when no manual session
   },1000);
 }
 async function livePoll(){
   try{
     if(typeof syncLoadMulti!=='function')return;
-    var all=await syncLoadMulti(['cc_pk_reset','cc_pk_picked','cc_pk_session','cc_pk_ticks','cc_wh_sent','cc_wh_tickmeta','cc_wh_map']);
+    var all=await syncLoadMulti(['cc_pk_reset','cc_pk_picked','cc_pk_session','cc_pk_ticks','cc_wh_sent','cc_wh_tickmeta','cc_wh_map','cc_pk_sessions']);
     if(!all)return;
     var _rs=all.cc_pk_reset;
     if(_rs&&_rs>pkResetTs){pkResetTs=_rs;try{localStorage.setItem('cc_pk_reset',String(_rs));localStorage.setItem('cc_pk_ticks','{}');}catch(e){}pkTx={};tmr.on=false;tmr.done=false;try{clearInterval(tmr.iv);}catch(e){}pkSession=null;if(loaded>=4)renderWH();}
@@ -598,6 +636,7 @@ async function livePoll(){
       if(all.cc_wh_sent&&typeof all.cc_wh_sent==='object'){whSent=all.cc_wh_sent;try{localStorage.setItem('cc_wh_sent',JSON.stringify(whSent));}catch(e){}}
       if(all.cc_wh_tickmeta&&typeof all.cc_wh_tickmeta==='object'){whTickMeta=all.cc_wh_tickmeta;try{localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}}
       if(!mapDirty&&all.cc_wh_map&&Array.isArray(all.cc_wh_map.rows)){var _nm=JSON.stringify(all.cc_wh_map);if(_nm!==JSON.stringify(whMapData)){whMapData=all.cc_wh_map;try{localStorage.setItem('cc_wh_map',JSON.stringify(whMapData));}catch(e){}if(loaded>=4)renderWH();}}
+      if(sessValid(all.cc_pk_sessions)){var _ns=JSON.stringify(all.cc_pk_sessions);if(_ns!==JSON.stringify(whSessions)){whSessions=all.cc_pk_sessions;sessSaveLocal();if(loaded>=4)renderWH();}}
     }
     var sig=pkDoneSig();
     if(sig!==lastDoneSig){lastDoneSig=sig;if(loaded>=4)renderWH();}
@@ -721,7 +760,7 @@ async function doSync(){
   var st=await syncLoad('cc_wh_set');
   if(st&&typeof st==='object'){if(st.minPick>=1)minPick=st.minPick|0;if(st.minMode==='total'||st.minMode==='branch')minMode=st.minMode;try{localStorage.setItem('cc_pk_minqty',String(minPick));localStorage.setItem('cc_pk_minmode',minMode);}catch(e){}if(st.sheetUrl){try{localStorage.setItem('cc_wh_sheet_url',st.sheetUrl);}catch(e){}}if(typeof st.hold!=='undefined'){try{localStorage.setItem('cc_wh_hold',String(st.hold));}catch(e){}}}
   var ss=await syncLoad('cc_pk_session');pkSession=(ss&&ss.start)?ss:null;
-  if(pkSession&&pkSession.last&&!tmr.on&&(Date.now()-pkSession.last)>IDLE_MS){
+  if(!curSession()&&pkSession&&pkSession.last&&!tmr.on&&(Date.now()-pkSession.last)>IDLE_MS){
     var sms=Math.max(0,pkSession.last-pkSession.start),scells=pkSession.done||0;
     if(scells>0&&sms>0)pushPickLog({id:Date.now()+'-stale',ts:pkSession.last,cells:scells,ms:sms,ticks:(pkSession.ticks||[]).slice(-1200)});
     pkSession=null;pushSession(null);
@@ -875,7 +914,7 @@ function buildPickList(){
     var need=[Math.max(0,T-c[0]),Math.max(0,T-c[1]),Math.max(0,T-c[2])];
     if(whNSat(0,p.bc))need[0]=0;if(whNSat(1,p.bc))need[1]=0;if(whNSat(2,p.bc))need[2]=0;
     var held=[whHeld(0,p.bc),whHeld(1,p.bc),whHeld(2,p.bc)];
-    var heldUntil=[held[0]?((whSent[p.bc+'|0']||0)+holdHours()*3600000):0,held[1]?((whSent[p.bc+'|1']||0)+holdHours()*3600000):0,held[2]?((whSent[p.bc+'|2']||0)+holdHours()*3600000):0];
+    var heldUntil=[held[0]?(sentTs(whSent[p.bc+'|0'])+holdHours()*3600000):0,held[1]?(sentTs(whSent[p.bc+'|1'])+holdHours()*3600000):0,held[2]?(sentTs(whSent[p.bc+'|2'])+holdHours()*3600000):0];
     if(need[0]+need[1]+need[2]<=0)return;
     var sp;
     if(whQty[p.bc]){
@@ -1104,7 +1143,7 @@ function importSales(file){
 }
 function saveOrderQty(){try{localStorage.setItem('cc_wh_order',JSON.stringify(orderQty));}catch(e){}}
 function ordEsc(s){return (''+(s==null?'':s)).replace(/[<>&]/g,function(c){return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;';});}
-function renderHeldHTML(){var w=holdHours()*3600000,now=Date.now(),rows=[];Object.keys(whSent).forEach(function(k){var t=whSent[k];if(!t||(now-t)>=w)return;var pp=k.split('|');var bc=pp[0],bi=+pp[1];var it=(typeof findItem==='function')?findItem(bc):null;rows.push({k:k,bc:bc,bi:bi,nm:it?it.nm:bc,sz:it?it.sz:'',left:w-(now-t)});});rows.sort(function(a,b){return a.left-b.left;});var h='<div style="padding:11px"><div style="font-weight:800;font-size:15px;margin-bottom:6px">🕓 Sent — on hold ('+rows.length+')</div><div style="font-size:12px;color:var(--sub);margin-bottom:10px">Packed to a branch and hidden from the pick list for '+holdHours()+'h — branches take 1–2 days to book stock in. They come back automatically after that if still low. Change the window in ⚙ settings.</div>';if(!rows.length)h+='<div class="empty">Nothing on hold.</div>';rows.forEach(function(r){var hrs=Math.ceil(r.left/3600000);h+='<div style="display:flex;gap:8px;align-items:center;padding:9px 0;border-top:1px solid #f1f1f4"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+escP(r.nm)+(r.sz?(' · '+escP(r.sz)):'')+'</div><div style="font-size:11px;color:var(--sub);font-family:ui-monospace,monospace">'+r.bc+' · '+((BR[r.bi]&&BR[r.bi].name)||('branch '+r.bi))+'</div></div><div style="text-align:right;min-width:56px"><div style="font-weight:800;color:var(--purple)">'+hrs+'h</div><div style="font-size:9px;color:var(--sub)">returns in</div></div><button class="held-back" data-k="'+escP(r.k)+'" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;margin-left:8px">Return now</button></div>';});return h+'</div>';}
+function renderHeldHTML(){var w=holdHours()*3600000,now=Date.now(),rows=[];Object.keys(whSent).forEach(function(k){var t=sentTs(whSent[k]);if(!t||(now-t)>=w)return;var pp=k.split('|');var bc=pp[0],bi=+pp[1];var it=(typeof findItem==='function')?findItem(bc):null;rows.push({k:k,bc:bc,bi:bi,nm:it?it.nm:bc,sz:it?it.sz:'',left:w-(now-t)});});rows.sort(function(a,b){return a.left-b.left;});var h='<div style="padding:11px"><div style="font-weight:800;font-size:15px;margin-bottom:6px">🕓 Sent — on hold ('+rows.length+')</div><div style="font-size:12px;color:var(--sub);margin-bottom:10px">Packed to a branch and hidden from the pick list for '+holdHours()+'h — branches take 1–2 days to book stock in. They come back automatically after that if still low. Change the window in ⚙ settings.</div>';if(!rows.length)h+='<div class="empty">Nothing on hold.</div>';rows.forEach(function(r){var hrs=Math.ceil(r.left/3600000);h+='<div style="display:flex;gap:8px;align-items:center;padding:9px 0;border-top:1px solid #f1f1f4"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+escP(r.nm)+(r.sz?(' · '+escP(r.sz)):'')+'</div><div style="font-size:11px;color:var(--sub);font-family:ui-monospace,monospace">'+r.bc+' · '+((BR[r.bi]&&BR[r.bi].name)||('branch '+r.bi))+'</div></div><div style="text-align:right;min-width:56px"><div style="font-weight:800;color:var(--purple)">'+hrs+'h</div><div style="font-size:9px;color:var(--sub)">returns in</div></div><button class="held-back" data-k="'+escP(r.k)+'" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:700;cursor:pointer;margin-left:8px">Return now</button></div>';});return h+'</div>';}
 function wireHeld(el){el.querySelectorAll('.held-back').forEach(function(b){b.addEventListener('click',function(){var k=this.getAttribute('data-k');delete whSent[k];saveSent();renderWH();});});}
 function tickedCount(){var n=0,wm=(typeof bm!=='undefined'&&bm[3])||{};if(!Object.keys(wm).length)return 0;Object.keys(pkTx).forEach(function(bc){if(!wm[bc])return;var a=pkTx[bc];if(a)for(var i=0;i<3;i++)if(a[i])n++;});return n;}
 function untick(bc,bi){if(pkTx[bc])pkTx[bc][bi]=false;clearTickMeta(bc,bi);try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}if(typeof syncSave==='function')syncSave('cc_pk_ticks',pkTx);if(typeof unmarkSent==='function')unmarkSent(bc,bi);var it=(typeof findItem==='function')?findItem(bc):null;sheetLog({action:'unticked',barcode:bc,product:it?it.nm:'',qty:0,branch:(BR[bi]&&BR[bi].name)||('branch '+bi)});renderWH();}
@@ -1234,7 +1273,7 @@ function renderWH(){
     '<button class="wh-tab'+(whTab==='order'?' active':'')+'" data-tab="order">🧾 Order</button>'+
     '<button class="wh-gear" id="wh-gear" title="Settings">⚙</button>'+
   '</div>';
-  function wireTabsBar(){el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});var g=document.getElementById('wh-gear');if(g)g.addEventListener('click',openSettings);ensureSettingsModal();sentBoot();cfgBoot();tickMetaBoot();if(!livePollIv){livePollStart();liveTickStart();}}
+  function wireTabsBar(){el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});var g=document.getElementById('wh-gear');if(g)g.addEventListener('click',openSettings);ensureSettingsModal();sentBoot();cfgBoot();tickMetaBoot();if(!livePollIv){livePollStart();liveTickStart();}try{renderSessBar();}catch(e){}}
   if(whTab==='held'){
     el.innerHTML=tabBar+renderHeldHTML();
     wireTabsBar();wireHeld(el);
