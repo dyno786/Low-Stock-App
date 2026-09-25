@@ -812,47 +812,55 @@ function wmSave(){try{localStorage.setItem(WM_KEY,JSON.stringify(wmMap));}catch(
 function wmEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function wmToast(m){var t=document.getElementById('wm-toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('on');},1600);}
 
-// ── STOCK LEVEL (set shelf qty per product, per source) ──────────────
-var stockLvlSrc=0, stockLvlSearch='';
-function wireStockPills(el){el.querySelectorAll('.low-subtab[data-src]').forEach(function(t){t.addEventListener('click',function(){stockLvlSrc=parseInt(this.dataset.src);stockLvlSearch='';renderStockLevel();});});}
+// ── STOCK LEVEL (set shelf qty per product, grouped by department, with pictures) ──
+var stockLvlSrc=0, stockLvlSearch='', stockLvlDept='ALL';
+function wireStockPills(el){el.querySelectorAll('.low-subtab[data-src]').forEach(function(t){t.addEventListener('click',function(){stockLvlSrc=parseInt(this.dataset.src);stockLvlSearch='';stockLvlDept='ALL';renderStockLevel();});});}
+function stkRowHTML(p){
+  var cap=shelfCap(p.bc),dq=getQty(p.bc),val=cap||7;
+  return '<div class="stk-row" data-bc="'+p.bc+'" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-top:1px solid var(--border)">'+
+    '<div class="item-img">'+(typeof imgEl==='function'?imgEl(p.bc,48):'')+'</div>'+
+    '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px;line-height:1.25">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
+    '<div style="font-size:11px;color:var(--sub);margin-top:1px">'+p.bc+' · here: '+dq+(cap?'':' · default')+'</div></div>'+
+    '<div style="display:flex;align-items:center;gap:5px">'+
+      '<button class="stk-dec" style="width:34px;height:34px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">−</button>'+
+      '<div class="stk-val" style="min-width:30px;text-align:center;font-weight:800;font-size:16px;'+(cap?'color:var(--purpletxt)':'color:#111')+'">'+val+'</div>'+
+      '<button class="stk-inc" style="width:34px;height:34px;border:1.5px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">+</button>'+
+    '</div></div>';
+}
 function renderStockLevel(){
   var el=document.getElementById('out');if(!el)return;
   var pills='<div class="low-subtabs">'+SOURCES.map(function(sc,i){var on=stockLvlSrc===i;return '<div class="low-subtab'+(on?' on':'')+'" data-src="'+i+'" style="'+(on?'border-color:'+sc.color+';color:'+sc.color:'')+'"><span class="low-sub-name">📦 '+sc.name+'</span></div>';}).join('')+'</div>';
   if(!srcLoaded[stockLvlSrc]){if(typeof loadSrc==='function')loadSrc(stockLvlSrc);el.innerHTML=pills+'<div class="loading"><div class="spin"></div>Loading '+SOURCES[stockLvlSrc].name+'…</div>';wireStockPills(el);return;}
   var sd=srcData[stockLvlSrc]||[];
   var q=stockLvlSearch.trim().toLowerCase();
-  var list=sd.filter(function(p){
-    if(!p.bc||!p.nm)return false;
-    if(q)return (p.nm.toLowerCase().indexOf(q)>=0)||(p.bc.indexOf(q)>=0);
-    if(p.qty<=0)return false;
-    var tg=shelfCap(p.bc)||TARGET;return getQty(p.bc)<tg;
-  });
-  list.sort(function(a,b){return (a.nm||'').localeCompare(b.nm||'');});
-  var capped=list.slice(0,400);
+  var elig=sd.filter(function(p){if(!p.bc||!p.nm)return false;if(p.qty<=0)return false;var tg=shelfCap(p.bc)||7;return getQty(p.bc)<tg;});
+  var shown=q?elig.filter(function(p){return p.nm.toLowerCase().indexOf(q)>=0||p.bc.indexOf(q)>=0;}):elig;
+  var deptCounts={};shown.forEach(function(p){var d=(p.dp||'General');deptCounts[d]=(deptCounts[d]||0)+1;});
+  var depts=Object.keys(deptCounts).sort();
+  if(stockLvlDept!=='ALL'&&!deptCounts[stockLvlDept])stockLvlDept='ALL';
+  var deptPills='<div class="collect-dept-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+
+    '<span class="collect-dept-pill'+(stockLvlDept==='ALL'?' on':'')+'" data-dp="ALL" style="cursor:pointer">All ('+shown.length+')</span>'+
+    depts.map(function(d){return '<span class="collect-dept-pill'+(stockLvlDept===d?' on':'')+'" data-dp="'+d.replace(/"/g,'&quot;')+'" style="cursor:pointer">'+d+' ('+deptCounts[d]+')</span>';}).join('')+'</div>';
+  var filtered=stockLvlDept==='ALL'?shown:shown.filter(function(p){return (p.dp||'General')===stockLvlDept;});
+  filtered.sort(function(a,b){var da=(a.dp||'General'),db=(b.dp||'General');if(da!==db)return da<db?-1:1;return (a.nm||'')<(b.nm||'')?-1:1;});
+  var cappedNote='';if(stockLvlDept==='ALL'&&!q&&filtered.length>500){cappedNote='<div style="font-size:12px;color:var(--sub);padding:8px 2px">Showing first 500 of '+filtered.length+' — pick a department or search to see the rest.</div>';filtered=filtered.slice(0,500);}
+  var byDept={};filtered.forEach(function(p){var d=(p.dp||'General');if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
+  var body='';Object.keys(byDept).sort().forEach(function(d){body+='<div style="font-weight:800;font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--purpletxt);background:var(--purplebg);padding:7px 10px;margin:10px 0 0">'+d+' · '+byDept[d].length+'</div>';byDept[d].forEach(function(p){body+=stkRowHTML(p);});});
   var search='<input id="stk-search" placeholder="🔍 Search product or barcode…" value="'+(stockLvlSearch||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" inputmode="search" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin:8px 0;box-sizing:border-box">';
-  var intro='<div style="font-size:12px;color:var(--sub);margin-bottom:6px">Set how many of each product should sit on the shelf. This becomes the top-up target and is saved for every device until you change it.'+(q?'':' Showing items below target from '+SOURCES[stockLvlSrc].name+' — search to set any product.')+'</div>';
-  var rows=capped.map(function(p){
-    var cap=shelfCap(p.bc),dq=getQty(p.bc);
-    return '<div class="stk-row" data-bc="'+p.bc+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--border)">'+
-      '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-      '<div style="font-size:11px;color:var(--sub)">'+p.bc+' · here: '+dq+(cap?'':' · using default '+TARGET)+'</div></div>'+
-      '<div style="display:flex;align-items:center;gap:6px">'+
-        '<button class="stk-dec" style="width:36px;height:36px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-size:20px;font-weight:800;cursor:pointer;line-height:1">−</button>'+
-        '<div class="stk-val" style="min-width:36px;text-align:center;font-weight:800;font-size:17px;cursor:pointer;'+(cap?'color:var(--purpletxt)':'color:var(--sub)')+'">'+(cap||'–')+'</div>'+
-        '<button class="stk-inc" style="width:36px;height:36px;border:1.5px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);border-radius:9px;font-size:20px;font-weight:800;cursor:pointer;line-height:1">+</button>'+
-      '</div></div>';
-  }).join('');
-  el.innerHTML=pills+search+intro+'<div style="border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden">'+(rows||'<div class="empty" style="padding:16px">Nothing to show — try searching.</div>')+'</div>'+(list.length>capped.length?'<div style="font-size:12px;color:var(--sub);padding:8px 2px">Showing first '+capped.length+' of '+list.length+' — search to narrow.</div>':'');
+  var intro='<div style="font-size:12px;color:var(--sub);margin-bottom:2px">Everything is preset to <b>7</b> (same as the warehouse top-up). Change any item with − / + — it saves for every device until you change it.</div>';
+  el.innerHTML=pills+search+intro+deptPills+'<div style="border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden">'+(body||'<div class="empty" style="padding:16px">Nothing below target here — search to set any product.</div>')+'</div>'+cappedNote;
   wireStockPills(el);
   var si=document.getElementById('stk-search');if(si){si.addEventListener('input',function(){stockLvlSearch=this.value;clearTimeout(window.__stkT);window.__stkT=setTimeout(renderStockLevel,250);});}
+  el.querySelectorAll('.collect-dept-pill[data-dp]').forEach(function(pl){pl.addEventListener('click',function(){stockLvlDept=this.getAttribute('data-dp');renderStockLevel();});});
   el.querySelectorAll('.stk-row').forEach(function(row){
     var bc=row.getAttribute('data-bc');var vEl=row.querySelector('.stk-val');
-    function upd(){var c=shelfCap(bc);vEl.textContent=c||'–';vEl.style.color=c?'var(--purpletxt)':'var(--sub)';}
-    row.querySelector('.stk-inc').addEventListener('click',function(){setShelfCap(bc,(shelfCap(bc)||0)+1);upd();});
-    row.querySelector('.stk-dec').addEventListener('click',function(){setShelfCap(bc,Math.max(0,(shelfCap(bc)||0)-1));upd();});
-    vEl.addEventListener('click',function(){var p=prompt('Shelf qty for this item (0 to clear):',shelfCap(bc)||'');if(p==null)return;var v=parseInt(p);setShelfCap(bc,(isNaN(v)||v<0)?0:v);upd();});
+    function upd(){var c=shelfCap(bc);vEl.textContent=c||7;vEl.style.color=c?'var(--purpletxt)':'#111';}
+    row.querySelector('.stk-inc').addEventListener('click',function(){setShelfCap(bc,(shelfCap(bc)||7)+1);upd();});
+    row.querySelector('.stk-dec').addEventListener('click',function(){setShelfCap(bc,Math.max(0,(shelfCap(bc)||7)-1));upd();});
+    vEl.addEventListener('click',function(){var pr=prompt('Shelf qty for this item (0 = use default 7):',shelfCap(bc)||7);if(pr==null)return;var v=parseInt(pr);setShelfCap(bc,(isNaN(v)||v<0)?0:v);upd();});
   });
 }
+
 
 function renderMap(){
   var el=document.getElementById('out'); if(!el)return;
