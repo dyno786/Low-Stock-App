@@ -376,6 +376,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 <div class="vtabs" id="vtabs">
   <div class="vtab on" data-v="home">🏠 Home</div>
   <div class="vtab" data-v="low">📦 Missing &amp; Low Stock</div>
+  <div class="vtab" data-v="stocklvl">📏 Stock level</div>
   <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
@@ -790,6 +791,49 @@ function wmLoad(){try{var r=localStorage.getItem(WM_KEY);if(r){var m=JSON.parse(
 function wmSave(){try{localStorage.setItem(WM_KEY,JSON.stringify(wmMap));}catch(e){}}
 function wmEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function wmToast(m){var t=document.getElementById('wm-toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('on');},1600);}
+
+// ── STOCK LEVEL (set shelf qty per product, per source) ──────────────
+var stockLvlSrc=0, stockLvlSearch='';
+function wireStockPills(el){el.querySelectorAll('.low-subtab[data-src]').forEach(function(t){t.addEventListener('click',function(){stockLvlSrc=parseInt(this.dataset.src);stockLvlSearch='';renderStockLevel();});});}
+function renderStockLevel(){
+  var el=document.getElementById('out');if(!el)return;
+  var pills='<div class="low-subtabs">'+SOURCES.map(function(sc,i){var on=stockLvlSrc===i;return '<div class="low-subtab'+(on?' on':'')+'" data-src="'+i+'" style="'+(on?'border-color:'+sc.color+';color:'+sc.color:'')+'"><span class="low-sub-name">📦 '+sc.name+'</span></div>';}).join('')+'</div>';
+  if(!srcLoaded[stockLvlSrc]){if(typeof loadSrc==='function')loadSrc(stockLvlSrc);el.innerHTML=pills+'<div class="loading"><div class="spin"></div>Loading '+SOURCES[stockLvlSrc].name+'…</div>';wireStockPills(el);return;}
+  var sd=srcData[stockLvlSrc]||[];
+  var q=stockLvlSearch.trim().toLowerCase();
+  var list=sd.filter(function(p){
+    if(!p.bc||!p.nm)return false;
+    if(q)return (p.nm.toLowerCase().indexOf(q)>=0)||(p.bc.indexOf(q)>=0);
+    if(p.qty<=0)return false;
+    var tg=shelfCap(p.bc)||TARGET;return getQty(p.bc)<tg;
+  });
+  list.sort(function(a,b){return (a.nm||'').localeCompare(b.nm||'');});
+  var capped=list.slice(0,400);
+  var search='<input id="stk-search" placeholder="🔍 Search product or barcode…" value="'+escP(stockLvlSearch)+'" inputmode="search" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin:8px 0;box-sizing:border-box">';
+  var intro='<div style="font-size:12px;color:var(--sub);margin-bottom:6px">Set how many of each product should sit on the shelf. This becomes the top-up target and is saved for every device until you change it.'+(q?'':' Showing items below target from '+SOURCES[stockLvlSrc].name+' — search to set any product.')+'</div>';
+  var rows=capped.map(function(p){
+    var cap=shelfCap(p.bc),dq=getQty(p.bc);
+    return '<div class="stk-row" data-bc="'+p.bc+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--border)">'+
+      '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
+      '<div style="font-size:11px;color:var(--sub)">'+p.bc+' · here: '+dq+(cap?'':' · using default '+TARGET)+'</div></div>'+
+      '<div style="display:flex;align-items:center;gap:6px">'+
+        '<button class="stk-dec" style="width:36px;height:36px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-size:20px;font-weight:800;cursor:pointer;line-height:1">−</button>'+
+        '<div class="stk-val" style="min-width:36px;text-align:center;font-weight:800;font-size:17px;cursor:pointer;'+(cap?'color:var(--purpletxt)':'color:var(--sub)')+'">'+(cap||'–')+'</div>'+
+        '<button class="stk-inc" style="width:36px;height:36px;border:1.5px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);border-radius:9px;font-size:20px;font-weight:800;cursor:pointer;line-height:1">+</button>'+
+      '</div></div>';
+  }).join('');
+  el.innerHTML=pills+search+intro+'<div style="border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden">'+(rows||'<div class="empty" style="padding:16px">Nothing to show — try searching.</div>')+'</div>'+(list.length>capped.length?'<div style="font-size:12px;color:var(--sub);padding:8px 2px">Showing first '+capped.length+' of '+list.length+' — search to narrow.</div>':'');
+  wireStockPills(el);
+  var si=document.getElementById('stk-search');if(si){si.addEventListener('input',function(){stockLvlSearch=this.value;clearTimeout(window.__stkT);window.__stkT=setTimeout(renderStockLevel,250);});}
+  el.querySelectorAll('.stk-row').forEach(function(row){
+    var bc=row.getAttribute('data-bc');var vEl=row.querySelector('.stk-val');
+    function upd(){var c=shelfCap(bc);vEl.textContent=c||'–';vEl.style.color=c?'var(--purpletxt)':'var(--sub)';}
+    row.querySelector('.stk-inc').addEventListener('click',function(){setShelfCap(bc,(shelfCap(bc)||0)+1);upd();});
+    row.querySelector('.stk-dec').addEventListener('click',function(){setShelfCap(bc,Math.max(0,(shelfCap(bc)||0)-1));upd();});
+    vEl.addEventListener('click',function(){var p=prompt('Shelf qty for this item (0 to clear):',shelfCap(bc)||'');if(p==null)return;var v=parseInt(p);setShelfCap(bc,(isNaN(v)||v<0)?0:v);upd();});
+  });
+}
+
 function renderMap(){
   var el=document.getElementById('out'); if(!el)return;
   var pw=document.getElementById('prog-wrap'); if(pw)pw.style.display='none';
@@ -892,7 +936,7 @@ function renderView(){
   var isCollect=/^s[0-9]+$/.test(view);
   var isLow=view==='low';
   document.getElementById('day-filter').style.display=view==='oos'?'block':'none';
-  document.getElementById('prog-wrap').style.display=(view!=='oos'&&view!=='imgs')?'block':'none';
+  document.getElementById('prog-wrap').style.display=(view!=='oos'&&view!=='imgs'&&view!=='stocklvl')?'block':'none';
   document.getElementById('timer-bar').style.display=((isCollect||isLow)&&tmr.on)?'block':'none';
   if(isCollect){var idx=parseInt(view.substring(1));renderCollect(idx);}
   else if(isLow)renderLow();
@@ -906,6 +950,7 @@ function renderView(){
   else if(view==='shopify')renderShopify();
   else if(view==='map')renderMap();
   else if(view==='home')renderHome();
+  else if(view==='stocklvl')renderStockLevel();
   else renderImgs();
   backfillVisibleImages();
 }
@@ -1738,6 +1783,7 @@ function homeAreas(){var c=homeCounts();return [
   {k:'oos',  label:'Out of stock',         icon:'🚫', color:'#b45309', count:c.oos,  view:'oos'},
   {k:'over', label:'Overstock to move',    icon:'🔄', color:'#2563eb', count:c.over, view:'over'},
   {k:'order',label:'To order · low stock', icon:'🛒', color:'#16a34a', count:c.low,  view:'low'},
+  {k:'stock',label:'Stock levels',        icon:'📏', color:'#0d9488', count:(function(){try{return Object.keys(shelfCaps).filter(function(k){return k.split('|')[1]===String(DEST_ID);}).length;}catch(e){return 0;}})(), view:'stocklvl'},
   {k:'shop', label:'Add to Shopify',       icon:'🛍', color:'#db2777', count:c.shop, view:'shopify'},
   {k:'img',  label:'Missing images',       icon:'📸', color:'#0891b2', count:c.miss, view:'imgs'}
 ];}
