@@ -950,7 +950,7 @@ function renderView(){
   else if(view==='shopify')renderShopify();
   else if(view==='map')renderMap();
   else if(view==='home')renderHome();
-  else if(view==='stocklvl')renderStockLevel();
+  else if(view==='stocklvl'){try{renderStockLevel();}catch(err){var _o=document.getElementById('out');if(_o)_o.innerHTML='<div style="padding:16px;color:#b91c1c;font-size:13px;font-weight:600">Stock level error: '+((err&&err.message)||err)+'</div>';}}
   else renderImgs();
   backfillVisibleImages();
 }
