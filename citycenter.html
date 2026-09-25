@@ -1775,7 +1775,6 @@ function homeAreas(){var c=homeCounts();return [
   {k:'oos',  label:'Out of stock',         icon:'🚫', color:'#b45309', count:c.oos,  view:'oos'},
   {k:'over', label:'Overstock to move',    icon:'🔄', color:'#2563eb', count:c.over, view:'over'},
   {k:'order',label:'To order · low stock', icon:'🛒', color:'#16a34a', count:c.low,  view:'low'},
-  {k:'stock',label:'Stock levels',        icon:'📏', color:'#0d9488', count:(function(){try{return Object.keys(shelfCaps).filter(function(k){return k.split('|')[1]===String(DEST_ID);}).length;}catch(e){return 0;}})(), view:'stocklvl'},
   {k:'shop', label:'Add to Shopify',       icon:'🛍', color:'#db2777', count:c.shop, view:'shopify'},
   {k:'img',  label:'Missing images',       icon:'📸', color:'#0891b2', count:c.miss, view:'imgs'}
 ];}
@@ -3493,6 +3492,7 @@ if(__scr)__scr.addEventListener('click',runSysCheck);
    h+=card('⏱','Out of stock','oos',c.oos,'var(--red)');
    h+=card('🔄','Overstock to move','over',c.over,'#2563eb');
    h+=card('🛒','To order · low stock','low',c.low,'#16a34a');
+   h+=card('📏','Stock levels','stocklvl',c.caps,'#0d9488');
    h+=card('🛍','Add to Shopify','shopify',c.shop,'#db2777');
    h+=card('📸','Missing images','imgs',c.img,'var(--amber)');
    h+=card('🟡','Drafts to activate','shopify',c.drafts,'#92400e');
