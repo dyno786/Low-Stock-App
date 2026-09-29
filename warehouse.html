@@ -434,7 +434,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
-var WH_VER='build 21';
+var WH_VER='build 22';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -1195,21 +1195,39 @@ function openSettings(){setTmpMp=minPick;setTmpMode=minMode;ensureSettingsModal(
 function closeSettings(){var o=document.getElementById('set-ov');if(o)o.style.display='none';}
 
 function renderPickedHTML(){
-  var log=pickedLog.slice().sort(function(a,b){return b.ts-a.ts;});
-  var bn=['Chapeltown','City Center','Roundhay'],bc2=['#b45309','#16a34a','#2563eb'];
-  var h='<div style="padding:11px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:800;font-size:15px">✅ Picked</div><button id="pk-clear-log" style="font-size:12px;border:1px solid var(--border);background:#fff;border-radius:9px;padding:6px 10px;cursor:pointer">Clear log</button></div>';
-  if(!log.length){return h+'<div class="empty">Nothing picked yet. Every item packed shows here with who packed it.</div></div>';}
-  var byP={};log.forEach(function(e){var k=e.by||'Staff';(byP[k]=byP[k]||[]).push(e);});
-  Object.keys(byP).sort().forEach(function(nm){
-    var items=byP[nm],pcs=items.reduce(function(s,e){return s+(e.n||1);},0);
-    h+='<div style="border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden"><div style="background:var(--purplebg);padding:9px 12px;font-weight:800;display:flex;justify-content:space-between"><span>👤 '+escP(nm)+'</span><span style="font-weight:700;color:var(--purpletxt)">'+items.length+' picks · '+pcs+' pcs</span></div>';
-    items.forEach(function(e){var b=(e.bi>=0&&e.bi<3),col=b?bc2[e.bi]:'#6b7280',bl=b?bn[e.bi]:'Item',tm='';try{tm=new Date(e.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}catch(x){}
-      h+='<div style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-top:1px solid var(--border)">'+imgEl(e.bc,36)+'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escP(e.nm||e.bc)+'</div><div style="font-size:11px;color:'+col+';font-weight:700">'+bl+' · x'+(e.n||1)+' · '+tm+'</div></div></div>';});
-    h+='</div>';
+  var h='<div style="padding:11px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:800;font-size:16px">✅ Picked — by day &amp; person</div><button id="pk-clear-log" style="font-size:12px;border:1px solid var(--border);background:#fff;border-radius:9px;padding:6px 10px;cursor:pointer">Clear</button></div><div style="font-size:12px;color:var(--sub);margin-bottom:8px">Grouped by day, then person. Tap someone to see their timeline, breaks, and time by brand / section.</div>';
+  if(!pkTiming.length)return h+'<div class="empty">Nothing picked yet. Every item packed shows here with who packed it and how long it took.</div>';
+  var byKey={};
+  pkTiming.forEach(function(e){var d=new Date(e.ts);var ds=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);var k=ds+'||'+(e.by||'Staff');if(!byKey[k])byKey[k]={ds:ds,by:e.by||'Staff',evs:[]};byKey[k].evs.push(e);});
+  var groups=Object.keys(byKey).map(function(k){return byKey[k];});
+  var days={};groups.forEach(function(g){if(!days[g.ds])days[g.ds]=[];days[g.ds].push(g);});
+  Object.keys(days).sort().reverse().forEach(function(ds){
+    var dObj=new Date(ds+'T00:00:00');var dLabel=dObj.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'short'});
+    h+='<div style="font-weight:800;font-size:13px;color:var(--purpletxt);background:var(--purplebg);padding:8px 11px;border-radius:9px;margin:14px 0 4px">'+dLabel+'</div>';
+    days[ds].sort(function(a,b){return b.evs.length-a.evs.length;}).forEach(function(g){
+      var evs=g.evs.slice().sort(function(a,b){return a.ts-b.ts;});
+      var items=evs.length,active=evs.reduce(function(a,e){return a+(e.gap||0);},0);
+      var first=evs[0].ts,last=evs[evs.length-1].ts,span=last-first,breaks=Math.max(0,span-active),avg=items?Math.round(active/items/1000):0;
+      h+='<div class="pk-card" style="border:1px solid var(--border);border-radius:12px;background:#fff;margin:6px 0;overflow:hidden">'+
+        '<div class="pk-head" style="display:flex;align-items:center;gap:10px;padding:11px 12px;cursor:pointer">'+
+          '<div style="width:36px;height:36px;border-radius:50%;background:var(--purplebg);color:var(--purpletxt);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0">'+(g.by||"?").slice(0,1).toUpperCase()+'</div>'+
+          '<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px">'+escP(g.by)+'</div><div style="font-size:11.5px;color:var(--sub)">'+items+' picks · '+fmtDur(active)+' active · <b style="color:#b45309">'+fmtDur(breaks)+' breaks</b></div></div>'+
+          '<div style="text-align:right;flex-shrink:0"><div style="font-weight:800;font-size:14px;color:var(--purpletxt)">'+avg+'s</div><div style="font-size:10px;color:var(--sub)">avg/item</div></div>'+
+          '<div class="pk-caret" style="font-size:13px;color:var(--sub);flex-shrink:0">▸</div>'+
+        '</div>'+
+        '<div class="pk-detail" style="display:none;border-top:1px solid var(--border)">'+
+          renderTimeline(evs)+renderByBrand(evs)+renderBySection(evs)+
+          '<div style="font-weight:800;font-size:11.5px;padding:11px 12px 2px;border-top:1px solid var(--border);text-transform:uppercase;letter-spacing:.03em;color:var(--sub)">Every item · newest first</div>'+
+          evs.slice().reverse().slice(0,300).map(function(e){return '<div style="display:flex;gap:8px;padding:7px 12px;border-top:1px solid #f2f2f2;font-size:12.5px"><div style="width:44px;color:var(--sub);font-size:11px">'+new Date(e.ts).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})+'</div><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(e.nm||itemNm(e.bc))+'</div><div style="width:56px;text-align:right;font-weight:700;'+((e.gap&&e.gap>0)?"color:#111":"color:var(--sub)")+'">'+((e.gap&&e.gap>0)?fmtDur(e.gap):"—")+'</div></div>';}).join('')+
+        '</div></div>';
+    });
   });
   return h+'</div>';
 }
-function wirePicked(el){var b=document.getElementById('pk-clear-log');if(b)b.addEventListener('click',function(){if(confirm('Clear the picked log for everyone?')){pickedLog=[];savePicked();renderWH();}});}
+function wirePicked(el){
+  var b=document.getElementById('pk-clear-log');if(b)b.addEventListener('click',function(){if(confirm('Clear ALL pick history and time analysis for everyone? This cannot be undone.')){pickedLog=[];savePicked();pkTiming=[];try{localStorage.setItem('cc_pk_timing','[]');}catch(e){}if(typeof syncSave==='function')syncSave('cc_pk_timing',[]);renderWH();}});
+  el.querySelectorAll('.pk-head').forEach(function(hd){hd.addEventListener('click',function(){var d=this.parentNode.querySelector('.pk-detail');var c=this.querySelector('.pk-caret');if(d){var open=d.style.display!=='none';d.style.display=open?'none':'block';if(c)c.textContent=open?'▸':'▾';}});});
+}
 var TOPSELL='⭐ TOP SELLERS';
 var TOP_SELLERS_DEFAULT=['8691988008014','861348280277','632169111077','10181140082','5055123071616','5017857000027','8697926007439','8697440091945','636227024132','6583021105618','8697926023286','5060324172581','7332531063418','607203033363','746817073010','6156000043708','775724244382','42182658','4987205905599','632169110308','5060324173151','5012583105091','34285925123','34285696153','5023769063920','5017857070457','8691988007178','75610157109','636227122241','6976133165906','5060324172604','77312410728','5060324174349','802535154124','607203029946','75285002766','6186000077168','720947004007','748378003130','636227024095','632169210213','607203041696','8691988008007','632169117000','34285534165','34285658151','77312411039','881836032850','636227027003','5023769046992','5030834020696','5060324172635','632169110988','5055663716176','5060324172574','6033000102584','802535493155','881836242150','6976133165241','6156000043821','50064861','6976133165777','881836242419','75610159103','10181141652','748378001594','636227024101','636227221944','748378001112','636227024071','632169110995','5055663712536','5054510351218','636227048077','8718114642871','5055663716244','8712561483162','821090148164','607203034261','4000196901187','802535443082','77312410735','45836002453','8501020397597','607203038740','6977119130048','72790003721','6976133164626','75724252004','6006174000260','881836242136','607203495017','881836242167','8501020397573','748378003178','11313030202','636227024514','6001374057861','636227047025','731509849554','636227062486','5060065131243','75724252202','856484005037','8904061208028','636227122258','4987205905582','5060324174394','649674060653','6976133166507','5056538303385','6976133163209','714924290309','802535479173','636227885603','636227031130','77315003019','8697926016240','5060331569664'];
 var orderDept='AFRO BEAUTY PRODUCTS', orderTopN=20, orderNames={}, orderImgs={};
@@ -1396,7 +1414,7 @@ function renderWH(){
     '<button class="wh-tab'+(whTab==='oos'?' active':'')+'" data-tab="oos">⚠ Out of stock <span class="wh-tab-n">'+oosList.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='over'?' active':'')+'" data-tab="over">🏷 Overstock <span class="wh-tab-n">'+overList.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='map'?' active':'')+'" data-tab="map">🗺 Map</button>'+
-    '<button class="wh-tab'+(whTab==='picked'?' active':'')+'" data-tab="picked">✅ Picked <span class="wh-tab-n">'+pickedLog.length+'</span></button>'+
+    '<button class="wh-tab'+(whTab==='picked'?' active':'')+'" data-tab="picked">✅ Picked <span class="wh-tab-n">'+pkTiming.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='held'?' active':'')+'" data-tab="held">🔎 To Check <span class="wh-tab-n">'+heldCount()+'</span></button>'+
     '<button class="wh-tab'+(whTab==='ticked'?' active':'')+'" data-tab="ticked">☑ Ticked <span class="wh-tab-n">'+tickedCount()+'</span></button>'+
     '<button class="wh-tab'+(whTab==='order'?' active':'')+'" data-tab="order">🧾 Order</button>'+
