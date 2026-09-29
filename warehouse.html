@@ -434,7 +434,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
-var WH_VER='build 22';
+var WH_VER='build 24';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -458,9 +458,9 @@ function pkCorrupt(o){if(!o||typeof o!=='object'||Array.isArray(o))return !!o&&t
 pkTx=cleanPk(pkTx);try{localStorage.setItem('cc_pk_ticks',JSON.stringify(pkTx));}catch(e){}
 // who is picking + the shared 'picked' audit log
 var pickerName='';try{pickerName=localStorage.getItem('cc_pk_name')||'';}catch(e){}
-var DEFAULT_SHEET_URL='https://script.google.com/macros/s/AKfycbzOKY7WTRVudsLbsug5LfcETAqLaq3NFDf8vweCPsfjdVCQJOamOeCb4W24EDfK7Wuc/exec';
+var DEFAULT_SHEET_URL='https://script.google.com/macros/s/AKfycbyFzxwNMhXfY3Damcae3f_JB-kPjM2XNCrUB3oCJvdQpUd5LPze1K9SePbTvip4yxQ/exec';
 function sheetUrl(){try{var u=localStorage.getItem('cc_wh_sheet_url');if(u&&u.trim())return u.trim();}catch(e){}return DEFAULT_SHEET_URL;}
-function sheetLog(row){var u=sheetUrl();if(!u)return;try{row.ts=new Date().toISOString();row.by=pickerName||'Staff';row.device='Warehouse';fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(row)}).catch(function(){});}catch(e){}}
+function sheetLog(row){var u=sheetUrl();if(!u)return;if(row&&row.action&&row.action!=='test')return;try{row.ts=new Date().toISOString();row.by=pickerName||'Staff';row.device='Warehouse';fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(row)}).catch(function(){});}catch(e){}}
 function saveCfg(){if(typeof syncSave==='function')try{syncSave('cc_wh_set',{minPick:minPick,minMode:minMode,sheetUrl:sheetUrl(),hold:holdHours()});}catch(e){}}
 var __cfgT;function cfgDebounce(){clearTimeout(__cfgT);__cfgT=setTimeout(saveCfg,800);}
 function cfgBoot(){if(window.__cfgBoot||typeof syncLoad!=='function')return;window.__cfgBoot=1;syncLoad('cc_wh_set').then(function(o){if(o&&typeof o==='object'){var ch=false;if(o.sheetUrl&&o.sheetUrl!==sheetUrl()){try{localStorage.setItem('cc_wh_sheet_url',o.sheetUrl);}catch(e){}ch=true;}if(typeof o.hold!=='undefined'&&String(o.hold)!==String(holdHours())){try{localStorage.setItem('cc_wh_hold',String(o.hold));}catch(e){}ch=true;}if(ch){var a=document.getElementById('set-sheet');if(a)a.value=sheetUrl();var b=document.getElementById('set-hold');if(b)b.value=holdHours();}}}).catch(function(){});}
@@ -601,7 +601,7 @@ function sentBoot(){if(window.__sentBoot||typeof syncLoad!=='function')return;wi
 async function loadNS(){try{var r=await Promise.all([syncLoad('cc_whns0'),syncLoad('cc_whns1'),syncLoad('cc_whns2')]);whNS={0:r[0]||{},1:r[1]||{},2:r[2]||{}};}catch(e){}}
 var pickCounts=[0,0,0];
 var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_brandcollapsed')||'{}');}catch(e){}
-var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');return (v==='oos'||v==='topup'||v==='map'||v==='over'||v==='picked'||v==='order'||v==='held'||v==='ticked')?v:'topup';}catch(e){return 'topup';}})();
+var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');if(v==='ticked')v='topup';return (v==='oos'||v==='topup'||v==='map'||v==='over'||v==='picked'||v==='order'||v==='held'||v==='times'||v==='sessions')?v:'topup';}catch(e){return 'topup';}})();
 var offers={};try{offers=JSON.parse(localStorage.getItem('cc_wh_offers')||'{}');}catch(e){offers={};}
 function saveOffers(){try{localStorage.setItem('cc_wh_offers',JSON.stringify(offers));}catch(e){}}
 var ovMin=50,ovSlow=false;
@@ -683,7 +683,19 @@ function openSessions(){return Object.keys(whSessions).map(function(k){return wh
 function curSession(){var x=curSessId?whSessions[curSessId]:null;return (x&&!x.finished)?x:null;}
 function sessStart(){var by=ensurePicker();var id='S'+Date.now()+Math.random().toString(36).slice(2,5);whSessions[id]={id:id,by:by,start:Date.now(),last:Date.now(),finished:false};curSessId=id;sessPush();renderWH();}
 function sessJoin(id){if(whSessions[id]&&!whSessions[id].finished){curSessId=id;sessSaveLocal();renderWH();}}
-function sessFinish(){var x=curSession();if(!x)return;x.finished=true;x.end=Date.now();curSessId='';sessPush();renderWH();}
+function sheetSession(x){
+  var u=sheetUrl();if(!u||!x)return;
+  var evs=pkTiming.filter(function(e){return e.sid===x.id||(!e.sid&&e.by===x.by&&e.ts>=(x.start-2000)&&e.ts<=((x.end||Date.now())+2000));});
+  var items=evs.length,active=evs.reduce(function(a,e){return a+(e.gap||0);},0);
+  var first=evs.length?evs[0].ts:x.start,last=evs.length?evs[evs.length-1].ts:(x.end||x.start),span=last-first,breaks=Math.max(0,span-active),avg=items?Math.round(active/items/1000):0;
+  var bmT={},smT={},pos=(typeof brandPosMap==='function')?brandPosMap():{};
+  evs.forEach(function(e){if(!e.gap||e.gap<=0)return;var b=(typeof pickBrand==='function')?pickBrand(e):'?';bmT[b]=(bmT[b]||0)+e.gap;var loc=pos[(b||'').toUpperCase()];var L=loc?loc.label:'Unmapped';smT[L]=(smT[L]||0)+e.gap;});
+  function topOf(o){var best='',bt=0;Object.keys(o).forEach(function(k){if(o[k]>bt){bt=o[k];best=k;}});return best?(best+' ('+fmtDur(bt)+')'):'';}
+  function fmtT(ts){try{return new Date(ts).toLocaleString('en-GB');}catch(e){return '';}}
+  var payload={kind:'session',picker:x.by||'Staff',start:fmtT(x.start),finish:fmtT(x.end||Date.now()),items:items,active:fmtDur(active),breaks:fmtDur(breaks),avg:avg+'s',topBrand:topOf(bmT),topSection:topOf(smT)};
+  try{fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(function(){});}catch(e){}
+}
+function sessFinish(){var x=curSession();if(!x)return;x.finished=true;x.end=Date.now();try{sheetSession(x);}catch(e){}curSessId='';sessPush();renderWH();}
 function sessTouch(){var x=curSession();if(x){x.last=Date.now();sessSaveLocal();sessPushDeb();}}
 function sessChooser(){var o=openSessions();if(!o.length){sessStart();return;}var lines=o.map(function(s,i){return (i+1)+') '+(s.by||'picker')+' — '+Math.floor((Date.now()-(s.start||0))/60000)+'m';}).join('\n');var p=(typeof prompt==='function')?prompt('Join which session?\n'+lines+'\n\nType a number, or "new" for a new one:',''):null;if(p==null)return;if((''+p).toLowerCase().indexOf('new')===0){sessStart();return;}var idx=parseInt(p)-1;if(idx>=0&&idx<o.length)sessJoin(o[idx].id);}
 function renderSessBar(){
@@ -1416,7 +1428,6 @@ function renderWH(){
     '<button class="wh-tab'+(whTab==='map'?' active':'')+'" data-tab="map">🗺 Map</button>'+
     '<button class="wh-tab'+(whTab==='picked'?' active':'')+'" data-tab="picked">✅ Picked <span class="wh-tab-n">'+pkTiming.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='held'?' active':'')+'" data-tab="held">🔎 To Check <span class="wh-tab-n">'+heldCount()+'</span></button>'+
-    '<button class="wh-tab'+(whTab==='ticked'?' active':'')+'" data-tab="ticked">☑ Ticked <span class="wh-tab-n">'+tickedCount()+'</span></button>'+
     '<button class="wh-tab'+(whTab==='order'?' active':'')+'" data-tab="order">🧾 Order</button>'+
     '<button class="wh-tab'+(whTab==='times'?' active':'')+'" data-tab="times">⏱ Times</button>'+
     '<button class="wh-tab'+(whTab==='sessions'?' active':'')+'" data-tab="sessions">📋 Sessions</button>'+
@@ -1427,11 +1438,6 @@ function renderWH(){
   if(whTab==='held'){
     el.innerHTML=tabBar+renderHeldHTML();
     wireTabsBar();wireHeld(el);
-    return;
-  }
-  if(whTab==='ticked'){
-    el.innerHTML=tabBar+renderTickedHTML();
-    wireTabsBar();wireTicked(el);
     return;
   }
   if(whTab==='times'){
