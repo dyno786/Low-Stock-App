@@ -176,6 +176,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .wh-tab.active[data-tab="held"]{background:#f59e0b;border-color:#f59e0b}
 .wh-tab.active[data-tab="ticked"]{background:#6366f1;border-color:#6366f1}
 .wh-tab.active[data-tab="order"]{background:#ec4899;border-color:#ec4899}
+.wh-tab[data-tab="times"]{color:#0369a1;background:#f0f9ff;border-color:#7dd3fc}
+.wh-tab.active[data-tab="times"]{background:#0ea5e9;border-color:#0ea5e9}
 .ov-sum{font-size:12px;font-weight:700;color:var(--greentxt);background:var(--greenbg);border:1px solid var(--green);border-radius:9px;padding:8px 11px;margin:0 11px 10px}
 .ov-ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 11px 4px}
 .ov-thresh{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink)}
@@ -430,7 +432,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
-var WH_VER='build 14';
+var WH_VER='build 16';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -464,7 +466,56 @@ function forceSaveTicks(){try{localStorage.setItem('cc_pk_ticks',JSON.stringify(
 try{document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')forceSaveTicks();});window.addEventListener('pagehide',forceSaveTicks);}catch(e){}
 var whTickMeta={};try{whTickMeta=JSON.parse(localStorage.getItem('cc_wh_tickmeta')||'{}')||{};}catch(e){}
 function saveTickMeta(){try{localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}if(typeof syncSave==='function')syncSave('cc_wh_tickmeta',whTickMeta);}
-function tickMeta(bc,bi){whTickMeta[bc+'|'+bi]={by:(pickerName||'Staff'),ts:Date.now()};saveTickMeta();try{sessTouch();}catch(e){}}
+function tickMeta(bc,bi){whTickMeta[bc+'|'+bi]={by:(pickerName||'Staff'),ts:Date.now()};saveTickMeta();try{recordPick((pickerName||'Staff'),bc,bi);}catch(e){}try{sessTouch();}catch(e){}}
+// ---- Pick timing: exact seconds per pick, per picker, shared + viewable anywhere ----
+var pkTiming=[];try{pkTiming=JSON.parse(localStorage.getItem('cc_pk_timing')||'[]');if(!Array.isArray(pkTiming))pkTiming=[];}catch(e){pkTiming=[];}
+var pkLastBy={};
+function savePkTiming(){try{localStorage.setItem('cc_pk_timing',JSON.stringify(pkTiming.slice(-6000)));}catch(e){}clearTimeout(window.__ptPush);window.__ptPush=setTimeout(function(){if(typeof syncSave==='function'){window.__pkWrite=Date.now();syncSave('cc_pk_timing',pkTiming.slice(-6000));}},4000);}
+function recordPick(by,bc,bi){var now=Date.now();var prev=pkLastBy[by]||0;var gap=prev?(now-prev):0;pkLastBy[by]=now;if(gap>15*60000)gap=0;pkTiming.push({ts:now,by:by,bc:bc,bi:bi,gap:gap,nm:itemNm(bc)});if(pkTiming.length>6000)pkTiming=pkTiming.slice(-6000);savePkTiming();}
+function itemNm(bc){try{for(var b=3;b>=0;b--){if(bm[b]&&bm[b][bc]&&bm[b][bc].nm)return bm[b][bc].nm;}}catch(e){}return bc;}
+function fmtDur(ms){var s=Math.round((ms||0)/1000);if(s<60)return s+'s';var m=Math.floor(s/60);s=s%60;if(m<60)return m+'m '+s+'s';var h=Math.floor(m/60);m=m%60;return h+'h '+m+'m';}
+var timesView='people';
+function renderTimesItems(){
+  var byItem={};
+  pkTiming.forEach(function(e){if(!e.gap||e.gap<=0)return;var k=e.bc;if(!byItem[k])byItem[k]={bc:e.bc,nm:e.nm||itemNm(e.bc),n:0,total:0,max:0};var it=byItem[k];it.n++;it.total+=e.gap;if(e.gap>it.max)it.max=e.gap;});
+  var arr=Object.keys(byItem).map(function(k){var it=byItem[k];it.avg=it.total/it.n;return it;});
+  if(!arr.length)return '<div class="empty" style="padding:22px 16px;text-align:center;color:var(--sub)">No timed items yet.</div>';
+  arr.sort(function(a,b){return b.avg-a.avg;});
+  var html='<div style="font-size:12px;color:var(--sub);margin:4px 2px 8px">Average time to pick each item, slowest first — so you can see where time goes.</div><div style="border:1px solid var(--border);border-radius:11px;background:#fff;overflow:hidden">';
+  arr.slice(0,150).forEach(function(it){html+='<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid #f2f2f2"><div class="item-img">'+(typeof imgEl==='function'?imgEl(it.bc,40):'')+'</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+it.nm+'</div><div style="font-size:11px;color:var(--sub)">picked '+it.n+'× · longest '+fmtDur(it.max)+'</div></div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800;font-size:16px;color:var(--purpletxt)">'+Math.round(it.avg/1000)+'s</div><div style="font-size:10px;color:var(--sub)">avg</div></div></div>';});
+  return html+'</div>';
+}
+function timesToggle(){return '<div style="display:flex;gap:6px;margin:6px 2px 6px"><button class="tv-btn" data-tv="people" style="flex:1;padding:8px;border:1.5px solid '+(timesView==='people'?'var(--purple)':'var(--border)')+';background:'+(timesView==='people'?'var(--purplebg)':'#fff')+';color:'+(timesView==='people'?'var(--purpletxt)':'#555')+';border-radius:9px;font-weight:800;font-size:12.5px;cursor:pointer">👤 By person</button><button class="tv-btn" data-tv="items" style="flex:1;padding:8px;border:1.5px solid '+(timesView==='items'?'var(--purple)':'var(--border)')+';background:'+(timesView==='items'?'var(--purplebg)':'#fff')+';color:'+(timesView==='items'?'var(--purpletxt)':'#555')+';border-radius:9px;font-weight:800;font-size:12.5px;cursor:pointer">🐢 Slowest items</button></div>';}
+function renderTimesHTML(){
+  var _hdr='<div style="padding:2px 2px 16px"><div style="font-weight:800;font-size:16px;margin:6px 2px 2px">⏱ Pick times</div>'+timesToggle();
+  if(!pkTiming.length)return _hdr+'<div class="empty" style="padding:22px 16px;text-align:center;color:var(--sub)">No pick times yet.<br>Every pack is timed automatically once staff start picking.</div></div>';
+  if(timesView==='items')return _hdr+renderTimesItems()+'</div>';
+  var byKey={};
+  pkTiming.forEach(function(e){var d=new Date(e.ts);var ds=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);var k=(e.by||'Staff')+'||'+ds;if(!byKey[k])byKey[k]={by:e.by||'Staff',ds:ds,items:0,active:0,first:e.ts,last:e.ts,evs:[]};var g=byKey[k];g.items++;g.active+=(e.gap||0);if(e.ts<g.first)g.first=e.ts;if(e.ts>g.last)g.last=e.ts;g.evs.push(e);});
+  var groups=Object.keys(byKey).map(function(k){return byKey[k];});
+  var days={};groups.forEach(function(g){if(!days[g.ds])days[g.ds]=[];days[g.ds].push(g);});
+  var html=_hdr+'<div style="font-size:12px;color:var(--sub);margin:0 2px 8px">Tap a person to see each item. Active time ignores breaks over 15 min.</div>';
+  Object.keys(days).sort().reverse().forEach(function(ds){
+    var dObj=new Date(ds+'T00:00:00');var dLabel=dObj.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+    html+='<div style="font-weight:800;font-size:13px;color:var(--purpletxt);background:var(--purplebg);padding:8px 11px;border-radius:9px;margin:12px 0 4px">'+dLabel+'</div>';
+    days[ds].sort(function(a,b){return b.items-a.items;}).forEach(function(g){
+      var avg=g.items?Math.round(g.active/g.items/1000):0;var span=g.last-g.first;
+      html+='<div class="times-card" style="border:1px solid var(--border);border-radius:11px;background:#fff;margin:6px 0;overflow:hidden">'+
+        '<div class="times-head" style="display:flex;align-items:center;gap:10px;padding:11px 12px;cursor:pointer">'+
+          '<div style="width:34px;height:34px;border-radius:50%;background:var(--purplebg);color:var(--purpletxt);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0">'+(g.by||'?').slice(0,1).toUpperCase()+'</div>'+
+          '<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px">'+g.by+'</div><div style="font-size:11.5px;color:var(--sub)">'+g.items+' items · avg <b style="color:#111">'+avg+'s</b>/item</div></div>'+
+          '<div style="text-align:right;flex-shrink:0"><div style="font-weight:800;font-size:14px;color:var(--purpletxt)">'+fmtDur(g.active)+'</div><div style="font-size:10.5px;color:var(--sub)">active</div></div>'+
+          '<div class="times-caret" style="font-size:13px;color:var(--sub);flex-shrink:0">▸</div>'+
+        '</div>'+
+        '<div class="times-detail" style="display:none;border-top:1px solid var(--border)">'+
+          g.evs.slice().reverse().slice(0,200).map(function(e){return '<div style="display:flex;gap:8px;padding:7px 12px;border-top:1px solid #f2f2f2;font-size:12.5px"><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(e.nm||itemNm(e.bc))+'</div><div style="width:60px;text-align:right;font-weight:700;'+((e.gap&&e.gap>0)?'color:#111':'color:var(--sub)')+'">'+((e.gap&&e.gap>0)?fmtDur(e.gap):'—')+'</div></div>';}).join('')+
+          '<div style="padding:8px 12px;font-size:11px;color:var(--sub);background:#fafafa;border-top:1px solid #f2f2f2">Started '+new Date(g.first).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+' · finished '+new Date(g.last).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+' · '+fmtDur(span)+' start-to-finish</div>'+
+        '</div></div>';
+    });
+  });
+  html+='</div>';return html;
+}
+function wireTimes(el){el.querySelectorAll('.tv-btn').forEach(function(b){b.addEventListener('click',function(){timesView=this.getAttribute('data-tv');renderWH();});});el.querySelectorAll('.times-head').forEach(function(h){h.addEventListener('click',function(){var d=this.parentNode.querySelector('.times-detail');var c=this.querySelector('.times-caret');if(d){var open=d.style.display!=='none';d.style.display=open?'none':'block';if(c)c.textContent=open?'▸':'▾';}});});}
 function clearTickMeta(bc,bi){if(whTickMeta[bc+'|'+bi]){delete whTickMeta[bc+'|'+bi];saveTickMeta();}}
 function tickMetaBoot(){if(window.__tmBoot||typeof syncLoad!=='function')return;window.__tmBoot=1;syncLoad('cc_wh_tickmeta').then(function(o){if(o&&typeof o==='object'){var ch=false;Object.keys(o).forEach(function(k){var cur=whTickMeta[k];if(!cur||((o[k]&&o[k].ts||0)>(cur.ts||0))){whTickMeta[k]=o[k];ch=true;}});if(ch){try{localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}if(whTab==='ticked')renderWH();}}}).catch(function(){});}
 function tickWhen(ts){if(!ts)return '';var d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
@@ -628,7 +679,7 @@ function liveTickStart(){
 async function livePoll(){
   try{
     if(typeof syncLoadMulti!=='function')return;
-    var all=await syncLoadMulti(['cc_pk_reset','cc_pk_picked','cc_pk_session','cc_pk_ticks','cc_wh_sent','cc_wh_tickmeta','cc_wh_map','cc_pk_sessions','cc_shelf_caps']);
+    var all=await syncLoadMulti(['cc_pk_reset','cc_pk_picked','cc_pk_session','cc_pk_ticks','cc_wh_sent','cc_wh_tickmeta','cc_wh_map','cc_pk_sessions','cc_shelf_caps','cc_pk_timing']);
     if(!all)return;
     var _rs=all.cc_pk_reset;
     if(_rs&&_rs>pkResetTs){pkResetTs=_rs;try{localStorage.setItem('cc_pk_reset',String(_rs));localStorage.setItem('cc_pk_ticks','{}');}catch(e){}pkTx={};tmr.on=false;tmr.done=false;try{clearInterval(tmr.iv);}catch(e){}pkSession=null;if(loaded>=4)renderWH();}
@@ -649,6 +700,7 @@ async function livePoll(){
       if(!mapDirty&&all.cc_wh_map&&Array.isArray(all.cc_wh_map.rows)){var _nm=JSON.stringify(all.cc_wh_map);if(_nm!==JSON.stringify(whMapData)){whMapData=all.cc_wh_map;try{localStorage.setItem('cc_wh_map',JSON.stringify(whMapData));}catch(e){}if(loaded>=4)renderWH();}}
       if(sessValid(all.cc_pk_sessions)){var _ns=JSON.stringify(all.cc_pk_sessions);if(_ns!==JSON.stringify(whSessions)){whSessions=all.cc_pk_sessions;sessSaveLocal();if(loaded>=4)renderWH();}}
       if(all.cc_shelf_caps&&typeof all.cc_shelf_caps==='object'&&!Array.isArray(all.cc_shelf_caps)){var _sc=JSON.stringify(all.cc_shelf_caps);if(_sc!==JSON.stringify(shelfCaps)){shelfCaps=all.cc_shelf_caps;try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(loaded>=4)renderWH();}}
+      if(Array.isArray(all.cc_pk_timing)){var _seen={};pkTiming.forEach(function(e){_seen[e.ts+'|'+e.by+'|'+e.bc]=1;});var _add=false;all.cc_pk_timing.forEach(function(e){var _kk=e.ts+'|'+e.by+'|'+e.bc;if(!_seen[_kk]){pkTiming.push(e);_seen[_kk]=1;_add=true;}});if(_add){pkTiming.sort(function(a,b){return a.ts-b.ts;});if(pkTiming.length>6000)pkTiming=pkTiming.slice(-6000);try{localStorage.setItem('cc_pk_timing',JSON.stringify(pkTiming));}catch(e){}if(whTab==='times'&&loaded>=4)renderWH();}}
     }
     var sig=pkDoneSig();
     if(sig!==lastDoneSig){lastDoneSig=sig;if(loaded>=4)renderWH();}
@@ -1283,6 +1335,7 @@ function renderWH(){
     '<button class="wh-tab'+(whTab==='held'?' active':'')+'" data-tab="held">🕓 Sent <span class="wh-tab-n">'+heldCount()+'</span></button>'+
     '<button class="wh-tab'+(whTab==='ticked'?' active':'')+'" data-tab="ticked">☑ Ticked <span class="wh-tab-n">'+tickedCount()+'</span></button>'+
     '<button class="wh-tab'+(whTab==='order'?' active':'')+'" data-tab="order">🧾 Order</button>'+
+    '<button class="wh-tab'+(whTab==='times'?' active':'')+'" data-tab="times">⏱ Times</button>'+
     '<button class="wh-gear" id="wh-gear" title="Settings">⚙</button>'+
   '</div>';
   function wireTabsBar(){el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});var g=document.getElementById('wh-gear');if(g)g.addEventListener('click',openSettings);ensureSettingsModal();sentBoot();cfgBoot();tickMetaBoot();if(typeof syncLoad==='function'&&!window.__scBoot){window.__scBoot=1;syncLoad('cc_shelf_caps').then(function(o){if(o&&typeof o==='object'&&!Array.isArray(o)){shelfCaps=o;try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(loaded>=4)renderWH();}}).catch(function(){});}if(!livePollIv){livePollStart();liveTickStart();}try{renderSessBar();}catch(e){}}
@@ -1294,6 +1347,11 @@ function renderWH(){
   if(whTab==='ticked'){
     el.innerHTML=tabBar+renderTickedHTML();
     wireTabsBar();wireTicked(el);
+    return;
+  }
+  if(whTab==='times'){
+    el.innerHTML=tabBar+renderTimesHTML();
+    wireTabsBar();wireTimes(el);
     return;
   }
   if(whTab==='map'){
