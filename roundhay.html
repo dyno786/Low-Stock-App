@@ -376,7 +376,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 <div class="vtabs" id="vtabs">
   <div class="vtab on" data-v="home">🏠 Home</div>
   <div class="vtab" data-v="low">📦 Missing &amp; Low Stock</div>
-  <div class="vtab" data-v="stocklvl">📏 Stock level</div>
   <div class="vtab" data-v="neg">🔴 Negatives</div>
   <div class="vtab" data-v="oos">⏱ Out of stock</div>
   <div class="vtab" data-v="over">🔄 Overstock</div>
@@ -385,6 +384,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   <div class="vtab" data-v="fast">⚡ Fast OOS</div>
   <div class="vtab" data-v="disc">🚫 Discontinued</div>
   <div class="vtab" data-v="whorder">🚚 W/H Order</div>
+  <div class="vtab" data-v="stocklvl">📏 Stock level</div>
   <div class="vtab" data-v="shopify">🛍 + Shopify</div>
   <div class="vtab" data-v="imgs">📸 Images</div>
   <div class="vtab" data-v="map">🗺️ Map</div>
@@ -792,19 +792,22 @@ function wmSave(){try{localStorage.setItem(WM_KEY,JSON.stringify(wmMap));}catch(
 function wmEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function wmToast(m){var t=document.getElementById('wm-toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('on');},1600);}
 
-// ── STOCK LEVEL (set shelf qty per product, grouped by department, with pictures) ──
-var stockLvlSrc=0, stockLvlSearch='', stockLvlDept='ALL';
-function wireStockPills(el){el.querySelectorAll('.low-subtab[data-src]').forEach(function(t){t.addEventListener('click',function(){stockLvlSrc=parseInt(this.dataset.src);stockLvlSearch='';stockLvlDept='ALL';renderStockLevel();});});}
+// ── STOCK LEVEL (set how much goes on the shelf, per product, per source) ──
+var stockLvlSrc=0, stockLvlSearch='', stockLvlDepts=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'], stockLvlAll=false;
+function wireStockPills(el){el.querySelectorAll('.low-subtab[data-src]').forEach(function(t){t.addEventListener('click',function(){stockLvlSrc=parseInt(this.dataset.src);stockLvlSearch='';renderStockLevel();});});}
 function stkRowHTML(p){
   var cap=shelfCap(p.bc),dq=getQty(p.bc),val=cap||7;
-  return '<div class="stk-row" data-bc="'+p.bc+'" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-top:1px solid var(--border)">'+
+  return '<div class="stk-row" data-bc="'+p.bc+'" style="display:flex;align-items:center;gap:10px;padding:10px;border-top:1px solid var(--border)">'+
     '<div class="item-img">'+(typeof imgEl==='function'?imgEl(p.bc,48):'')+'</div>'+
     '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px;line-height:1.25">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-    '<div style="font-size:11px;color:var(--sub);margin-top:1px">'+p.bc+' · here: '+dq+(cap?'':' · default')+'</div></div>'+
-    '<div style="display:flex;align-items:center;gap:5px">'+
-      '<button class="stk-dec" style="width:34px;height:34px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">−</button>'+
-      '<div class="stk-val" style="min-width:30px;text-align:center;font-weight:800;font-size:16px;'+(cap?'color:var(--purpletxt)':'color:#111')+'">'+val+'</div>'+
-      '<button class="stk-inc" style="width:34px;height:34px;border:1.5px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">+</button>'+
+    '<div style="font-size:11.5px;color:var(--sub);margin-top:2px">In stock here: <b style="color:#111">'+dq+'</b></div></div>'+
+    '<div style="text-align:center;flex-shrink:0">'+
+      '<div style="font-size:9.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;font-weight:800">On shelf</div>'+
+      '<div style="display:flex;align-items:center;gap:5px">'+
+        '<button class="stk-dec" style="width:34px;height:34px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">−</button>'+
+        '<div class="stk-val" style="min-width:28px;text-align:center;font-weight:800;font-size:17px;'+(cap?'color:var(--purpletxt)':'color:#111')+'">'+val+'</div>'+
+        '<button class="stk-inc" style="width:34px;height:34px;border:1.5px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">+</button>'+
+      '</div>'+
     '</div></div>';
 }
 function renderStockLevel(){
@@ -814,30 +817,29 @@ function renderStockLevel(){
   var sd=srcData[stockLvlSrc]||[];
   var q=stockLvlSearch.trim().toLowerCase();
   var elig=sd.filter(function(p){if(!p.bc||!p.nm)return false;if(p.qty<=0)return false;var tg=shelfCap(p.bc)||7;return getQty(p.bc)<tg;});
-  var shown=q?elig.filter(function(p){return p.nm.toLowerCase().indexOf(q)>=0||p.bc.indexOf(q)>=0;}):elig;
-  var deptCounts={};shown.forEach(function(p){var d=(p.dp||'General');deptCounts[d]=(deptCounts[d]||0)+1;});
+  var searched=q?elig.filter(function(p){return p.nm.toLowerCase().indexOf(q)>=0||p.bc.indexOf(q)>=0;}):elig;
+  var deptCounts={};searched.forEach(function(p){var d=(p.dp||'General');deptCounts[d]=(deptCounts[d]||0)+1;});
   var depts=Object.keys(deptCounts).sort();
-  if(stockLvlDept!=='ALL'&&!deptCounts[stockLvlDept])stockLvlDept='ALL';
   var deptPills='<div class="collect-dept-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+
-    '<span class="collect-dept-pill'+(stockLvlDept==='ALL'?' on':'')+'" data-dp="ALL" style="cursor:pointer">All ('+shown.length+')</span>'+
-    depts.map(function(d){return '<span class="collect-dept-pill'+(stockLvlDept===d?' on':'')+'" data-dp="'+d.replace(/"/g,'&quot;')+'" style="cursor:pointer">'+d+' ('+deptCounts[d]+')</span>';}).join('')+'</div>';
-  var filtered=stockLvlDept==='ALL'?shown:shown.filter(function(p){return (p.dp||'General')===stockLvlDept;});
+    '<span class="collect-dept-pill'+(stockLvlAll?' on':'')+'" data-dp="__ALL__" style="cursor:pointer">All ('+searched.length+')</span>'+
+    depts.map(function(d){var on=!stockLvlAll&&stockLvlDepts.indexOf(d)>=0;return '<span class="collect-dept-pill'+(on?' on':'')+'" data-dp="'+d.replace(/"/g,'&quot;')+'" style="cursor:pointer">'+d+' ('+deptCounts[d]+')</span>';}).join('')+'</div>';
+  var filtered=searched.filter(function(p){var d=(p.dp||'General');return stockLvlAll?true:(stockLvlDepts.indexOf(d)>=0);});
   filtered.sort(function(a,b){var da=(a.dp||'General'),db=(b.dp||'General');if(da!==db)return da<db?-1:1;return (a.nm||'')<(b.nm||'')?-1:1;});
-  var cappedNote='';if(stockLvlDept==='ALL'&&!q&&filtered.length>500){cappedNote='<div style="font-size:12px;color:var(--sub);padding:8px 2px">Showing first 500 of '+filtered.length+' — pick a department or search to see the rest.</div>';filtered=filtered.slice(0,500);}
+  var cappedNote='';if(filtered.length>500){cappedNote='<div style="font-size:12px;color:var(--sub);padding:8px 2px">Showing first 500 of '+filtered.length+' — narrow by department or search.</div>';filtered=filtered.slice(0,500);}
   var byDept={};filtered.forEach(function(p){var d=(p.dp||'General');if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
   var body='';Object.keys(byDept).sort().forEach(function(d){body+='<div style="font-weight:800;font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--purpletxt);background:var(--purplebg);padding:7px 10px;margin:10px 0 0">'+d+' · '+byDept[d].length+'</div>';byDept[d].forEach(function(p){body+=stkRowHTML(p);});});
   var search='<input id="stk-search" placeholder="🔍 Search product or barcode…" value="'+(stockLvlSearch||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" inputmode="search" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin:8px 0;box-sizing:border-box">';
-  var intro='<div style="font-size:12px;color:var(--sub);margin-bottom:2px">Everything is preset to <b>7</b> (same as the warehouse top-up). Change any item with − / + — it saves for every device until you change it.</div>';
-  el.innerHTML=pills+search+intro+deptPills+'<div style="border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden">'+(body||'<div class="empty" style="padding:16px">Nothing below target here — search to set any product.</div>')+'</div>'+cappedNote;
+  var intro='<div style="font-size:12px;color:var(--sub);margin-bottom:2px">Set <b>how much goes on the shelf</b> for each product (preset to 7). Change with − / + — it saves for every device until you change it.</div>';
+  el.innerHTML=pills+search+intro+deptPills+'<div style="border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden">'+(body||'<div class="empty" style="padding:16px">Nothing here — pick a department or search.</div>')+'</div>'+cappedNote;
   wireStockPills(el);
   var si=document.getElementById('stk-search');if(si){si.addEventListener('input',function(){stockLvlSearch=this.value;clearTimeout(window.__stkT);window.__stkT=setTimeout(renderStockLevel,250);});}
-  el.querySelectorAll('.collect-dept-pill[data-dp]').forEach(function(pl){pl.addEventListener('click',function(){stockLvlDept=this.getAttribute('data-dp');renderStockLevel();});});
+  el.querySelectorAll('.collect-dept-pill[data-dp]').forEach(function(pl){pl.addEventListener('click',function(){var d=this.getAttribute('data-dp');if(d==='__ALL__'){stockLvlAll=!stockLvlAll;}else{stockLvlAll=false;var ix=stockLvlDepts.indexOf(d);if(ix>=0)stockLvlDepts.splice(ix,1);else stockLvlDepts.push(d);}renderStockLevel();});});
   el.querySelectorAll('.stk-row').forEach(function(row){
     var bc=row.getAttribute('data-bc');var vEl=row.querySelector('.stk-val');
     function upd(){var c=shelfCap(bc);vEl.textContent=c||7;vEl.style.color=c?'var(--purpletxt)':'#111';}
     row.querySelector('.stk-inc').addEventListener('click',function(){setShelfCap(bc,(shelfCap(bc)||7)+1);upd();});
     row.querySelector('.stk-dec').addEventListener('click',function(){setShelfCap(bc,Math.max(0,(shelfCap(bc)||7)-1));upd();});
-    vEl.addEventListener('click',function(){var pr=prompt('Shelf qty for this item (0 = use default 7):',shelfCap(bc)||7);if(pr==null)return;var v=parseInt(pr);setShelfCap(bc,(isNaN(v)||v<0)?0:v);upd();});
+    vEl.addEventListener('click',function(){var pr=prompt('How many go on the shelf? (0 = use default 7)',shelfCap(bc)||7);if(pr==null)return;var v=parseInt(pr);setShelfCap(bc,(isNaN(v)||v<0)?0:v);upd();});
   });
 }
 
