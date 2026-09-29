@@ -820,7 +820,7 @@ function stkRowHTML(p){
   return '<div class="stk-row" data-bc="'+p.bc+'" style="display:flex;align-items:center;gap:10px;padding:10px;border-top:1px solid var(--border)">'+
     '<div class="item-img">'+(typeof imgEl==='function'?imgEl(p.bc,48):'')+'</div>'+
     '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px;line-height:1.25">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-    '<div style="font-size:11.5px;color:var(--sub);margin-top:2px">In stock here: <b style="color:#111">'+dq+'</b></div></div>'+
+    '<div style="font-size:11.5px;color:var(--sub);margin-top:2px">Here: <b style="color:#111">'+dq+'</b> &nbsp;·&nbsp; '+((typeof SOURCES!=='undefined'&&SOURCES[stockLvlSrc])?SOURCES[stockLvlSrc].name:'Source')+': <b style="color:#111">'+(p.qty||0)+'</b></div></div>'+
     '<div style="text-align:center;flex-shrink:0">'+
       '<div style="font-size:9.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;font-weight:800">On shelf</div>'+
       '<div style="display:flex;align-items:center;gap:5px">'+
