@@ -434,7 +434,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
-var WH_VER='build 18';
+var WH_VER='build 19';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -517,6 +517,28 @@ function renderTimesHTML(){
   });
   html+='</div>';return html;
 }
+function pickBrand(e){try{return brandOf(e.nm||itemNm(e.bc),e.bc)||'?';}catch(x){return '?';}}
+function renderTimeline(evs){
+  if(!evs.length)return '';
+  var start=evs[0].ts,end=evs[evs.length-1].ts;var mins=Math.max(1,Math.ceil((end-start)/60000)+1);
+  var buckets=[];for(var i=0;i<mins;i++)buckets.push(0);
+  evs.forEach(function(e){var idx=Math.floor((e.ts-start)/60000);if(idx>=0&&idx<mins)buckets[idx]++;});
+  var cells=buckets.map(function(c,i){var col=c===0?'#e5e7eb':(c===1?'#bbf7d0':(c<=3?'#34d399':'#059669'));var tm=new Date(start+i*60000).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});return '<div title="'+tm+' · '+c+' picks" style="width:8px;height:18px;background:'+col+';border-radius:2px"></div>';}).join('');
+  var idle=[],run=0,runStart=0;buckets.forEach(function(c,i){if(c===0){if(run===0)runStart=i;run++;}else{if(run>=3)idle.push({from:runStart,len:run});run=0;}});if(run>=3)idle.push({from:runStart,len:run});
+  var idleH=idle.length?('<div style="font-size:11.5px;color:var(--sub);margin-top:7px"><b style="color:#b45309">Stopped picking (3+ min gaps):</b><br>'+idle.map(function(g){return '• '+new Date(start+g.from*60000).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+' – '+new Date(start+(g.from+g.len)*60000).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+' &nbsp;<b>'+g.len+' min</b>';}).join('<br>')+'</div>'):'<div style="font-size:11.5px;color:#059669;margin-top:7px">No gaps over 3 min — steady picking.</div>';
+  var activeMin=0;buckets.forEach(function(c){if(c>0)activeMin++;});var idleMin=mins-activeMin;
+  return '<div style="padding:11px 12px"><div style="font-weight:800;font-size:12.5px;margin-bottom:3px">🗺 Minute-by-minute</div><div style="font-size:11px;color:var(--sub);margin-bottom:6px">'+new Date(start).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})+' → '+new Date(end).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})+' · <b style="color:#059669">'+activeMin+' min active</b>, <b style="color:#b45309">'+idleMin+' min idle</b></div><div style="display:flex;flex-wrap:wrap;gap:2px">'+cells+'</div><div style="display:flex;gap:14px;font-size:10px;color:var(--sub);margin-top:6px"><span>⬜ idle</span><span>🟩 1 pick</span><span>🟩 busy</span></div>'+idleH+'</div>';
+}
+function renderByBrand(evs){
+  var m={};evs.forEach(function(e){if(!e.gap||e.gap<=0)return;var b=pickBrand(e);if(!m[b])m[b]={t:0,n:0};m[b].t+=e.gap;m[b].n++;});
+  var arr=Object.keys(m).map(function(k){return {b:k,t:m[k].t,n:m[k].n};});if(!arr.length)return '';arr.sort(function(a,b){return b.t-a.t;});
+  return '<div style="padding:11px 12px;border-top:1px solid var(--border)"><div style="font-weight:800;font-size:12.5px;margin-bottom:5px">⏱ Time by brand (most first)</div>'+arr.slice(0,50).map(function(x){return '<div style="display:flex;gap:8px;padding:4px 0;font-size:12.5px;border-top:1px solid #f6f6f8"><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+x.b+'</div><div style="color:var(--sub);width:38px;text-align:right">'+x.n+'×</div><div style="width:62px;text-align:right;font-weight:800;color:var(--purpletxt)">'+fmtDur(x.t)+'</div></div>';}).join('')+'</div>';
+}
+function renderBySection(evs){
+  var pos=(typeof brandPosMap==='function')?brandPosMap():{};var m={};evs.forEach(function(e){if(!e.gap||e.gap<=0)return;var b=(pickBrand(e)||'').toUpperCase();var pp=pos[b];var loc=pp?pp.label:'Unmapped';if(!m[loc])m[loc]={t:0,n:0,ord:pp?pp.ord:9e9};m[loc].t+=e.gap;m[loc].n++;});
+  var arr=Object.keys(m).map(function(k){return {loc:k,t:m[k].t,n:m[k].n,ord:m[k].ord};});if(!arr.length)return '';arr.sort(function(a,b){return b.t-a.t;});
+  return '<div style="padding:11px 12px;border-top:1px solid var(--border)"><div style="font-weight:800;font-size:12.5px;margin-bottom:5px">📍 Time by section / row (most first)</div>'+arr.slice(0,50).map(function(x){return '<div style="display:flex;gap:8px;padding:4px 0;font-size:12.5px;border-top:1px solid #f6f6f8"><div style="flex:1;min-width:0"><b>'+x.loc+'</b></div><div style="color:var(--sub);width:38px;text-align:right">'+x.n+'×</div><div style="width:62px;text-align:right;font-weight:800;color:var(--purpletxt)">'+fmtDur(x.t)+'</div></div>';}).join('')+'</div>';
+}
 function renderSessionsHTML(){
   var sess=Object.keys(whSessions).map(function(k){return whSessions[k];}).filter(function(x){return x&&x.start;});
   sess.sort(function(a,b){return (b.start||0)-(a.start||0);});
@@ -534,6 +556,7 @@ function renderSessionsHTML(){
         '<div class="sess-caret2" style="font-size:13px;color:var(--sub);flex-shrink:0">▸</div>'+
       '</div>'+
       '<div class="sess-detail2" style="display:none;border-top:1px solid var(--border)">'+
+        (evs.length?(renderTimeline(evs)+renderByBrand(evs)+renderBySection(evs)+'<div style="font-weight:800;font-size:11.5px;padding:11px 12px 2px;border-top:1px solid var(--border);text-transform:uppercase;letter-spacing:.03em;color:var(--sub)">Every item · newest first</div>'):'')+
         (evs.length?evs.slice().reverse().slice(0,300).map(function(e){return '<div style="display:flex;gap:8px;padding:7px 12px;border-top:1px solid #f2f2f2;font-size:12.5px"><div style="width:44px;color:var(--sub);font-size:11px">'+new Date(e.ts).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})+'</div><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(e.nm||itemNm(e.bc))+'</div><div style="width:56px;text-align:right;font-weight:700;'+((e.gap&&e.gap>0)?"color:#111":"color:var(--sub)")+'">'+((e.gap&&e.gap>0)?fmtDur(e.gap):"—")+'</div></div>';}).join(''):'<div style="padding:12px;color:var(--sub);font-size:12px">No items recorded for this session yet.</div>')+
       '</div></div>';
   });
