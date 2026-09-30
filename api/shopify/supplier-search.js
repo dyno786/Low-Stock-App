@@ -103,7 +103,7 @@ export default async function handler(req){
   }
 
   // ---- name fallback: only if NO barcode match anywhere ----
-  if(!matches.length && name){
+  if(false){ /* name matching disabled — barcode-only */
     for(var s2=0;s2<sites.length;s2++){
       var rn=await suggest(sites[s2],name);
       if(rn.items.length){
