@@ -351,9 +351,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 
 
 /* ============ + SHOPIFY REDESIGN (mobile + desktop) ============ */
-body.shopwide{max-width:480px}
 @media(min-width:860px){
-  body.shopwide{max-width:1200px}
+  body{max-width:920px}
+  body[data-view="shopify"]{max-width:1200px}
 }
 .shp2{padding:8px 10px 24px}
 .shp2-bar{position:sticky;top:0;z-index:20;background:var(--bg);padding:8px 4px 6px;margin:0 -4px}
@@ -1043,7 +1043,7 @@ function wmShare(){
 
 function renderView(){
   shopEnsure();
-  try{document.body.classList.toggle('shopwide',view==='shopify');}catch(e){}
+  try{document.body.setAttribute('data-view',view);}catch(e){}
   var isCollect=/^s[0-9]+$/.test(view);
   var isLow=view==='low';
   document.getElementById('day-filter').style.display=view==='oos'?'block':'none';
