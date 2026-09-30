@@ -1,204 +1,105 @@
-// api/shopify/enrich.js — AI product research + listing copy (barcode-aware, attribute-aware, collection-aware).
-// Returns { title, brand, category, tags[], attributes{}, collections[], descriptionHtml, seoTitle, seoDescription }.
-// - Uses the BARCODE to identify the real product and FIX truncated till names.
-// - Picks Shopify standard product attributes from allowed values (_taxonomy.js).
-// - Places the product into the correct smart collections using the store's REAL tag rules and
-//   matches the exact vendor name for vendor-driven collections (_collections.js).
-// AI provider: OpenAI/ChatGPT (OPENAI_API_KEY, OPENAI_MODEL) is tried FIRST; if it errors or is out of
-// quota it falls back to Anthropic Claude (ANTHROPIC_API_KEY, ANTHROPIC_MODEL). Either key alone also works.
+// api/shopify/enrich.js
+// Generates Shopify listing copy (description, SEO, tags, collections, taxonomy)
+// from a product's name/brand/category. Works with either AI provider:
+//   POST { barcode, name, brand, category, provider:"openai"|"claude" }
+// Keys (set in Vercel env):
+//   OPENAI_API_KEY        + optional AI_OPENAI_MODEL (default gpt-4o-mini)
+//   ANTHROPIC_API_KEY     + optional AI_CLAUDE_MODEL (default claude-haiku-4-5-20251001)
+// Returns: { title, brand, category, descriptionHtml, seoTitle, seoDescription,
+//            tags[], collections[], taxonomyCategory, attributes{}, provider }
 
-import { attrOptionsText, categoryFor, categoryOptionsText } from './_taxonomy.js';
-import { fetchCollectionMenu, collectionOptionsText, validCollectionTags, canonicalVendor } from './_collections.js';
+export const config = { runtime: 'edge' };
 
-export const config = { maxDuration: 60 };
+var OPENAI_MODEL = (typeof process!=='undefined' && process.env && process.env.AI_OPENAI_MODEL) || 'gpt-4o-mini';
+var CLAUDE_MODEL = (typeof process!=='undefined' && process.env && process.env.AI_CLAUDE_MODEL) || 'claude-haiku-4-5-20251001';
 
-const OKEY = process.env.OPENAI_API_KEY;
-const AKEY = process.env.ANTHROPIC_API_KEY;
-const MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
-const AMODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
+function buildPrompt(p){
+  return 'You are writing a product listing for a UK hair & beauty shop\'s Shopify store.\n'+
+    'Product name: '+(p.name||'')+'\n'+
+    'Brand: '+(p.brand||'(unknown)')+'\n'+
+    'Department/category: '+(p.category||'(unknown)')+'\n'+
+    'Barcode: '+(p.barcode||'')+'\n\n'+
+    'Return ONLY a JSON object (no markdown, no prose) with exactly these keys:\n'+
+    '{\n'+
+    '  "title": clean product title, proper case, no ALL CAPS,\n'+
+    '  "brand": best brand name,\n'+
+    '  "category": short department name,\n'+
+    '  "descriptionHtml": 2-3 short paragraphs in <p>...</p> tags, benefits-led, UK English, no invented claims,\n'+
+    '  "seoTitle": <=60 chars, includes brand + product,\n'+
+    '  "seoDescription": <=155 chars, natural, includes key benefit,\n'+
+    '  "tags": array of 5-10 lowercase tags (brand, type, hair concern, format),\n'+
+    '  "collections": array of likely store collection names this belongs in (e.g. "Curl Activators", "Shampoo"),\n'+
+    '  "taxonomyCategory": best Shopify standard product category path, or "",\n'+
+    '  "attributes": object of simple facts you are confident about (e.g. {"size":"340g","form":"cream"})\n'+
+    '}\n'+
+    'If unsure about a value, use a sensible default or empty string/array. Never fabricate specific medical claims.';
+}
 
-export default async function handler(req, res) {
-  if (req.method === 'GET') { res.status(200).json({ ok: true, providers: { openai: !!OKEY, anthropic: !!AKEY }, anthropicModel: AMODEL }); return; }
-  if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
-  if (!OKEY && !AKEY) { res.status(500).json({ error: 'Missing ANTHROPIC_API_KEY or OPENAI_API_KEY' }); return; }
+function extractJson(txt){
+  if(!txt) return null;
+  var s=(''+txt).trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  try{ return JSON.parse(s); }catch(e){}
+  var a=s.indexOf('{'), b=s.lastIndexOf('}');
+  if(a>=0&&b>a){ try{ return JSON.parse(s.slice(a,b+1)); }catch(e){} }
+  return null;
+}
 
-  let body = {};
-  try { body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {}); } catch (e) {}
-  const name = (body.name || '').trim();
-  const brand = (body.brand || '').trim();
-  const category = (body.category || '').trim();
-  const barcode = (body.barcode || '').trim();
-  if (!name) { res.status(400).json({ error: 'name required' }); return; }
+async function callOpenAI(prompt){
+  var key=(typeof process!=='undefined'&&process.env)?process.env.OPENAI_API_KEY:null;
+  if(!key) return {error:'OpenAI key not set on the server (OPENAI_API_KEY).'};
+  var r=await fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify({model:OPENAI_MODEL,temperature:0.4,response_format:{type:'json_object'},
+      messages:[{role:'system',content:'You output only valid JSON.'},{role:'user',content:prompt}]})
+  });
+  var d=await r.json().catch(function(){return null;});
+  if(!r.ok){ var m=(d&&d.error&&d.error.message)||('OpenAI HTTP '+r.status); return {error:m}; }
+  var txt=d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+  var j=extractJson(txt);
+  return j||{error:'OpenAI returned no parseable JSON.'};
+}
 
-  let menu = { tags: [], vendors: [] };
-  try { menu = await fetchCollectionMenu(); } catch (e) {}
+async function callClaude(prompt){
+  var key=(typeof process!=='undefined'&&process.env)?process.env.ANTHROPIC_API_KEY:null;
+  if(!key) return {error:'Claude key not set on the server (ANTHROPIC_API_KEY).'};
+  var r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:1200,temperature:0.4,
+      system:'You output only valid JSON, no markdown fences, no prose.',
+      messages:[{role:'user',content:prompt}]})
+  });
+  var d=await r.json().catch(function(){return null;});
+  if(!r.ok){ var m=(d&&d.error&&d.error.message)||('Claude HTTP '+r.status); return {error:m}; }
+  var txt=d&&d.content&&d.content[0]&&d.content[0].text;
+  var j=extractJson(txt);
+  return j||{error:'Claude returned no parseable JSON.'};
+}
 
-  const instructions =
-    'You are a product researcher and e-commerce copywriter for CC Hair And Beauty, a UK retailer specialising in ' +
-    'Afro and ethnic hair & beauty products. The product name you receive comes from an EPOS till and is often ' +
-    'TRUNCATED, abbreviated, or missing spaces (e.g. "TARGETSERUM" means "Target Serum"; "GEL TUBE" may just be "Gel"; ' +
-    '"CREME WAX HONEY" means a honey-scented creme wax). Use the BARCODE and brand to identify the EXACT real-world ' +
-    'product, then correct and expand the name properly. Research carefully and do NOT invent ingredients, sizes, ' +
-    'claims or awards you are not confident about — keep uncertain specifics general. Write in UK English. ' +
-    'You will also classify the product using FIXED lists: only ever use the exact attribute value labels and the ' +
-    'exact collection tags provided, never invent new ones, and omit anything that does not clearly apply. If the ' +
-    "product's brand matches one of the listed vendor names, return the brand with that exact spelling. " +
-    'You will also be given a short list of standard product categories; choose the single best fit so the ' +
-    'official attribute fields can be saved. ' +
-    'Respond with ONLY a JSON object (no markdown fences) with keys: ' +
-    'title, brand, category, taxonomyCategory, tags, attributes, collections, descriptionHtml, seoTitle, seoDescription.';
-
-  const ask =
-    'Raw till name (may be truncated): ' + name + '\n' +
-    'Brand (may be blank or partial): ' + (brand || '(unknown)') + '\n' +
-    'Category hint: ' + (category || '(unknown)') + '\n' +
-    'Barcode (use this to identify the exact product): ' + (barcode || '(none)') + '\n\n' +
-    'Standard product categories (choose the ONE that best fits):\n' +
-    categoryOptionsText() + '\n\n' +
-    'Allowed attribute values (use the key on the left; pick ONLY from the exact labels listed):\n' +
-    attrOptionsText() + '\n\n' +
-    'Shop collection tags (place the product in the ones it belongs to, using the EXACT tag on the left):\n' +
-    (collectionOptionsText(menu) || '(none available)') + '\n\n' +
-    'Known vendor names (if the product brand is one of these, return brand EXACTLY as written): ' +
-    ((menu.vendors || []).slice(0, 80).join(', ') || '(none)') + '\n\n' +
-    'Tasks:\n' +
-    '- Identify the exact product from the barcode and brand. If the till name is truncated or has words run together, fix it.\n' +
-    '- title: the correct, full product name in Title Case (Brand + Product + Variant/Scent + Size if known), max ~70 chars. No barcode in the title.\n' +
-    '- brand: the correct brand / manufacturer name in Title Case (use an exact vendor name from the list if it matches).\n' +
-    '- category: a concise product type, e.g. "Hair Serum", "Body Spray", "Styling Gel", "Shampoo", "Hair Wax".\n' +
-    '- taxonomyCategory: the single best-matching label from the Standard product categories list above (exact text). Use empty string only if none fit.\n' +
-    '- tags: an array of 6 to 12 short lowercase descriptive tags for search — product type, format, scent/variant, hair or skin type or concern, brand, size. No "#".\n' +
-    '- attributes: an object whose keys are the attribute keys above and whose values are arrays of the EXACT labels that apply (1 to 4 each). Only include attributes you are confident about.\n' +
-    '- collections: an array of the EXACT collection tags from the list above that this product belongs in (usually 2 to 6). Only use tags from that list; pick the genuinely relevant ones.\n' +
-    '- descriptionHtml: 2 to 3 short paragraphs wrapped in <p> tags — what it is, who it suits, key benefits, and how to use it.\n' +
-    '- seoTitle: max 60 characters, include the brand and product.\n' +
-    '- seoDescription: max 155 characters, compelling, includes the product and a key benefit.\n' +
-    'Return ONLY the JSON object.';
-
-  function parseJSON(t) {
-    if (!t) return null;
-    let s = ('' + t).trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
-    const i = s.indexOf('{'), j = s.lastIndexOf('}');
-    if (i >= 0 && j > i) s = s.slice(i, j + 1);
-    try { return JSON.parse(s); } catch (e) { return null; }
-  }
-  function cleanTags(t) {
-    let arr = Array.isArray(t) ? t : (typeof t === 'string' ? t.split(',') : []);
-    const seen = {}, out = [];
-    for (let x of arr) {
-      x = ('' + (x == null ? '' : x)).replace(/^#/, '').trim().slice(0, 40);
-      if (!x) continue;
-      const k = x.toLowerCase();
-      if (seen[k]) continue;
-      seen[k] = 1; out.push(x);
-      if (out.length >= 15) break;
-    }
-    return out;
-  }
-  function cleanAttrs(a) {
-    const out = {};
-    if (a && typeof a === 'object' && !Array.isArray(a)) {
-      for (const k of Object.keys(a)) {
-        let v = a[k];
-        if (!Array.isArray(v)) v = (typeof v === 'string' ? v.split(',') : []);
-        const arr = [];
-        for (let x of v) { x = ('' + (x == null ? '' : x)).trim(); if (x && arr.indexOf(x) < 0) arr.push(x); if (arr.length >= 6) break; }
-        if (arr.length) out[('' + k).trim()] = arr;
-      }
-    }
-    return out;
-  }
-  function finalize(o) {
-    const s = x => ('' + (x == null ? '' : x)).trim();
-    const catInfo = categoryFor(o.taxonomyCategory);
-    let attrs = cleanAttrs(o.attributes);
-    if (catInfo) {
-      // keep only attributes that are valid for the chosen taxonomy category
-      const allow = {}; catInfo.keys.forEach(k => allow[k] = 1);
-      const filtered = {}; Object.keys(attrs).forEach(k => { if (allow[k]) filtered[k] = attrs[k]; });
-      attrs = filtered;
-    } else {
-      attrs = {}; // no category -> attributes can't be saved, so don't return any
-    }
-    const out = {
-      title: s(o.title).slice(0, 120),
-      brand: s(o.brand).slice(0, 80),
-      category: s(o.category).slice(0, 60),
-      taxonomyCategory: catInfo ? catInfo.label : '',
-      tags: cleanTags(o.tags),
-      attributes: attrs,
-      collections: validCollectionTags(o.collections, menu),
-      descriptionHtml: s(o.descriptionHtml),
-      seoTitle: s(o.seoTitle).slice(0, 70),
-      seoDescription: s(o.seoDescription).slice(0, 320)
-    };
-    const cv = canonicalVendor(out.brand, menu);
-    if (cv) out.brand = cv;
-    return out;
-  }
-
-  let lastErr = '';
-
-  // 1) OpenAI (ChatGPT) — tried FIRST
-  if (OKEY) {
-    // Responses API with web search
-    try {
-      const r = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OKEY },
-        body: JSON.stringify({ model: MODEL, tools: [{ type: 'web_search_preview' }], instructions: instructions, input: ask, max_output_tokens: 1400 })
-      });
-      if (r.ok) {
-        const j = await r.json();
-        let text = j.output_text;
-        if (!text && Array.isArray(j.output)) text = j.output.map(o => (o.content || []).map(c => c.text || '').join('')).join('');
-        const parsed = parseJSON(text);
-        if (parsed && parsed.title) { res.status(200).json(finalize(parsed)); return; }
-      } else {
-        try { const ej = await r.json(); lastErr = (ej.error && ej.error.message) || ('OpenAI ' + r.status); } catch (e) { lastErr = 'OpenAI ' + r.status; }
-      }
-    } catch (e) {}
-    // Chat Completions fallback (guaranteed JSON)
-    try {
-      const r = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OKEY },
-        body: JSON.stringify({ model: MODEL, response_format: { type: 'json_object' }, max_tokens: 1400,
-          messages: [{ role: 'system', content: instructions }, { role: 'user', content: ask }] })
-      });
-      const j = await r.json();
-      if (j.error) { lastErr = j.error.message || 'OpenAI error'; }
-      else {
-        const text = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
-        const parsed = parseJSON(text);
-        if (parsed && parsed.title) { res.status(200).json(finalize(parsed)); return; }
-        lastErr = lastErr || 'Could not parse AI response';
-      }
-    } catch (e) { lastErr = lastErr || String((e && e.message) || e); }
-  }
-
-  // 2) Anthropic (Claude) — used when OpenAI is full/errored, or if it's the only key set
-  if (AKEY) {
-    try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': AKEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: AMODEL, max_tokens: 1500, system: instructions,
-          messages: [{ role: 'user', content: ask + '\n\nReturn ONLY the JSON object — no prose, no markdown fences.' }]
-        })
-      });
-      const j = await r.json();
-      if (j && j.error) { lastErr = (j.error && j.error.message) || 'Anthropic error'; }
-      else {
-        const text = (j && Array.isArray(j.content)) ? j.content.map(c => c.text || '').join('') : '';
-        const parsed = parseJSON(text);
-        if (parsed && parsed.title) { res.status(200).json(finalize(parsed)); return; }
-        lastErr = lastErr || 'Could not parse Claude response';
-      }
-    } catch (e) { lastErr = lastErr || String((e && e.message) || e); }
-  }
-
-  if (!AKEY && lastErr) { res.status(502).json({ error: 'OpenAI failed and Claude fallback is not active on this deployment (ANTHROPIC_API_KEY not visible — redeploy after adding it). ' + lastErr }); return; }
-  res.status(502).json({ error: lastErr || 'AI unavailable — set OPENAI_API_KEY or ANTHROPIC_API_KEY.' });
+export default async function handler(req){
+  var cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type','Content-Type':'application/json'};
+  if(req.method==='OPTIONS')return new Response(null,{status:200,headers:cors});
+  if(req.method!=='POST')return new Response(JSON.stringify({error:'POST only'}),{status:405,headers:cors});
+  var p={}; try{ p=await req.json(); }catch(e){}
+  if(!p.name&&!p.barcode)return new Response(JSON.stringify({error:'name or barcode required'}),{status:400,headers:cors});
+  var provider=(p.provider==='claude')?'claude':'openai';
+  var prompt=buildPrompt(p);
+  var out = provider==='claude' ? await callClaude(prompt) : await callOpenAI(prompt);
+  if(out&&out.error)return new Response(JSON.stringify({error:out.error,provider:provider}),{status:200,headers:cors});
+  // normalise shape
+  var res={
+    title:out.title||p.name||'',
+    brand:out.brand||p.brand||'',
+    category:out.category||p.category||'',
+    descriptionHtml:out.descriptionHtml||out.description||'',
+    seoTitle:out.seoTitle||'',
+    seoDescription:out.seoDescription||'',
+    tags:Array.isArray(out.tags)?out.tags:[],
+    collections:Array.isArray(out.collections)?out.collections:[],
+    taxonomyCategory:out.taxonomyCategory||'',
+    attributes:(out.attributes&&typeof out.attributes==='object')?out.attributes:{},
+    provider:provider
+  };
+  return new Response(JSON.stringify(res),{status:200,headers:cors});
 }
