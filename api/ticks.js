@@ -3,7 +3,7 @@
 
 export const config = { runtime: 'edge' };
 
-const ALLOWED_KEYS = ['cc_pk_ticks','cc_staff2_ticks','cc_neg_ticks','cc_auto_log','cc_staff_week','cc_whns0','cc_whns1','cc_whns2','cc_wh_map','cc_wh_qty','cc_pk_log','cc_pk_session','cc_wh_set','cc_training_results','cc_wh_topsellers','cc_wh_tags','cc_pick_log','cc_wh_sent','cc_wh_cfg','cc_wh_tickmeta','cc_pk_sessions','cc_shelf_caps','cc_pk_picked','cc_pk_reset','cc_t0','cc_t1','cc_t2','cc_n0','cc_n1','cc_n2','cc_shop_noadd','cc_shop_depts','cc_shop_listed','cc_shop_localdrafts','cc_pk_timing','cc_wh_target','cc_shop_suppliers','cc_over_ns','cc_discontinued'];
+const ALLOWED_KEYS = ['cc_pk_ticks','cc_staff2_ticks','cc_neg_ticks','cc_auto_log','cc_staff_week','cc_whns0','cc_whns1','cc_whns2','cc_wh_map','cc_wh_qty','cc_pk_log','cc_pk_session','cc_wh_set','cc_training_results','cc_wh_topsellers','cc_wh_tags','cc_pick_log','cc_wh_sent','cc_wh_cfg','cc_wh_tickmeta','cc_pk_sessions','cc_shelf_caps','cc_pk_picked','cc_pk_reset','cc_t0','cc_t1','cc_t2','cc_n0','cc_n1','cc_n2','cc_shop_noadd','cc_shop_depts','cc_shop_listed','cc_shop_localdrafts','cc_pk_timing','cc_wh_target','cc_shop_suppliers','cc_over_ns','cc_discontinued','cc_ai_provider'];
 
 export default async function handler(req) {
   const cors = {
