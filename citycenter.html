@@ -597,11 +597,11 @@ async function syncLoad(k){
   catch(e){syncOk=false;return null;}
 }
 function syncSave(k,v){
-  if(!syncOk)return;if(syncPend)clearTimeout(syncPend);
-  syncPend=setTimeout(function(){
+  if(!window._sp)window._sp={};if(window._sp[k])clearTimeout(window._sp[k]);
+  window._sp[k]=setTimeout(function(){
     fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({key:k,value:v})}).catch(function(){});
-    syncPend=null;setSyncTxt('✓ Synced');
+    window._sp[k]=null;setSyncTxt('✓ Synced');
   },500);
 }
 function setSyncTxt(t){var el=document.getElementById('sync-txt');if(!el)return;el.textContent=t;clearTimeout(el._t);el._t=setTimeout(function(){el.textContent='';},3000);}
@@ -626,9 +626,20 @@ function getQty(bc){var p=destData?destData.find(function(x){return x.bc===bc;})
 var shelfCaps={};try{shelfCaps=JSON.parse(localStorage.getItem('cc_shelf_caps')||'{}')||{};}catch(e){shelfCaps={};}
 if(!shelfCaps||typeof shelfCaps!=='object'||Array.isArray(shelfCaps))shelfCaps={};
 function shelfCap(bc){var v=shelfCaps[bc+'|'+DEST_ID];return (typeof v==='number'&&v>0)?v:0;}
-function setShelfCap(bc,v){var k=bc+'|'+DEST_ID;if(v&&v>0)shelfCaps[k]=v;else delete shelfCaps[k];try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(typeof syncSave==='function')syncSave('cc_shelf_caps',shelfCaps);}
+
+var shelfChecked={};try{shelfChecked=JSON.parse(localStorage.getItem('cc_shelf_checked')||'{}')||{};}catch(e){shelfChecked={};}
+if(!shelfChecked||typeof shelfChecked!=='object'||Array.isArray(shelfChecked))shelfChecked={};
+function chkKey(bc){return bc+'|'+DEST_ID;}
+function isChecked(bc){return !!shelfChecked[chkKey(bc)];}
+function saveShelfCapStrict(bc,v){var k=bc+'|'+DEST_ID;return fetch('/api/ticks?key=cc_shelf_caps',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){var srv=(d&&d.data&&typeof d.data==='object'&&!Array.isArray(d.data))?d.data:{};for(var kk in shelfCaps){if(!(kk in srv))srv[kk]=shelfCaps[kk];}if(v&&v>0)srv[k]=v;else delete srv[k];return fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_shelf_caps',value:srv})}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j&&j.ok){shelfCaps=srv;try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}return true;}return false;});}).catch(function(){return false;});}
+function saveCheckedStrict(bc,on,v,nm){var k=bc+'|'+DEST_ID;return fetch('/api/ticks?key=cc_shelf_checked',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){var srv=(d&&d.data&&typeof d.data==='object'&&!Array.isArray(d.data))?d.data:{};for(var kk in shelfChecked){if(!(kk in srv))srv[kk]=shelfChecked[kk];}if(on)srv[k]={t:Date.now(),v:(v||0),nm:(nm||'')};else delete srv[k];return fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:'cc_shelf_checked',value:srv})}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j&&j.ok){shelfChecked=srv;try{localStorage.setItem('cc_shelf_checked',JSON.stringify(shelfChecked));}catch(e){}return true;}return false;});}).catch(function(){return false;});}
+function fmtStamp(t){if(!t)return 'confirmed';var d=new Date(t);if(isNaN(d.getTime()))return 'confirmed';var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];var hh=d.getHours(),mm=d.getMinutes(),ap=hh<12?'am':'pm',h12=hh%12;if(h12===0)h12=12;var yr=(d.getFullYear()!==new Date().getFullYear())?(' '+d.getFullYear()):'';return d.getDate()+' '+mo[d.getMonth()]+yr+', '+h12+':'+(mm<10?'0':'')+mm+ap;}
+function refreshCheckedFromServer(){return fetch('/api/ticks?key=cc_shelf_checked',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&d.data&&typeof d.data==='object'&&!Array.isArray(d.data)){shelfChecked=d.data;try{localStorage.setItem('cc_shelf_checked',JSON.stringify(shelfChecked));}catch(e){}}return true;}).catch(function(){return false;});}
+function setChecked(bc,on,v,nm){var k=chkKey(bc);if(on){shelfChecked[k]={t:Date.now(),v:(v||0),nm:(nm||'')};}else{delete shelfChecked[k];}try{localStorage.setItem('cc_shelf_checked',JSON.stringify(shelfChecked));}catch(e){}if(typeof syncLoad==='function'){syncLoad('cc_shelf_checked').then(function(srv){if(srv&&typeof srv==='object'&&!Array.isArray(srv)){if(on)srv[k]=shelfChecked[k];else delete srv[k];for(var kk in shelfChecked){if(!(kk in srv))srv[kk]=shelfChecked[kk];}shelfChecked=srv;try{localStorage.setItem('cc_shelf_checked',JSON.stringify(shelfChecked));}catch(e){}}if(typeof syncSave==='function')syncSave('cc_shelf_checked',shelfChecked);}).catch(function(){if(typeof syncSave==='function')syncSave('cc_shelf_checked',shelfChecked);});}else if(typeof syncSave==='function'){syncSave('cc_shelf_checked',shelfChecked);}}
+(function(){if(typeof syncLoad!=='function')return;syncLoad('cc_shelf_checked').then(function(o){if(o&&typeof o==='object'&&!Array.isArray(o)){for(var kk in o){shelfChecked[kk]=o[kk];}try{localStorage.setItem('cc_shelf_checked',JSON.stringify(shelfChecked));}catch(e){}if(typeof view!=='undefined'&&view==='stocklvl'&&typeof renderStockLevel==='function')renderStockLevel();}}).catch(function(){});})();
+function setShelfCap(bc,v){var k=bc+'|'+DEST_ID;if(v&&v>0)shelfCaps[k]=v;else delete shelfCaps[k];try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(typeof syncLoad==='function'){syncLoad('cc_shelf_caps').then(function(srv){if(srv&&typeof srv==='object'&&!Array.isArray(srv)){if(v&&v>0)srv[k]=v;else delete srv[k];for(var kk in shelfCaps){if(!(kk in srv))srv[kk]=shelfCaps[kk];}shelfCaps=srv;try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}}if(typeof syncSave==='function')syncSave('cc_shelf_caps',shelfCaps);}).catch(function(){if(typeof syncSave==='function')syncSave('cc_shelf_caps',shelfCaps);});}else if(typeof syncSave==='function'){syncSave('cc_shelf_caps',shelfCaps);}}
 window.setShelfPrompt=function(bc){var cur=shelfCap(bc);var p=prompt('How many fit on the shelf here for this item?\nTop-up fills to this number. Blank or 0 to clear.',cur||'');if(p==null)return;var v=parseInt(p);setShelfCap(bc,(isNaN(v)||v<0)?0:v);if(typeof renderView==='function')renderView();};
-(function(){if(typeof syncLoad!=='function')return;syncLoad('cc_shelf_caps').then(function(o){if(o&&typeof o==='object'&&!Array.isArray(o)){shelfCaps=o;try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(typeof renderView==='function')renderView();}}).catch(function(){});})();
+(function(){if(typeof syncLoad!=='function')return;syncLoad('cc_shelf_caps').then(function(o){if(o&&typeof o==='object'&&!Array.isArray(o)){for(var kk in o){shelfCaps[kk]=o[kk];}try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(typeof renderView==='function')renderView();}}).catch(function(){});})();
 function calcWH(bc,whQty){var tg=shelfCap(bc)||TARGET;var dq=getQty(bc);var need=Math.max(0,tg-dq);if(need<=0||dq>=tg)return 0;return Math.min(need,whQty);}
 // ── SCANNABLE BARCODE POPUP ──────────────────────────────────
 // Tap any barcode (item-bc/neg-bc/oos-bc/img-bc) → fullscreen modal
@@ -893,53 +904,80 @@ function wmEsc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){retu
 function wmToast(m){var t=document.getElementById('wm-toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('on');},1600);}
 
 // ── STOCK LEVEL (set how much goes on the shelf, per product, per source) ──
-var stockLvlSrc=0, stockLvlSearch='', stockLvlDepts=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'], stockLvlAll=false;
+var stockLvlSrc=0, stockLvlSearch='', stockLvlDepts=['AFRO BEAUTY PRODUCTS','AFRO PRODUCTS 2'], stockLvlAll=false, stockLvlTab='todo';
 function wireStockPills(el){el.querySelectorAll('.low-subtab[data-src]').forEach(function(t){t.addEventListener('click',function(){stockLvlSrc=parseInt(this.dataset.src);stockLvlSearch='';renderStockLevel();});});}
-function stkRowHTML(p){
+function stkRowHTML(p,mode){
   var cap=shelfCap(p.bc),dq=getQty(p.bc),val=cap||7;
-  return '<div class="stk-row" data-bc="'+p.bc+'" style="display:flex;align-items:center;gap:10px;padding:10px;border-top:1px solid var(--border)">'+
+  var actBtn=(mode==='done')
+    ? '<button class="stk-uncheck" style="margin-top:6px;width:100%;border:1px solid var(--border);background:#fff;color:var(--sub);border-radius:8px;padding:7px;font-size:11.5px;font-weight:700;cursor:pointer">\u21A9 Move back</button>'
+    : '<button class="stk-confirm" style="margin-top:6px;width:100%;border:none;background:var(--green);color:#fff;border-radius:8px;padding:8px;font-size:12.5px;font-weight:800;cursor:pointer">\u2713 Confirm &amp; save</button>';
+  return '<div class="stk-row" data-bc="'+p.bc+'" data-nm="'+(''+p.nm).replace(/"/g,'&quot;')+'" style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-top:1px solid var(--border)">'+
     '<div class="item-img">'+(typeof imgEl==='function'?imgEl(p.bc,48):'')+'</div>'+
-    '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px;line-height:1.25">'+p.nm+(p.sz?' · '+p.sz:'')+'</div>'+
-    '<div style="font-size:11.5px;color:var(--sub);margin-top:2px">Here: <b style="color:#111">'+dq+'</b> &nbsp;·&nbsp; '+((typeof SOURCES!=='undefined'&&SOURCES[stockLvlSrc])?SOURCES[stockLvlSrc].name:'Source')+': <b style="color:#111">'+(p.qty||0)+'</b></div></div>'+
-    '<div style="text-align:center;flex-shrink:0">'+
+    '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px;line-height:1.25">'+p.nm+(p.sz?' \u00b7 '+p.sz:'')+'</div>'+
+    '<div style="font-size:11.5px;color:var(--sub);margin-top:2px">Here: <b style="color:#111">'+dq+'</b> &nbsp;\u00b7&nbsp; '+((typeof SOURCES!=='undefined'&&SOURCES[stockLvlSrc])?SOURCES[stockLvlSrc].name:'Source')+': <b style="color:#111">'+(p.qty||0)+'</b>'+(mode==='done'?' &nbsp;\u00b7&nbsp; <b style="color:var(--greentxt)">\u2713 checked '+fmtStamp((shelfChecked[p.bc+'|'+DEST_ID]||{}).t)+'</b>':'')+'</div></div>'+
+    '<div style="text-align:center;flex-shrink:0;width:120px">'+
       '<div style="font-size:9.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;font-weight:800">On shelf</div>'+
-      '<div style="display:flex;align-items:center;gap:5px">'+
-        '<button class="stk-dec" style="width:34px;height:34px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">−</button>'+
+      '<div style="display:flex;align-items:center;gap:5px;justify-content:center">'+
+        '<button class="stk-dec" style="width:34px;height:34px;border:1.5px solid var(--border);background:#fff;border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">\u2212</button>'+
         '<div class="stk-val" style="min-width:28px;text-align:center;font-weight:800;font-size:17px;'+(cap?'color:var(--purpletxt)':'color:#111')+'">'+val+'</div>'+
         '<button class="stk-inc" style="width:34px;height:34px;border:1.5px solid var(--purple);background:var(--purplebg);color:var(--purpletxt);border-radius:9px;font-size:19px;font-weight:800;cursor:pointer;line-height:1">+</button>'+
-      '</div>'+
+      '</div>'+actBtn+
     '</div></div>';
 }
 function renderStockLevel(){
   var el=document.getElementById('out');if(!el)return;
-  var pills='<div class="low-subtabs">'+SOURCES.map(function(sc,i){var on=stockLvlSrc===i;return '<div class="low-subtab'+(on?' on':'')+'" data-src="'+i+'" style="'+(on?'border-color:'+sc.color+';color:'+sc.color:'')+'"><span class="low-sub-name">📦 '+sc.name+'</span></div>';}).join('')+'</div>';
-  if(!srcLoaded[stockLvlSrc]){if(typeof loadSrc==='function')loadSrc(stockLvlSrc);el.innerHTML=pills+'<div class="loading"><div class="spin"></div>Loading '+SOURCES[stockLvlSrc].name+'…</div>';wireStockPills(el);return;}
+  var pills='<div class="low-subtabs">'+SOURCES.map(function(sc,i){var on=stockLvlSrc===i;return '<div class="low-subtab'+(on?' on':'')+'" data-src="'+i+'" style="'+(on?'border-color:'+sc.color+';color:'+sc.color:'')+'"><span class="low-sub-name">\uD83D\uDCE6 '+sc.name+'</span></div>';}).join('')+'</div>';
+  if(!srcLoaded[stockLvlSrc]){if(typeof loadSrc==='function')loadSrc(stockLvlSrc);el.innerHTML=pills+'<div class="loading"><div class="spin"></div>Loading '+SOURCES[stockLvlSrc].name+'\u2026</div>';wireStockPills(el);return;}
   var sd=srcData[stockLvlSrc]||[];
   var q=stockLvlSearch.trim().toLowerCase();
-  var elig=sd.filter(function(p){if(!p.bc||!p.nm)return false;if(p.qty<=0)return false;var tg=shelfCap(p.bc)||7;return getQty(p.bc)<tg;});
-  var searched=q?elig.filter(function(p){return p.nm.toLowerCase().indexOf(q)>=0||p.bc.indexOf(q)>=0;}):elig;
-  var deptCounts={};searched.forEach(function(p){var d=(p.dp||'General');deptCounts[d]=(deptCounts[d]||0)+1;});
-  var depts=Object.keys(deptCounts).sort();
-  var deptPills='<div class="collect-dept-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+
-    '<span class="collect-dept-pill'+(stockLvlAll?' on':'')+'" data-dp="__ALL__" style="cursor:pointer">All ('+searched.length+')</span>'+
-    depts.map(function(d){var on=!stockLvlAll&&stockLvlDepts.indexOf(d)>=0;return '<span class="collect-dept-pill'+(on?' on':'')+'" data-dp="'+d.replace(/"/g,'&quot;')+'" style="cursor:pointer">'+d+' ('+deptCounts[d]+')</span>';}).join('')+'</div>';
-  var filtered=searched.filter(function(p){var d=(p.dp||'General');return stockLvlAll?true:(stockLvlDepts.indexOf(d)>=0);});
-  filtered.sort(function(a,b){var da=(a.dp||'General'),db=(b.dp||'General');if(da!==db)return da<db?-1:1;return (a.nm||'')<(b.nm||'')?-1:1;});
-  var cappedNote='';if(filtered.length>500){cappedNote='<div style="font-size:12px;color:var(--sub);padding:8px 2px">Showing first 500 of '+filtered.length+' — narrow by department or search.</div>';filtered=filtered.slice(0,500);}
-  var byDept={};filtered.forEach(function(p){var d=(p.dp||'General');if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
-  var body='';Object.keys(byDept).sort().forEach(function(d){body+='<div style="font-weight:800;font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--purpletxt);background:var(--purplebg);padding:7px 10px;margin:10px 0 0">'+d+' · '+byDept[d].length+'</div>';byDept[d].forEach(function(p){body+=stkRowHTML(p);});});
-  var search='<input id="stk-search" placeholder="🔍 Search product or barcode…" value="'+(stockLvlSearch||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" inputmode="search" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin:8px 0;box-sizing:border-box">';
-  var intro='<div style="font-size:12px;color:var(--sub);margin-bottom:2px">Set <b>how much goes on the shelf</b> for each product (preset to 7). Change with − / + — it saves for every device until you change it.</div>';
-  el.innerHTML=pills+search+intro+deptPills+'<div style="border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden">'+(body||'<div class="empty" style="padding:16px">Nothing here — pick a department or search.</div>')+'</div>'+cappedNote;
+  var suf='|'+DEST_ID;
+  var elig=sd.filter(function(p){return p.bc&&p.nm&&p.qty>0;});
+  var todoAll=elig.filter(function(p){return !isChecked(p.bc);});
+  var doneCount=0;for(var ck in shelfChecked){if(ck.slice(-suf.length)===suf)doneCount++;}
+  var tabBar='<div style="display:flex;gap:8px;margin:8px 0">'+
+    '<button class="stk-tab" data-tab="todo" style="flex:1;border:2px solid '+(stockLvlTab!=='done'?'var(--purple)':'var(--border)')+';background:'+(stockLvlTab!=='done'?'var(--purplebg)':'#fff')+';color:'+(stockLvlTab!=='done'?'var(--purpletxt)':'var(--sub)')+';border-radius:10px;padding:10px;font-weight:800;font-size:13.5px;cursor:pointer">\uD83D\uDCDD To check ('+todoAll.length+')</button>'+
+    '<button class="stk-tab" data-tab="done" style="flex:1;border:2px solid '+(stockLvlTab==='done'?'var(--green)':'var(--border)')+';background:'+(stockLvlTab==='done'?'var(--greenbg)':'#fff')+';color:'+(stockLvlTab==='done'?'var(--greentxt)':'var(--sub)')+';border-radius:10px;padding:10px;font-weight:800;font-size:13.5px;cursor:pointer">\u2713 Checked ('+doneCount+')</button>'+
+  '</div>';
+  var search='<input id="stk-search" placeholder="\uD83D\uDD0D Scan or type barcode / name\u2026" value="'+(stockLvlSearch||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'" inputmode="search" style="width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin:4px 0 8px;box-sizing:border-box">';
+  var body='',intro='',deptPills='',cappedNote='';
+  if(stockLvlTab!=='done'){
+    var searched=q?todoAll.filter(function(p){return p.nm.toLowerCase().indexOf(q)>=0||p.bc.indexOf(q)>=0;}):todoAll;
+    var deptCounts={};searched.forEach(function(p){var d=(p.dp||'General');deptCounts[d]=(deptCounts[d]||0)+1;});
+    var depts=Object.keys(deptCounts).sort();
+    deptPills='<div class="collect-dept-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">'+
+      '<span class="collect-dept-pill'+(stockLvlAll?' on':'')+'" data-dp="__ALL__" style="cursor:pointer">All ('+searched.length+')</span>'+
+      depts.map(function(d){var on=!stockLvlAll&&stockLvlDepts.indexOf(d)>=0;return '<span class="collect-dept-pill'+(on?' on':'')+'" data-dp="'+d.replace(/"/g,'&quot;')+'" style="cursor:pointer">'+d+' ('+deptCounts[d]+')</span>';}).join('')+'</div>';
+    var filtered=searched.filter(function(p){var d=(p.dp||'General');return stockLvlAll?true:(stockLvlDepts.indexOf(d)>=0);});
+    filtered.sort(function(a,b){var da=(a.dp||'General'),db=(b.dp||'General');if(da!==db)return da<db?-1:1;return (a.nm||'')<(b.nm||'')?-1:1;});
+    if(filtered.length>500){cappedNote='<div style="font-size:12px;color:var(--sub);padding:8px 2px">Showing first 500 of '+filtered.length+' \u2014 narrow by department or search.</div>';filtered=filtered.slice(0,500);}
+    var byDept={};filtered.forEach(function(p){var d=(p.dp||'General');if(!byDept[d])byDept[d]=[];byDept[d].push(p);});
+    Object.keys(byDept).sort().forEach(function(d){body+='<div style="font-weight:800;font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--purpletxt);background:var(--purplebg);padding:7px 10px;margin:10px 0 0">'+d+' \u00b7 '+byDept[d].length+'</div>';byDept[d].forEach(function(p){body+=stkRowHTML(p,'todo');});});
+    intro='<div style="font-size:12px;color:var(--sub);margin-bottom:2px">Set <b>how much goes on the shelf</b>, then tap <b>Confirm</b>. Confirmed items move to Checked and won\u2019t show here again.</div>';
+    if(!body)body='<div class="empty" style="padding:16px">\uD83C\uDF89 All caught up \u2014 nothing left to check'+(q?' for this search':'')+'.</div>';
+  }else{
+    var byBc={};sd.forEach(function(p){if(p.bc)byBc[p.bc]=p;});
+    var list=[];for(var k in shelfChecked){if(k.slice(-suf.length)!==suf)continue;var bc=k.slice(0,k.length-suf.length);var meta=shelfChecked[k]||{};var p=byBc[bc]||{bc:bc,nm:(meta.nm||bc),qty:0,dp:'General'};list.push(p);}
+    if(q)list=list.filter(function(p){return (p.nm||'').toLowerCase().indexOf(q)>=0||p.bc.indexOf(q)>=0;});
+    list.sort(function(a,b){return (a.nm||'')<(b.nm||'')?-1:1;});
+    if(list.length>500){cappedNote='<div style="font-size:12px;color:var(--sub);padding:8px 2px">Showing first 500 of '+list.length+' \u2014 search to narrow.</div>';list=list.slice(0,500);}
+    list.forEach(function(p){body+=stkRowHTML(p,'done');});
+    intro='<div style="font-size:12px;color:var(--sub);margin-bottom:2px">Already checked. Scan or type a barcode to find one, adjust with \u2212 / +, or move it back to re-check.</div>';
+    if(!body)body='<div class="empty" style="padding:16px">Nothing checked yet'+(q?' matching this search':'')+'.</div>';
+  }
+  el.innerHTML=pills+tabBar+search+intro+deptPills+'<div style="border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden">'+body+'</div>'+cappedNote;
   wireStockPills(el);
+  el.querySelectorAll('.stk-tab').forEach(function(t){t.addEventListener('click',function(){stockLvlTab=this.getAttribute('data-tab');if(stockLvlTab==='done'){refreshCheckedFromServer().then(renderStockLevel);}else{renderStockLevel();}});});
   var si=document.getElementById('stk-search');if(si){si.addEventListener('input',function(){stockLvlSearch=this.value;clearTimeout(window.__stkT);window.__stkT=setTimeout(renderStockLevel,250);});}
   el.querySelectorAll('.collect-dept-pill[data-dp]').forEach(function(pl){pl.addEventListener('click',function(){var d=this.getAttribute('data-dp');if(d==='__ALL__'){stockLvlAll=!stockLvlAll;}else{stockLvlAll=false;var ix=stockLvlDepts.indexOf(d);if(ix>=0)stockLvlDepts.splice(ix,1);else stockLvlDepts.push(d);}renderStockLevel();});});
   el.querySelectorAll('.stk-row').forEach(function(row){
-    var bc=row.getAttribute('data-bc');var vEl=row.querySelector('.stk-val');
+    var bc=row.getAttribute('data-bc');var nm=row.getAttribute('data-nm');var vEl=row.querySelector('.stk-val');
+    function curVal(){return shelfCap(bc)||7;}
     function upd(){var c=shelfCap(bc);vEl.textContent=c||7;vEl.style.color=c?'var(--purpletxt)':'#111';}
-    row.querySelector('.stk-inc').addEventListener('click',function(){setShelfCap(bc,(shelfCap(bc)||7)+1);upd();});
-    row.querySelector('.stk-dec').addEventListener('click',function(){setShelfCap(bc,Math.max(0,(shelfCap(bc)||7)-1));upd();});
-    vEl.addEventListener('click',function(){var pr=prompt('How many go on the shelf? (0 = use default 7)',shelfCap(bc)||7);if(pr==null)return;var v=parseInt(pr);setShelfCap(bc,(isNaN(v)||v<0)?0:v);upd();});
+    row.querySelector('.stk-inc').addEventListener('click',function(){setShelfCap(bc,curVal()+1);upd();if(isChecked(bc))setChecked(bc,true,curVal(),nm);});
+    row.querySelector('.stk-dec').addEventListener('click',function(){setShelfCap(bc,Math.max(0,curVal()-1));upd();if(isChecked(bc))setChecked(bc,true,curVal(),nm);});
+    vEl.addEventListener('click',function(){var pr=prompt('How many go on the shelf? (0 = use default 7)',curVal());if(pr==null)return;var v=parseInt(pr);setShelfCap(bc,(isNaN(v)||v<0)?0:v);upd();if(isChecked(bc))setChecked(bc,true,curVal(),nm);});
+    var cf=row.querySelector('.stk-confirm');if(cf)cf.addEventListener('click',function(){var btn=this,v=curVal();btn.disabled=true;btn.textContent='Saving\u2026';btn.style.background='var(--sub)';Promise.all([saveShelfCapStrict(bc,v),saveCheckedStrict(bc,true,v,nm)]).then(function(res){if(res[0]&&res[1]){if(typeof setSyncTxt==='function')setSyncTxt('\u2713 Saved to server');renderStockLevel();}else{btn.disabled=false;btn.textContent='\u2717 Not saved \u2014 tap to retry';btn.style.background='#dc2626';}});});
+    var un=row.querySelector('.stk-uncheck');if(un)un.addEventListener('click',function(){var btn=this;btn.disabled=true;btn.textContent='\u2026';saveCheckedStrict(bc,false).then(function(okk){if(okk){renderStockLevel();}else{btn.disabled=false;btn.textContent='\u2717 retry';}});});
   });
 }
 
@@ -4097,7 +4135,7 @@ var __LOCK=(window.__CC_ORDERS_SCOPE||null);
 var ORDERS_STATE_KEY='cc_orders_'+__BR;
 var syncOk=true, syncPend=null, hydrated=false;
 async function syncLoad(k){try{var r=await fetch('/api/ticks?key='+encodeURIComponent(k),{signal:AbortSignal.timeout(3500)});var d=await r.json();if(d&&d.fallback){syncOk=false;return null;}return (d&&d.data)||null;}catch(e){syncOk=false;return null;}}
-function syncSave(k,v){if(!syncOk)return;if(syncPend)clearTimeout(syncPend);syncPend=setTimeout(function(){fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,value:v})}).catch(function(){});syncPend=null;},400);}
+function syncSave(k,v){if(!window._sp)window._sp={};if(window._sp[k])clearTimeout(window._sp[k]);window._sp[k]=setTimeout(function(){fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,value:v})}).catch(function(){});window._sp[k]=null;},400);}
 function ordersSnapshot(){return {edited:edited,picked:picked,exCol:exCol,exProd:exProd,openProd:openProd,MIN:MIN,MAX:MAX,BOX:BOX,UNIT:UNIT,BRAND:BRAND,DEPT:DEPT,CAT:CAT};}
 function ordersApplyState(st){
   if(!st||typeof st!=='object')return;
