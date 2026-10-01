@@ -434,7 +434,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
-var WH_VER='build 24';
+var WH_VER='build 26';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -871,10 +871,10 @@ async function syncLoad(k){
 function syncSave(k,v){
   if(k==='cc_pk_ticks'||k==='cc_wh_sent'||k==='cc_wh_tickmeta')window.__pkWrite=Date.now();
   if(!syncOk)return;
-  if(syncPend)clearTimeout(syncPend);
-  syncPend=setTimeout(function(){
+  if(!window._sp)window._sp={};if(window._sp[k])clearTimeout(window._sp[k]);
+  window._sp[k]=setTimeout(function(){
     fetch('/api/ticks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,value:v})}).catch(function(){});
-    syncPend=null;setSyncTxt('✓ Synced');
+    window._sp[k]=null;setSyncTxt('✓ Synced');
   },500);
 }
 function setSyncTxt(t){var el=document.getElementById('sync-txt');if(!el)return;el.textContent=t;clearTimeout(el._t);el._t=setTimeout(function(){el.textContent='';},3000);}
@@ -1037,7 +1037,7 @@ function buildPickList(){
     var st=gst(p.bc,p);
     var tgts=[shelfCap(p.bc,0)||T,shelfCap(p.bc,1)||T,shelfCap(p.bc,2)||T];
     var c=[getQty(0,p.bc),getQty(1,p.bc),getQty(2,p.bc)];
-    var need=[Math.max(0,T-c[0]),Math.max(0,T-c[1]),Math.max(0,T-c[2])];
+    var need=[Math.max(0,tgts[0]-c[0]),Math.max(0,tgts[1]-c[1]),Math.max(0,tgts[2]-c[2])];
     if(whNSat(0,p.bc))need[0]=0;if(whNSat(1,p.bc))need[1]=0;if(whNSat(2,p.bc))need[2]=0;
     var held=[whHeld(0,p.bc),whHeld(1,p.bc),whHeld(2,p.bc)];
     if(pkTx[p.bc]){if(pkTx[p.bc][0]){need[0]=0;held[0]=false;}if(pkTx[p.bc][1]){need[1]=0;held[1]=false;}if(pkTx[p.bc][2]){need[2]=0;held[2]=false;}}
