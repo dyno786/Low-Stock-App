@@ -83,6 +83,24 @@ body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);-web
 </style>
 </head>
 <body>
+<div id="mgr-gate" style="position:fixed;inset:0;background:#fff;z-index:99;display:flex;align-items:center;justify-content:center;padding:20px;font-family:system-ui,sans-serif">
+  <div style="width:100%;max-width:320px;text-align:center">
+    <div style="font-size:18px;font-weight:800;margin-bottom:12px">🔒 Manager login</div>
+    <input id="mgr-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="Password" style="width:100%;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:17px;box-sizing:border-box;text-align:center;letter-spacing:4px">
+    <div id="mgr-err" style="color:#dc2626;font-size:13px;font-weight:700;min-height:20px;margin:6px 0"></div>
+    <button id="mgr-go" style="width:100%;border:none;background:#7c3aed;color:#fff;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer">Log in</button>
+  </div>
+</div>
+<script>
+(function(){
+  var H='77f1cec5dabf986e5d5aea8b199033ecaa62b0f991e27512ddf3ee3fb6c86cd7',g=document.getElementById('mgr-gate'),i=document.getElementById('mgr-pin'),er=document.getElementById('mgr-err');
+  function open(){g.style.display='none';}
+  try{if(sessionStorage.getItem('cc_wh_mgr')==='1'){open();return;}}catch(e){}
+  function go(){crypto.subtle.digest('SHA-256',new TextEncoder().encode('cc-wh-mgr|'+i.value.trim())).then(function(b){var h=Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('');if(h===H){try{sessionStorage.setItem('cc_wh_mgr','1');}catch(e){}open();}else{er.textContent='Wrong password';i.value='';i.focus();}}).catch(function(){er.textContent='Could not check password';});}
+  document.getElementById('mgr-go').addEventListener('click',go);
+  i.addEventListener('keydown',function(e){if(e.key==='Enter')go();});
+})();
+</script>
 <div class="wrap">
   <div class="hdr">
     <div class="hdr-l"><div class="t">⏱ Pick Times</div><div class="s">Manager view — not linked from the app</div></div>
