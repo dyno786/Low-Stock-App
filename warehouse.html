@@ -77,6 +77,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .live-prog{font-size:12px;font-weight:700;color:var(--greentxt);background:#fff;border:1px solid var(--green);border-radius:7px;padding:2px 8px;font-variant-numeric:tabular-nums}
 .live-time{margin-left:auto;font-size:13px;font-weight:800;color:var(--greentxt);font-variant-numeric:tabular-nums}
 .pk-tag-sold{background:#fff7ed;color:#b45309;border:1px solid #fed7aa}
+.no-sess .pk-scanout{opacity:.4}
 .set-ov{position:fixed;inset:0;background:rgba(20,18,30,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
 .set-box{background:#fff;width:100%;max-width:460px;border-radius:18px 18px 0 0;padding:16px 16px 22px;animation:setup .2s ease}
 @keyframes setup{from{transform:translateY(30px);opacity:.6}to{transform:translateY(0);opacity:1}}
@@ -177,9 +178,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
 .wh-tab.active[data-tab="ticked"]{background:#6366f1;border-color:#6366f1}
 .wh-tab.active[data-tab="order"]{background:#ec4899;border-color:#ec4899}
 .wh-tab[data-tab="times"]{color:#0369a1;background:#f0f9ff;border-color:#7dd3fc}
-.wh-tab.active[data-tab="times"]{background:#0ea5e9;border-color:#0ea5e9}
+.wh-tab.active[data-tab="times"]{color:#fff;background:#0ea5e9;border-color:#0ea5e9}
 .wh-tab[data-tab="sessions"]{color:#7c3aed;background:#f5f3ff;border-color:#c4b5fd}
-.wh-tab.active[data-tab="sessions"]{background:#7c3aed;border-color:#7c3aed}
+.wh-tab.active[data-tab="sessions"]{color:#fff;background:#7c3aed;border-color:#7c3aed}
 .ov-sum{font-size:12px;font-weight:700;color:var(--greentxt);background:var(--greenbg);border:1px solid var(--green);border-radius:9px;padding:8px 11px;margin:0 11px 10px}
 .ov-ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 11px 4px}
 .ov-thresh{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink)}
@@ -434,7 +435,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
-var WH_VER='build 26';
+var WH_VER='build 27';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -539,30 +540,61 @@ function renderBySection(evs){
   var arr=Object.keys(m).map(function(k){return {loc:k,t:m[k].t,n:m[k].n,ord:m[k].ord};});if(!arr.length)return '';arr.sort(function(a,b){return b.t-a.t;});
   return '<div style="padding:11px 12px;border-top:1px solid var(--border)"><div style="font-weight:800;font-size:12.5px;margin-bottom:5px">📍 Time by section / row (most first)</div>'+arr.slice(0,50).map(function(x){return '<div style="display:flex;gap:8px;padding:4px 0;font-size:12.5px;border-top:1px solid #f6f6f8"><div style="flex:1;min-width:0"><b>'+x.loc+'</b></div><div style="color:var(--sub);width:38px;text-align:right">'+x.n+'×</div><div style="width:62px;text-align:right;font-weight:800;color:var(--purpletxt)">'+fmtDur(x.t)+'</div></div>';}).join('')+'</div>';
 }
+function sessDayKey(ts){var d=new Date(ts);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function sessHM(ts){return new Date(ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
+function sessEvs(sX){return pkTiming.filter(function(e){return e.sid===sX.id||(!e.sid&&e.by===sX.by&&e.ts>=(sX.start-2000)&&e.ts<=((sX.end||Date.now())+2000));});}
 function renderSessionsHTML(){
+  var now=Date.now();
   var sess=Object.keys(whSessions).map(function(k){return whSessions[k];}).filter(function(x){return x&&x.start;});
   sess.sort(function(a,b){return (b.start||0)-(a.start||0);});
-  var html='<div style="padding:11px"><div style="font-weight:800;font-size:16px;margin-bottom:2px">📋 Sessions</div><div style="font-size:12px;color:var(--sub);margin-bottom:10px">Every picking session — live and past. Tap one to see exactly what was picked and how long each item took.</div>';
-  if(!sess.length)return html+'<div class="empty">No sessions yet. Start one from the bar at the top.</div></div>';
-  sess.forEach(function(sX){
-    var evs=pkTiming.filter(function(e){return e.sid===sX.id||(!e.sid&&e.by===sX.by&&e.ts>=(sX.start-2000)&&e.ts<=((sX.end||Date.now())+2000));});
-    var items=evs.length,active=evs.reduce(function(a,e){return a+(e.gap||0);},0),avg=items?Math.round(active/items/1000):0,live=!sX.finished;
-    html+='<div class="sess-card" style="border:1px solid '+(live?'#a7f3d0':'var(--border)')+';border-radius:12px;background:#fff;margin:7px 0;overflow:hidden">'+
-      '<div class="sess-head2" style="display:flex;align-items:center;gap:10px;padding:11px 12px;cursor:pointer">'+
-        '<div style="width:36px;height:36px;border-radius:50%;background:'+(live?'#ecfdf5':'var(--purplebg)')+';color:'+(live?'#065f46':'var(--purpletxt)')+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0">'+(sX.by||"?").slice(0,1).toUpperCase()+'</div>'+
-        '<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px">'+escP(sX.by||"Picker")+(live?' <span style="color:#059669;font-size:11px;font-weight:800">● LIVE</span>':'')+'</div>'+
-        '<div style="font-size:11.5px;color:var(--sub)">'+new Date(sX.start).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+(sX.end?(" → "+new Date(sX.end).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})):"")+' · '+items+' items</div></div>'+
-        '<div style="text-align:right;flex-shrink:0"><div style="font-weight:800;font-size:13px;color:var(--purpletxt)">'+fmtDur(active)+'</div><div style="font-size:10px;color:var(--sub)">avg '+avg+'s</div></div>'+
-        '<div class="sess-caret2" style="font-size:13px;color:var(--sub);flex-shrink:0">▸</div>'+
-      '</div>'+
-      '<div class="sess-detail2" style="display:none;border-top:1px solid var(--border)">'+
-        (evs.length?(renderTimeline(evs)+renderByBrand(evs)+renderBySection(evs)+'<div style="font-weight:800;font-size:11.5px;padding:11px 12px 2px;border-top:1px solid var(--border);text-transform:uppercase;letter-spacing:.03em;color:var(--sub)">Every item · newest first</div>'):'')+
-        (evs.length?evs.slice().reverse().slice(0,300).map(function(e){return '<div style="display:flex;gap:8px;padding:7px 12px;border-top:1px solid #f2f2f2;font-size:12.5px"><div style="width:44px;color:var(--sub);font-size:11px">'+new Date(e.ts).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})+'</div><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(e.nm||itemNm(e.bc))+'</div><div style="width:56px;text-align:right;font-weight:700;'+((e.gap&&e.gap>0)?"color:#111":"color:var(--sub)")+'">'+((e.gap&&e.gap>0)?fmtDur(e.gap):"—")+'</div></div>';}).join(''):'<div style="padding:12px;color:var(--sub);font-size:12px">No items recorded for this session yet.</div>')+
-      '</div></div>';
+  var html='<div style="padding:11px"><div style="font-weight:800;font-size:16px;margin-bottom:2px">📋 Sessions <span style="font-size:11px;font-weight:700;color:var(--sub)">· manager only</span></div><div style="font-size:12px;color:var(--sub);margin-bottom:10px">Every time someone starts and ends a picking session, with the reason they stopped. Tap a session to see exactly what was picked.</div>';
+  // --- who is picking right now ---
+  var live=sess.filter(function(x){return !x.finished;});
+  html+='<div style="border:1px solid '+(live.length?'#a7f3d0':'#fecaca')+';background:'+(live.length?'#ecfdf5':'#fef2f2')+';border-radius:12px;padding:11px 12px;margin-bottom:12px"><div style="font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:'+(live.length?'#065f46':'#b91c1c')+';margin-bottom:5px">Right now</div>';
+  if(live.length){
+    live.forEach(function(x){var idle=now-(x.last||x.start);var n=sessEvs(x).length;
+      html+='<div style="font-size:13.5px;padding:3px 0"><b>🟢 '+escP(x.by||'Picker')+'</b> — picking since '+sessHM(x.start)+' ('+fmtDur(now-x.start)+') · '+n+' items'+(idle>15*60000?' <span style="color:#b45309;font-weight:800">⚠ nothing picked for '+fmtDur(idle)+'</span>':'')+'</div>';});
+  } else {
+    var lastE=sess.filter(function(x){return x.finished&&x.end;}).sort(function(a,b){return b.end-a.end;})[0];
+    html+='<div style="font-size:13.5px"><b>Nobody is picking.</b>'+(lastE?(' Last: '+escP(lastE.by||'Picker')+' ended '+new Date(lastE.end).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(lastE.reason?(' — '+(lastE.reason==='mgr'?'ended by manager':sessReasonLbl(lastE.reason))):'')):'')+'</div>';
+  }
+  html+='</div>';
+  if(!sess.length)return html+'<div class="empty">No sessions yet.</div></div>';
+  // previous session by the same person on the same day -> "away" time before each session
+  var prevOf={},asc=sess.slice().sort(function(a,b){return a.start-b.start;}),lastBy={};
+  asc.forEach(function(x){var k=sessDayKey(x.start)+'|'+(x.by||'').toLowerCase();if(lastBy[k])prevOf[x.id]=lastBy[k];lastBy[k]=x;});
+  var days={},order=[];
+  sess.forEach(function(x){var d=sessDayKey(x.start);if(!days[d]){days[d]=[];order.push(d);}days[d].push(x);});
+  order.forEach(function(ds){
+    var list=days[ds];
+    var per={};list.forEach(function(x){var b=x.by||'Picker';if(!per[b])per[b]={n:0,ms:0,items:0};per[b].n++;per[b].ms+=((x.end||now)-x.start);per[b].items+=sessEvs(x).length;});
+    html+='<div style="background:var(--purplebg);border-radius:9px;padding:8px 11px;margin:14px 0 4px"><div style="font-weight:800;font-size:13px;color:var(--purpletxt)">'+new Date(ds+'T00:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})+'</div>'+
+      Object.keys(per).map(function(b){return '<div style="font-size:12px;color:var(--purpletxt);margin-top:2px"><b>'+escP(b)+'</b> — '+per[b].n+' session'+(per[b].n>1?'s':'')+' · '+fmtDur(per[b].ms)+' in session · '+per[b].items+' items</div>';}).join('')+'</div>';
+    list.forEach(function(sX){
+      var evs=sessEvs(sX);
+      var items=evs.length,active=evs.reduce(function(a,e){return a+(e.gap||0);},0),avg=items?Math.round(active/items/1000):0,isLive=!sX.finished;
+      var dur=(sX.end||now)-sX.start,pv=prevOf[sX.id];
+      var why=isLive?'':(sX.reason==='mgr'?'Ended by manager':(sessReasonLbl(sX.reason)||'Ended'));
+      if(pv&&pv.end&&sX.start>pv.end)html+='<div style="font-size:11.5px;color:#b45309;font-weight:700;padding:2px 12px">↑ '+escP(sX.by||'Picker')+' away '+fmtDur(sX.start-pv.end)+(pv.reason&&pv.reason!=='mgr'?(' ('+sessReasonLbl(pv.reason)+')'):'')+' · '+sessHM(pv.end)+' → '+sessHM(sX.start)+'</div>';
+      html+='<div class="sess-card" style="border:1px solid '+(isLive?'#a7f3d0':'var(--border)')+';border-radius:12px;background:#fff;margin:7px 0;overflow:hidden">'+
+        '<div class="sess-head2" style="display:flex;align-items:center;gap:10px;padding:11px 12px;cursor:pointer">'+
+          '<div style="width:36px;height:36px;border-radius:50%;background:'+(isLive?'#ecfdf5':'var(--purplebg)')+';color:'+(isLive?'#065f46':'var(--purpletxt)')+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0">'+escP((sX.by||"?").slice(0,1).toUpperCase())+'</div>'+
+          '<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px">'+escP(sX.by||"Picker")+(isLive?' <span style="color:#059669;font-size:11px;font-weight:800">● LIVE</span>':'')+'</div>'+
+          '<div style="font-size:11.5px;color:var(--sub)">'+sessHM(sX.start)+' → '+(sX.end?sessHM(sX.end):'now')+' · '+items+' items · avg '+avg+'s</div>'+
+          (why?'<div style="font-size:11.5px;font-weight:800;color:#b45309;margin-top:1px">Stopped: '+why+'</div>':'')+'</div>'+
+          '<div style="text-align:right;flex-shrink:0"><div style="font-weight:800;font-size:13px;color:var(--purpletxt)">'+fmtDur(dur)+'</div><div style="font-size:10px;color:var(--sub)">in session</div></div>'+
+          '<div class="sess-caret2" style="font-size:13px;color:var(--sub);flex-shrink:0">▸</div>'+
+        '</div>'+
+        '<div class="sess-detail2" style="display:none;border-top:1px solid var(--border)">'+
+          (isLive?'<div style="padding:10px 12px"><button class="sess-force" data-id="'+sX.id+'" style="border:1px solid #dc2626;background:#fff;color:#dc2626;border-radius:9px;padding:8px 12px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:var(--font)">⏹ End this session (they forgot)</button></div>':'')+
+          (evs.length?(renderTimeline(evs)+renderByBrand(evs)+renderBySection(evs)+'<div style="font-weight:800;font-size:11.5px;padding:11px 12px 2px;border-top:1px solid var(--border);text-transform:uppercase;letter-spacing:.03em;color:var(--sub)">Every item · newest first</div>'):'')+
+          (evs.length?evs.slice().reverse().slice(0,300).map(function(e){return '<div style="display:flex;gap:8px;padding:7px 12px;border-top:1px solid #f2f2f2;font-size:12.5px"><div style="width:44px;color:var(--sub);font-size:11px">'+sessHM(e.ts)+'</div><div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(e.nm||itemNm(e.bc))+'</div><div style="width:56px;text-align:right;font-weight:700;'+((e.gap&&e.gap>0)?"color:#111":"color:var(--sub)")+'">'+((e.gap&&e.gap>0)?fmtDur(e.gap):"—")+'</div></div>';}).join(''):'<div style="padding:12px;color:var(--sub);font-size:12px">Nothing picked in this session.</div>')+
+        '</div></div>';
+    });
   });
   return html+'</div>';
 }
-function wireSessions(el){el.querySelectorAll('.sess-head2').forEach(function(h){h.addEventListener('click',function(){var d=this.parentNode.querySelector('.sess-detail2');var c=this.querySelector('.sess-caret2');if(d){var open=d.style.display!=='none';d.style.display=open?'none':'block';if(c)c.textContent=open?'▸':'▾';}});});}
+function wireSessions(el){el.querySelectorAll('.sess-head2').forEach(function(h){h.addEventListener('click',function(){var d=this.parentNode.querySelector('.sess-detail2');var c=this.querySelector('.sess-caret2');if(d){var open=d.style.display!=='none';d.style.display=open?'none':'block';if(c)c.textContent=open?'▸':'▾';}});});el.querySelectorAll('.sess-force').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();var id=this.getAttribute('data-id');var x=whSessions[id];if(x&&confirm('End '+(x.by||'this')+"'s session now?"))sessForceEnd(id);});});}
 function wireTimes(el){el.querySelectorAll('.tv-btn').forEach(function(b){b.addEventListener('click',function(){timesView=this.getAttribute('data-tv');renderWH();});});el.querySelectorAll('.times-head').forEach(function(h){h.addEventListener('click',function(){var d=this.parentNode.querySelector('.times-detail');var c=this.querySelector('.times-caret');if(d){var open=d.style.display!=='none';d.style.display=open?'none':'block';if(c)c.textContent=open?'▸':'▾';}});});}
 function clearTickMeta(bc,bi){if(whTickMeta[bc+'|'+bi]){delete whTickMeta[bc+'|'+bi];saveTickMeta();}}
 function tickMetaBoot(){if(window.__tmBoot||typeof syncLoad!=='function')return;window.__tmBoot=1;syncLoad('cc_wh_tickmeta').then(function(o){if(o&&typeof o==='object'){var ch=false;Object.keys(o).forEach(function(k){var cur=whTickMeta[k];if(!cur||((o[k]&&o[k].ts||0)>(cur.ts||0))){whTickMeta[k]=o[k];ch=true;}});if(ch){try{localStorage.setItem('cc_wh_tickmeta',JSON.stringify(whTickMeta));}catch(e){}if(whTab==='ticked')renderWH();}}}).catch(function(){});}
@@ -669,6 +701,29 @@ function saveSecPer(v){try{localStorage.setItem('cc_pk_secper',String(v));}catch
 function pkHist(){try{var a=JSON.parse(localStorage.getItem('cc_pk_times')||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
 function estMins(cells){return cells>0?Math.max(1,Math.round(cells*loadSecPer()/60)):0;}
 // ── LIVE PICK SESSION (so another device can watch progress) ──
+// ---- Manager login: Picked / Times / Sessions are hidden from staff until the manager password is entered ----
+var MGR_HASH='77f1cec5dabf986e5d5aea8b199033ecaa62b0f991e27512ddf3ee3fb6c86cd7';
+var mgrOn=false;try{mgrOn=sessionStorage.getItem('cc_wh_mgr')==='1';}catch(e){}
+function isMgr(){return !!mgrOn;}
+function mgrTab(t){return t==='picked'||t==='times'||t==='sessions';}
+async function mgrCheck(pin){try{var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('cc-wh-mgr|'+pin));return Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('')===MGR_HASH;}catch(e){return false;}}
+function whModalClose(){var m=document.getElementById('wh-modal');if(m&&m.parentNode)m.parentNode.removeChild(m);}
+function whModal(inner){whModalClose();var m=document.createElement('div');m.id='wh-modal';m.className='set-ov';m.style.display='flex';m.style.zIndex='60';m.innerHTML='<div class="set-box">'+inner+'</div>';document.body.appendChild(m);m.addEventListener('click',function(e){if(e.target===m)whModalClose();});return m;}
+var WH_INP='width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:17px;font-family:var(--font);box-sizing:border-box';
+function mgrLogin(){
+  whModal('<div class="set-h"><span>🔒 Manager login</span><button class="set-x" id="mg-x">✕</button></div>'+
+    '<div class="set-lbl" style="margin-top:0">Manager password</div>'+
+    '<input id="mg-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="Password" style="'+WH_INP+';letter-spacing:4px">'+
+    '<div id="mg-err" style="color:#dc2626;font-size:12.5px;font-weight:700;min-height:18px;margin-top:6px"></div>'+
+    '<button class="set-save" id="mg-go" style="margin-top:6px">Log in</button>');
+  var inp=document.getElementById('mg-pin'),err=document.getElementById('mg-err');
+  function go(){mgrCheck(inp.value.trim()).then(function(ok){if(ok){mgrOn=true;try{sessionStorage.setItem('cc_wh_mgr','1');}catch(e){}whModalClose();whTab='sessions';try{localStorage.setItem('cc_wh_tab','sessions');}catch(e){}renderWH();}else{err.textContent='Wrong password';inp.value='';inp.focus();}});}
+  document.getElementById('mg-x').addEventListener('click',whModalClose);
+  document.getElementById('mg-go').addEventListener('click',go);
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter')go();});
+  setTimeout(function(){try{inp.focus();}catch(e){}},50);
+}
+function mgrLogout(){mgrOn=false;try{sessionStorage.removeItem('cc_wh_mgr');}catch(e){}if(mgrTab(whTab)){whTab='topup';try{localStorage.setItem('cc_wh_tab','topup');}catch(e){}}renderWH();}
 var pkSession=null, livePollIv=null, liveTickIv=null, lastDoneSig=-1, sessPend=null;
 // ---- Persistent picking sessions: Start -> stays open until Finish; per-person; join/switch ----
 var whSessions={};try{whSessions=JSON.parse(localStorage.getItem('cc_pk_sessions')||'{}')||{};}catch(e){whSessions={};}
@@ -681,7 +736,43 @@ function sessPush(){sessSaveLocal();window.__pkWrite=Date.now();if(typeof syncSa
 function sessPushDeb(){if(sessPushPend)clearTimeout(sessPushPend);sessPushPend=setTimeout(function(){sessPushPend=null;sessPush();},2000);}
 function openSessions(){return Object.keys(whSessions).map(function(k){return whSessions[k];}).filter(function(x){return x&&!x.finished;}).sort(function(a,b){return (b.start||0)-(a.start||0);});}
 function curSession(){var x=curSessId?whSessions[curSessId]:null;return (x&&!x.finished)?x:null;}
-function sessStart(){var by=ensurePicker();var id='S'+Date.now()+Math.random().toString(36).slice(2,5);whSessions[id]={id:id,by:by,start:Date.now(),last:Date.now(),finished:false};curSessId=id;sessPush();renderWH();}
+var SESS_REASONS=[['break','☕ Break'],['lunch','🍽 Lunch'],['shop','🏪 Back to shop'],['done','✅ Finished picking']];
+function sessReasonLbl(r){for(var i=0;i<SESS_REASONS.length;i++)if(SESS_REASONS[i][0]===r)return SESS_REASONS[i][1];return r?escP(r):'';}
+function sessStart(by){
+  by=(''+(by||'')).trim();if(!by)return false;
+  pickerName=by;try{localStorage.setItem('cc_pk_name',pickerName);}catch(e){}
+  var ex=openSessions().filter(function(x){return (''+(x.by||'')).trim().toLowerCase()===by.toLowerCase();})[0];
+  if(ex){curSessId=ex.id;sessSaveLocal();renderWH();return true;}
+  var id='S'+Date.now()+Math.random().toString(36).slice(2,5);
+  whSessions[id]={id:id,by:by,start:Date.now(),last:Date.now(),finished:false};curSessId=id;
+  try{pkLastBy[by]=Date.now();}catch(e){}
+  sessPush();renderWH();return true;
+}
+function sessStartAsk(msg){
+  whModal('<div class="set-h"><span>▶ Start picking session</span><button class="set-x" id="ss-x">✕</button></div>'+
+    (msg?'<div style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;margin-bottom:6px">'+msg+'</div>':'')+
+    '<div class="set-lbl" style="margin-top:8px">Who is picking?</div>'+
+    '<input id="ss-name" placeholder="Your name" autocomplete="off" style="'+WH_INP+'">'+
+    '<div class="set-note">Your session is timed from now. Tap <b>End session</b> every time you stop — break, lunch or going back to the shop.</div>'+
+    '<button class="set-save" id="ss-go">▶ Start session</button>');
+  var inp=document.getElementById('ss-name');inp.value=pickerName||'';
+  function go(){if(!inp.value.trim()){inp.focus();inp.style.borderColor='#dc2626';return;}whModalClose();sessStart(inp.value);}
+  document.getElementById('ss-x').addEventListener('click',whModalClose);
+  document.getElementById('ss-go').addEventListener('click',go);
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter')go();});
+  if(!inp.value)setTimeout(function(){try{inp.focus();}catch(e){}},50);
+}
+function sessEndAsk(){
+  var x=curSession();if(!x)return;
+  whModal('<div class="set-h"><span>⏹ End session — '+escP(x.by||'Picker')+'</span><button class="set-x" id="se-x">✕</button></div>'+
+    '<div class="set-note" style="margin:0 0 10px;font-size:12.5px">Why are you stopping? Everything you picked is saved.</div>'+
+    SESS_REASONS.map(function(r){return '<button class="se-r" data-r="'+r[0]+'" style="display:block;width:100%;text-align:left;border:1.5px solid var(--border);background:#fff;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:var(--font);margin-bottom:8px">'+r[1]+'</button>';}).join('')+
+    '<button id="se-c" style="width:100%;border:none;background:var(--s1);color:var(--sub);border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)">Cancel — keep picking</button>');
+  document.getElementById('se-x').addEventListener('click',whModalClose);
+  document.getElementById('se-c').addEventListener('click',whModalClose);
+  document.querySelectorAll('#wh-modal .se-r').forEach(function(b){b.addEventListener('click',function(){var r=this.getAttribute('data-r');whModalClose();sessFinish(r);});});
+}
+function sessForceEnd(id){var x=whSessions[id];if(!x||x.finished)return;x.finished=true;x.end=Date.now();x.reason='mgr';try{sheetSession(x);}catch(e){}if(curSessId===id)curSessId='';sessPush();renderWH();}
 function sessJoin(id){if(whSessions[id]&&!whSessions[id].finished){curSessId=id;sessSaveLocal();renderWH();}}
 function sheetSession(x){
   var u=sheetUrl();if(!u||!x)return;
@@ -692,30 +783,28 @@ function sheetSession(x){
   evs.forEach(function(e){if(!e.gap||e.gap<=0)return;var b=(typeof pickBrand==='function')?pickBrand(e):'?';bmT[b]=(bmT[b]||0)+e.gap;var loc=pos[(b||'').toUpperCase()];var L=loc?loc.label:'Unmapped';smT[L]=(smT[L]||0)+e.gap;});
   function topOf(o){var best='',bt=0;Object.keys(o).forEach(function(k){if(o[k]>bt){bt=o[k];best=k;}});return best?(best+' ('+fmtDur(bt)+')'):'';}
   function fmtT(ts){try{return new Date(ts).toLocaleString('en-GB');}catch(e){return '';}}
-  var payload={kind:'session',picker:x.by||'Staff',start:fmtT(x.start),finish:fmtT(x.end||Date.now()),items:items,active:fmtDur(active),breaks:fmtDur(breaks),avg:avg+'s',topBrand:topOf(bmT),topSection:topOf(smT)};
+  var payload={kind:'session',reason:(x.reason==='mgr'?'Ended by manager':(sessReasonLbl(x.reason)||'')),picker:x.by||'Staff',start:fmtT(x.start),finish:fmtT(x.end||Date.now()),items:items,active:fmtDur(active),breaks:fmtDur(breaks),avg:avg+'s',topBrand:topOf(bmT),topSection:topOf(smT)};
   try{fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(function(){});}catch(e){}
 }
-function sessFinish(){var x=curSession();if(!x)return;x.finished=true;x.end=Date.now();try{sheetSession(x);}catch(e){}curSessId='';sessPush();renderWH();}
+function sessFinish(reason){var x=curSession();if(!x)return;x.finished=true;x.end=Date.now();x.reason=reason||'done';try{sheetSession(x);}catch(e){}curSessId='';sessPush();renderWH();}
 function sessTouch(){var x=curSession();if(x){x.last=Date.now();sessSaveLocal();sessPushDeb();}}
-function sessChooser(){var o=openSessions();if(!o.length){sessStart();return;}var lines=o.map(function(s,i){return (i+1)+') '+(s.by||'picker')+' — '+Math.floor((Date.now()-(s.start||0))/60000)+'m';}).join('\n');var p=(typeof prompt==='function')?prompt('Join which session?\n'+lines+'\n\nType a number, or "new" for a new one:',''):null;if(p==null)return;if((''+p).toLowerCase().indexOf('new')===0){sessStart();return;}var idx=parseInt(p)-1;if(idx>=0&&idx<o.length)sessJoin(o[idx].id);}
+function sessChooser(){var o=openSessions();if(!o.length){sessStartAsk();return;}var lines=o.map(function(s,i){return (i+1)+') '+(s.by||'picker')+' — '+Math.floor((Date.now()-(s.start||0))/60000)+'m';}).join('\n');var p=(typeof prompt==='function')?prompt('Join which session?\n'+lines+'\n\nType a number, or "new" for a new one:',''):null;if(p==null)return;if((''+p).toLowerCase().indexOf('new')===0){sessStartAsk();return;}var idx=parseInt(p)-1;if(idx>=0&&idx<o.length)sessJoin(o[idx].id);}
 function renderSessBar(){
   var el=document.getElementById('sess-bar');if(!el)return;el.style.display='block';
   var s=curSession();
+  var out=document.getElementById('out');if(out)out.classList.toggle('no-sess',!s);
+  var B='border-radius:9px;padding:8px 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--font)';
   if(s){
     var m=Math.floor((Date.now()-(s.start||0))/60000);
-    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#ecfdf5;border-bottom:1px solid #d1fae5"><span style="font-weight:800;color:#065f46;font-size:13px">🟢 '+escP(s.by||'Picker')+'</span><span style="font-size:12px;color:#047857">picking · '+m+'m</span><span style="flex:1"></span>'+(openSessions().length>1?'<button id="sess-switch" style="border:1px solid #a7f3d0;background:#fff;border-radius:8px;padding:5px 9px;font-size:12px;font-weight:700;cursor:pointer">⇄ Switch</button>':'')+'<button id="sess-view" style="border:1px solid var(--purple);background:#fff;color:var(--purpletxt);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800;cursor:pointer">📋 Picks</button>'+'<button id="sess-finish" style="border:1px solid #10b981;background:#10b981;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer">✓ Finish</button></div>';
-    var fb=document.getElementById('sess-finish');if(fb)fb.addEventListener('click',function(){if(confirm('Finish '+(s.by||'this')+"'s session? Everything picked is saved."))sessFinish();});
-    var sw=document.getElementById('sess-switch');if(sw)sw.addEventListener('click',sessChooser);var vw=document.getElementById('sess-view');if(vw)vw.addEventListener('click',function(){whTab='sessions';try{localStorage.setItem('cc_wh_tab','sessions');}catch(e){}renderWH();});
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#ecfdf5;border-bottom:1px solid #d1fae5"><span style="font-weight:800;color:#065f46;font-size:13px">🟢 '+escP(s.by||'Picker')+'</span><span style="font-size:12px;color:#047857">in session · '+(m>=60?(Math.floor(m/60)+'h '+(m%60)+'m'):(m+'m'))+'</span><span style="flex:1"></span>'+(openSessions().length>1?'<button id="sess-switch" style="border:1px solid #a7f3d0;background:#fff;'+B+'">⇄ Switch</button>':'')+'<button id="sess-finish" style="border:1px solid #dc2626;background:#dc2626;color:#fff;'+B+'">⏹ End session</button></div>';
+    var fb=document.getElementById('sess-finish');if(fb)fb.addEventListener('click',sessEndAsk);
+    var sw=document.getElementById('sess-switch');if(sw)sw.addEventListener('click',sessChooser);
   } else {
     var o=openSessions();
-    if(o.length){
-      var btns=o.map(function(x){var mm=Math.floor((Date.now()-(x.start||0))/60000);return '<button class="sess-join" data-id="'+x.id+'" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer">↳ Join '+escP(x.by||'picker')+' · '+mm+'m</button>';}).join('');
-      el.innerHTML='<div style="padding:8px 12px;background:#f5f3ff;border-bottom:1px solid #ddd6fe;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-weight:700;font-size:12px;color:#5b21b6">Session:</span>'+btns+'<button id="sess-new" style="border:1px solid var(--purple);background:var(--purple);color:#fff;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:800;cursor:pointer">▶ Start new</button></div>';
-      el.querySelectorAll('.sess-join').forEach(function(b){b.addEventListener('click',function(){sessJoin(this.getAttribute('data-id'));});});
-    } else {
-      el.innerHTML='<div style="padding:8px 12px;background:#f5f3ff;border-bottom:1px solid #ddd6fe;display:flex;gap:8px;align-items:center"><span style="font-weight:700;font-size:12px;color:#5b21b6">No picking session</span><span style="flex:1"></span><button id="sess-new" style="border:1px solid var(--purple);background:var(--purple);color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer">▶ Start session</button></div>';
-    }
-    var nb=document.getElementById('sess-new');if(nb)nb.addEventListener('click',sessStart);
+    var btns=o.map(function(x){return '<button class="sess-join" data-id="'+x.id+'" style="border:1px solid #fecaca;background:#fff;color:#111;'+B+'">↳ I\'m '+escP(x.by||'picker')+' — carry on</button>';}).join('');
+    el.innerHTML='<div style="padding:10px 12px;background:#fef2f2;border-bottom:1px solid #fecaca;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-weight:800;font-size:13px;color:#b91c1c">⛔ No session — start your session before you pick</span><span style="flex:1"></span>'+btns+'<button id="sess-new" style="border:1px solid var(--purple);background:var(--purple);color:#fff;'+B+'">▶ Start session</button></div>';
+    el.querySelectorAll('.sess-join').forEach(function(b){b.addEventListener('click',function(){sessJoin(this.getAttribute('data-id'));});});
+    var nb=document.getElementById('sess-new');if(nb)nb.addEventListener('click',function(){sessStartAsk();});
   }
 }
 var IDLE_MS=5*60*1000;   // a run with no ticks for this long is auto-finished & logged
@@ -1203,7 +1292,7 @@ function ensureSettingsModal(){
     closeSettings();renderWH();
   });
 }
-function openSettings(){setTmpMp=minPick;setTmpMode=minMode;ensureSettingsModal();setSettingsUI();document.getElementById('set-ov').style.display='flex';}
+function openSettings(){setTmpMp=minPick;setTmpMode=minMode;ensureSettingsModal();setSettingsUI();var _vp=document.getElementById('set-view-picked');if(_vp)_vp.style.display=isMgr()?'':'none';var _pl=document.querySelector('#set-ov .set-link');if(_pl)_pl.style.display=isMgr()?'':'none';document.getElementById('set-ov').style.display='flex';}
 function closeSettings(){var o=document.getElementById('set-ov');if(o)o.style.display='none';}
 
 function renderPickedHTML(){
@@ -1418,6 +1507,7 @@ function renderWH(){
   var el=document.getElementById('out');
   if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
   pruneStale();
+  if(mgrTab(whTab)&&!isMgr())whTab='topup';
   var L=buildPickList(),allItems=L.dead.concat(L.normal);
   var oosList=allItems.filter(function(it){return Math.min(it.bq[0],it.bq[1],it.bq[2])<=0;});
   var overList=(bd[3]||[]).filter(function(p){return p.qty>=ovMin&&(!ovSlow||daysSince(p.ls)>=90);}).map(function(p){return {bc:p.bc,nm:p.nm,sz:p.sz,prc:p.prc,qty:p.qty,days:daysSince(p.ls)};}).sort(function(a,b){return b.qty-a.qty;});
@@ -1426,14 +1516,15 @@ function renderWH(){
     '<button class="wh-tab'+(whTab==='oos'?' active':'')+'" data-tab="oos">⚠ Out of stock <span class="wh-tab-n">'+oosList.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='over'?' active':'')+'" data-tab="over">🏷 Overstock <span class="wh-tab-n">'+overList.length+'</span></button>'+
     '<button class="wh-tab'+(whTab==='map'?' active':'')+'" data-tab="map">🗺 Map</button>'+
-    '<button class="wh-tab'+(whTab==='picked'?' active':'')+'" data-tab="picked">✅ Picked <span class="wh-tab-n">'+pkTiming.length+'</span></button>'+
+    (isMgr()?'<button class="wh-tab'+(whTab==='picked'?' active':'')+'" data-tab="picked">✅ Picked <span class="wh-tab-n">'+pkTiming.length+'</span></button>':'')+
     '<button class="wh-tab'+(whTab==='held'?' active':'')+'" data-tab="held">🔎 To Check <span class="wh-tab-n">'+heldCount()+'</span></button>'+
     '<button class="wh-tab'+(whTab==='order'?' active':'')+'" data-tab="order">🧾 Order</button>'+
-    '<button class="wh-tab'+(whTab==='times'?' active':'')+'" data-tab="times">⏱ Times</button>'+
-    '<button class="wh-tab'+(whTab==='sessions'?' active':'')+'" data-tab="sessions">📋 Sessions</button>'+
+    (isMgr()?'<button class="wh-tab'+(whTab==='times'?' active':'')+'" data-tab="times">⏱ Times</button>'+
+    '<button class="wh-tab'+(whTab==='sessions'?' active':'')+'" data-tab="sessions">📋 Sessions</button>':'')+
+    '<button id="wh-mgr" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;color:var(--sub);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font);white-space:nowrap">'+(isMgr()?'🔓 Log out':'🔒 Manager')+'</button>'+
     '<button class="wh-gear" id="wh-gear" title="Settings">⚙</button>'+
   '</div>';
-  function wireTabsBar(){el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});var g=document.getElementById('wh-gear');if(g)g.addEventListener('click',openSettings);ensureSettingsModal();sentBoot();cfgBoot();tickMetaBoot();if(typeof syncLoad==='function'&&!window.__tgtBoot){window.__tgtBoot=1;syncLoad('cc_wh_target').then(function(v){if(v!=null&&!isNaN(parseInt(v))){try{localStorage.setItem('cc_wh_target',String(parseInt(v)));}catch(e){}if(loaded>=4)renderWH();}}).catch(function(){});}
+  function wireTabsBar(){el.querySelectorAll('.wh-tab').forEach(function(b){b.addEventListener('click',function(){whTab=this.dataset.tab;try{localStorage.setItem('cc_wh_tab',whTab);}catch(e){}renderWH();});});var g=document.getElementById('wh-gear');if(g)g.addEventListener('click',openSettings);var mb=document.getElementById('wh-mgr');if(mb)mb.addEventListener('click',function(){if(isMgr())mgrLogout();else mgrLogin();});ensureSettingsModal();sentBoot();cfgBoot();tickMetaBoot();if(typeof syncLoad==='function'&&!window.__tgtBoot){window.__tgtBoot=1;syncLoad('cc_wh_target').then(function(v){if(v!=null&&!isNaN(parseInt(v))){try{localStorage.setItem('cc_wh_target',String(parseInt(v)));}catch(e){}if(loaded>=4)renderWH();}}).catch(function(){});}
   if(typeof syncLoad==='function'&&!window.__scBoot){window.__scBoot=1;syncLoad('cc_shelf_caps').then(function(o){if(o&&typeof o==='object'&&!Array.isArray(o)){shelfCaps=o;try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(loaded>=4)renderWH();}}).catch(function(){});}if(!livePollIv){livePollStart();liveTickStart();}try{renderSessBar();}catch(e){}}
   if(whTab==='held'){
     el.innerHTML=tabBar+renderHeldHTML();
@@ -1801,6 +1892,7 @@ function wireTicks(all){
   el.querySelectorAll('.pk-scanout').forEach(function(box){
     box.addEventListener('click',function(){
       var row=this.closest('.pk-row');if(!row)return;
+      if(!curSession()){sessStartAsk('Start your session before you pick.');return;}
       var bc=row.dataset.bc;
       var cells=row.querySelectorAll('.pk-cell[data-take="1"]');
       if(!cells.length)return;
