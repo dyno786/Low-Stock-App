@@ -180,6 +180,8 @@ body.wh-locked .trolley,body.wh-locked .hdr-top button,body.wh-locked .sync-bar,
 .wh-tab.active[data-tab="order"]{background:#ec4899;border-color:#ec4899}
 .wh-tab[data-tab="times"]{color:#0369a1;background:#f0f9ff;border-color:#7dd3fc}
 .wh-tab.active[data-tab="times"]{color:#fff;background:#0ea5e9;border-color:#0ea5e9}
+.wh-tab[data-tab="history"]{color:#334155;background:#f1f5f9;border-color:#94a3b8}
+.wh-tab.active[data-tab="history"]{color:#fff;background:#334155;border-color:#334155}
 .wh-tab[data-tab="sessions"]{color:#7c3aed;background:#f5f3ff;border-color:#c4b5fd}
 .wh-tab.active[data-tab="sessions"]{color:#fff;background:#7c3aed;border-color:#7c3aed}
 .ov-sum{font-size:12px;font-weight:700;color:var(--greentxt);background:var(--greenbg);border:1px solid var(--green);border-radius:9px;padding:8px 11px;margin:0 11px 10px}
@@ -436,7 +438,7 @@ var SPLIT={0:12,1:12,2:6}; // chapy, city, roundhay targets
 
 window.addEventListener('error',function(e){try{if(window.__shownErr)return;window.__shownErr=1;var o=document.getElementById('out')||document.body;if(o)o.innerHTML='<div style="padding:18px;font:14px -apple-system,system-ui;color:#b00020;line-height:1.5">Warehouse load error:<br><b>'+(((e&&e.message)||e)+'').replace(/</g,'&lt;')+'</b><br><br>Screenshot this and send it, then hard-refresh / clear browser cache.</div>';}catch(_){}});
 if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout!=='function'){try{AbortSignal.timeout=function(ms){var c=new AbortController();setTimeout(function(){try{c.abort();}catch(e){}},ms);return c.signal;};}catch(e){}}
-var WH_VER='build 28';
+var WH_VER='build 29';
 var BR=[
   {id:'chapy',    name:'Chapeltown',short:'Chap',color:'#fb923c',url:'/api/stock-data?branch=chapy'},
   {id:'city',     name:'City Center',short:'City',color:'#4ade80',url:'/api/stock-data?branch=city'},
@@ -475,7 +477,7 @@ function tickMeta(bc,bi){whTickMeta[bc+'|'+bi]={by:(pickerName||'Staff'),ts:Date
 var pkTiming=[];try{pkTiming=JSON.parse(localStorage.getItem('cc_pk_timing')||'[]');if(!Array.isArray(pkTiming))pkTiming=[];}catch(e){pkTiming=[];}
 var pkLastBy={};
 function savePkTiming(){try{localStorage.setItem('cc_pk_timing',JSON.stringify(pkTiming.slice(-6000)));}catch(e){}clearTimeout(window.__ptPush);window.__ptPush=setTimeout(function(){if(typeof syncSave==='function'){window.__pkWrite=Date.now();syncSave('cc_pk_timing',pkTiming.slice(-6000));}},4000);}
-function recordPick(by,bc,bi){var now=Date.now();var prev=pkLastBy[by]||0;var gap=prev?(now-prev):0;pkLastBy[by]=now;if(gap>15*60000)gap=0;pkTiming.push({ts:now,by:by,bc:bc,bi:bi,gap:gap,nm:itemNm(bc),sid:(curSessId||'')});if(pkTiming.length>6000)pkTiming=pkTiming.slice(-6000);savePkTiming();}
+function recordPick(by,bc,bi){var now=Date.now();var prev=pkLastBy[by]||0;var gap=prev?(now-prev):0;pkLastBy[by]=now;if(gap>15*60000)gap=0;var _q=0;try{var _c=document.querySelector('.pk-row[data-bc="'+bc+'"] .pk-cell[data-bi="'+bi+'"] .pc-num');_q=_c?(parseInt(_c.textContent)||0):0;}catch(e){}pkTiming.push({ts:now,by:by,bc:bc,bi:bi,q:_q,gap:gap,nm:itemNm(bc),sid:(curSessId||'')});if(pkTiming.length>6000)pkTiming=pkTiming.slice(-6000);savePkTiming();}
 function itemNm(bc){try{for(var b=3;b>=0;b--){if(bm[b]&&bm[b][bc]&&bm[b][bc].nm)return bm[b][bc].nm;}}catch(e){}return bc;}
 function fmtDur(ms){var s=Math.round((ms||0)/1000);if(s<60)return s+'s';var m=Math.floor(s/60);s=s%60;if(m<60)return m+'m '+s+'s';var h=Math.floor(m/60);m=m%60;return h+'h '+m+'m';}
 var timesView='people';
@@ -634,7 +636,7 @@ function sentBoot(){if(window.__sentBoot||typeof syncLoad!=='function')return;wi
 async function loadNS(){try{var r=await Promise.all([syncLoad('cc_whns0'),syncLoad('cc_whns1'),syncLoad('cc_whns2')]);whNS={0:r[0]||{},1:r[1]||{},2:r[2]||{}};}catch(e){}}
 var pickCounts=[0,0,0];
 var brandCollapsed={};try{brandCollapsed=JSON.parse(localStorage.getItem('cc_wh_brandcollapsed')||'{}');}catch(e){}
-var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');if(v==='ticked')v='topup';return (v==='oos'||v==='topup'||v==='map'||v==='over'||v==='picked'||v==='order'||v==='held'||v==='times'||v==='sessions')?v:'topup';}catch(e){return 'topup';}})();
+var whTab=(function(){try{var v=localStorage.getItem('cc_wh_tab');if(v==='ticked')v='topup';return (v==='oos'||v==='topup'||v==='map'||v==='over'||v==='picked'||v==='order'||v==='held'||v==='times'||v==='sessions'||v==='history')?v:'topup';}catch(e){return 'topup';}})();
 var offers={};try{offers=JSON.parse(localStorage.getItem('cc_wh_offers')||'{}');}catch(e){offers={};}
 function saveOffers(){try{localStorage.setItem('cc_wh_offers',JSON.stringify(offers));}catch(e){}}
 var ovMin=50,ovSlow=false;
@@ -706,7 +708,7 @@ function estMins(cells){return cells>0?Math.max(1,Math.round(cells*loadSecPer()/
 var MGR_HASH='77f1cec5dabf986e5d5aea8b199033ecaa62b0f991e27512ddf3ee3fb6c86cd7';
 var mgrOn=false;try{mgrOn=sessionStorage.getItem('cc_wh_mgr')==='1';}catch(e){}
 function isMgr(){return !!mgrOn;}
-function mgrTab(t){return t==='picked'||t==='times'||t==='sessions';}
+function mgrTab(t){return t==='picked'||t==='times'||t==='sessions'||t==='history';}
 async function mgrCheck(pin){try{var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('cc-wh-mgr|'+pin));return Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('')===MGR_HASH;}catch(e){return false;}}
 function whModalClose(){var m=document.getElementById('wh-modal');if(m&&m.parentNode)m.parentNode.removeChild(m);}
 function whModal(inner){whModalClose();var m=document.createElement('div');m.id='wh-modal';m.className='set-ov';m.style.display='flex';m.style.zIndex='60';m.innerHTML='<div class="set-box">'+inner+'</div>';document.body.appendChild(m);m.addEventListener('click',function(e){if(e.target===m)whModalClose();});return m;}
@@ -864,7 +866,7 @@ async function livePoll(){
       if(!mapDirty&&all.cc_wh_map&&Array.isArray(all.cc_wh_map.rows)){var _nm=JSON.stringify(all.cc_wh_map);if(_nm!==JSON.stringify(whMapData)){whMapData=all.cc_wh_map;try{localStorage.setItem('cc_wh_map',JSON.stringify(whMapData));}catch(e){}if(loaded>=4)renderWH();}}
       if(all.cc_shelf_caps&&typeof all.cc_shelf_caps==='object'&&!Array.isArray(all.cc_shelf_caps)){var _sc=JSON.stringify(all.cc_shelf_caps);if(_sc!==JSON.stringify(shelfCaps)){shelfCaps=all.cc_shelf_caps;try{localStorage.setItem('cc_shelf_caps',JSON.stringify(shelfCaps));}catch(e){}if(loaded>=4)renderWH();}}
       if(all.cc_wh_target!=null&&!isNaN(parseInt(all.cc_wh_target))&&parseInt(all.cc_wh_target)!==loadTarget()){try{localStorage.setItem('cc_wh_target',String(parseInt(all.cc_wh_target)));}catch(e){}if(loaded>=4)renderWH();}
-      if(Array.isArray(all.cc_pk_timing)){var _seen={};pkTiming.forEach(function(e){_seen[e.ts+'|'+e.by+'|'+e.bc]=1;});var _add=false;all.cc_pk_timing.forEach(function(e){var _kk=e.ts+'|'+e.by+'|'+e.bc;if(!_seen[_kk]){pkTiming.push(e);_seen[_kk]=1;_add=true;}});if(_add){pkTiming.sort(function(a,b){return a.ts-b.ts;});if(pkTiming.length>6000)pkTiming=pkTiming.slice(-6000);try{localStorage.setItem('cc_pk_timing',JSON.stringify(pkTiming));}catch(e){}if((whTab==='times'||whTab==='sessions')&&loaded>=4)renderWH();}}
+      if(Array.isArray(all.cc_pk_timing)){var _seen={};pkTiming.forEach(function(e){_seen[e.ts+'|'+e.by+'|'+e.bc]=1;});var _add=false;all.cc_pk_timing.forEach(function(e){var _kk=e.ts+'|'+e.by+'|'+e.bc;if(!_seen[_kk]){pkTiming.push(e);_seen[_kk]=1;_add=true;}});if(_add){pkTiming.sort(function(a,b){return a.ts-b.ts;});if(pkTiming.length>6000)pkTiming=pkTiming.slice(-6000);try{localStorage.setItem('cc_pk_timing',JSON.stringify(pkTiming));}catch(e){}if((whTab==='times'||whTab==='sessions'||(whTab==='history'&&document.activeElement&&document.activeElement.id!=='hist-q'))&&loaded>=4)renderWH();}}
     }
     if(sessMerge(all.cc_pk_sessions)&&loaded>=4&&whTab==='sessions')renderWH();
     var sig=pkDoneSig();
@@ -1521,8 +1523,11 @@ var __ordEnriched={};
 function enrichOrderNames(){var list=orderList();var bcs=list.map(function(p){return p.bc;}).filter(function(bc){return !__ordEnriched[bc];});bcs=bcs.slice(0,120);bcs.forEach(function(bc){__ordEnriched[bc]=1;});if(!bcs.length)return;var batches=[];for(var i=0;i<bcs.length;i+=40)batches.push(bcs.slice(i,i+40));batches.forEach(function(group){fetch('/api/shopify/exists',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({barcodes:group})}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j&&j.results){var ch=false;Object.keys(j.results).forEach(function(bc){var info=j.results[bc]||{};if(info.title){orderNames[bc]=info.title;ch=true;}if(info.imageUrl){orderImgs[bc]=info.imageUrl;ch=true;}});if(ch&&whTab==='order')renderWH();}}).catch(function(){});});}
 function whLocked(){return !curSession()&&!isMgr();}
 function renderLockGate(el){
-  document.body.classList.add('wh-locked');
   var o=openSessions();
+  var gsig=o.map(function(x){return x.id;}).join(',');
+  if(document.body.classList.contains('wh-locked')&&document.getElementById('lg-go')&&el.getAttribute('data-gsig')===gsig)return;
+  var keep=document.getElementById('lg-name');keep=keep?keep.value:'';
+  document.body.classList.add('wh-locked');el.setAttribute('data-gsig',gsig);
   var B='display:block;width:100%;border-radius:12px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;font-family:var(--font);margin-top:10px';
   el.innerHTML='<div style="padding:28px 18px;max-width:440px;margin:0 auto;text-align:center">'+
     '<div style="font-size:44px">🔒</div>'+
@@ -1533,7 +1538,7 @@ function renderLockGate(el){
     (o.length?'<div style="font-size:12px;color:var(--sub);margin:18px 0 0;font-weight:700">Already started on this or another phone?</div>'+o.map(function(x){return '<button class="lg-join" data-id="'+x.id+'" style="'+B+';border:1.5px solid var(--border);background:#fff;color:#111;font-size:14px">↳ I\'m '+escP(x.by||'picker')+' — carry on</button>';}).join(''):'')+
     '<button id="lg-mgr" style="margin-top:34px;border:none;background:none;color:var(--sub);font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font);text-decoration:underline">🔒 Manager login</button>'+
   '</div>';
-  var inp=document.getElementById('lg-name');inp.value=pickerName||'';
+  var inp=document.getElementById('lg-name');inp.value=keep||pickerName||'';
   function go(){if(!inp.value.trim()){inp.style.borderColor='#dc2626';inp.focus();return;}sessStart(inp.value);}
   document.getElementById('lg-go').addEventListener('click',go);
   inp.addEventListener('keydown',function(e){if(e.key==='Enter')go();});
@@ -1541,11 +1546,64 @@ function renderLockGate(el){
   document.getElementById('lg-mgr').addEventListener('click',mgrLogin);
   if(!livePollIv){try{livePollStart();liveTickStart();}catch(e){}}
 }
+// ---- History log (manager only): every pick, filterable, downloadable as Excel ----
+var histRange='7',histWho='',histQ='';
+function histBranch(bi){return (BR[bi]&&BR[bi].name)||(bi>=0?('Branch '+bi):'');}
+function histSessOf(e){if(e.sid&&whSessions[e.sid])return whSessions[e.sid];var hit=null;Object.keys(whSessions).forEach(function(k){var x=whSessions[k];if(x&&x.by===e.by&&e.ts>=x.start-2000&&e.ts<=((x.end||Date.now())+2000))hit=x;});return hit;}
+function histRows(){
+  var since=histRange==='all'?0:(histRange==='today'?new Date(new Date().toDateString()).getTime():Date.now()-parseInt(histRange)*86400000);
+  var q=histQ.toLowerCase();
+  return pkTiming.filter(function(e){if(e.ts<since)return false;if(histWho&&(e.by||'Staff')!==histWho)return false;if(q){var t=((e.nm||itemNm(e.bc))+' '+e.bc).toLowerCase();if(t.indexOf(q)<0)return false;}return true;}).slice().sort(function(a,b){return b.ts-a.ts;});
+}
+function renderHistoryHTML(){
+  var rows=histRows();
+  var who={};pkTiming.forEach(function(e){who[e.by||'Staff']=1;});
+  var S='border:1px solid var(--border);border-radius:9px;padding:8px;font-size:13px;font-family:var(--font);background:#fff';
+  var units=rows.reduce(function(a,e){return a+(e.q||0);},0);
+  var h='<div style="padding:11px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="font-weight:800;font-size:16px">📜 Picking history</div><button id="hist-xl" style="border:none;background:#16a34a;color:#fff;border-radius:9px;padding:9px 12px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--font)">⬇ Download Excel</button></div>'+
+    '<div style="font-size:12px;color:var(--sub);margin:2px 0 10px">Every item picked: when, who, which branch and how long it took. Updates live.</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
+      '<select id="hist-range" style="'+S+'">'+[['today','Today'],['7','Last 7 days'],['30','Last 30 days'],['all','All history']].map(function(o){return '<option value="'+o[0]+'"'+(histRange===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>'+
+      '<select id="hist-who" style="'+S+'"><option value="">Everyone</option>'+Object.keys(who).sort().map(function(w){return '<option'+(histWho===w?' selected':'')+'>'+escP(w)+'</option>';}).join('')+'</select>'+
+      '<input id="hist-q" type="search" placeholder="Search product or barcode" value="'+escP(histQ)+'" style="'+S+';flex:1;min-width:140px">'+
+    '</div>'+
+    '<div style="font-size:12.5px;font-weight:700;color:var(--purpletxt);margin-bottom:6px">'+rows.length+' picks'+(units?(' · '+units+' units'):'')+'</div>';
+  if(!rows.length)return h+'<div class="empty">No picks in this period.</div></div>';
+  var lastDay='';
+  h+='<div style="border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden">';
+  rows.slice(0,500).forEach(function(e){
+    var d=new Date(e.ts),day=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    if(day!==lastDay){lastDay=day;h+='<div style="background:var(--purplebg);color:var(--purpletxt);font-weight:800;font-size:12px;padding:6px 10px">'+day+'</div>';}
+    h+='<div style="display:flex;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid #f2f2f2;font-size:12.5px">'+
+      '<div style="width:40px;color:var(--sub);font-size:11px;flex-shrink:0">'+sessHM(e.ts)+'</div>'+
+      '<div style="flex:1;min-width:0"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700">'+escP(e.nm||itemNm(e.bc))+'</div><div style="font-size:11px;color:var(--sub)">'+escP(e.by||'Staff')+' → '+escP(histBranch(e.bi))+(e.q?(' · '+e.q+' pcs'):'')+'</div></div>'+
+      '<div style="width:48px;text-align:right;font-weight:700;flex-shrink:0;'+((e.gap&&e.gap>0)?'':'color:var(--sub)')+'">'+((e.gap&&e.gap>0)?fmtDur(e.gap):'—')+'</div></div>';
+  });
+  h+='</div>'+(rows.length>500?'<div style="font-size:11.5px;color:var(--sub);padding:8px 2px">Showing the latest 500. Download Excel for all '+rows.length+'.</div>':'');
+  return h+'</div>';
+}
+function histExcel(){
+  if(typeof XLSX==='undefined'){alert('Excel library did not load. Check the connection and try again.');return;}
+  var rows=histRows().slice().reverse();
+  var picks=rows.map(function(e){var d=new Date(e.ts),x=histSessOf(e);return {'Date':d.toLocaleDateString('en-GB'),'Time':d.toLocaleTimeString('en-GB'),'Picker':e.by||'Staff','Product':e.nm||itemNm(e.bc),'Barcode':e.bc,'Branch':histBranch(e.bi),'Qty':e.q||'','Seconds taken':(e.gap&&e.gap>0)?Math.round(e.gap/1000):'','Session started':x?new Date(x.start).toLocaleString('en-GB'):''};});
+  var sess=Object.keys(whSessions).map(function(k){return whSessions[k];}).filter(function(x){return x&&x.start;}).sort(function(a,b){return a.start-b.start;}).map(function(x){var n=sessEvs(x).length;return {'Picker':x.by||'Picker','Started':new Date(x.start).toLocaleString('en-GB'),'Ended':x.end?new Date(x.end).toLocaleString('en-GB'):'still open','Minutes in session':Math.round(((x.end||Date.now())-x.start)/60000),'Items picked':n,'Stopped because':x.finished?(x.reason==='mgr'?'Ended by manager':(sessReasonLbl(x.reason)||'')):''};});
+  var wb=XLSX.utils.book_new();
+  var ws1=XLSX.utils.json_to_sheet(picks.length?picks:[{'Date':'No picks in this period'}]);ws1['!cols']=[{wch:11},{wch:9},{wch:12},{wch:40},{wch:15},{wch:12},{wch:5},{wch:13},{wch:18}];
+  var ws2=XLSX.utils.json_to_sheet(sess.length?sess:[{'Picker':'No sessions yet'}]);ws2['!cols']=[{wch:12},{wch:18},{wch:18},{wch:17},{wch:12},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Picks');XLSX.utils.book_append_sheet(wb,ws2,'Sessions');
+  XLSX.writeFile(wb,'warehouse-picking-history-'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+function wireHistory(el){
+  var r=document.getElementById('hist-range');if(r)r.addEventListener('change',function(){histRange=this.value;renderWH();});
+  var w=document.getElementById('hist-who');if(w)w.addEventListener('change',function(){histWho=this.value;renderWH();});
+  var q=document.getElementById('hist-q');if(q){q.addEventListener('input',function(){histQ=this.value;clearTimeout(window.__hq);window.__hq=setTimeout(function(){renderWH();var n=document.getElementById('hist-q');if(n){n.focus();var L=n.value.length;try{n.setSelectionRange(L,L);}catch(e){}}},400);});}
+  var x=document.getElementById('hist-xl');if(x)x.addEventListener('click',histExcel);
+}
 var sessOpen={};
 function renderWH(){
   var el=document.getElementById('out');
   if(whLocked()){renderLockGate(el);return;}
-  document.body.classList.remove('wh-locked');
+  document.body.classList.remove('wh-locked');el.removeAttribute('data-gsig');
   if(!bd[3]){el.innerHTML='<div class="loading"><div class="spin"></div>Loading warehouse…</div>';return;}
   pruneStale();
   if(mgrTab(whTab)&&!isMgr())whTab='topup';
@@ -1561,7 +1619,8 @@ function renderWH(){
     '<button class="wh-tab'+(whTab==='held'?' active':'')+'" data-tab="held">🔎 To Check <span class="wh-tab-n">'+heldCount()+'</span></button>'+
     '<button class="wh-tab'+(whTab==='order'?' active':'')+'" data-tab="order">🧾 Order</button>'+
     (isMgr()?'<button class="wh-tab'+(whTab==='times'?' active':'')+'" data-tab="times">⏱ Times</button>'+
-    '<button class="wh-tab'+(whTab==='sessions'?' active':'')+'" data-tab="sessions">📋 Sessions</button>':'')+
+    '<button class="wh-tab'+(whTab==='sessions'?' active':'')+'" data-tab="sessions">📋 Sessions</button>'+
+    '<button class="wh-tab'+(whTab==='history'?' active':'')+'" data-tab="history">📜 History</button>':'')+
     '<button id="wh-mgr" style="flex-shrink:0;border:1.5px solid var(--border);background:#fff;color:var(--sub);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font);white-space:nowrap">'+(isMgr()?'🔓 Log out':'🔒 Manager')+'</button>'+
     '<button class="wh-gear" id="wh-gear" title="Settings">⚙</button>'+
   '</div>';
@@ -1595,6 +1654,11 @@ function renderWH(){
   if(whTab==='picked'){
     el.innerHTML=tabBar+renderPickedHTML();
     wireTabsBar();wirePicked(el);
+    return;
+  }
+  if(whTab==='history'){
+    el.innerHTML=tabBar+renderHistoryHTML();
+    wireTabsBar();wireHistory(el);
     return;
   }
   if(whTab==='order'){
