@@ -1,6 +1,7 @@
 import { BRANCHES, fail, redis, random, sha, equal, londonDay, londonMinutes, clockMinutes, clock, branchId, loadBranch, mutateBranch, todayState, cookie, session, makeSession, sessionCookie, requireManager, limit, hashPin, publicStaff, requestOrigin } from '../lib/team-store.js';
 import { SKILLS, LEVELS, branchConfig, training, allocate } from '../lib/allocation.js';
 import { endWork, closeArrival, pauseStaffTasks } from '../lib/work-time.js';
+import { locationConfig, checkLocation } from '../lib/location.js';
 export const config = { runtime: 'edge' };
 const LEGACY_MANAGER_HASH = '77f1cec5dabf986e5d5aea8b199033ecaa62b0f991e27512ddf3ee3fb6c86cd7';
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', ...headers } });
@@ -74,19 +75,19 @@ export default async function handler(req) {
     }
     if (action === 'qr' || action === 'rotate') {
       const k = await session(req, 'cc_kiosk'); const m = await session(req, 'cc_manager');
-      if (m?.role !== 'manager' && k?.role !== 'kiosk') fail('Ask a manager to set up this branch computer.', 401);
       if (action === 'rotate' && m?.role !== 'manager') fail('Manager sign-in is required to rotate early.', 401);
       const branch = branchId(action === 'rotate' ? body.branch : url.searchParams.get('branch') ?? k?.branch);
-      if (m?.role !== 'manager' && k.branch !== branch) fail('This computer is set up for a different branch.', 403);
       const q = await qrRecord(branch, action === 'rotate');
-      return json({ ...q, branch, name: BRANCHES[branch].name, url: requestOrigin(req) + `/asim.html?branch=${branch}#scan=${q.token}`, now: Date.now() });
+      const {state}=await loadBranch(branch); const day=todayState(state);
+      const roster=publicStaff(state).filter(s=>s.active||day.arrivals[s.id]).map(s=>{const a=day.arrivals[s.id];return {name:s.name,at:a?.at||null,outAt:a?.outAt||null,status:!a?'Not signed in':a.outAt?'Clocked out':'Clocked in'};});
+      return json({ ...q, roster, branch, name: BRANCHES[branch].name, url: requestOrigin(req) + `/asim.html?branch=${branch}#scan=${q.token}`, now: Date.now() });
     }
     if (action === 'scan') {
       await limit(req, 'scan', 240); const branch = branchId(body.branch); const qrKey=await validQr(branch, body.token);
       const { state } = await loadBranch(branch);
       const ticket = random();
       await redis(['SET', 'attendance:scan:' + await sha(ticket), JSON.stringify({branch, date:londonDay(), token:body.token, qrKey}), 'EX', 90]);
-      return json({ branch, ticket, date: londonDay(), name: BRANCHES[branch].name, staff: publicStaff(state).filter(s => s.active).map(({ id, name }) => ({ id, name })) });
+      return json({ branch, ticket, date: londonDay(), name: BRANCHES[branch].name, locationRequired:!!state.location?.required, locationConfigured:!!state.location, staff: publicStaff(state).filter(s => s.active).map(({ id, name }) => ({ id, name })) });
     }
     if (action === 'checkin') {
       const branch = branchId(body.branch); await limit(req, 'staff:' + branch, 60);
@@ -98,6 +99,7 @@ export default async function handler(req) {
       await limit(req, `pin:${branch}:${await sha(body.staff)}`, 10);
       const valid = person.salt ? equal((await hashPin(body.pin, person.salt)).hash, person.hash) : person.legacyHash && equal(await sha(`cc-staff|${branch}|${body.staff}|${body.pin}`), person.legacyHash);
       if (!valid) fail('Incorrect PIN.', 401);
+      checkLocation(body.location,state.location,branch);
       if (body.ticket) {
         const consumed = await redis(['DEL','attendance:scan:' + await sha(body.ticket)]);
         if (!consumed) fail('This scan has already been used. Scan the current code again.',401);
@@ -108,14 +110,16 @@ export default async function handler(req) {
         const p = state.staff[body.staff];
         if (!p?.active || p.hash !== person.hash || p.legacyHash !== person.legacyHash) fail('Staff details changed. Please try signing in again.', 409);
         if (upgraded) { Object.assign(p, upgraded); delete p.legacyHash; }
+        const tag=checkLocation(body.location,state.location,branch,at);
         const d = todayState(state, date);
         const prior = d.arrivals[body.staff];
         if (body.mode === 'out') {
           if (!prior || prior.outAt) fail('You are not clocked in at this branch today. Ask the manager if a record needs correcting.');
+          prior.locationEvents ||= []; prior.locationEvents.push({...tag,mode:'out'}); prior.location=tag;
           closeArrival(prior,at); pauseStaffTasks(d,body.staff,at); allocate(state,branch); return prior;
         }
-        if (!prior) d.arrivals[body.staff] = { name: p.name, at, sessions:[{in:at}], shiftStart:p.shiftStart || state.shiftStart, lateMinutes: Math.max(0, londonMinutes(at) - clockMinutes(p.shiftStart || state.shiftStart)), verified: true };
-        else if (prior.outAt) { prior.sessions ||= [{in:prior.at,out:prior.outAt}]; prior.sessions.push({in:at}); prior.returns ||= []; prior.returns.push(at); delete prior.outAt; }
+        if (!prior) d.arrivals[body.staff] = { name: p.name, at, sessions:[{in:at}], shiftStart:p.shiftStart || state.shiftStart, lateMinutes: Math.max(0, londonMinutes(at) - clockMinutes(p.shiftStart || state.shiftStart)), verified: true, location:tag, locationEvents:[{...tag,mode:'in'}] };
+        else if (prior.outAt) { prior.location=tag; (prior.locationEvents ||= []).push({...tag,mode:'in'}); prior.sessions ||= [{in:prior.at,out:prior.outAt}]; prior.sessions.push({in:at}); prior.returns ||= []; prior.returns.push(at); delete prior.outAt; }
         return d.arrivals[body.staff];
       });
       if (body.mode === 'out') return json({ok:true,mode:'out',arrival:result,branch},200,{'Set-Cookie':sessionCookie('cc_attendance','',0)});
@@ -163,7 +167,7 @@ export default async function handler(req) {
     await requireManager(req);
     if (action === 'dashboard') {
       const date = url.searchParams.get('date') || londonDay(); if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail('Invalid date.');
-      const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id); return { ...branch, staff: publicStaff(state), day: state.days[date] || { arrivals: {}, tasks: [] }, shiftStart: state.shiftStart, config: branchConfig(state, branch.id) }; }));
+      const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id); return { ...branch, staff: publicStaff(state), day: state.days[date] || { arrivals: {}, tasks: [] }, shiftStart: state.shiftStart, config: branchConfig(state, branch.id), location:state.location||null }; }));
       return json({ date, today: londonDay(), now: Date.now(), branches, skills: SKILLS });
     }
     const branch = branchId(body.branch);
@@ -190,6 +194,10 @@ export default async function handler(req) {
         for (const skill of SKILLS) { if (!LEVELS.includes(body.skills?.[skill.id])) fail('Choose a level for every skill.'); skills[skill.id] = body.skills[skill.id]; }
         p.confirmedSkills = skills; p.trainingUpdatedAt = Date.now(); p.trainingConfirmedAt = Date.now(); allocate(state, branch);
       }); return json({ ok: true });
+    }
+    if (action === 'location-configure') {
+      const location=locationConfig(body.location);
+      await mutateBranch(branch,state=>{state.location=location;}); return json({ok:true});
     }
     if (action === 'configure') {
       const allowed = SKILLS.filter(s => s.id !== 'till').map(s => s.id);

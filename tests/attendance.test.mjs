@@ -41,14 +41,14 @@ test('UK dates and shift minutes handle midnight and both DST boundaries',()=>{
 
 test('complete manager → kiosk → QR → arrival → training → allocation → progress story',async()=>{
  assert.equal((await call('dashboard')).status,401);
- assert.equal((await call('qr',undefined,'',{branch:0})).status,401);
+ assert.equal((await call('qr',undefined,'',{branch:0})).status,200);
  assert.equal((await call('manager-login',{password:'wrong'})).status,401);
  const manager=await call('manager-login',{password:process.env.ATTENDANCE_MANAGER_PASSWORD});assert.equal(manager.status,200);const mc=manager.cookie;
  const senior=await call('staff-save',{branch:0,name:'Senior colleague',pin:'1234',shiftStart:'23:59',seniority:'senior'},mc);assert.equal(senior.status,200,JSON.stringify(senior.body));
  const beginner=await call('staff-save',{branch:0,name:'New colleague',pin:'5678',shiftStart:'23:59',seniority:'new'},mc);assert.equal(beginner.status,200);
  const sid=senior.body.id,nid=beginner.body.id;
  const paired=await call('pair',{branch:0},mc);assert.equal(paired.status,200);const kc=paired.cookie;
- assert.equal((await call('qr',undefined,kc,{branch:1})).status,403);
+ assert.equal((await call('qr',undefined,kc,{branch:1})).status,200);
  const qr=await call('qr',undefined,kc,{branch:0});assert.equal(qr.status,200);const token=qr.body.token;
  assert.equal((await call('scan',{branch:0,token:'f'.repeat(64)})).status,401);
  const scan=await call('scan',{branch:0,token});assert.equal(scan.body.staff.length,2);assert.ok(!JSON.stringify(scan.body).includes('hash'));
@@ -151,3 +151,37 @@ test('task timing pauses at clock-out and returning staff retain separate attend
 });
 
 test('health confirms storage without exposing records',async()=>{const h=await call('health');assert.equal(h.status,200);assert.equal(h.body.storage,'connected');breakStorage=true;try{assert.equal((await call('health')).status,503);}finally{breakStorage=false;}});
+
+test('public QR roster excludes private data; manager-only branch location checks gate and tag attendance',async()=>{
+ const m=await call('manager-login',{password:process.env.ATTENDANCE_MANAGER_PASSWORD});
+ const location={latitude:53.8,longitude:-1.55,radius:150,required:true};
+ assert.equal((await call('location-configure',{branch:1,location})).status,401);
+ assert.equal((await call('location-configure',{branch:1,location:{...location,latitude:100}},m.cookie)).status,400);
+ assert.equal((await call('location-configure',{branch:1,location},m.cookie)).status,200);
+ const person=await call('staff-save',{branch:1,name:'Location test',pin:'9876',shiftStart:'09:00',seniority:'new'},m.cookie);
+ const q=await call('qr',undefined,'',{branch:1});assert.equal(q.status,200);assert.equal(q.body.roster[0].status,'Not signed in');
+ const scan=await call('scan',{branch:1,token:q.body.token});assert.equal(scan.body.locationRequired,true);
+ const payload={branch:1,ticket:scan.body.ticket,staff:person.body.id,pin:'9876'};
+ assert.equal((await call('checkin',payload)).status,400,'required missing location rejected');
+ assert.equal((await call('checkin',{...payload,location:{status:'denied'}})).status,400);
+ const fix={latitude:53.8,longitude:-1.55,accuracy:15,timestamp:Date.now()};
+ assert.equal((await call('checkin',{...payload,location:{...fix,latitude:53.9}})).status,400,'outside branch rejected');
+ assert.equal((await call('checkin',{...payload,location:{...fix,accuracy:500}})).status,400,'poor accuracy rejected');
+ assert.equal((await call('checkin',{...payload,location:{...fix,timestamp:Date.now()-120000}})).status,400,'stale tag rejected');
+ const entered=await call('checkin',{...payload,location:fix});assert.equal(entered.status,200,JSON.stringify(entered.body));assert.equal(entered.body.arrival.location.status,'near');assert.equal(entered.body.arrival.location.branch,1);
+ const roster=await call('qr',undefined,'',{branch:1});assert.equal(roster.body.roster.find(s=>s.name==='Location test').status,'Clocked in');assert.deepEqual(Object.keys(roster.body.roster.find(s=>s.name==='Location test')).sort(),['at','name','outAt','status']);assert.ok(!JSON.stringify(roster.body).includes('latitude'));
+ const out=await call('checkin',{branch:1,token:q.body.token,staff:person.body.id,pin:'9876',mode:'out',location:{...fix,timestamp:Date.now()}});assert.equal(out.status,200);assert.deepEqual(out.body.arrival.locationEvents.map(g=>g.mode),['in','out']);
+ // Disabling enforcement must visibly flag an outside fix, never label it near.
+ await call('location-configure',{branch:1,location:{...location,required:false}},m.cookie);
+ const back=await call('checkin',{branch:1,token:q.body.token,staff:person.body.id,pin:'9876',location:{...fix,latitude:53.9,timestamp:Date.now()}});assert.equal(back.status,200);assert.equal(back.body.arrival.location.status,'outside');
+ const board=await call('dashboard',undefined,m.cookie);const b=board.body.branches[1];assert.equal(b.location.latitude,53.8);assert.equal(b.day.arrivals[person.body.id].locationEvents.length,3);
+});
+
+test('location tags distinguish missing, uncertain and unconfigured positions',async()=>{
+ const {checkLocation}=await import('../lib/location.js');const now=Date.now();const fix={latitude:53.8,longitude:-1.55,accuracy:10,timestamp:now};
+ assert.equal(checkLocation(fix,null,0,now).status,'unconfigured');
+ assert.equal(checkLocation({status:'denied'},null,0,now).status,'denied');
+ assert.equal(checkLocation({...fix,latitude:'53.8'},null,0,now).status,'unavailable');
+ assert.equal(checkLocation({...fix,timestamp:now+120000},null,0,now).status,'unavailable');
+ assert.equal(checkLocation({...fix,accuracy:101},{...fix,radius:150,required:false},0,now).status,'inaccurate');
+});

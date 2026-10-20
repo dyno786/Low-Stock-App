@@ -6,7 +6,7 @@ Implementation prepared against dyno786/Low-Stock-App main commit
 ## Release state
 
 The changes are implemented and checked. Repository write access was enabled on
-20 October 2026 and the release is being prepared. Live verification follows publication.
+20 October 2026. The initial release is live; this update removes the kiosk password and adds location checks.
 
 ## Pages
 
@@ -26,9 +26,12 @@ The changes are implemented and checked. Repository write access was enabled on
 3. Choose branch work categories and permitted quiet-period till duties.
    Shopify is the default quiet-period till duty in each shop, and can be changed.
    Warehouse has picking/replenishment jobs and does not require a till person.
-4. On EACH branch computer open asim.html and sign in as manager for setup.
-   Choose its branch and click Link computer & display QR. The manager session
-   closes after pairing. The computer keeps only its limited QR-display session.
+4. On EACH branch computer open asim.html and choose its branch. The QR and
+   current-day staff roster appear immediately without a password. The selected
+   branch is kept in the page URL; bookmark that URL. In manager Staff & branch
+   setup, save the correct branch coordinates and allowed radius. Use device
+   location only while physically at that branch. Enable Require an accurate
+   location near the branch to block unverified clock-ins and clock-outs.
 5. Bookmark asim.html. Alternatively save computer-shortcut/asim.html onto the
    computer and double-click it; this small launcher opens the hosted page.
    Do not save the main app HTML as an offline page: it needs its hosted scripts
@@ -77,9 +80,20 @@ The changes are implemented and checked. Repository write access was enabled on
 - The phone form supports Clock in and Clock out using name + PIN. Clock-out
   stops an active task timer. Returning staff retain each separate attendance span.
 - The same QR URL works with Android and iPhone cameras; no separate QR is needed.
-- The kiosk is paired to one branch for 90 days and cannot access manager records.
-- A code can still be photographed/shared during its valid minute; rotation reduces
-  replay but is not physical-location verification. No GPS tracking was added.
+- The kiosk QR and current-day names/status/arrival/departure roster are public.
+  PINs, training, tasks, location coordinates and historical records require authentication.
+- A code can still be photographed/shared during its valid minute. Because QR
+  retrieval is now public, the QR itself cannot prove someone is at the branch.
+  Configure branch location checks and enable enforcement for proximity checks.
+- Each clock-in/out requests a fresh phone location with permission. The server
+  validates coordinate ranges, freshness (60 seconds), accuracy and distance.
+  Near branch requires the accuracy circle to fit inside the configured radius.
+  Accuracy over 100 metres (or over the radius) is uncertain, never verified.
+- With enforcement enabled, missing, denied, stale, uncertain and outside fixes
+  are rejected. Otherwise they are recorded with explicit manager warnings.
+  Unconfigured branches cannot be labelled near. The manager sees map links,
+  distance, accuracy and each entry/exit tag. No continuous tracking is performed.
+  Browser locations can be spoofed: this is supporting evidence, not fraud-proof identity.
 - A saved local computer-shortcut/asim.html launcher opens the hosted page;
   the hosted app still requires internet access and deployment.
 
@@ -114,7 +128,7 @@ The changes are implemented and checked. Repository write access was enabled on
 
 Run `npm test` and `npm run check`.
 
-Nine automated suites cover:
+Eleven automated suites cover:
 - UK calendar midnight and daylight-saving changes.
 - Manager → kiosk pairing → QR → PIN sign-in → training review → allocation → task progress.
 - Invalid PINs, duplicate arrival timestamps, unauthorized dashboard/till changes,
@@ -122,6 +136,8 @@ Nine automated suites cover:
 - Old QR rejection after manual rotation, minute expiry and date rollover.
 - Concurrent arrivals, legacy data migration and unavailable storage errors.
 - Training confirmation priority and explicit lack of trained till cover.
+- Public QR/roster fields, private location configuration, geofence enforcement,
+  missing/denied/stale/low-accuracy locations, and persisted entry/exit tags.
 
 Additional isolated DOM checks passed for manager tabs and forms, safe text rendering,
 local QR generation, phone sign-in, daily training and all four stock workspaces.
@@ -129,11 +145,11 @@ All inline scripts in the four workspaces and picklog.html parse successfully.
 DOM checks use fixtures; these are not a substitute for a real deployed browser
 and live storage check. No real staff records were created during testing.
 
-## Deployment verification still needed
+## On-site verification
 
-Publish through the existing GitHub → Vercel
-project, verify the actual edge build and Redis environment, and test a manager
-setup and a real camera scan on a branch computer/phone. Confirm 09:00 or each
+The initial production deployment and Redis health have been checked. The update
+uses the same GitHub → Vercel project. Test a real camera scan and phone location
+permission at each branch after saving that branch’s coordinates. Confirm 09:00 or each
 person's actual start times before staff begin using attendance.
 
 ## Attendance and workload history
