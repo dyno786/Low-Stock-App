@@ -164,3 +164,13 @@ The Time & workload tab shows staff totals and a timestamped activity log. Atten
 and workload CSV exports are available. Task timers measure staff start/stop actions,
 not verified productivity or physical movement. Live camera/device and deployed Redis
 checks follow publication.
+
+## Shared navigation
+
+The four branch workspaces, ASIM staff/manager pages, Orders, PICCO and pick log
+load workspace-nav.js and workspace-nav.css. The shared menu includes Back,
+Branch home, My day & jobs, Staff QR, Manager and All tools & pages. Branch context
+is retained in links and a local display preference; this never grants access.
+Manager tabs support a tab query parameter. On stock work areas, Back first
+returns to the branch home; direct entries fall back to the branch home safely.
+The menu stays visible while scrolling and wraps for phones.
