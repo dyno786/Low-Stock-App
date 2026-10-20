@@ -93,10 +93,10 @@ body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);-web
 </div>
 <script>
 (function(){
-  var H='77f1cec5dabf986e5d5aea8b199033ecaa62b0f991e27512ddf3ee3fb6c86cd7',g=document.getElementById('mgr-gate'),i=document.getElementById('mgr-pin'),er=document.getElementById('mgr-err');
-  function open(){g.style.display='none';}
-  try{if(sessionStorage.getItem('cc_wh_mgr')==='1'){open();return;}}catch(e){}
-  function go(){crypto.subtle.digest('SHA-256',new TextEncoder().encode('cc-wh-mgr|'+i.value.trim())).then(function(b){var h=Array.from(new Uint8Array(b)).map(function(x){return ('0'+x.toString(16)).slice(-2);}).join('');if(h===H){try{sessionStorage.setItem('cc_wh_mgr','1');}catch(e){}open();}else{er.textContent='Wrong password';i.value='';i.focus();}}).catch(function(){er.textContent='Could not check password';});}
+  var g=document.getElementById('mgr-gate'),i=document.getElementById('mgr-pin'),er=document.getElementById('mgr-err');
+  function open(){g.style.display='none';if(typeof load==='function')load();}
+  fetch('/api/team?action=status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){if(j.manager)open();}).catch(function(){});
+  async function go(){try{var r=await fetch('/api/team',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'manager-login',password:i.value})});if(!r.ok)throw new Error('Incorrect password');open();}catch(e){er.textContent=e.message;i.value='';i.focus();}}
   document.getElementById('mgr-go').addEventListener('click',go);
   i.addEventListener('keydown',function(e){if(e.key==='Enter')go();});
 })();

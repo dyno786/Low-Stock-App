@@ -4,5 +4,9 @@
   "private": true,
   "dependencies": {
     "sharp": "^0.33.5"
+  },
+  "scripts": {
+    "test": "node --test tests/attendance.test.mjs",
+    "check": "node --check api/team.js && node --check lib/team-store.js && node --check lib/allocation.js && node --check lib/work-time.js && node --check team-ui.js && node --check staffday.js"
   }
 }

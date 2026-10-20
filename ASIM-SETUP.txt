@@ -1,0 +1,24 @@
+ASIM STAFF ATTENDANCE — READY TO DEPLOY, NOT YET LIVE
+
+Pages:
+  asim.html          Open on each branch computer to display the rotating QR.
+  asim-manager.html  Open as manager to review attendance, tasks and training.
+  myday.html         Staff arrival confirmation and assigned jobs on their phone.
+
+Each branch computer is linked once by the manager. The QR changes every minute.
+Staff use the normal camera on an Android phone or iPhone, select Clock in or Clock
+out, choose their name and enter their PIN. A successfully scanned form allows up
+to 90 seconds to enter the PIN and cannot be used again after submission.
+
+Managers can review each branch and date, arrivals/departures, separate visits,
+time in branch, assigned tasks, task starts/completions, task time and activity logs.
+The existing skills/training-based allocation and one-person till coverage remain.
+
+For a desktop HTML shortcut, save computer-shortcut/asim.html on the computer.
+It opens the hosted app; it is not an offline attendance database.
+
+Nine API/allocation test suites and interface DOM checks pass. Real iPhone,
+Android, hosted build and live Redis verification are still pending deployment.
+
+Repository write access is enabled. Release preparation is underway.
+The deployed URL and final live verification are confirmed at publication.
