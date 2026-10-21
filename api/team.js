@@ -19,6 +19,20 @@ async function validQr(branch, token) {
   if (!equal(token, current)) fail('This QR code has expired or was rotated. Scan the current code on the branch computer.', 401);
   return key;
 }
+// Phone tag for each scan: a random id the phone keeps + a short browser/model summary + a hashed network address.
+function deviceSummary(ua=''){
+  ua=String(ua);let m;
+  if(/iPhone/.test(ua))return 'iPhone'+((m=ua.match(/OS (\d+)_/))?' iOS '+m[1]:'');
+  if(/iPad/.test(ua))return 'iPad'+((m=ua.match(/OS (\d+)_/))?' iOS '+m[1]:'');
+  if(/Android/.test(ua)){m=ua.match(/Android [\d.]+;\s*([^;)]+?)(?:\s+Build|\))/);return 'Android'+(m&&m[1]&&!/^[a-z]{2}-[a-z]{2}$/i.test(m[1].trim())?' · '+m[1].trim().slice(0,30):'');}
+  if(/Windows/.test(ua))return 'Windows PC';if(/Macintosh/.test(ua))return 'Mac';
+  return ua?'Other device':'Unknown';
+}
+async function deviceTag(req, body, at){
+  const id=typeof body.device==='string'&&/^[a-f0-9]{16,40}$/.test(body.device)?body.device:'';
+  const ip=req.headers.get('x-real-ip')||req.headers.get('x-forwarded-for')?.split(',')[0]||'';
+  return {at,id:id||('nodevice-'+(await sha(ip+'|'+(req.headers.get('user-agent')||''))).slice(0,12)),model:deviceSummary(req.headers.get('user-agent')),net:ip?(await sha('net|'+ip)).slice(0,8):'',anon:!id};
+}
 async function verifyScan(branch, body) {
   if (!body.ticket) return validQr(branch, body.token);
   if (!/^[a-f0-9]{64}$/.test(body.ticket)) fail('Scan the current branch QR code again.', 401);
@@ -106,6 +120,7 @@ export default async function handler(req) {
       }
       const upgraded = person.salt ? null : await hashPin(body.pin);
       const date = londonDay(); const at = Date.now();
+      const device = await deviceTag(req, body, at);
       const { result } = await mutateBranch(branch, state => {
         const p = state.staff[body.staff];
         if (!p?.active || p.hash !== person.hash || p.legacyHash !== person.legacyHash) fail('Staff details changed. Please try signing in again.', 409);
@@ -115,11 +130,11 @@ export default async function handler(req) {
         const prior = d.arrivals[body.staff];
         if (body.mode === 'out') {
           if (!prior || prior.outAt) fail('You are not clocked in at this branch today. Ask the manager if a record needs correcting.');
-          prior.locationEvents ||= []; prior.locationEvents.push({...tag,mode:'out'}); prior.location=tag;
+          prior.locationEvents ||= []; prior.locationEvents.push({...tag,mode:'out'}); prior.location=tag; (prior.devices ||= []).push({...device,mode:'out'});
           closeArrival(prior,at); pauseStaffTasks(d,body.staff,at); allocate(state,branch); return prior;
         }
-        if (!prior) d.arrivals[body.staff] = { name: p.name, at, sessions:[{in:at}], shiftStart:p.shiftStart || state.shiftStart, lateMinutes: Math.max(0, londonMinutes(at) - clockMinutes(p.shiftStart || state.shiftStart)), verified: true, location:tag, locationEvents:[{...tag,mode:'in'}] };
-        else if (prior.outAt) { prior.location=tag; (prior.locationEvents ||= []).push({...tag,mode:'in'}); prior.sessions ||= [{in:prior.at,out:prior.outAt}]; prior.sessions.push({in:at}); prior.returns ||= []; prior.returns.push(at); delete prior.outAt; }
+        if (!prior) d.arrivals[body.staff] = { name: p.name, at, sessions:[{in:at}], shiftStart:p.shiftStart || state.shiftStart, lateMinutes: Math.max(0, londonMinutes(at) - clockMinutes(p.shiftStart || state.shiftStart)), verified: true, location:tag, locationEvents:[{...tag,mode:'in'}], devices:[{...device,mode:'in'}] };
+        else if (prior.outAt) { prior.location=tag; (prior.locationEvents ||= []).push({...tag,mode:'in'}); (prior.devices ||= []).push({...device,mode:'in'}); prior.sessions ||= [{in:prior.at,out:prior.outAt}]; prior.sessions.push({in:at}); prior.returns ||= []; prior.returns.push(at); delete prior.outAt; }
         return d.arrivals[body.staff];
       });
       if (body.mode === 'out') return json({ok:true,mode:'out',arrival:result,branch},200,{'Set-Cookie':sessionCookie('cc_attendance','',0)});

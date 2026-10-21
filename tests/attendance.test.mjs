@@ -53,13 +53,19 @@ test('complete manager → kiosk → QR → arrival → training → allocation 
  assert.equal((await call('scan',{branch:0,token:'f'.repeat(64)})).status,401);
  const scan=await call('scan',{branch:0,token});assert.equal(scan.body.staff.length,2);assert.ok(!JSON.stringify(scan.body).includes('hash'));
  assert.equal((await call('checkin',{branch:0,token,staff:sid,pin:'9999'})).status,401);
- const signed=await call('checkin',{branch:0,token,staff:sid,pin:'1234'});assert.equal(signed.status,200,JSON.stringify(signed.body));const sc=signed.cookie;const at=signed.body.arrival.at;
+ const signed=await call('checkin',{branch:0,token,staff:sid,pin:'1234',device:'a'.repeat(32)});assert.equal(signed.status,200,JSON.stringify(signed.body));const sc=signed.cookie;const at=signed.body.arrival.at;
  const repeated=await call('checkin',{branch:0,token,staff:sid,pin:'1234'});assert.equal(repeated.body.arrival.at,at,'duplicate scan preserves first arrival');
  const pre=await call('me',undefined,sc);assert.equal(pre.body.needsTrainingReview,true);assert.equal(pre.body.tasks.length,0);
  const allSkills=Object.fromEntries(['till','pick','neg','over','low','shop','img'].map(k=>[k,'trained']));
  assert.equal((await call('training-save',{skills:allSkills},sc)).status,200);
  const my=await call('me',undefined,sc);assert.equal(my.body.till,true);assert.equal(my.body.needsTrainingReview,false);assert.ok(my.body.tasks.some(t=>t.category==='shop'));
  const newsign=await call('checkin',{branch:0,token,staff:nid,pin:'5678'});const nc=newsign.cookie;
+ { // phone tags: both people clocked in from the same phone id -> manager can see it in the dashboard data
+   const dash=await call('dashboard',undefined,mc);const arr=dash.body.branches[0].day.arrivals;
+   assert.equal(arr[sid].devices?.[0]?.id,'a'.repeat(32),'device id recorded on first clock-in');
+   assert.equal(arr[sid].devices[0].mode,'in');assert.ok(arr[sid].devices[0].model,'device model summary recorded');
+   assert.ok(arr[nid].devices?.[0]?.id.startsWith('nodevice-'),'a scan without a phone id still gets a tag');
+ }
  const newSkills={...allSkills,till:'untrained',shop:'learning',neg:'untrained',img:'untrained'};
  assert.equal((await call('training-save',{skills:newSkills},nc)).status,200);
  const board=await call('dashboard',undefined,mc);const b=board.body.branches[0];assert.equal(b.day.till,sid);assert.equal(b.day.tasks.filter(t=>t.category==='till'&&!t.archived).length,1);
