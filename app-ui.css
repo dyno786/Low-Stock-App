@@ -7,3 +7,11 @@ body.branch-app{--bg:#f5f7fb;--s1:#fff;--border:#e2e8f0;--ink:#172033;--sub:#647
 @media(max-width:600px){.app-header{height:68px;padding:0 16px}.brand{font-size:13px}.brand small{font-size:10px}.brand-mark{width:36px;height:36px}.header-links a{font-size:11px;padding:4px}.workspace{padding:24px 16px 40px}.page-heading{align-items:flex-start;flex-direction:column}.metrics{gap:10px}.metric{padding:15px}.metric strong{font-size:26px}.panel{padding:18px}.grid2,.grid3,.form-row{grid-template-columns:1fr}.toolbar{width:100%}.kiosk{margin:28px auto;padding:0 16px}.kiosk-grid{grid-template-columns:1fr}.kiosk-grid>div:first-child h1{font-size:30px}.instructions{gap:14px;margin:24px 0}.qr-panel{padding:20px}.signin-card{margin:24px 16px}.skill-row{grid-template-columns:1fr 140px;font-size:12px}.branch-app{min-width:0}body.branch-app{padding:12px 12px 40px!important}.branch-app>.hdr{padding:18px 16px!important}.branch-app>.hdr .title{font-size:17px}.branch-app .refresh-btn{padding:8px}.cc-workspace-links .current-person{width:100%;margin:0}.home-intro{padding:18px 0 12px}.home-intro h1{font-size:24px}.home-area-grid{gap:10px}.area-card{min-height:112px;padding:15px}.cc-team-strip{padding:15px;align-items:flex-start;flex-direction:column}.branch-app>.vtabs .vtab{font-size:11px;padding:8px 9px}.header-links .desktop-only{display:none}.cover{align-items:flex-start;flex-wrap:wrap}.skill-cell{min-width:100px}}
 
 .branch-app.on-home>.hdr .stats-hdr{display:none!important}
+
+/* branch location search */
+.loc-search{display:flex;gap:8px;margin-top:6px}.loc-search input{flex:1;min-width:0}
+.loc-results{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.loc-result{appearance:none;text-align:left;border:1px solid var(--line,#e5e7eb);background:#fff;border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;gap:2px}
+.loc-result:hover,.loc-result:focus-visible{border-color:var(--accent,#2563eb);background:var(--accent-soft,#eff6ff)}
+.loc-preview{margin:8px 0 14px}.loc-saved{margin-bottom:6px}
+.loc-map{width:100%;height:220px;border:1px solid var(--line,#e5e7eb);border-radius:12px;display:block}

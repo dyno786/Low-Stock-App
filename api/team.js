@@ -1,7 +1,7 @@
 import { BRANCHES, fail, redis, random, sha, equal, londonDay, londonMinutes, clockMinutes, clock, branchId, loadBranch, mutateBranch, todayState, cookie, session, makeSession, sessionCookie, requireManager, limit, hashPin, publicStaff, requestOrigin } from '../lib/team-store.js';
 import { SKILLS, LEVELS, branchConfig, training, allocate } from '../lib/allocation.js';
 import { endWork, closeArrival, pauseStaffTasks } from '../lib/work-time.js';
-import { locationConfig, checkLocation } from '../lib/location.js';
+import { locationConfig, checkLocation, geocode } from '../lib/location.js';
 export const config = { runtime: 'edge' };
 const LEGACY_MANAGER_HASH = '77f1cec5dabf986e5d5aea8b199033ecaa62b0f991e27512ddf3ee3fb6c86cd7';
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', ...headers } });
@@ -194,6 +194,10 @@ export default async function handler(req) {
         for (const skill of SKILLS) { if (!LEVELS.includes(body.skills?.[skill.id])) fail('Choose a level for every skill.'); skills[skill.id] = body.skills[skill.id]; }
         p.confirmedSkills = skills; p.trainingUpdatedAt = Date.now(); p.trainingConfirmedAt = Date.now(); allocate(state, branch);
       }); return json({ ok: true });
+    }
+    if (action === 'geocode') {
+      await requireManager(req); await limit(req, 'geocode', 40);
+      return json({ ok: true, results: await geocode(body.query) });
     }
     if (action === 'location-configure') {
       const location=locationConfig(body.location);
