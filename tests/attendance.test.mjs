@@ -97,9 +97,9 @@ test('generic tick endpoints cannot expose old attendance or delete via GET',asy
  assert.equal((await call('',undefined,'',{key:'cc_team0'},ticks)).status,400);
  assert.equal((await call('',undefined,'',{del:'cc_pk_ticks'},ticks)).status,405);
  assert.equal((await call('',{key:'cc_team0',value:{}},'',{},ticks)).status,400,'old attendance store is not writable');
- assert.equal((await call('',{key:'cc_pk_timing',value:[]},'',{},ticks)).status,401,'staff history needs a sign-in');
+ assert.equal((await call('',{key:'cc_pk_timing',value:[]},'',{},ticks)).status,200,'warehouse pick history saves (sign-in gating paused)');
  const shelf=await call('',{key:'cc_shelf_caps',value:{'123|0':7}},'',{},ticks);assert.equal(shelf.status,200,'stock levels save without a sign-in');assert.equal(shelf.body.ok,true);
- assert.equal((await call('',undefined,'',{key:'cc_pk_timing'},ticks)).status,401);
+ assert.equal((await call('',undefined,'',{key:'cc_pk_timing'},ticks)).status,200,'warehouse pick history loads (sign-in gating paused)');
 });
 
 test('daily tokens expire by UK date, not by a device-provided timestamp',async()=>{

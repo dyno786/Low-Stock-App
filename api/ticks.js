@@ -35,7 +35,9 @@ export default async function handler(req) {
   const PRIVATE_KEYS = ['cc_pk_log','cc_pick_log','cc_pk_picked','cc_pk_timing','cc_pk_sessions','cc_pk_session','cc_training_results','cc_staff_week'];
   let canReadPrivate=false;
   try{const m=await session(req,'cc_manager');const s=await session(req);canReadPrivate=m?.role==='manager';if(!canReadPrivate&&s?.role==='staff'&&s.date===londonDay()){const {state}=await loadBranch(s.branch);const arrival=state.days[s.date]?.arrivals[s.staff];canReadPrivate=!!(state.staff[s.staff]?.active&&arrival&&!arrival.outAt);}}catch(e){}
-  const readable=k=>ALLOWED_KEYS.includes(k)&&(!PRIVATE_KEYS.includes(k)||canReadPrivate);
+  // Sign-in gating is paused until ASIM is set up at every branch: all allowed keys read/write as before.
+  const GATE_PRIVATE=false;
+  const readable=k=>ALLOWED_KEYS.includes(k)&&(!GATE_PRIVATE||!PRIVATE_KEYS.includes(k)||canReadPrivate);
 
   if (req.method === 'GET') {
     if (url.searchParams.has('del')) return new Response(JSON.stringify({error:'Deletion is not available through GET.'}),{status:405,headers:cors});
@@ -58,7 +60,7 @@ export default async function handler(req) {
     }
 
     const key = url.searchParams.get('key');
-    if(PRIVATE_KEYS.includes(key)&&!canReadPrivate)return new Response(JSON.stringify({error:'Sign in to view staff history.'}),{status:401,headers:cors});
+    if(GATE_PRIVATE&&PRIVATE_KEYS.includes(key)&&!canReadPrivate)return new Response(JSON.stringify({error:'Sign in to view staff history.'}),{status:401,headers:cors});
     if (!key || !ALLOWED_KEYS.includes(key)) {
       return new Response(JSON.stringify({ error: 'Invalid key' }), { status: 400, headers: cors });
     }
@@ -85,7 +87,7 @@ export default async function handler(req) {
     try {
       const body = await req.json();
       const { key, value } = body;
-      if(PRIVATE_KEYS.includes(key)&&!canReadPrivate)return new Response(JSON.stringify({error:'Sign in to save staff history.'}),{status:401,headers:cors});
+      if(GATE_PRIVATE&&PRIVATE_KEYS.includes(key)&&!canReadPrivate)return new Response(JSON.stringify({error:'Sign in to save staff history.'}),{status:401,headers:cors});
       if (!key || !ALLOWED_KEYS.includes(key)) {
         return new Response(JSON.stringify({ error: 'Invalid key' }), { status: 400, headers: cors });
       }
