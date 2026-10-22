@@ -80,7 +80,8 @@ export default async function handler(req) {
     const origin=req.headers.get('origin');
     if ((origin && origin!==requestOrigin(req)) || req.headers.get('sec-fetch-site')==='cross-site') return new Response(JSON.stringify({error:'Use this app directly.'}),{status:403,headers:cors});
     if (!req.headers.get('content-type')?.includes('application/json')) return new Response(JSON.stringify({error:'JSON required'}),{status:415,headers:cors});
-    if (!canReadPrivate) return new Response(JSON.stringify({error:'Scan the branch QR and sign in before saving changes.'}),{status:401,headers:cors});
+    // Ordinary app data (stock levels, picking ticks, settings) saves without a sign-in, as before.
+    // Staff history keys (PRIVATE_KEYS) still need a signed-in staff member or manager - checked below.
     try {
       const body = await req.json();
       const { key, value } = body;
