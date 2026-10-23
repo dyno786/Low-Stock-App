@@ -174,11 +174,14 @@ test('public QR roster excludes private data; manager-only branch location check
  assert.equal((await call('checkin',{...payload,location:{status:'denied'}})).status,400);
  const fix={latitude:53.8,longitude:-1.55,accuracy:15,timestamp:Date.now()};
  assert.equal((await call('checkin',{...payload,location:{...fix,latitude:53.9}})).status,400,'outside branch rejected');
- assert.equal((await call('checkin',{...payload,location:{...fix,accuracy:500}})).status,400,'poor accuracy rejected');
+ assert.equal((await call('checkin',{...payload,location:{...fix,latitude:53.81,accuracy:500}})).status,400,'poor accuracy away from the branch rejected');
+ assert.equal((await call('checkin',{...payload,location:{...fix,accuracy:2000}})).status,400,'hopeless accuracy rejected');
  assert.equal((await call('checkin',{...payload,location:{...fix,timestamp:Date.now()-120000}})).status,400,'stale tag rejected');
  const entered=await call('checkin',{...payload,location:fix});assert.equal(entered.status,200,JSON.stringify(entered.body));assert.equal(entered.body.arrival.location.status,'near');assert.equal(entered.body.arrival.location.branch,1);
  const roster=await call('qr',undefined,'',{branch:1});assert.equal(roster.body.roster.find(s=>s.name==='Location test').status,'Clocked in');assert.deepEqual(Object.keys(roster.body.roster.find(s=>s.name==='Location test')).sort(),['at','name','outAt','status']);assert.ok(!JSON.stringify(roster.body).includes('latitude'));
  const out=await call('checkin',{branch:1,token:q.body.token,staff:person.body.id,pin:'9876',mode:'out',location:{...fix,timestamp:Date.now()}});assert.equal(out.status,200);assert.deepEqual(out.body.arrival.locationEvents.map(g=>g.mode),['in','out']);
+ { const p2=await call('staff-save',{branch:1,name:'Rough fix',pin:'4455',shiftStart:'09:00',seniority:'new'},m.cookie);const s2=await call('scan',{branch:1,token:q.body.token});
+   const r=await call('checkin',{branch:1,ticket:s2.body.ticket,staff:p2.body.id,pin:'4455',location:{...fix,accuracy:400,timestamp:Date.now()}});assert.equal(r.status,200,'rough reading centred on the branch is allowed');assert.equal(r.body.arrival.location.status,'inaccurate');assert.equal(r.body.arrival.location.plausible,true,'and flagged for review'); }
  // Disabling enforcement must visibly flag an outside fix, never label it near.
  await call('location-configure',{branch:1,location:{...location,required:false}},m.cookie);
  const back=await call('checkin',{branch:1,token:q.body.token,staff:person.body.id,pin:'9876',location:{...fix,latitude:53.9,timestamp:Date.now()}});assert.equal(back.status,200);assert.equal(back.body.arrival.location.status,'outside');
