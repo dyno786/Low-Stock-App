@@ -60,7 +60,7 @@ export default async function handler(req) {
     const url = new URL(req.url); let body = {};
     if (req.method === 'POST') { try { const raw = await req.text(); if (raw.length > 16000) fail('Request too large.', 413); body = JSON.parse(raw); } catch (e) { if (e.status) throw e; fail('Invalid request.'); } }
     const action = req.method === 'GET' ? url.searchParams.get('action') : body.action;
-    const postOnly = !['status', 'dashboard', 'me', 'qr', 'health'].includes(action);
+    const postOnly = !['status', 'dashboard', 'me', 'qr', 'health', 'report'].includes(action);
     if (postOnly && req.method !== 'POST') fail('POST required.', 405);
     if(action === 'health') { if(await redis(['PING'])!=='PONG') fail('Attendance storage is unavailable.',503); return json({ok:true,storage:'connected',now:Date.now()}); }
     if (action === 'status') {
@@ -173,6 +173,7 @@ export default async function handler(req) {
         if (body.status === 'progress') for(const other of d.tasks) if(other.id!==task.id && other.assignee===s.staff && other.status==='progress' && !other.archived){endWork(other,at);other.status='pending';other.updatedAt=at;(other.history ||= []).push({at,by:s.staff,status:'pending',event:'Paused when another task started'});}
         if (task.status === 'progress') endWork(task,at);
         if (body.status === 'progress') { task.startedAt ||= at; task.runningSince=at; delete task.completedAt; }
+        if (body.status === 'done' && task.photoRequired && !(task.photos||[]).length) fail('Add a photo of the finished work first, then mark it completed.');
         if (body.status === 'done') task.completedAt=at;
         else delete task.completedAt;
         task.status = body.status; task.updatedAt = at; task.history ||= []; task.history.push({ at, by: s.staff, status: body.status }); return task;
@@ -180,6 +181,15 @@ export default async function handler(req) {
       return json({ ok: true, result });
     }
     await requireManager(req);
+    if (action === 'report') {
+      await requireManager(req);
+      const to = url.searchParams.get('to') || londonDay(); const from = url.searchParams.get('from') || to;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) fail('Invalid date range.');
+      const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id);
+        const days = {}; for (const [date, d] of Object.entries(state.days)) if (date >= from && date <= to) days[date] = { arrivals: d.arrivals || {}, tasks: (d.tasks || []).filter(t => !t.archived), till: d.till || '', gaps: d.gaps || [] };
+        return { id: branch.id, name: branch.name, file: branch.file, color: branch.color, staff: publicStaff(state), deletedStaff: state.deletedStaff || {}, days, shiftStart: state.shiftStart, config: branchConfig(state, branch.id) }; }));
+      return json({ from, to, today: londonDay(), now: Date.now(), branches, skills: SKILLS });
+    }
     if (action === 'dashboard') {
       const date = url.searchParams.get('date') || londonDay(); if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail('Invalid date.');
       const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id); return { ...branch, staff: publicStaff(state), day: state.days[date] || { arrivals: {}, tasks: [] }, shiftStart: state.shiftStart, config: branchConfig(state, branch.id), location:state.location||null }; }));
@@ -201,6 +211,17 @@ export default async function handler(req) {
         if (hashed) delete state.staff[id].legacyHash;
         allocate(state, branch);
       }); return json({ ok: true, id });
+    }
+    if (action === 'staff-delete') {
+      if (typeof body.staff !== 'string' || !body.staff) fail('Choose a staff member.');
+      await mutateBranch(branch, state => {
+        const p = Object.hasOwn(state.staff, body.staff) ? state.staff[body.staff] : null; if (!p) fail('Staff member not found.', 404);
+        // History (arrivals, tasks) keeps the name; the login itself is removed.
+        state.deletedStaff ||= {}; state.deletedStaff[body.staff] = { name: p.name, deletedAt: Date.now() };
+        delete state.staff[body.staff];
+        const d = todayState(state); if (d.till === body.staff) d.till = '';
+        allocate(state, branch);
+      }); return json({ ok: true });
     }
     if (action === 'training-confirm') {
       await mutateBranch(branch, state => {
@@ -256,7 +277,8 @@ export default async function handler(req) {
         }
         if (body.category !== 'custom' && training(state.staff[body.assignee], body.category) !== 'trained' && !buddy) fail('This person needs training for this job. Assign a trained buddy for supervision.');
         if (d.till === body.assignee && !branchConfig(state, branch).tillDuties.includes(body.category)) fail('This person is covering the till. Choose a permitted quiet-period duty or assign someone else.');
-        const task = { id, title, notes, category: body.category, priority: body.priority, assignee: body.assignee, due: body.due || '', trainingBuddy: buddy, status: existing?.status || 'pending', createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now(), assignedAt:existing?.assignee===body.assignee?(existing.assignedAt||existing.createdAt):Date.now(), history: existing?.history || [], manualAssignment: true };
+        const photoRequired = body.photoRequired === undefined ? (existing ? !!existing.photoRequired : body.category === 'custom') : !!body.photoRequired;
+        const task = { id, title, notes, photoRequired, photos: existing?.photos || [], category: body.category, priority: body.priority, assignee: body.assignee, due: body.due || '', trainingBuddy: buddy, status: existing?.status || 'pending', createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now(), assignedAt:existing?.assignee===body.assignee?(existing.assignedAt||existing.createdAt):Date.now(), history: existing?.history || [], manualAssignment: true };
         if(existing && existing.assignee!==body.assignee && existing.status==='progress'){endWork(existing,task.updatedAt);task.status='pending';}
         task.history.push({ at: task.updatedAt, by: 'manager', assignee: task.assignee });
         if (existing) Object.assign(existing, task); else d.tasks.push(task);
