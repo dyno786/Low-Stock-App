@@ -25,6 +25,14 @@ export default async function handler(req){
       if(removed) await blobDel(removed.url);
       return json({ok:true});
     }
+    if(action==='ref'){ // manager uploads a reference photo (e.g. a shelf); returns its URL only
+      const m=await session(req,'cc_manager'); if(m?.role!=='manager') fail('Please sign in as manager.',401);
+      const branch=Number(url.searchParams.get('branch')); if(!(branch>=0&&branch<=3)) fail('Choose a branch.');
+      const type=req.headers.get('content-type')||''; if(!/^image\/(jpeg|png|webp)$/.test(type)) fail('Send a JPEG, PNG or WebP photo.',415);
+      const bytes=await req.arrayBuffer(); if(bytes.byteLength<2000) fail('That photo looks empty.'); if(bytes.byteLength>4_000_000) fail('Photo too large (max 4 MB).',413);
+      const stored=await blobPut(`asim/${branch}/shelves/${random().slice(0,12)}.${type.split('/')[1].replace('jpeg','jpg')}`,bytes,type);
+      return json({ok:true,url:stored.url});
+    }
     // upload: staff session required, task must be theirs and from today
     const s=await session(req); if(s?.role!=='staff'||s.date!==londonDay()) fail('Please scan today’s branch QR code and sign in.',401);
     const taskId=url.searchParams.get('task')||''; const note=(url.searchParams.get('note')||'').slice(0,200);

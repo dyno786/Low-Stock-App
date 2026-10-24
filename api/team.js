@@ -2,6 +2,7 @@ import { BRANCHES, fail, redis, random, sha, equal, londonDay, londonMinutes, cl
 import { SKILLS, LEVELS, branchConfig, training, allocate } from '../lib/allocation.js';
 import { endWork, closeArrival, pauseStaffTasks } from '../lib/work-time.js';
 import { locationConfig, checkLocation, geocode } from '../lib/location.js';
+import { validateSections, cityCentreTemplate, genericTemplate } from '../lib/sections.js';
 export const config = { runtime: 'edge' };
 const LEGACY_MANAGER_HASH = '77f1cec5dabf986e5d5aea8b199033ecaa62b0f991e27512ddf3ee3fb6c86cd7';
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', ...headers } });
@@ -55,10 +56,10 @@ export default async function handler(req) {
       const origin = req.headers.get('origin');
       if ((origin && origin !== requestOrigin(req)) || req.headers.get('sec-fetch-site') === 'cross-site') fail('Please use this app directly.', 403);
       if (!req.headers.get('content-type')?.includes('application/json')) fail('JSON required.', 415);
-      if (Number(req.headers.get('content-length') || 0) > 16000) fail('Request too large.', 413);
+      if (Number(req.headers.get('content-length') || 0) > 64000) fail('Request too large.', 413);
     }
     const url = new URL(req.url); let body = {};
-    if (req.method === 'POST') { try { const raw = await req.text(); if (raw.length > 16000) fail('Request too large.', 413); body = JSON.parse(raw); } catch (e) { if (e.status) throw e; fail('Invalid request.'); } }
+    if (req.method === 'POST') { try { const raw = await req.text(); if (raw.length > 64000) fail('Request too large.', 413); body = JSON.parse(raw); } catch (e) { if (e.status) throw e; fail('Invalid request.'); } }
     const action = req.method === 'GET' ? url.searchParams.get('action') : body.action;
     const postOnly = !['status', 'dashboard', 'me', 'qr', 'health', 'report'].includes(action);
     if (postOnly && req.method !== 'POST') fail('POST required.', 405);
@@ -143,7 +144,9 @@ export default async function handler(req) {
     }
     if (action === 'me') {
       const { s, state } = await activeStaffSession(req); const d = todayState(state);
-      return json({ branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
+      const secs = state.sections?.enabled ? (state.sections.list || []) : []; const owners = d.sectionOwners || {};
+      const mySections = secs.filter(x => owners[x.id] === s.staff).map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, shelves: x.shelves }));
+      return json({ mySections, allSectionRules: secs.map(x => ({ id: x.id, name: x.name, kind: x.kind, rules: x.rules })), branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
     }
     if (action === 'training-save') {
       const { s } = await activeStaffSession(req);
@@ -187,12 +190,12 @@ export default async function handler(req) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) fail('Invalid date range.');
       const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id);
         const days = {}; for (const [date, d] of Object.entries(state.days)) if (date >= from && date <= to) days[date] = { arrivals: d.arrivals || {}, tasks: (d.tasks || []).filter(t => !t.archived), till: d.till || '', gaps: d.gaps || [] };
-        return { id: branch.id, name: branch.name, file: branch.file, color: branch.color, staff: publicStaff(state), deletedStaff: state.deletedStaff || {}, days, shiftStart: state.shiftStart, config: branchConfig(state, branch.id) }; }));
+        return { id: branch.id, name: branch.name, file: branch.file, color: branch.color, staff: publicStaff(state), deletedStaff: state.deletedStaff || {}, days, shiftStart: state.shiftStart, config: branchConfig(state, branch.id), sections: state.sections || null }; }));
       return json({ from, to, today: londonDay(), now: Date.now(), branches, skills: SKILLS });
     }
     if (action === 'dashboard') {
       const date = url.searchParams.get('date') || londonDay(); if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail('Invalid date.');
-      const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id); return { ...branch, staff: publicStaff(state), day: state.days[date] || { arrivals: {}, tasks: [] }, shiftStart: state.shiftStart, config: branchConfig(state, branch.id), location:state.location||null }; }));
+      const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id); return { ...branch, sections: state.sections || null, staff: publicStaff(state), day: state.days[date] || { arrivals: {}, tasks: [] }, shiftStart: state.shiftStart, config: branchConfig(state, branch.id), location:state.location||null }; }));
       return json({ date, today: londonDay(), now: Date.now(), branches, skills: SKILLS });
     }
     const branch = branchId(body.branch);
@@ -211,6 +214,22 @@ export default async function handler(req) {
         if (hashed) delete state.staff[id].legacyHash;
         allocate(state, branch);
       }); return json({ ok: true, id });
+    }
+    if (action === 'sections-save') {
+      await mutateBranch(branch, state => { state.sections = validateSections(body.sections, state.staff); allocate(state, branch); }); return json({ ok: true });
+    }
+    if (action === 'sections-template') {
+      await mutateBranch(branch, state => { if (state.sections?.list?.length && !body.replace) fail('This branch already has sections. Edit them instead.'); state.sections = branch === 1 ? cityCentreTemplate() : genericTemplate(); allocate(state, branch); }); return json({ ok: true });
+    }
+    if (action === 'section-owner') {
+      await mutateBranch(branch, state => {
+        const sec = state.sections?.list?.find(x => x.id === body.section); if (!sec) fail('Section not found.', 404);
+        if (sec.kind === 'till') fail('The till section follows today’s till cover. Change it with the till selector.');
+        const d = todayState(state); d.sectionOverrides ||= {};
+        if (body.staff === null || body.staff === undefined) delete d.sectionOverrides[sec.id];
+        else { if (body.staff !== '' && (!Object.hasOwn(state.staff, body.staff) || !state.staff[body.staff].active)) fail('Choose an active staff member.'); d.sectionOverrides[sec.id] = body.staff; }
+        allocate(state, branch);
+      }); return json({ ok: true });
     }
     if (action === 'staff-delete') {
       if (typeof body.staff !== 'string' || !body.staff) fail('Choose a staff member.');
