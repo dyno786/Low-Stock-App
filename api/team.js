@@ -63,7 +63,12 @@ export default async function handler(req) {
     const action = req.method === 'GET' ? url.searchParams.get('action') : body.action;
     const postOnly = !['status', 'dashboard', 'me', 'qr', 'health', 'report'].includes(action);
     if (postOnly && req.method !== 'POST') fail('POST required.', 405);
-    if(action === 'health') { if(await redis(['PING'])!=='PONG') fail('Attendance storage is unavailable.',503); return json({ok:true,storage:'connected',now:Date.now()}); }
+    if(action === 'health') {
+      // Report the storage provider's own status message (no credentials) so limits/outages are diagnosable.
+      const u=process.env.KV_REST_API_URL||process.env.KV_URL||process.env.UPSTASH_REDIS_REST_URL, k=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;
+      let status=0,detail='';try{const r=await fetch(u,{method:'POST',headers:{Authorization:`Bearer ${k}`,'Content-Type':'application/json'},body:JSON.stringify(['PING']),signal:AbortSignal.timeout(8000)});status=r.status;const j=await r.json().catch(()=>({}));detail=String(j.error||j.result||'').slice(0,200);}catch(e){detail=String(e.message||e).slice(0,200);}
+      return json({ok:detail==='PONG',storageStatus:status,storageMessage:detail,now:Date.now()},detail==='PONG'?200:503);
+    }
     if (action === 'status') {
       const m = await session(req, 'cc_manager'); const k = await session(req, 'cc_kiosk');
       return json({ manager: m?.role === 'manager', kiosk: k?.role === 'kiosk' ? { branch: k.branch } : null, branches: BRANCHES, skills: SKILLS, date: londonDay(), now: Date.now() });
