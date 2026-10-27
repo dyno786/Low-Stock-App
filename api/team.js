@@ -67,7 +67,7 @@ export default async function handler(req) {
       // Report the storage provider's own status message (no credentials) so limits/outages are diagnosable.
       const u=process.env.KV_REST_API_URL||process.env.KV_URL||process.env.UPSTASH_REDIS_REST_URL, k=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;
       let status=0,detail='';try{const r=await fetch(u,{method:'POST',headers:{Authorization:`Bearer ${k}`,'Content-Type':'application/json'},body:JSON.stringify(['PING']),signal:AbortSignal.timeout(8000)});status=r.status;const j=await r.json().catch(()=>({}));detail=String(j.error||j.result||'').slice(0,200);}catch(e){detail=String(e.message||e).slice(0,200);}
-      return json({ok:detail==='PONG',storageStatus:status,storageMessage:detail,now:Date.now()},detail==='PONG'?200:503);
+      return json(detail==='PONG'?{ok:true,storage:'connected',now:Date.now()}:{ok:false,error:'Attendance storage is unavailable.',storageStatus:status,storageMessage:detail,now:Date.now()},detail==='PONG'?200:503);
     }
     if (action === 'status') {
       const m = await session(req, 'cc_manager'); const k = await session(req, 'cc_kiosk');
