@@ -1,0 +1,228 @@
+/* =====================================================================
+   ASIM mobile theme — the ONE place to change the look.
+   Every colour, radius and size the phone screens use is a token here.
+   Themes: "red" (default, CC red) and "purple". Add a theme by copying a
+   block and changing the values; switch with <body data-theme="...">.
+   The screen components below match the design mockup 1:1.
+   ===================================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+:root,
+[data-theme="red"]{
+  --t-accent:#C8102E;      /* clock card, filled bars, active menu item, main buttons */
+  --t-ground:#FBF4F3;      /* page background */
+  --t-card:#FFFFFF;        /* cards */
+  --t-ink:#23171A;         /* headings, text, bottom menu */
+  --t-nav-text:#E6D3D6;    /* inactive bottom-menu items */
+  --t-track:#F3D3D8;       /* empty part of bars */
+  --t-track2:#F1DFE1;      /* progress rails, keypad "Clear" */
+  --t-border:#E3B9C0;      /* tick boxes, inputs */
+  --t-dot:#D9A7AF;         /* empty PIN dots */
+  --t-soft:#FBE6E9;        /* soft tint (avatars, "Working" pill) */
+  --t-soft-ink:#9B0D25;    /* text on soft tint */
+  --t-muted:#6E5F62;       /* secondary text */
+  --t-photo:#8A4B00;       /* "Photo needed" */
+  --t-photo-bg:#FFF0D9;    /* camera button */
+  --t-link:#A50D26;        /* text links */
+}
+[data-theme="purple"]{
+  --t-accent:#6D3FD8; --t-ground:#F4F1FB; --t-card:#FFFFFF; --t-ink:#1E1534; --t-nav-text:#CFC8E3;
+  --t-track:#DCD3F5; --t-track2:#E6E0F5; --t-border:#C9BFE6; --t-dot:#B9AEDC; --t-soft:#EDE7FB; --t-soft-ink:#4C2A9E;
+  --t-muted:#6B6480; --t-photo:#A3305C; --t-photo-bg:#FBE7EF; --t-link:#5B2FC9;
+}
+/* fixed status colours (same in every theme) */
+:root{
+  --t-ok:#1F7A4D; --t-ok-bg:#E3F5EC; --t-ok-ink:#14532D; --t-ok-sub:#1F5E3F;
+  --t-bad:#B42318; --t-bad-bg:#FDECEA; --t-bad-ink:#8A1C12;
+  --t-till:#1D4ED8; --t-till-bg:#E0ECFF; --t-away:#92400E; --t-away-bg:#FFF1DB;
+  --t-font:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+  --t-radius-card:24px; --t-radius-row:18px; --t-radius-btn:14px; --t-nav-h:72px;
+}
+
+/* ---------- page frame ---------- */
+body.m-page,body.m-page.team-app{margin:0;padding:0;background:var(--t-ground);color:var(--t-ink);font:15px/1.4 var(--t-font);-webkit-font-smoothing:antialiased}
+body.m-page h1,body.m-page h2,body.m-page h3{color:var(--t-ink)}
+body.m-page .app-header,body.m-page .footer-note,body.m-page .asim-navigation,body.m-page .cc-workspace-links{display:none!important}
+body.m-page .workspace,body.m-page main,body.m-page main.workspace{max-width:430px;margin:0 auto;padding:0}
+.m-app{display:flex;flex-direction:column;gap:16px;padding:28px 20px calc(var(--t-nav-h) + 38px)}
+.m-app *{box-sizing:border-box}
+.m-app button,.m-app input{font:inherit;color:inherit}
+.m-app button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.m-app h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+.m-app h2{margin:0;font-size:18px;font-weight:800}
+.m-app p{margin:0}
+.m-pane{display:flex;flex-direction:column;gap:16px}
+.m-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.m-head>div{display:flex;flex-direction:column;gap:2px}
+.m-label{display:block;font-size:13px;font-weight:600;color:var(--t-muted)}
+.m-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.m-icon-btn{width:44px;height:44px;border-radius:var(--t-radius-btn);border:0;background:var(--t-card);color:var(--t-ink);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(30,21,52,.06)}
+.m-card{background:var(--t-card);border-radius:var(--t-radius-card);padding:18px;display:flex;flex-direction:column;gap:14px}
+.m-card.tight{border-radius:22px;padding:16px;gap:10px}
+.m-notice{padding:12px 14px;border-radius:16px;background:var(--t-soft);color:var(--t-soft-ink);font-size:14px;font-weight:600}
+.m-notice.error{background:var(--t-bad-bg);color:var(--t-bad-ink)}.m-notice.success,.m-notice.info{background:var(--t-ok-bg);color:var(--t-ok-ink)}
+.m-notice:empty{display:none}
+.m-app .notice{padding:12px 14px;border-radius:16px;border:0;background:var(--t-soft);color:var(--t-soft-ink);font-size:14px;font-weight:600}
+.m-app .notice.error{background:var(--t-bad-bg);color:var(--t-bad-ink)}.m-app .notice.success,.m-app .notice.info{background:var(--t-ok-bg);color:var(--t-ok-ink)}.m-app .notice.warning{background:var(--t-away-bg);color:var(--t-away)}
+.m-app .notice:empty{display:none}
+
+/* ---------- buttons ---------- */
+.m-btn{height:44px;padding:0 16px;border-radius:var(--t-radius-btn);border:0;background:var(--t-soft);color:var(--t-ink);font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.m-btn.white{background:var(--t-card);color:var(--t-ink)}
+.m-btn.glass{background:rgba(255,255,255,.2);color:#fff}
+.m-btn.accent{background:var(--t-accent);color:#fff}
+.m-btn.big{height:54px;border-radius:18px;font-size:16px;font-weight:800;width:100%}
+.m-btn.ghost{background:transparent;border:2px solid var(--t-track);color:var(--t-muted)}
+.m-btn:disabled{opacity:.55;cursor:wait}
+.m-link{background:none;border:0;padding:10px 0;color:var(--t-link);font-size:14px;font-weight:700;text-decoration:none}
+.m-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+
+/* ---------- Today: clock card ---------- */
+.m-clock{background:var(--t-accent);border-radius:var(--t-radius-card);padding:18px;color:#fff;display:flex;flex-direction:column;gap:14px}
+.m-clock .m-label{color:#fff;opacity:.85;font-size:12px;letter-spacing:.04em}
+.m-clock .time{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.m-clock .sub{font-size:13px;font-weight:500}
+.m-clock .ring{width:64px;height:64px;border-radius:32px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:none}
+
+/* ---------- chips ---------- */
+.m-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}.m-chips::-webkit-scrollbar{display:none}
+.m-chip{flex:none;height:36px;padding:0 14px;border-radius:18px;background:var(--t-card);color:var(--t-ink);font-size:13px;font-weight:600;display:flex;align-items:center;border:0}
+.m-chip.on{background:var(--t-ink);color:#fff;font-weight:700}
+.m-chip.pill{height:40px;border-radius:20px;font-weight:700}
+
+/* ---------- chart card ---------- */
+.m-big{font-size:24px;font-weight:800}.m-big small{font-size:14px;font-weight:600;color:var(--t-muted)}
+.m-pill{font-size:13px;font-weight:700;padding:6px 10px;border-radius:10px;white-space:nowrap}
+.m-pill.ok{background:var(--t-ok-bg);color:var(--t-ok)}
+.m-bars{display:flex;align-items:flex-end;justify-content:space-between;height:120px;gap:10px}
+.m-bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.m-bar .track{width:100%;max-width:30px;border-radius:9px;background:var(--t-track);display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.m-bar .fill{width:100%;border-radius:9px;background:var(--t-accent)}
+.m-bar span{font-size:12px;font-weight:600;color:var(--t-muted)}.m-bar span.today{font-weight:800;color:var(--t-ink)}
+.m-legend{display:flex;gap:16px;font-size:12px;font-weight:600;color:var(--t-muted)}
+.m-legend span{display:flex;align-items:center;gap:6px}.m-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.m-legend .done{background:var(--t-accent)}.m-legend .given{background:var(--t-track)}
+
+/* ---------- job rows ---------- */
+.m-list{display:flex;flex-direction:column;gap:10px}
+.m-job{width:100%;text-align:left;background:var(--t-card);border:0;border-radius:var(--t-radius-row);padding:14px;display:flex;align-items:center;gap:12px}
+.m-job .box{width:28px;height:28px;border-radius:9px;border:2px solid var(--t-border);flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
+.m-job.done .box{background:var(--t-ok);border-color:var(--t-ok)}
+.m-job .text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.m-job .text b{font-size:15px;font-weight:700}
+.m-job.done .text b{text-decoration:line-through;color:var(--t-muted)}
+.m-job .text small{font-size:12px;font-weight:600;color:var(--t-muted)}
+.m-job .text small.need{color:var(--t-photo)}
+.m-job .cam{color:var(--t-photo);flex:none;display:flex}
+.m-job .thumb{width:40px;height:40px;border-radius:12px;object-fit:cover;flex:none}
+
+/* ---------- Tasks screen ---------- */
+.m-task{background:var(--t-card);border-radius:var(--t-radius-row);padding:12px 14px;display:flex;align-items:center;gap:12px}
+.m-task .box{width:44px;height:44px;flex:none;border-radius:var(--t-radius-btn);border:2px solid var(--t-border);background:var(--t-card);display:flex;align-items:center;justify-content:center;color:#fff;padding:0}
+.m-task.done .box{background:var(--t-ok);border-color:var(--t-ok)}
+.m-task .text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.m-task .text b{font-size:15px;font-weight:700}.m-task.done .text b{text-decoration:line-through;color:var(--t-muted)}
+.m-task .text small{font-size:12px;font-weight:600;color:var(--t-muted)}.m-task .text small.need{color:var(--t-photo)}
+.m-task .cam{width:44px;height:44px;border-radius:var(--t-radius-btn);border:0;background:var(--t-photo-bg);color:var(--t-photo);display:flex;align-items:center;justify-content:center;flex:none;padding:0}
+.m-task .thumb{width:44px;height:44px;border-radius:var(--t-radius-btn);object-fit:cover;flex:none}
+.m-progress{height:12px;border-radius:6px;background:var(--t-track2);overflow:hidden}.m-progress div{height:100%;border-radius:6px;background:var(--t-accent)}
+.m-filters{display:flex;gap:8px}
+.m-photo-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.m-photo-card{background:var(--t-card);border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:8px;border:0;text-align:left;color:var(--t-ink)}
+.m-photo-card .shot{height:64px;border-radius:var(--t-radius-btn);display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--t-ok-bg);color:var(--t-ok)}
+.m-photo-card .shot img{width:100%;height:100%;object-fit:cover}
+.m-photo-card .shot.empty{background:var(--t-ground);color:var(--t-accent);border:2px dashed var(--t-border)}
+.m-photo-card b{font-size:13px;font-weight:800}
+.m-photo-card small{font-size:12px;font-weight:600;color:var(--t-muted);display:flex;align-items:center;gap:4px}
+.m-photo-card small.sent{color:#1F6B45}
+
+/* ---------- Clock in ---------- */
+.m-ok{background:var(--t-ok-bg);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.m-ok .tick{width:32px;height:32px;border-radius:10px;background:var(--t-ok);display:flex;align-items:center;justify-content:center;flex:none}
+.m-ok b{display:block;font-size:14px;font-weight:700;color:var(--t-ok-ink)}
+.m-ok small{font-size:12px;font-weight:600;color:var(--t-ok-sub)}
+.m-section-title{font-size:15px;font-weight:800}
+.m-names{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;border:0;padding:0;margin:0}
+.m-names button{height:44px;border-radius:var(--t-radius-btn);border:0;background:var(--t-card);color:var(--t-ink);font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
+.m-names button[aria-pressed="true"]{background:var(--t-accent);color:#fff}
+.m-pin{display:flex;flex-direction:column;align-items:center;gap:10px}
+.m-pin .prompt{font-size:14px;font-weight:700;color:var(--t-muted);text-align:center}
+.m-dots{display:flex;gap:14px}.m-dots i{width:16px;height:16px;border-radius:8px;border:2px solid var(--t-dot);display:block}.m-dots i.on{background:var(--t-accent);border-color:var(--t-accent)}
+.m-keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.m-keys button{height:58px;border-radius:18px;border:0;background:var(--t-card);color:var(--t-ink);font-size:22px;font-weight:800}
+.m-keys button.clear{background:var(--t-track2);font-size:14px}
+.m-keys button.go{background:var(--t-accent);color:#fff;font-size:16px}
+.m-keys button:disabled{opacity:.5}
+
+/* ---------- Blocked / Phone number / Done screens ---------- */
+.m-center{align-items:center;text-align:center;padding:24px 20px}
+.m-center h2{font-size:22px}
+.m-center p{font-size:15px;font-weight:500;line-height:1.5;color:var(--t-muted)}
+.m-center p strong{color:var(--t-ink)}
+.m-badge-icon{width:72px;height:72px;border-radius:36px;display:flex;align-items:center;justify-content:center;flex:none}
+.m-badge-icon.bad{background:var(--t-bad-bg);color:var(--t-bad)}.m-badge-icon.ok{background:var(--t-ok-bg);color:var(--t-ok)}
+.m-bad-note{width:100%;background:var(--t-bad-bg);border-radius:14px;padding:12px;font-size:13px;font-weight:600;color:var(--t-bad-ink)}
+.m-hint{font-size:13px;font-weight:600;text-align:center;color:var(--t-muted)}
+.m-setup{padding:22px 20px}
+.m-setup .icon{width:56px;height:56px;border-radius:18px;background:var(--t-ok-bg);color:var(--t-ok);display:flex;align-items:center;justify-content:center}
+.m-setup .eyebrow{font-size:12px;font-weight:700;color:var(--t-muted);letter-spacing:.04em}
+.m-setup h2{font-size:22px}
+.m-setup p{font-size:14px;font-weight:500;line-height:1.5;color:var(--t-muted)}
+.m-field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700}
+.m-field input,.m-field select{height:54px;border-radius:16px;border:2px solid var(--t-border);padding:0 16px;font-size:18px;font-weight:700;color:var(--t-ink);background:var(--t-ground);width:100%}
+.m-field input:focus{outline:3px solid var(--t-accent);outline-offset:2px}
+.m-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.m-seg button{height:44px;border-radius:var(--t-radius-btn);border:2px solid var(--t-track);background:var(--t-card);color:var(--t-ink);font-weight:700}
+.m-seg button[aria-pressed="true"]{background:var(--t-ink);border-color:var(--t-ink);color:#fff}
+.m-me{flex-direction:row;align-items:center;gap:12px}
+.m-avatar{width:52px;height:52px;border-radius:17px;background:var(--t-soft);color:var(--t-soft-ink);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex:none}
+
+/* ---------- Manager: Team today ---------- */
+.m-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.m-tile{background:var(--t-card);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:2px}
+.m-tile .k{font-size:12px;font-weight:600;color:var(--t-muted)}
+.m-tile .v{font-size:26px;font-weight:800}
+.m-tile .s{font-size:12px;font-weight:600;color:var(--t-photo)}
+.m-tile.accent{background:var(--t-accent);color:#fff}.m-tile.accent .k,.m-tile.accent .s{color:#fff}
+.m-staff{background:var(--t-card);border-radius:var(--t-radius-row);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.m-staff .who{display:flex;align-items:center;gap:10px}
+.m-staff .ini{width:36px;height:36px;border-radius:12px;background:var(--t-soft);color:var(--t-soft-ink);font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.m-staff .nm{flex:1;min-width:0;display:flex;flex-direction:column}
+.m-staff .nm b{font-size:15px;font-weight:700}.m-staff .nm span{font-size:12px;font-weight:600;color:var(--t-muted)}
+.m-status{height:28px;padding:0 10px;border-radius:14px;font-size:12px;font-weight:700;display:flex;align-items:center;flex:none;white-space:nowrap}
+.m-status.working{background:var(--t-soft);color:var(--t-soft-ink)}
+.m-status.till{background:var(--t-till-bg);color:var(--t-till)}
+.m-status.away{background:var(--t-away-bg);color:var(--t-away)}
+.m-status.out{background:var(--t-photo-bg);color:var(--t-photo)}
+.m-staff .bar{display:flex;align-items:center;gap:10px}
+.m-staff .rail{flex:1;height:8px;border-radius:4px;background:var(--t-track2);overflow:hidden}.m-staff .rail div{height:100%;border-radius:4px;background:var(--t-accent)}
+.m-staff .n{width:40px;text-align:right;font-size:12px;font-weight:700}
+.m-staff .photos{display:flex;gap:6px}.m-staff .photos img{width:44px;height:44px;border-radius:12px;object-fit:cover}
+
+@media (min-width:761px){.m-only{display:none!important}}
+/* ---------- bottom menu ---------- */
+.m-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));width:min(406px,calc(100% - 24px));height:var(--t-nav-h);border-radius:26px;background:var(--t-ink);display:flex;align-items:center;justify-content:space-around;padding:0 6px;box-shadow:0 10px 30px rgba(30,21,52,.25);z-index:900;font-family:var(--t-font)}
+.m-nav a,.m-nav button{position:relative;width:64px;height:56px;border-radius:18px;border:0;background:none;color:var(--t-nav-text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:600;text-decoration:none;cursor:pointer}
+.m-nav [aria-current="page"]{background:var(--t-accent);color:#fff;font-weight:700}
+.m-nav .count{position:absolute;top:4px;right:10px;min-width:18px;height:18px;border-radius:9px;background:#fff;color:var(--t-ink);font-size:11px;font-style:normal;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* ---------- desktop pages that only borrow the bottom menu (stock tools, manager) ---------- */
+body.m-bottom{padding-bottom:calc(var(--t-nav-h) + 40px)!important}
+@media (min-width:761px){body.m-bottom .m-nav{display:none}body.m-bottom{padding-bottom:0!important}}
+@media (max-width:760px){
+  body.m-mgr .app-header,body.m-mgr .page-heading,body.m-mgr .metrics,body.m-mgr .tabs,body.m-mgr .branch-tabs,body.m-mgr .footer-note{display:none!important}
+  body.m-mgr{background:var(--t-ground);font-family:var(--t-font)}
+  body.m-mgr .asim-navigation,body.m-mgr .cc-workspace-links{display:none!important}
+  body.m-mgr .workspace{padding:8px 0 calc(var(--t-nav-h) + 38px)}
+  body.m-mgr #manager-body>*:not(.m-app){margin:0 20px 16px}
+  body.m-mgr .split,body.m-mgr .grid2,body.m-mgr .grid3,body.m-mgr .form-row,body.m-mgr .metrics{grid-template-columns:minmax(0,1fr)}
+  body.m-mgr .panel{border:0;border-radius:var(--t-radius-card);padding:16px;max-width:100%;min-width:0}
+  body.m-mgr .table-wrap{max-width:100%}
+}
+/* stock pages on a phone: the bottom menu carries the main links, so the top bar keeps only branch / back / "All tools" */
+.asim-nav-menu>span.asim-nav-phone,.asim-nav-menu a[data-phone]{display:none}
+@media (max-width:760px){
+  body.m-bottom .asim-nav-links>a{display:none}
+  body.m-bottom .asim-nav-menu>span.asim-nav-phone{display:block}
+  body.m-bottom .asim-nav-menu a[data-phone]{display:flex}
+}

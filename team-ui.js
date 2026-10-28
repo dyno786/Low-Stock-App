@@ -60,101 +60,136 @@ function qrCountdown(){
  if(remaining>0)el.innerHTML=badge('● Ready to scan · new code in '+remaining+'s','green');
  else {const qr=document.getElementById('qr');if(qr){qr.innerHTML='<div class="empty">Refreshing the secure code…</div>';delete qr.dataset.token;}el.innerHTML=badge('Code expired · refreshing','amber');qrExpiry=0;refreshQr();}
 }
+// =====================================================================
+// Phone screens. Markup here mirrors the design mockup frame-for-frame
+// (Main / Tasks / ClockIn / Blocked / Phone / Team). Styling lives only in
+// asim-theme.css — change the look there, not here.
+// =====================================================================
+const ICON={home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',tasks:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 18h3v3"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',stock:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',team:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.6 0 4.5 2 4.5 5"/>',me:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',camok:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13l2 2 4-4"/>',check:'<path d="M5 12l5 5L20 7"/>',bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',down:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',phoneoff:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 18h4"/><path d="M3 3l18 18"/>',wa:'<path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12z"/><path d="M9 9.5c.5 2.5 2.5 4.5 5 5l1.2-1.2 2 1-.6 1.7c-3.6.2-8.3-4.5-8.1-8.1l1.7-.6 1 2z"/>',cog:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'};
+const svg=(k,sz=22,sw=2)=>`<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+const tick=(sz=16)=>svg('check',sz,3);
+function themeInit(){let t='red';try{t=localStorage.getItem('asim.theme')||'red';}catch{}document.body.dataset.theme=t;document.body.classList.add('m-page');return t;}
+function setTheme(t){try{localStorage.setItem('asim.theme',t);}catch{}document.body.dataset.theme=t;document.querySelectorAll('[data-theme-pick]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.themePick===t)));}
+// Bottom menu — same five items on every staff screen. `current` = which one is lit.
+function staffNav(b,current){const day='myday.html?branch='+b.id;const items=[['today','Today','home',day],['tasks','Tasks','tasks',day+'&pane=tasks'],['clockin','Clock in','qr','asim.html?branch='+b.id],['stock','Stock','stock',b.file],['me','Me','me',day+'&pane=me']];
+  return `<nav class="m-nav" aria-label="Main menu">${items.map(([id,label,ic,href])=>`<a href="${esc(href)}" data-nav="${id}" aria-current="${id===current?'page':'false'}">${svg(ic)}<span>${label}</span>${id==='tasks'&&navOpen?`<i class="count">${navOpen}</i>`:''}</a>`).join('')}</nav>`;}
+let navOpen=0;
+let mPane=['today','tasks','me'].includes(new URLSearchParams(location.search).get('pane'))?new URLSearchParams(location.search).get('pane'):'today';
+function showPane(){root.querySelectorAll('.m-pane[data-p]').forEach(p=>p.hidden=p.dataset.p!==mPane);root.querySelectorAll('.m-nav [data-nav]').forEach(a=>a.setAttribute('aria-current',a.dataset.nav===mPane?'page':'false'));}
+
+// ---------- Clock in (after scanning the branch QR) ----------
 async function scanForm(token){
-  root.className='workspace';let info;try{info=await api('scan',{branch,token});}catch(e){root.innerHTML=`<section class="panel signin-card"><div class="eyebrow">Scan needed</div><h1>Use today’s code.</h1><p>${esc(e.message)}</p><div class="notice warning">Open your phone camera and scan the current QR on the branch computer.</div></section>`;return;}
+  themeInit();root.className='workspace';let info;
+  try{info=await api('scan',{branch,token});}catch(e){root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">Scan needed</span><h1>Use today’s code</h1></div></header><section class="m-card m-center"><span class="m-badge-icon bad">${svg('qr',34)}</span><h2>This code has expired</h2><p>${esc(e.message)}</p></section><p class="m-hint">Open your phone camera and scan the QR on the branch computer again.</p></div>`;return;}
   const b=boot.branches[branch];setAccent(b);
-  let theme='red';try{theme=localStorage.getItem('asim.theme')||'red';}catch{}document.body.dataset.theme=theme;document.body.classList.add('m-mode');
-  const locNote=info.locationRequired?'An accurate location near this branch is required.':info.locationConfigured?'Your location is checked once when you confirm.':'Branch location not set up yet; your scan is marked unverified.';
-  root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(info.name)} · ${esc(dateLabel(info.date))}</span><h1>Clock in</h1></div></header>
-  <div class="m-ok"><span class="m-ok-tick">✓</span><div><b>Branch QR scanned</b><small>${esc(locNote)}</small></div></div>
-  ${info.staff.length?`<form id="checkin-form" class="m-pane">
-    <div class="m-seg m-mode-seg" role="radiogroup" aria-label="Clock in or out"><label><input type="radio" name="mode" value="in" checked><span>Clock in</span></label><label><input type="radio" name="mode" value="out"><span>Clock out</span></label></div>
-    <fieldset class="m-names"><legend>Who are you?</legend>${info.staff.map(s=>`<label><input type="radio" name="staff" value="${esc(s.id)}" required><span>${esc(s.name)}</span></label>`).join('')}</fieldset>
-    <label class="m-pin"><span>Your PIN</span><input name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off" required placeholder="••••"></label>
-    <div id="notice" class="notice" role="alert"></div>
-    <button type="submit" class="m-btn m-primary full">Confirm</button>
-    <p class="m-label" style="text-align:center">Use your own phone. Each phone can clock in one person per day.</p>
-  </form>`:'<div class="notice warning">No staff are set up at this branch yet. Ask your manager to add you.</div>'}</div>`;
-  bindForm('#checkin-form',async f=>{message('Checking your location — this can take up to 30 seconds indoors…','info');const locationTag=await phoneLocation();const staff=f.elements.namedItem('staff').value;const who=info.staff.find(s=>s.id===staff)?.name||'';let result;
-    try{result=await api('checkin',{branch,token,ticket:info.ticket,location:locationTag,device:deviceId(),mode:f.elements.namedItem('mode').value,staff,pin:f.elements.namedItem('pin').value});}
-    catch(e){if(e.status===409&&/phone/i.test(e.message)){root.innerHTML=`<div class="m-app"><section class="m-card m-blocked"><span class="m-blocked-icon" aria-hidden="true">📵</span><h1>This phone is already in use today</h1><p>${esc(e.message)}</p><div class="m-note">${esc(who||'This attempt')} · your manager can see this attempt.</div></section><a class="m-btn m-primary full" href="asim.html?branch=${branch}">Back</a></div>`;return;}throw e;}
-    if(result.mode==='out'){root.innerHTML=`<div class="m-app"><section class="m-card m-blocked"><span class="m-ok-tick big">✓</span><h1>Clock-out saved</h1><p>Your departure was recorded at ${time(result.arrival.outAt)} UK time. Thank you for today.</p></section></div>`;}else location.replace('myday.html?branch='+branch);});
+  const locNote=info.locationRequired?'An accurate location near this branch is required':info.locationConfigured?'Till screen code · location checked once':'Till screen code · location not set up yet';
+  const st={mode:'in',who:'',pin:''};
+  const draw=()=>{
+    const who=info.staff.find(s=>s.id===st.who);
+    root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(info.name)} · ${esc(dateLabel(info.date))}</span><h1>${st.mode==='out'?'Clock out':'Clock in'}</h1></div></header>
+      <div class="m-ok"><span class="tick">${tick(18)}</span><div><b>Branch QR scanned</b><small>${esc(locNote)}</small></div></div>
+      <div class="m-seg" role="group" aria-label="Clock in or out"><button type="button" data-mode="in" aria-pressed="${st.mode==='in'}">Clock in</button><button type="button" data-mode="out" aria-pressed="${st.mode==='out'}">Clock out</button></div>
+      ${info.staff.length?`<div class="m-pane"><span class="m-section-title">Who are you?</span><div class="m-names" role="group" aria-label="Your name">${info.staff.map(s=>`<button type="button" data-who="${esc(s.id)}" aria-pressed="${s.id===st.who}">${esc(s.name)}</button>`).join('')}</div></div>
+      <div class="m-pin"><span class="prompt">${who?esc(who.name)+', enter your 4-digit PIN':'Choose your name, then enter your PIN'}</span><div class="m-dots" aria-hidden="true">${[0,1,2,3].map(i=>`<i class="${i<st.pin.length?'on':''}"></i>`).join('')}</div></div>
+      <div id="notice" class="notice" role="alert"></div>
+      <div class="m-keys">${['1','2','3','4','5','6','7','8','9'].map(k=>`<button type="button" data-key="${k}" aria-label="Digit ${k}">${k}</button>`).join('')}<button type="button" class="clear" data-key="clear">Clear</button><button type="button" data-key="0" aria-label="Digit 0">0</button><button type="button" class="go" data-key="go" ${who&&st.pin.length>=4?'':'disabled'}>Go</button></div>
+      <p class="m-hint">Use your own phone. Each phone can clock in one person per day.</p>`:'<div class="notice warning">No staff are set up at this branch yet. Ask your manager to add you.</div>'}</div>`;
+    root.querySelectorAll('[data-mode]').forEach(x=>x.onclick=()=>{st.mode=x.dataset.mode;draw();});
+    root.querySelectorAll('[data-who]').forEach(x=>x.onclick=()=>{st.who=x.dataset.who;st.pin='';draw();});
+    root.querySelectorAll('[data-key]').forEach(x=>x.onclick=()=>{const k=x.dataset.key;if(k==='clear'){st.pin='';draw();}else if(k==='go')submit();else if(st.pin.length<8){st.pin+=k;draw();}});
+  };
+  async function submit(){
+    const who=info.staff.find(s=>s.id===st.who);if(!who||st.pin.length<4)return;
+    root.querySelectorAll('.m-keys button').forEach(x=>x.disabled=true);message('Checking your location — this can take up to 30 seconds indoors…','info');
+    try{const locationTag=await phoneLocation();const result=await api('checkin',{branch,token,ticket:info.ticket,location:locationTag,device:deviceId(),mode:st.mode,staff:st.who,pin:st.pin});
+      if(result.mode==='out'){root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(info.name)}</span><h1>Clock out</h1></div></header><section class="m-card m-center"><span class="m-badge-icon ok">${tick(34)}</span><h2>Clock-out saved</h2><p>Your departure was recorded at <strong>${time(result.arrival.outAt)}</strong> UK time. Thank you for today, ${esc(who.name)}.</p></section><a class="m-btn accent big" href="asim.html?branch=${branch}">Done</a></div>`;}
+      else location.replace('myday.html?branch='+branch);}
+    catch(e){
+      if(e.status===409&&/phone/i.test(e.message)){const other=(e.message.match(/clock in (.+?) today/)||[])[1]||'someone else';
+        root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(info.name)} · ${esc(dateLabel(info.date))}</span><h1>Clock in</h1></div></header>
+          <section class="m-card m-center"><span class="m-badge-icon bad">${svg('phoneoff',34)}</span><h2>This phone is already in use today</h2><p>${esc(other)} clocked in on this phone. <strong>${esc(who.name)}</strong>, please clock in on your own phone.</p><div class="m-bad-note">Your manager can see this attempt.</div></section>
+          <button type="button" class="m-btn accent big" id="back-pin">Use my own phone</button><p class="m-hint">Phone not working? Ask the manager to sign in on this phone to clock you in.</p></div>`;
+        document.getElementById('back-pin').onclick=()=>{st.pin='';st.who='';draw();};return;}
+      st.pin='';draw();message(e.message);}
+  }
+  draw();
 }
+
+// ---------- My day ----------
 async function myDay(quiet=false){
-  try{currentMe=await api('me');}catch(e){if(quiet){message('Session or connection lost. '+e.message);return;}root.innerHTML=`<section class="panel signin-card"><div class="eyebrow">Staff workspace</div><h1>Start at your branch.</h1><p>${esc(e.message)}</p><div class="notice">Scan the QR code displayed on your branch computer. Then choose your name and enter your PIN.</div></section>`;return;}
+  themeInit();
+  try{currentMe=await api('me');}catch(e){if(quiet){message('Session or connection lost. '+e.message);return;}const b=boot.branches[branch]||boot.branches[0];root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(b.name)}</span><h1>Start at your branch</h1></div></header><section class="m-card m-center"><span class="m-badge-icon ok">${svg('qr',34)}</span><h2>Scan to clock in</h2><p>${esc(e.message)}</p></section><a class="m-btn accent big" href="asim.html?branch=${b.id}">Open the clock-in screen</a>${staffNav(b,'today')}</div>`;return;}
   const me=currentMe;branch=me.branch;const b=boot.branches[branch];setAccent(b);
   if(me.needsTrainingReview){renderTraining(me);return;}
   if(!me.profile?.phone){renderPhone(me);return;}
-  const done=me.tasks.filter(t=>t.status==='done').length;
-  root.innerHTML=mobileDay(me,b,done);
-  document.getElementById('update-training').onclick=()=>{clearInterval(poll);renderTraining(me);};
-  root.querySelectorAll('[data-task-status]').forEach(btn=>btn.onclick=async()=>{btn.disabled=true;try{await api('task-status',{id:btn.dataset.id,status:btn.dataset.taskStatus});await myDay();}catch(e){message(e.message);btn.disabled=false;}});
-  wirePhotoButtons(root);wireSectionBlock(me);
-  document.getElementById('device-logout').onclick=async()=>{try{await api('logout',{});clearInterval(poll);location.replace('myday.html?branch='+branch);}catch(e){message(e.message);}};
-  root.querySelectorAll('[data-pane]').forEach(x=>x.onclick=()=>{mPane=x.dataset.pane;showPane();});
-  root.querySelectorAll('[data-theme-pick]').forEach(x=>x.onclick=()=>{try{localStorage.setItem('asim.theme',x.dataset.themePick);}catch{}document.body.dataset.theme=x.dataset.themePick;root.querySelectorAll('[data-theme-pick]').forEach(y=>y.setAttribute('aria-pressed',String(y===x)));});
+  navOpen=me.tasks.filter(t=>t.status!=='done').length;
+  root.innerHTML='<div class="m-app">'+todayScreen(me,b)+tasksScreen(me,b)+meScreen(me,b)+'</div>'+staffNav(b,mPane);
+  root.querySelectorAll('[data-pane]').forEach(x=>x.onclick=e=>{e.preventDefault();mPane=x.dataset.pane;showPane();window.scrollTo(0,0);});
+  root.querySelectorAll('.m-nav [data-nav]').forEach(a=>{if(['today','tasks','me'].includes(a.dataset.nav))a.onclick=e=>{e.preventDefault();mPane=a.dataset.nav;showPane();window.scrollTo(0,0);};});
+  root.querySelectorAll('[data-theme-pick]').forEach(x=>x.onclick=()=>setTheme(x.dataset.themePick));
+  root.querySelectorAll('[data-out]').forEach(x=>x.onclick=()=>dialog(x.dataset.out==='lunch'?'Lunch — scan to clock out':'Scan to clock out',`<p class="muted">Scan the QR on your branch computer, choose <strong>Clock out</strong>, pick your name and enter your PIN. ${x.dataset.out==='lunch'?'Scan again when you are back and your jobs carry on.':'Your departure and task timer are saved centrally.'}</p>`));
+  const tr=document.getElementById('update-training');if(tr)tr.onclick=()=>{clearInterval(poll);renderTraining(me);};
   const ch=document.getElementById('change-phone');if(ch)ch.onclick=()=>{clearInterval(poll);renderPhone(me);};
+  const lo=document.getElementById('device-logout');if(lo)lo.onclick=async()=>{try{await api('logout',{});clearInterval(poll);location.replace('myday.html?branch='+branch);}catch(e){message(e.message);}};
+  root.querySelectorAll('[data-task-status]').forEach(btn=>btn.onclick=async()=>{btn.disabled=true;try{await api('task-status',{id:btn.dataset.id,status:btn.dataset.taskStatus});await myDay();}catch(e){message(e.message);btn.disabled=false;}});
+  wireSectionBlock(me);root.querySelectorAll('[data-filter]').forEach(x=>x.onclick=()=>{taskFilter=x.dataset.filter;myDay(true);});
   showPane();
-  const nc=document.getElementById('nav-clockout');if(nc)nc.onclick=()=>document.getElementById('finish-shift').click();
-  document.getElementById('finish-shift').onclick=()=>dialog('Scan to clock out',`<p class="muted">Scan the current QR on your branch computer, choose <strong>Clock out</strong> and enter your name and PIN. Your departure and task timer will be saved centrally.</p>`);
   clearInterval(poll);poll=setInterval(()=>{if(!document.querySelector('dialog')&&!document.hidden)myDay(true);},30000);
 }
-// ---------- mobile "My day": bottom menu, weekly chart, tasks ----------
-let mPane=['today','tasks','me'].includes(new URLSearchParams(location.search).get('pane'))?new URLSearchParams(location.search).get('pane'):'today';
-const ICON={home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',tasks:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',stock:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',me:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',cog:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'};
-const svg=(k,sz=22)=>`<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
-function showPane(){root.querySelectorAll('.m-pane').forEach(p=>p.hidden=p.dataset.p!==mPane);root.querySelectorAll('.m-nav [data-pane]').forEach(a=>a.setAttribute('aria-current',a.dataset.pane===mPane?'page':'false'));}
-function weekChart(week){const w=week||[];const max=Math.max(4,...w.map(d=>d.given));const tot=w.reduce((n,d)=>n+d.given,0),dn=w.reduce((n,d)=>n+d.done,0);const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  return `<section class="m-card"><div class="m-row"><div><span class="m-label">Jobs done · last 7 days</span><div class="m-big">${dn} <small>of ${tot}</small></div></div>${tot?`<span class="m-pill good">${Math.round(dn/tot*100)}% done</span>`:''}</div>
-  <div class="m-bars" role="img" aria-label="Jobs done each day: ${esc(w.map(d=>days[new Date(d.day+'T12:00:00Z').getUTCDay()]+' '+d.done+' of '+d.given).join(', '))}">${w.map((d,i)=>`<div class="m-bar"><div class="m-track" style="height:${d.given?Math.max(8,Math.round(d.given/max*96)):4}px"><div class="m-fill" style="height:${d.given?Math.round(d.done/d.given*100):0}%"></div></div><span class="${i===w.length-1?'today':''}">${days[new Date(d.day+'T12:00:00Z').getUTCDay()]}</span></div>`).join('')}</div>
-  <div class="m-legend"><span><i class="k-done"></i>Done</span><span><i class="k-given"></i>Given to you</span></div></section>`;}
-function jobRow(t){const d=t.status==='done';const needs=t.photoRequired&&!(t.photos||[]).length&&!d;return `<button class="m-job ${d?'done':''}" data-pane="tasks"><span class="m-box">${d?'✓':''}</span><span class="m-job-text"><b>${esc(t.title)}</b><small class="${needs?'need':''}">${d?'Done '+time(t.completedAt):needs?'Photo needed':(t.sectionName||boot.skills.find(k=>k.id===t.category)?.name||'Job')}</small></span>${needs?`<span class="m-cam">${svg('cam',20)}</span>`:''}</button>`;}
-function mobileDay(me,b,done){
-  let theme='red';try{theme=localStorage.getItem('asim.theme')||'red';}catch{}document.body.dataset.theme=theme;document.body.classList.add('m-mode');
-  const a=me.arrival,first=esc(me.name.split(' ')[0]),hour=+new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'numeric',hour12:false}).format(Date.now());
-  const greet=hour<12?'Morning':hour<17?'Afternoon':'Evening';const open=me.tasks.filter(t=>t.status!=='done');const next=[...open,...me.tasks.filter(t=>t.status==='done')].slice(0,3);
-  const others=me.tasks.filter(t=>t.kind!=='check');const pct=me.tasks.length?Math.round(done/me.tasks.length*100):0;const trained=Object.values({...me.profile.skills,...me.profile.confirmedSkills}).filter(x=>x==='trained').length;
-  return `<div class="m-app">
-  <header class="m-head"><div><span class="m-label">${esc(b.name)} · ${esc(dateLabel(me.date))}</span><h1>${greet}, ${first}</h1></div></header>
-  <div id="notice" class="notice" role="alert"></div>
-  <div class="m-pane" data-p="today">
-    <section class="m-clock"><div class="m-row"><div><span class="m-label light">CLOCKED IN</span><div class="m-time">${time(a.at)}</div><span>${a.lateMinutes?a.lateMinutes+' min late':'On time'} · ${duration(attendanceMs(a,me.now))} worked</span></div><span class="m-ring">${svg('clock',30)}</span></div>
-      <button class="m-btn light" id="finish-shift">Clock out</button></section>
-    ${me.till?'<div class="m-note"><b>You are on the till today.</b> Customers come first; do other jobs in quiet periods.</div>':''}
+let taskFilter='all';
+const jobMeta=t=>t.sectionName||boot.skills.find(k=>k.id===t.category)?.name||'Job';
+const needsPhoto=t=>t.photoRequired&&!(t.photos||[]).length&&t.status!=='done';
+function weekChart(week){const w=week||[];const max=Math.max(4,...w.map(d=>d.given));const tot=w.reduce((n,d)=>n+d.given,0),dn=w.reduce((n,d)=>n+d.done,0);const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const lbl=d=>D[new Date(d.day+'T12:00:00Z').getUTCDay()];
+  return `<section class="m-card"><div class="m-row" style="align-items:flex-end"><div><span class="m-label">Jobs done this week</span><div class="m-big">${dn} <small>of ${tot}</small></div></div>${tot?`<span class="m-pill ok">${Math.round(dn/tot*100)}% done</span>`:''}</div>
+    <div class="m-bars" role="img" aria-label="Jobs done each day: ${esc(w.map(d=>lbl(d)+' '+d.done+' of '+d.given).join(', '))}">${w.map((d,i)=>`<div class="m-bar"><div class="track" style="height:${d.given?Math.max(8,Math.round(d.given/max*96)):4}px"><div class="fill" style="height:${d.given?Math.round(d.done/d.given*100):0}%"></div></div><span class="${i===w.length-1?'today':''}">${lbl(d)}</span></div>`).join('')}</div>
+    <div class="m-legend"><span><i class="done"></i>Done</span><span><i class="given"></i>Given to you</span></div></section>`;}
+function todayScreen(me,b){
+  const a=me.arrival,first=me.name.split(' ')[0];const hour=+new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'numeric',hour12:false}).format(Date.now());
+  const greet=hour<12?'Morning':hour<17?'Afternoon':'Evening';const open=me.tasks.filter(t=>t.status!=='done');const next=[...me.tasks.filter(t=>t.status==='done').slice(-1),...open].slice(0,3);
+  return `<div class="m-pane" data-p="today"><header class="m-head"><div><span class="m-label">${esc(b.name)} · ${esc(dateLabel(me.date))}</span><h1>${greet}, ${esc(first)}</h1></div><button type="button" class="m-icon-btn" aria-label="Notifications" data-pane="tasks">${svg('bell')}</button></header>
+    <section class="m-clock"><div class="m-row"><div><span class="m-label">CLOCKED IN</span><div class="time">${time(a.at)}</div><span class="sub">${a.lateMinutes?a.lateMinutes+' min late':'On time'} · ${duration(attendanceMs(a,me.now))} worked</span></div><span class="ring">${svg('clock',30)}</span></div>
+      <div class="m-grid2"><button type="button" class="m-btn glass" data-out="lunch">Lunch</button><button type="button" class="m-btn white" data-out="out">Clock out</button></div></section>
+    ${me.till?`<div class="m-notice"><b>You are on the till today.</b> Customers come first; do other jobs in quiet periods.</div>`:''}
     ${(me.mySections||[]).length?`<div class="m-chips">${me.mySections.map((s,i)=>`<span class="m-chip ${i?'':'on'}">${esc((s.area?s.area.split('·')[0].trim()+' · ':'')+s.name)}</span>`).join('')}</div>`:''}
     ${weekChart(me.week)}
-    <div class="m-row m-h2"><h2>Today’s jobs</h2>${me.tasks.length?`<button class="m-link" data-pane="tasks">See all ${me.tasks.length}</button>`:''}</div>
-    <div class="m-list">${next.map(jobRow).join('')||'<div class="m-card m-empty">No jobs yet. Your manager allocates work after everyone signs in.</div>'}</div>
-  </div>
-  <div class="m-pane" data-p="tasks" hidden>
-    <section class="m-card"><div class="m-row"><b>${done} of ${me.tasks.length} done</b><span class="m-label">${me.tasks.length-done} left</span></div><div class="m-progress"><div style="width:${pct}%"></div></div></section>
-    ${sectionBlock(me)}
-    ${others.length?`<h2 class="m-h2">Other jobs</h2><div class="m-list">${others.map(t=>taskCard(t,b,false)).join('')}</div>`:''}
-    ${!me.tasks.length?'<div class="m-card m-empty">No jobs assigned yet.</div>':''}
-  </div>
-  <div class="m-pane" data-p="me" hidden>
-    <section class="m-card m-me"><span class="m-avatar">${esc(me.name.slice(0,1))}</span><div><b>${esc(me.name)}</b><span class="m-label">${esc(b.name)} · ${esc(me.profile.seniority||'')}</span></div></section>
-    <section class="m-card"><div class="m-row"><div><span class="m-label">WhatsApp number</span><b>${esc(me.profile.phone||'Not added')}</b></div><button class="m-btn small" id="change-phone">Change</button></div></section>
-    <section class="m-card"><div class="m-row"><div><span class="m-label">Training</span><b>${trained} of ${boot.skills.length} jobs trained</b></div><button class="m-btn small" id="update-training">Review</button></div></section>
-    <section class="m-card"><span class="m-label">App colour</span><div class="m-seg">${[['red','CC red'],['purple','Purple']].map(([k,n])=>`<button data-theme-pick="${k}" aria-pressed="${theme===k}">${n}</button>`).join('')}</div></section>
-    <a class="m-btn full" href="${b.file}">Open branch stock tools</a>
-    <button class="m-btn full ghost" id="device-logout">Sign out of this phone</button>
-  </div>
-  <nav class="m-nav" aria-label="Main menu">
-    <button data-pane="today">${svg('home')}<span>Today</span></button>
-    <button data-pane="tasks">${svg('tasks')}<span>Tasks</span>${open.length?`<i class="m-badge">${open.length}</i>`:''}</button>
-    <button id="nav-clockout">${svg('clock')}<span>Clock out</span></button>
-    <a href="${b.file}">${svg('stock')}<span>Stock</span></a>
-    <button data-pane="me">${svg('me')}<span>Me</span></button>
-  </nav></div>`;}
+    <div class="m-row"><h2>Today’s jobs</h2>${me.tasks.length?`<a href="#" class="m-link" data-pane="tasks">See all ${me.tasks.length}</a>`:''}</div>
+    <div class="m-list">${next.map(t=>`<button type="button" class="m-job ${t.status==='done'?'done':''}" data-pane="tasks"><span class="box">${t.status==='done'?tick():''}</span><span class="text"><b>${esc(t.title)}</b><small class="${needsPhoto(t)?'need':''}">${t.status==='done'?'Done '+time(t.completedAt)+((t.photos||[]).length?' · photo added':''):needsPhoto(t)?'Photo needed · '+(t.minutes||15)+' min':jobMeta(t)}</small></span>${needsPhoto(t)?`<span class="cam">${svg('cam',20)}</span>`:''}</button>`).join('')||'<section class="m-card m-center"><p>No jobs yet. Your manager allocates work once everyone has signed in.</p></section>'}</div></div>`;}
+function tasksScreen(me,b){
+  const secs=me.mySections||[];const duties=secs.filter(s=>s.kind==='duty');const normal=secs.filter(s=>s.kind!=='duty');
+  const all=me.tasks.filter(t=>!duties.some(d=>d.id===t.section));const done=all.filter(t=>t.status==='done').length;const pct=all.length?Math.round(done/all.length*100):0;
+  const show=t=>taskFilter==='all'||(taskFilter==='todo'?t.status!=='done':t.status==='done');
+  const row=t=>`<div class="m-task ${t.status==='done'?'done':''}"><button type="button" class="box" data-check="${esc(t.id)}" data-photo="${needsPhoto(t)?'1':''}" aria-label="${t.status==='done'?'Mark not done':'Mark done'}: ${esc(t.title)}">${t.status==='done'?tick():''}</button><span class="text"><b>${esc(t.title)}</b><small class="${needsPhoto(t)?'need':''}">${t.status==='done'?'Done '+time(t.completedAt):needsPhoto(t)?'Photo needed · '+(t.minutes||15)+' min':(t.minutes||15)+' min'}</small></span>${needsPhoto(t)?`<button type="button" class="cam" data-check="${esc(t.id)}" data-photo="1" aria-label="Add photo">${svg('cam',20)}</button>`:(t.photos||[]).length?`<img class="thumb" src="${esc(t.photos[t.photos.length-1].url)}" alt="">`:''}</div>`;
+  const dutyCards=duties.map(d=>{const ts=me.tasks.filter(t=>t.section===d.id);return `<div class="m-photo-cards">${ts.map(t=>{const ph=(t.photos||[]).slice(-1)[0];const name=t.title.split(':')[0];return `<button type="button" class="m-photo-card" data-check="${esc(t.id)}" data-photo="${t.status==='done'?'':'1'}" aria-label="${esc(name)} photo"><span class="shot ${ph?'':'empty'}">${ph?`<img src="${esc(ph.url)}" alt="">`:svg('cam',26)}</span><b>${esc(name)} photo${t.status==='done'?' · '+time(t.completedAt):''}</b><small class="${t.status==='done'?'sent':''}">${t.status==='done'?tick(14)+'Saved for the manager':'Tap to take the photo'}</small></button>`;}).join('')}</div>`;}).join('');
+  const heading=normal[0]?[normal[0].area?'My section · '+normal[0].area.split('·')[0].trim():'My section',normal.map(s=>s.name).join(' + ')]:duties[0]?['My duties',duties[0].name]:['My jobs','Today'];
+  return `<div class="m-pane" data-p="tasks" hidden><header class="m-head"><div><span class="m-label">${esc(heading[0])}</span><h1>${esc(heading[1])}</h1></div></header>
+    ${dutyCards}
+    ${normal.filter(s=>s.kind==='support'||s.rules?.length).map(s=>`<div class="m-chips sec-stock" data-sec="${esc(s.id)}" data-kind="${esc(s.kind)}">${['neg','oos','low','all'].map(g=>`<button type="button" class="m-chip" data-stock="${g}">${groupLabel[g].replace(/ \(.*/,'')} <span data-n="${g}">…</span></button>`).join('')}</div>`).join('')}
+    <section class="m-card tight"><div class="m-row"><span style="font-size:15px;font-weight:700">${done} of ${all.length} done</span><span class="m-label">${all.length-done} left</span></div><div class="m-progress"><div style="width:${pct}%"></div></div></section>
+    <div class="m-filters" role="group" aria-label="Filter">${[['all','All'],['todo','To do'],['done','Done']].map(([k,l])=>`<button type="button" class="m-chip pill ${taskFilter===k?'on':''}" data-filter="${k}" aria-pressed="${taskFilter===k}">${l}</button>`).join('')}</div>
+    <div class="m-list">${all.filter(show).map(row).join('')||'<section class="m-card m-center"><p>Nothing here.</p></section>'}</div></div>`;}
+function meScreen(me,b){const theme=document.body.dataset.theme||'red';const trained=Object.values({...me.profile.skills,...me.profile.confirmedSkills}).filter(x=>x==='trained').length;
+  return `<div class="m-pane" data-p="me" hidden><header class="m-head"><div><span class="m-label">${esc(b.name)}</span><h1>Me</h1></div></header>
+    <section class="m-card m-me"><span class="m-avatar">${esc(me.name.slice(0,1))}</span><div><b style="font-size:15px">${esc(me.name)}</b><br><span class="m-label">${esc(me.profile.seniority||'')} · arrived ${time(me.arrival.at)}</span></div></section>
+    <section class="m-card"><div class="m-row"><div><span class="m-label">WhatsApp number</span><b>${esc(me.profile.phone||'Not added')}</b></div><button type="button" class="m-btn" id="change-phone">Change</button></div></section>
+    <section class="m-card"><div class="m-row"><div><span class="m-label">Training</span><b>${trained} of ${boot.skills.length} jobs trained</b></div><button type="button" class="m-btn" id="update-training">Review</button></div></section>
+    <section class="m-card"><span class="m-label">App colour</span><div class="m-seg">${[['red','CC red'],['purple','Purple']].map(([k,n])=>`<button type="button" data-theme-pick="${k}" aria-pressed="${theme===k}">${n}</button>`).join('')}</div></section>
+    <a class="m-btn big" href="${esc(b.file)}">Open branch stock tools</a>
+    <button type="button" class="m-btn big ghost" id="device-logout">Sign out of this phone</button></div>`;}
+// ---------- one-time: WhatsApp number ----------
 function renderPhone(me){
-  clearInterval(poll);
-  root.innerHTML=`<section class="panel" style="max-width:520px;margin:12px auto"><div class="eyebrow">${esc(boot.branches[me.branch].name)} · ONE-TIME SETUP</div><h1>Your mobile number</h1><p class="muted" style="margin:14px 0 20px">Hello ${esc(me.name)}. Add the WhatsApp number on this phone. It is used to send your task photos and daily list. You only do this once.</p><form id="phone-form"><label class="field">Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07700 900123" required maxlength="20"></label><div id="notice" class="notice" role="alert" style="margin-top:16px"></div><button class="btn primary full" style="margin-top:18px" type="submit">Save number</button></form></section>`;
+  clearInterval(poll);const b=boot.branches[me.branch];
+  root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(b.name)} · ${esc(dateLabel(me.date))}</span><h1>Clock in</h1></div></header>
+    <form id="phone-form" class="m-pane"><section class="m-card m-setup"><span class="icon">${svg('wa',28)}</span><span class="eyebrow">ONE-TIME SETUP</span><h2>Your WhatsApp number</h2><p>Hello ${esc(me.name)}. Your morning and end-of-day photos go straight to the manager on WhatsApp. You only do this once.</p>
+      <label class="m-field">Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="07700 900123" required maxlength="20"></label><span class="m-label" style="font-size:12px">Only managers can see your number.</span></section>
+      <div id="notice" class="notice" role="alert"></div><button type="submit" class="m-btn accent big">Save and start my day</button></form></div>`;
   bindForm('#phone-form',async f=>{await api('phone-save',{phone:f.elements.namedItem('phone').value});await myDay();});
 }
+// ---------- training check (same card style) ----------
 function renderTraining(me){
-  clearInterval(poll);
-  root.innerHTML=`<section class="panel" style="max-width:720px;margin:12px auto"><div class="eyebrow">${esc(boot.branches[me.branch].name)} · TRAINING CHECK</div><h1>What are you trained in?</h1><p class="muted" style="margin:14px 0 20px">Hello ${esc(me.name)}. Review your skills before receiving today’s jobs. Your previous choices are remembered; update anything that has changed.</p><div class="notice" style="margin-bottom:18px">Choose <strong>Trained</strong> for work you can complete independently, <strong>Learning</strong> if you need support, or <strong>Not trained</strong>. Your manager can confirm levels and arrange training.</div><form id="training-form">${skillFields(me.profile.skills,me.profile.confirmedSkills)}<div id="notice" class="notice" role="alert" style="margin-top:20px"></div><div class="toolbar" style="margin-top:22px"><button class="btn primary" type="submit">Save skills & get my jobs →</button>${!me.needsTrainingReview?'<button type="button" class="btn" id="cancel-training">Back to my day</button>':''}</div></form></section>`;
+  clearInterval(poll);const b=boot.branches[me.branch];
+  root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(b.name)} · TRAINING CHECK</span><h1>What are you trained in?</h1></div></header>
+    <form id="training-form" class="m-pane"><section class="m-card m-setup"><p>Hello ${esc(me.name)}. Choose <strong>Trained</strong> for work you can do on your own, <strong>Learning</strong> if you need support, or <strong>Not trained</strong>. Your manager can confirm these.</p>${skillFields(me.profile.skills,me.profile.confirmedSkills)}</section>
+      <div id="notice" class="notice" role="alert"></div><button type="submit" class="m-btn accent big">Save and see my jobs</button>${me.arrival.trainingDate?'<button type="button" class="m-btn big ghost" id="cancel-training">Cancel</button>':''}</form></div>`;
   bindForm('#training-form',async f=>{await api('training-save',{skills:readSkills(f)});await myDay();});const cancel=document.getElementById('cancel-training');if(cancel)cancel.onclick=()=>myDay();
 }
 function duration(ms){const mins=Math.floor(Math.max(0,ms||0)/60000);return Math.floor(mins/60)+'h '+(mins%60)+'m';}
@@ -187,18 +222,26 @@ async function managerInit(){
 async function loadDashboard(quiet=false){
   try{dashboard=await api('dashboard',undefined,{date:dashboard?.date||boot.date});renderManager();}catch(e){if(quiet)message('Refresh failed. The view may be out of date. '+e.message);else throw e;}
 }
-function progressPanel(b,today){const rows=b.staff.filter(s=>s.active||b.day.arrivals[s.id]).map(s=>{const a=b.day.arrivals[s.id];const ts=b.day.tasks.filter(t=>!t.archived&&t.assignee===s.id);const dn=ts.filter(t=>t.status==='done').length;const st=!a?(today?'Not in':'No sign-in'):a.outAt?'Finished':b.day.till===s.id?'On till':'Working';return {s,st,dn,n:ts.length};}).sort((x,y)=>(x.st==='Not in')-(y.st==='Not in'));
-  const cls={'Not in':'red','No sign-in':'red','Finished':'','On till':'blue','Working':'purple'};
-  return `<section class="panel"><div class="panel-title"><h3>Team progress</h3>${badge(rows.filter(r=>r.st!=='Not in'&&r.st!=='No sign-in').length+' in','green')}</div><div class="prog-list">${rows.map(r=>`<div class="prog-row"><span class="avatar">${esc(r.s.name.slice(0,1))}</span><div class="prog-main"><div class="prog-top"><strong>${esc(r.s.name)}</strong>${badge(r.st,cls[r.st])}</div><div class="prog-bar"><div style="width:${r.n?Math.round(r.dn/r.n*100):0}%"></div></div></div><span class="tiny prog-n">${r.dn}/${r.n}</span></div>`).join('')||'<p class="muted">No staff yet.</p>'}</div></section>`;}
-function dutyPanel(b){const duties=(b.sections?.enabled?b.sections.list:[]).filter(s=>s.kind==='duty');if(!duties.length)return '';const nm=id=>b.staff.find(x=>x.id===id)?.name||'Not assigned';
-  return duties.map(d=>{const ts=b.day.tasks.filter(t=>!t.archived&&t.section===d.id);return `<section class="panel"><div class="panel-title"><h3>${esc(d.name)}</h3>${badge(ts.filter(t=>t.status==='done').length+' / '+ts.length+' done',ts.length&&ts.every(t=>t.status==='done')?'green':'amber')}</div><p class="tiny" style="margin-bottom:10px">${esc(nm(b.day.sectionOwners?.[d.id]||d.defaultOwner))}${b.day.sectionOwners?.[d.id]?'':' (not clocked in yet)'}</p><div class="duty-list">${ts.map(t=>`<div class="duty-item"><div><strong>${esc(t.title.split(':')[0])}</strong><span class="tiny">${t.status==='done'?'Done '+time(t.completedAt):'Waiting for photo'}</span></div><div class="duty-photos">${(t.photos||[]).slice(-3).map(ph=>`<a href="${esc(ph.url)}" target="_blank" rel="noopener"><img src="${esc(ph.url)}" alt="${esc(t.title.split(':')[0])} photo"></a>`).join('')||'<span class="duty-empty">📷</span>'}</div></div>`).join('')||'<p class="muted">No jobs today.</p>'}</div></section>`;}).join('');}
+function teamToday(b,today){
+  const nm=id=>b.staff.find(x=>x.id===id)?.name||'';const own=b.day.sectionOwners||{};const secs=b.sections?.enabled?b.sections.list:[];
+  const rows=b.staff.filter(s=>s.active||b.day.arrivals[s.id]).map(s=>{const a=b.day.arrivals[s.id];const ts=b.day.tasks.filter(t=>!t.archived&&t.assignee===s.id);const dn=ts.filter(t=>t.status==='done').length;
+    const st=!a?['Not in','out']:a.outAt?['Finished','away']:b.day.till===s.id?['On till','till']:['Working','working'];
+    const mine=secs.filter(x=>own[x.id]===s.id);const job=mine.length?mine.map(x=>(x.area?x.area.split('·')[0].trim()+' · ':'')+x.name).join(', '):(a?'No section':'');
+    const photos=ts.flatMap(t=>(t.photos||[]).slice(-1)).slice(-3);
+    return {s,st,dn,n:ts.length,job,photos};}).sort((x,y)=>(x.st[0]==='Not in')-(y.st[0]==='Not in'));
+  const arrived=rows.filter(r=>r.st[0]!=='Not in').length,late=Object.values(b.day.arrivals).filter(a=>a.lateMinutes>0).length;
+  const tasks=b.day.tasks.filter(t=>!t.archived);const done=tasks.filter(t=>t.status==='done').length;const toCheck=tasks.filter(t=>t.status==='done'&&(t.photos||[]).length).length;const blocked=(b.day.deviceBlocks||[]).length;
+  return `<div class="m-app" style="padding-top:0"><header class="m-head"><div><span class="m-label">Manager · ${esc(dateLabel(dashboard.date))}</span><h1>Team today</h1></div><button type="button" class="m-icon-btn" id="export-csv-m" aria-label="Download attendance">${svg('down',20)}</button></header>
+    <div class="m-chips" role="group" aria-label="Branch">${dashboard.branches.filter(x=>x.id!==3).map(x=>`<button type="button" class="m-chip pill ${x.id===branch?'on':''}" data-branch="${x.id}" aria-pressed="${x.id===branch}">${esc(x.name)}</button>`).join('')}</div>
+    <div class="m-tiles"><div class="m-tile accent"><span class="k">Clocked in</span><span class="v">${arrived} of ${rows.length}</span><span class="s">${late?late+' late today':'Nobody late'}${blocked?' · '+blocked+' blocked scan'+(blocked>1?'s':''):''}</span></div><div class="m-tile"><span class="k">Jobs done</span><span class="v">${done} / ${tasks.length}</span><span class="s">${toCheck?toCheck+' photo'+(toCheck>1?'s':'')+' to check':'No photos waiting'}</span></div></div>
+    <h2>Staff</h2><div class="m-list">${rows.map(r=>`<div class="m-staff"><div class="who"><span class="ini">${esc(r.s.name.slice(0,1))}</span><div class="nm"><b>${esc(r.s.name)}</b><span>${esc(r.job)}</span></div><span class="m-status ${r.st[1]}">${r.st[0]}</span></div><div class="bar"><div class="rail"><div style="width:${r.n?Math.round(r.dn/r.n*100):0}%"></div></div><span class="n">${r.dn}/${r.n}</span></div>${r.photos.length?`<div class="photos">${r.photos.map(p=>`<a href="${esc(p.url)}" target="_blank" rel="noopener"><img src="${esc(p.url)}" alt="Photo"></a>`).join('')}</div>`:''}</div>`).join('')||'<section class="m-card m-center"><p>Add your staff in Setup to get started.</p></section>'}</div><button type="button" class="m-btn big ghost m-only" id="manager-signout-m">Sign out of manager</button></div>`;}
 function activeBranch(){return dashboard.branches.find(b=>b.id===branch);}
 function renderManager(){
   const b=activeBranch();setAccent(b);const today=dashboard.date===dashboard.today;const arrived=Object.values(b.day.arrivals);const active=b.staff.filter(s=>s.active);const tasks=b.day.tasks.filter(t=>!t.archived);const late=arrived.filter(s=>s.lateMinutes>0).length;const trainingGaps=active.reduce((n,s)=>n+boot.skills.filter(k=>(s.confirmedSkills[k.id]||s.skills[k.id])!=='trained').length,0);
-  root.innerHTML=`<div class="page-heading"><div><div class="eyebrow">MANAGER WORKSPACE</div><h1>A clear view of your day.</h1><p>Attendance, skills and the right jobs for every person.</p></div><div class="toolbar"><input class="control" id="view-date" type="date" aria-label="View date" value="${dashboard.date}" max="${dashboard.today}" style="width:160px"><button class="btn" id="export-csv">Export attendance</button></div></div><div id="notice" class="notice" role="alert"></div><div class="branch-tabs">${dashboard.branches.map(x=>`<button class="branch-tab ${x.id===branch?'active':''}" data-branch="${x.id}"><span class="dot" style="background:${x.color}"></span>${esc(x.name)} <span class="tiny">${Object.keys(x.day.arrivals).length}/${x.staff.filter(s=>s.active).length}</span></button>`).join('')}</div><div class="metrics"><div class="metric"><span>Signed in · ${esc(b.name)}</span><strong>${arrived.length}<span style="font-size:18px"> / ${active.length}</span></strong><small>Active staff listed at this branch</small></div><div class="metric"><span>Late arrivals</span><strong style="color:${late?'#b91c1c':'#047857'}">${late}</strong><small>Compared with individual shift starts</small></div><div class="metric"><span>Tasks complete</span><strong>${tasks.filter(t=>t.status==='done').length}<span style="font-size:18px"> / ${tasks.length}</span></strong><small>${tasks.filter(t=>!t.assignee).length} need allocation</small></div><div class="metric"><span>Training opportunities</span><strong>${trainingGaps}</strong><small>Skills across active staff needing training</small></div></div><div class="tabs">${[['overview','Attendance'],['tasks','Daily jobs'],['sections','Sections'],['training','Training matrix'],['activity','Time & workload'],['setup','Staff & branch setup']].map(([id,label])=>`<button data-tab="${id}" class="${tab===id?'active':''}">${label}</button>`).join('')}</div><div id="manager-body">${tab==='overview'?`<div class="mgr-top">${progressPanel(b,today)}${dutyPanel(b)}</div>`+attendanceView(b,today):tab==='tasks'?tasksView(b,today):tab==='sections'?sectionsView(b,today):tab==='training'?trainingView(b):tab==='activity'?activityView(b):setupView(b)}</div><nav class="m-nav mgr-nav" aria-label="Manager menu">${[['overview','Today','home'],['tasks','Jobs','tasks'],['sections','Sections','stock'],['training','Training','me'],['setup','Setup','cog']].map(([id,l,ic])=>`<button data-tab="${id}" aria-current="${tab===id?'page':'false'}">${svg(ic)}<span>${l}</span></button>`).join('')}</nav>`;
-  document.body.classList.add('m-mgr');
+  root.innerHTML=`<div class="page-heading"><div><div class="eyebrow">MANAGER WORKSPACE</div><h1>A clear view of your day.</h1><p>Attendance, skills and the right jobs for every person.</p></div><div class="toolbar"><input class="control" id="view-date" type="date" aria-label="View date" value="${dashboard.date}" max="${dashboard.today}" style="width:160px"><button class="btn" id="export-csv">Export attendance</button></div></div><div id="notice" class="notice" role="alert"></div><div class="branch-tabs">${dashboard.branches.map(x=>`<button class="branch-tab ${x.id===branch?'active':''}" data-branch="${x.id}"><span class="dot" style="background:${x.color}"></span>${esc(x.name)} <span class="tiny">${Object.keys(x.day.arrivals).length}/${x.staff.filter(s=>s.active).length}</span></button>`).join('')}</div><div class="metrics"><div class="metric"><span>Signed in · ${esc(b.name)}</span><strong>${arrived.length}<span style="font-size:18px"> / ${active.length}</span></strong><small>Active staff listed at this branch</small></div><div class="metric"><span>Late arrivals</span><strong style="color:${late?'#b91c1c':'#047857'}">${late}</strong><small>Compared with individual shift starts</small></div><div class="metric"><span>Tasks complete</span><strong>${tasks.filter(t=>t.status==='done').length}<span style="font-size:18px"> / ${tasks.length}</span></strong><small>${tasks.filter(t=>!t.assignee).length} need allocation</small></div><div class="metric"><span>Training opportunities</span><strong>${trainingGaps}</strong><small>Skills across active staff needing training</small></div></div><div class="tabs">${[['overview','Attendance'],['tasks','Daily jobs'],['sections','Sections'],['training','Training matrix'],['activity','Time & workload'],['setup','Staff & branch setup']].map(([id,label])=>`<button data-tab="${id}" class="${tab===id?'active':''}">${label}</button>`).join('')}</div><div id="manager-body">${tab==='overview'?teamToday(b,today)+attendanceView(b,today):tab==='tasks'?tasksView(b,today):tab==='sections'?sectionsView(b,today):tab==='training'?trainingView(b):tab==='activity'?activityView(b):setupView(b)}</div><nav class="m-nav" aria-label="Manager menu">${[['overview','Team','team'],['tasks','Jobs','tasks'],['sections','Sections','stock'],['training','Training','me'],['setup','Setup','cog']].map(([id,l,ic])=>`<button type="button" data-tab="${id}" aria-current="${tab===id?'page':'false'}">${svg(ic)}<span>${l}</span></button>`).join('')}</nav>`;
+  document.body.classList.add('m-mgr','m-bottom');{let t='red';try{t=localStorage.getItem('asim.theme')||'red';}catch{}document.body.dataset.theme=t;}
   root.querySelectorAll('[data-branch]').forEach(btn=>btn.onclick=()=>{branch=+btn.dataset.branch;history.replaceState(null,'',`asim-manager.html?branch=${branch}&tab=${tab}`);renderManager();});root.querySelectorAll('[data-tab]').forEach(btn=>btn.onclick=()=>{tab=btn.dataset.tab;history.replaceState(null,'',`asim-manager.html?branch=${branch}&tab=${tab}`);renderManager();});
-  document.getElementById('view-date').onchange=async e=>{if(!e.target.value)return;dashboard.date=e.target.value;await loadDashboard();};document.getElementById('export-csv').onclick=exportAttendance;if(document.getElementById('export-workload'))document.getElementById('export-workload').onclick=exportWorkload;
+  document.getElementById('view-date').onchange=async e=>{if(!e.target.value)return;dashboard.date=e.target.value;await loadDashboard();};document.getElementById('export-csv').onclick=exportAttendance;const ecm=document.getElementById('export-csv-m');if(ecm)ecm.onclick=exportAttendance;const som=document.getElementById('manager-signout-m');if(som)som.onclick=async()=>{await api('manager-logout',{});clearInterval(poll);location.reload();};if(document.getElementById('export-workload'))document.getElementById('export-workload').onclick=exportWorkload;
   bindManagerActions(b,today);if(tab==='sections')bindSections(b,today);
 }
 function attendanceView(b,today){
