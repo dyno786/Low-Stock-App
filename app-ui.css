@@ -99,3 +99,38 @@ body.m-mode .section-card{border:0;border-radius:22px;padding:16px;margin:0!impo
 body.m-mode .check-row{border-radius:16px;min-height:56px}
 body.m-mode .task-card{border:0;border-radius:18px;border-left:0}
 body.m-mode .notice:empty{display:none}
+/* mobile clock-in */
+.m-primary{background:var(--m-accent);color:#fff}
+.m-ok{display:flex;gap:10px;align-items:center;background:#e3f5ec;border-radius:16px;padding:12px 14px}.m-ok b{display:block;color:#14532d}.m-ok small{color:#1f5e3f;font-size:12px;font-weight:600}
+.m-ok-tick{width:32px;height:32px;border-radius:10px;background:#1f7a4d;color:#fff;display:grid;place-items:center;font-weight:800;flex:none}.m-ok-tick.big{width:64px;height:64px;border-radius:20px;font-size:28px}
+.m-seg label,.m-names label{position:relative;display:block}
+.m-seg input,.m-names input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.m-seg label span,.m-names label span{min-height:48px;border-radius:14px;border:2px solid var(--m-track);background:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 6px;color:var(--m-ink)}
+.m-seg input:checked+span,.m-names input:checked+span{background:var(--m-accent);border-color:var(--m-accent);color:#fff}
+.m-seg input:focus-visible+span,.m-names input:focus-visible+span{outline:3px solid var(--m-ink);outline-offset:2px}
+.m-names{border:0;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.m-names legend{font-size:15px;font-weight:800;margin-bottom:10px}
+.m-pin{display:flex;flex-direction:column;gap:6px;font-weight:800;font-size:15px}.m-pin input{min-height:58px;border-radius:16px;border:2px solid var(--m-track);background:#fff;font-size:26px;letter-spacing:10px;text-align:center;color:var(--m-ink)}
+.m-blocked{align-items:center;text-align:center;padding:26px 20px}.m-blocked h1{font-size:22px}.m-blocked p{color:var(--m-muted)}.m-blocked-icon{font-size:44px}
+body.m-mode .signin-card{display:none}
+/* manager: team progress + fixed duty (Picco) photos */
+.mgr-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:24px}
+.prog-list{display:grid;gap:10px}.prog-row{display:flex;align-items:center;gap:10px}.prog-main{flex:1;min-width:0}.prog-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px}
+.prog-bar{height:8px;border-radius:4px;background:var(--accent-soft,#eee);overflow:hidden;border:1px solid var(--line)}.prog-bar div{height:100%;background:var(--accent)}.prog-n{width:36px;text-align:right;font-weight:700;color:var(--ink)}
+.duty-list{display:grid;gap:10px}.duty-item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px}.duty-item strong{display:block}
+.duty-photos{display:flex;gap:6px}.duty-photos img{width:56px;height:56px;object-fit:cover;border-radius:10px;display:block}.duty-empty{width:56px;height:56px;border-radius:10px;border:2px dashed var(--line);display:grid;place-items:center;opacity:.6}
+.mgr-nav{display:none}
+@media (max-width:760px){
+ body.m-mgr{--m-accent:var(--accent);--m-ink:#23171a;--m-nav-text:#e6d3d6}
+ body.m-mgr .workspace{padding:18px 14px 110px}
+ body.m-mgr .page-heading{flex-direction:column;align-items:flex-start}
+ body.m-mgr .page-heading h1{font-size:24px}
+ body.m-mgr .metrics{grid-template-columns:1fr 1fr;gap:10px}
+ body.m-mgr .metric{padding:14px}.metric strong{font-size:24px}
+ body.m-mgr .split,body.m-mgr .grid2,body.m-mgr .grid3,body.m-mgr .form-row{grid-template-columns:minmax(0,1fr)}
+ body.m-mgr .mgr-top{grid-template-columns:minmax(0,1fr)}
+ body.m-mgr .panel,body.m-mgr .table-wrap{min-width:0;max-width:100%}
+ body.m-mgr .tabs{display:none}
+ body.m-mgr .branch-tabs{flex-wrap:nowrap;overflow-x:auto}
+ body.m-mgr .panel{padding:16px;border-radius:18px}
+ body.m-mgr .mgr-nav{display:flex}
+}
