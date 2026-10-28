@@ -226,3 +226,24 @@ body.m-bottom{padding-bottom:calc(var(--t-nav-h) + 40px)!important}
   body.m-bottom .asim-nav-menu>span.asim-nav-phone{display:block}
   body.m-bottom .asim-nav-menu a[data-phone]{display:flex}
 }
+
+/* ---------- branch stock page (citycenter / chapeltown / roundhay) ---------- */
+.m-home{padding-top:22px}
+.m-home .m-tile{border:0;text-align:left;min-height:96px;cursor:pointer;font:inherit}
+.m-home .m-tile .s{color:var(--t-muted)}.m-home .m-tile.accent .s{color:#fff;opacity:.9}
+.m-sync{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#1F6B45}.m-sync.bad{color:var(--t-bad)}
+body.branch-app.on-home .cc-workspace-links{display:none}
+@media (max-width:760px){
+  body.branch-app{background:var(--t-ground)!important;font-family:var(--t-font)!important;color:var(--t-ink)}
+  body.branch-app>.hdr,body.branch-app>.sync-bar,body.branch-app .cc-workspace-links,body.branch-app>.asim-navigation{display:none!important}
+  body.branch-app{padding-top:8px}
+  body.branch-app.on-home>.vtabs{display:none!important}
+  body.branch-app>.vtabs{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;gap:8px!important;background:transparent!important;border:0!important;padding:8px 16px!important;scrollbar-width:none}
+  body.branch-app>.vtabs::-webkit-scrollbar{display:none}
+  body.branch-app>.vtabs .vtab{flex:none;height:36px;min-height:36px!important;padding:0 14px!important;border-radius:18px!important;background:var(--t-card)!important;color:var(--t-ink)!important;font-size:13px!important;font-weight:600!important;white-space:nowrap}
+  body.branch-app>.vtabs .vtab.on{background:var(--t-ink)!important;color:#fff!important;font-weight:700!important}
+  body.branch-app #out{padding:0 16px!important}
+  body.branch-app .m-app{padding-left:0;padding-right:0}
+  body.branch-app:not(.on-home) #out{padding-top:6px!important}
+  body.branch-app .src-card,body.branch-app .wh-card{border:0!important;border-radius:var(--t-radius-row)!important}
+}
