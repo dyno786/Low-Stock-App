@@ -34,6 +34,14 @@ async function deviceTag(req, body, at){
   const ip=req.headers.get('x-real-ip')||req.headers.get('x-forwarded-for')?.split(',')[0]||'';
   return {at,id:id||('nodevice-'+(await sha(ip+'|'+(req.headers.get('user-agent')||''))).slice(0,12)),model:deviceSummary(req.headers.get('user-agent')),net:ip?(await sha('net|'+ip)).slice(0,8):'',anon:!id};
 }
+// UK mobile -> +447xxxxxxxxx; also accepts other international numbers starting with +.
+function ukMobile(v){ const raw=String(v||'').replace(/[\s()-]/g,''); if(!raw) return ''; let n=raw; if(/^07\d{9}$/.test(n)) n='+44'+n.slice(1); else if(/^447\d{9}$/.test(n)) n='+'+n; else if(/^00\d{8,15}$/.test(n)) n='+'+n.slice(2); if(!/^\+\d{8,15}$/.test(n)) fail('Enter a mobile number like 07700 900123.'); return n; }
+function otherOnPhone(state, date, staff, device){
+  if (!device || device.anon) return null;
+  const d = state.days?.[date]; if (!d) return null;
+  for (const [sid, a] of Object.entries(d.arrivals || {})) { if (sid === staff) continue; if ((a.devices || []).some(x => x.id === device.id && !x.override)) return a.name || 'someone else'; }
+  return null;
+}
 async function verifyScan(branch, body) {
   if (!body.ticket) return validQr(branch, body.token);
   if (!/^[a-f0-9]{64}$/.test(body.ticket)) fail('Scan the current branch QR code again.', 401);
@@ -120,19 +128,29 @@ export default async function handler(req) {
       const valid = person.salt ? equal((await hashPin(body.pin, person.salt)).hash, person.hash) : person.legacyHash && equal(await sha(`cc-staff|${branch}|${body.staff}|${body.pin}`), person.legacyHash);
       if (!valid) fail('Incorrect PIN.', 401);
       checkLocation(body.location,state.location,branch);
+      const date = londonDay(); const at = Date.now();
+      const device = await deviceTag(req, body, at);
+      // One phone, one person per day: a phone that already clocked someone else in/out today is refused (manager signed in on that phone can override).
+      const mgrOverride = (await session(req, 'cc_manager'))?.role === 'manager';
+      const pre = mgrOverride ? null : otherOnPhone(state, date, body.staff, device);
+      if (pre) {
+        await mutateBranch(branch, st => { const d = todayState(st, date); (d.deviceBlocks ||= []).push({ at, staff: body.staff, name: person.name, usedBy: pre, mode: body.mode || 'in', model: device.model, device: device.id }); if (d.deviceBlocks.length > 200) d.deviceBlocks.splice(0, d.deviceBlocks.length - 200); });
+        fail(`This phone was already used to clock in ${pre} today. Everyone must clock in on their own phone. If yours isn't working, ask the manager.`, 409);
+      }
       if (body.ticket) {
         const consumed = await redis(['DEL','attendance:scan:' + await sha(body.ticket)]);
         if (!consumed) fail('This scan has already been used. Scan the current code again.',401);
       }
       const upgraded = person.salt ? null : await hashPin(body.pin);
-      const date = londonDay(); const at = Date.now();
-      const device = await deviceTag(req, body, at);
       const { result } = await mutateBranch(branch, state => {
         const p = state.staff[body.staff];
         if (!p?.active || p.hash !== person.hash || p.legacyHash !== person.legacyHash) fail('Staff details changed. Please try signing in again.', 409);
         if (upgraded) { Object.assign(p, upgraded); delete p.legacyHash; }
         const tag=checkLocation(body.location,state.location,branch,at);
         const d = todayState(state, date);
+        const clash = mgrOverride ? null : otherOnPhone(state, date, body.staff, device);
+        if (clash) fail(`This phone was already used to clock in ${clash} today. Everyone must clock in on their own phone. If yours isn't working, ask the manager.`, 409);
+        if (mgrOverride) device.override = 'manager';
         const prior = d.arrivals[body.staff];
         if (body.mode === 'out') {
           if (!prior || prior.outAt) fail('You are not clocked in at this branch today. Ask the manager if a record needs correcting.');
@@ -152,6 +170,11 @@ export default async function handler(req) {
       const secs = state.sections?.enabled ? (state.sections.list || []) : []; const owners = d.sectionOwners || {};
       const mySections = secs.filter(x => owners[x.id] === s.staff).map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, shelves: x.shelves }));
       return json({ mySections, allSectionRules: secs.map(x => ({ id: x.id, name: x.name, kind: x.kind, rules: x.rules })), branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
+    }
+    if (action === 'phone-save') {
+      const { s } = await activeStaffSession(req); const phone = ukMobile(body.phone); if (!phone) fail('Enter your mobile number.');
+      await mutateBranch(s.branch, state => { const p = state.staff[s.staff]; if (!p) fail('Staff member unavailable.', 401); p.phone = phone; p.phoneUpdatedAt = Date.now(); });
+      return json({ ok: true, phone });
     }
     if (action === 'training-save') {
       const { s } = await activeStaffSession(req);
@@ -216,6 +239,7 @@ export default async function handler(req) {
         if (Object.entries(state.staff).some(([k, s]) => k !== id && s.active && s.name.toLowerCase() === name.toLowerCase())) fail('That staff name already exists at this branch.');
         if (!['new', 'experienced', 'senior'].includes(body.seniority || 'new')) fail('Choose an experience level.');
         state.staff[id] = { ...existing, ...hashed, name, active: body.active !== false, shiftStart: body.shiftStart, seniority: body.seniority || 'new' };
+        if (body.phone !== undefined) { const ph = ukMobile(body.phone); if (ph) state.staff[id].phone = ph; else delete state.staff[id].phone; }
         if (hashed) delete state.staff[id].legacyHash;
         allocate(state, branch);
       }); return json({ ok: true, id });

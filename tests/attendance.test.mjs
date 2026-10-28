@@ -196,3 +196,26 @@ test('location tags distinguish missing, uncertain and unconfigured positions',a
  assert.equal(checkLocation({...fix,timestamp:now+120000},null,0,now).status,'unavailable');
  assert.equal(checkLocation({...fix,accuracy:101},{...fix,radius:150,required:false},0,now).status,'inaccurate');
 });
+
+test('one phone clocks in one person per day; manager on that phone can override; staff save their mobile',async()=>{
+ const mc=(await call('manager-login',{password:process.env.ATTENDANCE_MANAGER_PASSWORD})).cookie;
+ const a=(await call('staff-save',{branch:2,name:'Phone owner',pin:'1111',shiftStart:'23:59'},mc)).body.id;
+ const b=(await call('staff-save',{branch:2,name:'Friend',pin:'2222',shiftStart:'23:59'},mc)).body.id;
+ const kc=(await call('pair',{branch:2},mc)).cookie;const token=(await call('qr',undefined,kc,{branch:2})).body.token;
+ const phone='c'.repeat(32);
+ const first=await call('checkin',{branch:2,token,staff:a,pin:'1111',device:phone});assert.equal(first.status,200,JSON.stringify(first.body));
+ const again=await call('checkin',{branch:2,token,staff:a,pin:'1111',device:phone});assert.equal(again.status,200,'same person, same phone is fine');
+ const buddy=await call('checkin',{branch:2,token,staff:b,pin:'2222',device:phone});assert.equal(buddy.status,409);assert.match(buddy.body.error,/Phone owner/);
+ const buddyOut=await call('checkin',{branch:2,token,staff:b,pin:'2222',device:phone,mode:'out'});assert.equal(buddyOut.status,409,'cannot clock a friend out either');
+ let dash=await call('dashboard',undefined,mc);let day=dash.body.branches[2].day;
+ assert.equal(day.arrivals[b],undefined,'blocked scan did not create an arrival');
+ assert.equal(day.deviceBlocks.length,2);assert.equal(day.deviceBlocks[0].usedBy,'Phone owner');assert.equal(day.deviceBlocks[0].name,'Friend');
+ const ok=await call('checkin',{branch:2,token,staff:b,pin:'2222',device:'d'.repeat(32)});assert.equal(ok.status,200,'own phone works');
+ const c=(await call('staff-save',{branch:2,name:'Dead battery',pin:'3333',shiftStart:'23:59'},mc)).body.id;
+ const ov=await call('checkin',{branch:2,token,staff:c,pin:'3333',device:phone},mc);assert.equal(ov.status,200,'manager signed in on the phone overrides');
+ dash=await call('dashboard',undefined,mc);assert.equal(dash.body.branches[2].day.arrivals[c].devices[0].override,'manager');
+ const sc=first.cookie;
+ assert.equal((await call('phone-save',{phone:'123'},sc)).status,400);
+ const saved=await call('phone-save',{phone:'07700 900123'},sc);assert.equal(saved.status,200);assert.equal(saved.body.phone,'+447700900123');
+ const me=await call('me',undefined,sc);assert.equal(me.body.profile.phone,'+447700900123');
+});
