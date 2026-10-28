@@ -169,7 +169,8 @@ export default async function handler(req) {
       const { s, state } = await activeStaffSession(req); const d = todayState(state);
       const secs = state.sections?.enabled ? (state.sections.list || []) : []; const owners = d.sectionOwners || {};
       const mySections = secs.filter(x => owners[x.id] === s.staff).map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, shelves: x.shelves }));
-      return json({ mySections, allSectionRules: secs.map(x => ({ id: x.id, name: x.name, kind: x.kind, rules: x.rules })), branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
+      const week = [6,5,4,3,2,1,0].map(n => { const day = londonDay(Date.now() - n * 86400000); const ts = (state.days[day]?.tasks || []).filter(t => t.assignee === s.staff && !t.archived); return { day, given: ts.length, done: ts.filter(t => t.status === 'done').length }; });
+      return json({ week, mySections, allSectionRules: secs.map(x => ({ id: x.id, name: x.name, kind: x.kind, rules: x.rules })), branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
     }
     if (action === 'phone-save') {
       const { s } = await activeStaffSession(req); const phone = ukMobile(body.phone); if (!phone) fail('Enter your mobile number.');
