@@ -34,7 +34,7 @@ test('City Centre sections: owners, checklist jobs, photo rule, overrides',async
  const picco=day.tasks.filter(t=>t.section==='picco');assert.equal(picco.length,2);assert.ok(picco.every(t=>t.photoRequired&&t.assignee===ids.Ana),'morning + night Picco photos');
  const cat=(await call('me',undefined,cookies.Cat)).body;
  assert.deepEqual(cat.mySections.map(s=>s.id),['s3']);
- const catChecks=cat.tasks.filter(t=>t.kind==='check');assert.equal(catChecks.length,10+9,'every-owner + section 3 checklist');assert.ok(catChecks.some(t=>t.id==='sec-s3-o9'&&t.photoRequired),'stock transfer item needs a photo');
+ const catChecks=cat.tasks.filter(t=>t.kind==='check');assert.equal(catChecks.length,11+9,'every-owner + section 3 checklist');assert.ok(catChecks.some(t=>t.id==='sec-s3-o9'&&t.photoRequired),'stock transfer item needs a photo');
  const photoItem=catChecks.find(t=>t.photoRequired);const plainItem=catChecks.find(t=>!t.photoRequired);
  assert.equal((await call('task-status',{id:plainItem.id,status:'done'},cookies.Cat)).status,200);
  assert.equal((await call('task-status',{id:photoItem.id,status:'done'},cookies.Cat)).status,400,'photo item needs a photo');

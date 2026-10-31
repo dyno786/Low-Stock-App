@@ -276,3 +276,37 @@ body.k-page .workspace{max-width:none;padding:0;margin:0}
 #out .sec-bar{padding:4px 0 12px}
 .sec-stock .m-chip{gap:6px}
 @media (min-width:761px){#out .sec-bar .m-chip{border:1px solid var(--line,#e2e8f0)}}
+
+/* ---------- Inside the work areas: the old lists restyled to the same format (phone) ---------- */
+@media (max-width:760px){
+  body.branch-app>.vtabs{display:none!important}                 /* tools live on the Stock home tiles; back arrow returns */
+  body.branch-app #prog-wrap{background:var(--t-card)!important;border:0!important;border-radius:22px;margin:0 16px 12px;padding:14px 16px!important;font-family:var(--t-font)}
+  body.branch-app #prog-wrap .prog-bar,body.branch-app .prog-track{height:12px!important;border-radius:6px!important;background:var(--t-track2)!important}
+  body.branch-app #prog-wrap .prog-fill,body.branch-app .prog-bar>div{background:var(--t-accent)!important;border-radius:6px!important}
+  body.branch-app .src-card,body.branch-app .card-list,body.branch-app .over-card,body.branch-app .sm-card{background:var(--t-card)!important;border:0!important;border-radius:var(--t-radius-row)!important;margin:0 0 10px!important;box-shadow:none!important}
+  body.branch-app .src-hdr{background:transparent!important;border:0!important;padding:14px 14px 6px!important}
+  body.branch-app .src-name{font-size:15px!important;font-weight:800!important;color:var(--t-ink)!important}
+  body.branch-app .src-rule{font-size:12px!important;font-weight:600!important;color:var(--t-muted)!important}
+  body.branch-app .dept-hdr{background:transparent!important;padding:6px 4px 8px!important;display:flex;justify-content:space-between;align-items:baseline}
+  body.branch-app .dept-name{font-size:15px!important;font-weight:800!important;color:var(--t-ink)!important}
+  body.branch-app .dept-sub{font-size:12px!important;font-weight:600!important}
+  body.branch-app .item-card,body.branch-app .neg-card{padding:12px 14px!important;gap:12px!important;border-bottom:1px solid var(--t-ground)!important;align-items:center}
+  body.branch-app .item-img,body.branch-app .neg-img{width:48px!important;height:48px!important;border-radius:12px!important;border:0!important;background:var(--t-track2)!important}
+  body.branch-app .item-name,body.branch-app .neg-name{font-size:14px!important;font-weight:700!important;white-space:normal!important;color:var(--t-ink)}
+  body.branch-app .item-bc,body.branch-app .neg-bc{font-size:12px!important;font-weight:600!important;color:var(--t-muted)!important;font-family:var(--t-font)!important}
+  body.branch-app .itag,body.branch-app .pill{font-size:12px!important;font-weight:700!important;padding:4px 8px!important;border-radius:8px!important}
+  body.branch-app .neg-qty{font-size:16px!important;font-weight:800!important;padding:6px 10px!important;border-radius:10px!important;background:var(--t-bad-bg)!important;color:var(--t-bad)!important}
+  body.branch-app .low-subtabs,body.branch-app .over-subtabs{padding:0 0 10px!important;gap:8px!important}
+  body.branch-app .low-subtab,body.branch-app .over-subtab{border:0!important;border-radius:18px!important;background:var(--t-card)!important;padding:10px 12px!important;flex:none!important;min-width:0}
+  body.branch-app .low-subtab.on,body.branch-app .over-subtab.on{background:var(--t-ink)!important;color:#fff!important}
+  body.branch-app .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 12px}
+  body.branch-app .stat{background:var(--t-card)!important;border:0!important;border-radius:20px!important;padding:12px!important}
+  body.branch-app .stat-val{font-size:24px!important;font-weight:800!important;color:var(--t-ink)!important}
+  body.branch-app .stat-lbl{font-size:12px!important;font-weight:600!important;color:var(--t-muted)!important}
+  body.branch-app .empty{padding:28px 16px!important;background:var(--t-card);border-radius:var(--t-radius-card);color:var(--t-muted)!important;font-weight:600;text-align:center}
+  body.branch-app .loading{color:var(--t-muted)!important;font-weight:600}
+  body.branch-app #out button:not(.m-chip):not(.m-btn):not(.m-tile):not(.m-icon-btn){border-radius:12px!important;font-family:var(--t-font)!important;font-weight:700!important}
+  body.branch-app #out input[type=text],body.branch-app #out input[type=search],body.branch-app #out input:not([type]){border-radius:14px!important;border:2px solid var(--t-border)!important;font-family:var(--t-font)!important;background:var(--t-card)!important}
+}
+.wa-head{display:none}
+@media (max-width:760px){.wa-head{display:flex;gap:12px;align-items:center;padding:14px 0 12px;font-family:var(--t-font)}.wa-head h1{font-size:24px;margin:0}.wa-head>div{display:flex;flex-direction:column;gap:2px}}

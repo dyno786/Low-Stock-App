@@ -228,7 +228,7 @@ export default async function handler(req) {
     }
     if (action === 'dashboard') {
       const date = url.searchParams.get('date') || londonDay(); if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail('Invalid date.');
-      const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id); return { ...branch, sections: state.sections || null, staff: publicStaff(state), day: state.days[date] || { arrivals: {}, tasks: [] }, shiftStart: state.shiftStart, config: branchConfig(state, branch.id), location:state.location||null }; }));
+      const branches = await Promise.all(BRANCHES.map(async branch => { const { state } = await loadBranch(branch.id); return { ...branch, sections: state.sections || null, staff: publicStaff(state), day: state.days[date] || { arrivals: {}, tasks: [] }, shiftStart: state.shiftStart, config: branchConfig(state, branch.id), location:state.location||null, reports:(state.reports||[]).slice(-30), reportTo:state.reportTo||'' }; }));
       return json({ date, today: londonDay(), now: Date.now(), branches, skills: SKILLS });
     }
     const branch = branchId(body.branch);
@@ -265,6 +265,14 @@ export default async function handler(req) {
         allocate(state, branch);
       }); return json({ ok: true });
     }
+    if (action === 'report-send') { // manager: log an end-of-day report being sent (the text itself goes out via WhatsApp from the manager's phone)
+      await requireManager(req);
+      const to = String(body.to || '').replace(/[\s()-]/g, ''); if (!/^\+?\d{8,15}$/.test(to)) fail('Enter the number the report is going to.');
+      const summary = String(body.summary || '').slice(0, 4000); if (!summary) fail('Nothing to send.');
+      const by = String(body.by || 'manager').slice(0, 80);
+      await mutateBranch(branch, state => { (state.reports ||= []).push({ at: Date.now(), day: londonDay(), to, by, summary }); if (state.reports.length > 400) state.reports.splice(0, state.reports.length - 400); });
+      return json({ ok: true });
+    }
     if (action === 'staff-delete') {
       if (typeof body.staff !== 'string' || !body.staff) fail('Choose a staff member.');
       await mutateBranch(branch, state => {
@@ -292,6 +300,7 @@ export default async function handler(req) {
       const location=locationConfig(body.location);
       await mutateBranch(branch,state=>{state.location=location;}); return json({ok:true});
     }
+    if (action === 'report-to') { await requireManager(req); const to = String(body.to || '').replace(/[\s()-]/g, ''); if (to && !/^\+?\d{8,15}$/.test(to)) fail('Enter a mobile number.'); await mutateBranch(branch, state => { state.reportTo = to; }); return json({ ok: true }); }
     if (action === 'configure') {
       const allowed = SKILLS.filter(s => s.id !== 'till').map(s => s.id);
       if (!Array.isArray(body.enabled) || !Array.isArray(body.tillDuties) || body.enabled.some(k => !allowed.includes(k)) || body.tillDuties.some(k => !body.enabled.includes(k))) fail('Choose valid branch jobs and till duties.');
