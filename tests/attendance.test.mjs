@@ -69,9 +69,9 @@ test('complete manager → kiosk → QR → arrival → training → allocation 
  const newSkills={...allSkills,till:'untrained',shop:'learning',neg:'untrained',img:'untrained'};
  assert.equal((await call('training-save',{skills:newSkills},nc)).status,200);
  const board=await call('dashboard',undefined,mc);const b=board.body.branches[0];assert.equal(b.day.till,sid);assert.equal(b.day.tasks.filter(t=>t.category==='till'&&!t.archived).length,1);
- assert.ok(b.day.tasks.filter(t=>t.assignee===nid).every(t=>['pick','over','low'].includes(t.category)));
+ assert.ok(b.day.tasks.filter(t=>t.assignee===nid&&!t.needsSupport).every(t=>['pick','over','low'].includes(t.category)),'trained jobs go to the trained person');assert.ok(b.day.tasks.some(t=>t.assignee===nid&&t.needsSupport),'untrained jobs are still handed out, flagged needs support');
  assert.ok(!JSON.stringify(board.body).includes('legacyHash'));assert.ok(!JSON.stringify(board.body).includes('"salt"'));
- assert.equal((await call('task-save',{branch:0,title:'Learn images',assignee:nid,category:'img',priority:'normal'},mc)).status,400,'untrained work needs supervision');
+ {const r=await call('task-save',{branch:0,title:'Learn images',assignee:nid,category:'img',priority:'normal'},mc);assert.equal(r.status,200,'untrained people still get work');}
  // Till colleague may supervise only a configured quiet-period duty.
  assert.equal((await call('task-save',{branch:0,title:'Learn Shopify',assignee:nid,category:'shop',priority:'normal',trainingBuddy:sid},mc)).status,200);
  const task=(await call('me',undefined,nc)).body.tasks.find(t=>t.category==='pick');assert.ok(task);
@@ -121,7 +121,7 @@ test('parallel arrivals retain both employees; legacy history migrates without p
 
 test('manager-confirmed skills override staff reports; till gaps stay explicit',()=>{
  const state={staff:{a:{name:'A',active:true,trainingUpdatedAt:1,skills:{till:'trained',pick:'trained'},confirmedSkills:{till:'untrained'},seniority:'senior'}},days:{},config:{enabled:['pick'],tillDuties:[],tillRequired:true}};
- const date=londonDay();state.days[date]={arrivals:{a:{at:Date.now(),trainingDate:date}},tasks:[]};const d=allocate(state,0);assert.equal(d.till,'');assert.ok(d.gaps.some(g=>g.job==='till'));assert.equal(d.tasks.find(t=>t.category==='pick').assignee,'a');
+ const date=londonDay();state.days[date]={arrivals:{a:{at:Date.now(),trainingDate:date}},tasks:[]};const d=allocate(state,0);assert.equal(d.till,'a','till still gets covered by whoever is in');assert.ok(d.gaps.some(g=>g.job==='till'),'…but the manager is told they are not trained');assert.equal(d.tasks.find(t=>t.category==='pick').assignee,'a');
 });
 
 

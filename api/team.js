@@ -324,10 +324,10 @@ export default async function handler(req) {
           if (!Object.hasOwn(state.staff, buddy) || buddy === body.assignee || !state.staff[buddy]?.active || !d.arrivals[buddy] || d.arrivals[buddy].outAt || training(state.staff[buddy], body.category) !== 'trained') fail('Choose a different signed-in colleague who is trained in this job.');
           if (d.till === buddy && !branchConfig(state, branch).tillDuties.includes(body.category)) fail('The till person cannot leave the till to supervise this job. Choose another trained colleague.');
         }
-        if (body.category !== 'custom' && training(state.staff[body.assignee], body.category) !== 'trained' && !buddy) fail('This person needs training for this job. Assign a trained buddy for supervision.');
+        const needsSupport = body.category !== 'custom' && training(state.staff[body.assignee], body.category) !== 'trained' && !buddy;
         if (d.till === body.assignee && !branchConfig(state, branch).tillDuties.includes(body.category)) fail('This person is covering the till. Choose a permitted quiet-period duty or assign someone else.');
         const photoRequired = body.photoRequired === undefined ? (existing ? !!existing.photoRequired : body.category === 'custom') : !!body.photoRequired;
-        const task = { id, title, notes, photoRequired, photos: existing?.photos || [], category: body.category, priority: body.priority, assignee: body.assignee, due: body.due || '', trainingBuddy: buddy, status: existing?.status || 'pending', createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now(), assignedAt:existing?.assignee===body.assignee?(existing.assignedAt||existing.createdAt):Date.now(), history: existing?.history || [], manualAssignment: true };
+        const task = { id, title, notes, photoRequired, photos: existing?.photos || [], category: body.category, priority: body.priority, assignee: body.assignee, due: body.due || '', trainingBuddy: buddy, needsSupport, status: existing?.status || 'pending', createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now(), assignedAt:existing?.assignee===body.assignee?(existing.assignedAt||existing.createdAt):Date.now(), history: existing?.history || [], manualAssignment: true };
         if(existing && existing.assignee!==body.assignee && existing.status==='progress'){endWork(existing,task.updatedAt);task.status='pending';}
         task.history.push({ at: task.updatedAt, by: 'manager', assignee: task.assignee });
         if (existing) Object.assign(existing, task); else d.tasks.push(task);

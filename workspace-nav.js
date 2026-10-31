@@ -39,7 +39,7 @@ if(!manager&&!signin&&file!=='myday.html'){
  const ic=k=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
  const bb=branches[branch]||branches[0];const day=`myday.html?branch=${bb.id}`;
  const bar=document.createElement('nav');bar.className='m-nav';bar.setAttribute('aria-label','Main menu');
- bar.innerHTML=`<a href="${day}">${ic('home')}<span>Today</span></a><a href="${day}&pane=tasks">${ic('tasks')}<span>Tasks</span></a><a href="asim.html?branch=${bb.id}">${ic('qr')}<span>Clock in</span></a><a href="${esc(bb.file)}" aria-current="page">${ic('stock')}<span>Stock</span></a><a href="${day}&pane=me">${ic('me')}<span>Me</span></a>`;
+ bar.innerHTML=`<a href="${day}">${ic('home')}<span>Today</span></a><a href="${day}&pane=tasks">${ic('tasks')}<span>Tasks</span></a><a href="${esc(bb.file)}" aria-current="page">${ic('stock')}<span>Stock</span></a><a href="${day}&pane=me">${ic('me')}<span>Me</span></a>`;
  document.body.appendChild(bar);document.body.classList.add('m-bottom');
  let th='red';try{th=localStorage.getItem('asim.theme')||'red';}catch{}if(!document.body.dataset.theme)document.body.dataset.theme=th;
 }
