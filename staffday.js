@@ -4,12 +4,13 @@
 const branch = Number(document.body.dataset.branch);
 const branches = [{name:'Chapeltown',color:'#7c3aed'},{name:'City Centre',color:'#2563eb'},{name:'Roundhay',color:'#0f766e'},{name:'Warehouse',color:'#c2410c'}];
 const current = branches[branch];if(!current)return;
+window.destByBc=window.destByBc||(bc=>{const d=window.destData;if(!Array.isArray(d))return null;for(const p of d)if(p.bc===bc)return p;return null;});
 const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 document.documentElement.style.setProperty('--accent',current.color);
 document.documentElement.style.setProperty('--accent-soft',current.color+'0d');
 const nav = document.createElement('nav');nav.className='cc-workspace-links';nav.setAttribute('aria-label','Team workspace');nav.innerHTML='<span class="current-person" id="cc-person">Attendance & training workspace</span>';document.body.prepend(nav);
 let me=null;
-async function refreshPerson(){try{const r=await fetch('/api/team?action=me',{cache:'no-store'});const j=await r.json();if(r.ok&&j.branch===branch){me=j;document.getElementById('cc-person').textContent=j.name+' · arrival '+new Date(j.arrival.at).toLocaleTimeString('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit'});if(branch===3){window.pickerName=j.name;try{localStorage.setItem('cc_pk_name',j.name);}catch(e){}}else{window.ordBy=j.name;}if(window.view==='home')window.renderHome();}else{me=null;const status=await fetch('/api/team?action=status',{cache:'no-store'}).then(r=>r.json());document.getElementById('cc-person').textContent=status.manager?'Manager signed in':'Scan the branch QR to sign in before saving changes';}}catch(e){}}
+let refreshPerson=async function(){try{const r=await fetch('/api/team?action=me',{cache:'no-store'});const j=await r.json();if(r.ok&&j.branch===branch){me=j;document.getElementById('cc-person').textContent=j.name+' · arrival '+new Date(j.arrival.at).toLocaleTimeString('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit'});if(branch===3){window.pickerName=j.name;try{localStorage.setItem('cc_pk_name',j.name);}catch(e){}}else{window.ordBy=j.name;}if(window.view==='home')window.renderHome();}else{me=null;const status=await fetch('/api/team?action=status',{cache:'no-store'}).then(r=>r.json());document.getElementById('cc-person').textContent=status.manager?'Manager signed in':'Scan the branch QR to sign in before saving changes';}}catch(e){}}
 if(branch!==3){
   window.renderHome=function(){
     document.body.classList.add('on-home');
@@ -47,5 +48,27 @@ window.syncSave=function(k,v){
 const work=new URLSearchParams(location.search).get('work');const views={pick:'pick',neg:'neg',over:'over',low:'low',shop:'shopify',img:'imgs',oos:'oos',stocklvl:'stocklvl'};
 if(branch!==3&&views[work]){let attempts=0;const go=setInterval(()=>{if(window.destLoaded){clearInterval(go);window.homeGo(views[work]);}else if(++attempts>60)clearInterval(go);},500);}
 if(branch===3&&work){const target={pick:'topup',over:'over',low:'topup'}[work];if(target){window.whTab=target;if(window.loaded>=4)window.renderWH();}}
+// ---------- Sections on the stock page: every work area can show All / My section / Section 1–5 ----------
+const SEC={list:[],mine:[],sel:'all',vendors:null};
+try{SEC.sel=sessionStorage.getItem('cc_sec_sel_'+branch)||'all';}catch(e){}
+const kwRe={};const kwHit=(name,kw)=>{const re=kwRe[kw]||(kwRe[kw]=new RegExp('(^|[^A-Z0-9])'+kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));return re.test(name);};
+const normBrand=v=>String(v||'').trim().toUpperCase().replace(/\s+/g,' ').replace(/[^A-Z0-9&\/+\- ]/g,'').trim();
+function ruleMatch(p,rules){const nm=String(p.nm||'').toUpperCase();for(const r of rules||[]){if(r.depts?.length&&!r.depts.includes(p.dp))continue;if(r.include?.length&&!r.include.some(k=>kwHit(nm,k)))continue;if(r.exclude?.length&&r.exclude.some(k=>kwHit(nm,k)))continue;return true;}return false;}
+function secOf(p){if(!p)return '';const v=SEC.vendors&&p.bc?normBrand(SEC.vendors[p.bc]):'';if(v){for(const s of SEC.list)if(s.brands?.length&&s.brands.includes(v))return s.id;}for(const s of SEC.list)if(s.rules?.length&&ruleMatch(p,s.rules))return s.id;return '';}
+function secOk(p){const sel=SEC.sel;if(sel==='all'||!SEC.list.length)return true;const id=secOf(p);if(sel==='mine')return SEC.mine.includes(id);if(sel==='none')return !id;return id===sel;}
+window.secOkBc=function(bc){if(SEC.sel==='all'||!SEC.list.length)return true;const p=window.destByBc(bc);return p?secOk(p):SEC.sel==='none';};
+window.secOf=secOf;
+async function loadSections(){try{const r=await fetch('/api/team?action=sections&branch='+branch,{cache:'no-store'});const j=await r.json();SEC.list=(j.sections||[]).filter(s=>s.kind!=='duty');}catch(e){SEC.list=[];}
+  fetch('/api/vendors').then(r=>r.json()).then(j=>{SEC.vendors=j&&!j.error?j:{};if(!window.vmap)window.vmap=SEC.vendors;if(SEC.sel!=='all')rerender();}).catch(()=>{SEC.vendors={};});
+  if(SEC.sel!=='all')rerender();}
+function rerender(){if(typeof window.renderView==='function'&&window.view&&window.view!=='home'&&window.destLoaded)window.renderView();}
+function secLabel(s){return s.area?s.area.split('·')[0].trim():s.name;}
+function secBar(){if(!SEC.list.length)return '';const chips=[['all','All']];if(SEC.mine.length)chips.push(['mine','My section']);SEC.list.forEach(s=>chips.push([s.id,secLabel(s)]));chips.push(['none','No section']);
+  return '<div class="m-chips sec-bar" role="group" aria-label="Section">'+chips.map(([id,l])=>'<button type="button" class="m-chip'+(SEC.sel===id?' on':'')+'" data-secsel="'+esc(id)+'">'+esc(l)+'</button>').join('')+'</div>';}
+function wireSecBar(){document.querySelectorAll('[data-secsel]').forEach(b=>b.onclick=()=>{SEC.sel=b.dataset.secsel;try{sessionStorage.setItem('cc_sec_sel_'+branch,SEC.sel);}catch(e){}rerender();});}
+function withSection(name){const fn=window[name];if(typeof fn!=='function')return;window[name]=function(){const full=window.destData;if(SEC.sel!=='all'&&Array.isArray(full)&&SEC.list.length)window.destData=full.filter(secOk);try{return fn.apply(this,arguments);}finally{window.destData=full;const out=document.getElementById('out');if(out&&!out.querySelector('.sec-bar')&&SEC.list.length){out.insertAdjacentHTML('afterbegin',secBar());wireSecBar();}}};}
+if(branch!==3){['renderNeg','renderOOS','renderLow','renderShopify','renderImgs','renderOverstock','renderOrdersInbox'].forEach(withSection);loadSections();}
+const baseRefresh=refreshPerson;
+refreshPerson=async function(){await baseRefresh();if(me&&Array.isArray(me.mySections)){const ids=me.mySections.filter(s=>s.kind!=='duty').map(s=>s.id);const first=!SEC.mine.length&&ids.length;SEC.mine=ids;let saved=null;try{saved=sessionStorage.getItem('cc_sec_sel_'+branch);}catch(e){}if(first&&!saved){SEC.sel='mine';rerender();}}};
 refreshPerson();setInterval(refreshPerson,60000);
 })();

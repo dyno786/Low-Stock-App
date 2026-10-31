@@ -69,13 +69,17 @@ export default async function handler(req) {
     const url = new URL(req.url); let body = {};
     if (req.method === 'POST') { try { const raw = await req.text(); if (raw.length > 64000) fail('Request too large.', 413); body = JSON.parse(raw); } catch (e) { if (e.status) throw e; fail('Invalid request.'); } }
     const action = req.method === 'GET' ? url.searchParams.get('action') : body.action;
-    const postOnly = !['status', 'dashboard', 'me', 'qr', 'health', 'report'].includes(action);
+    const postOnly = !['status', 'dashboard', 'me', 'qr', 'health', 'report', 'sections'].includes(action);
     if (postOnly && req.method !== 'POST') fail('POST required.', 405);
     if(action === 'health') {
       // Report the storage provider's own status message (no credentials) so limits/outages are diagnosable.
       const u=process.env.KV_REST_API_URL||process.env.KV_URL||process.env.UPSTASH_REDIS_REST_URL, k=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;
       let status=0,detail='';try{const r=await fetch(u,{method:'POST',headers:{Authorization:`Bearer ${k}`,'Content-Type':'application/json'},body:JSON.stringify(['PING']),signal:AbortSignal.timeout(8000)});status=r.status;const j=await r.json().catch(()=>({}));detail=String(j.error||j.result||'').slice(0,200);}catch(e){detail=String(e.message||e).slice(0,200);}
       return json(detail==='PONG'?{ok:true,storage:'connected',now:Date.now()}:{ok:false,error:'Attendance storage is unavailable.',storageStatus:status,storageMessage:detail,now:Date.now()},detail==='PONG'?200:503);
+    }
+    if (action === 'sections') { // public: which products belong to which section (no staff data)
+      const b = branchId(url.searchParams.get('branch')); const { state } = await loadBranch(b); const secs = state.sections?.enabled ? (state.sections.list || []) : [];
+      return json({ branch: b, sections: secs.map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, brands: x.brands || [] })) }, 200, { 'Cache-Control': 'no-store' });
     }
     if (action === 'status') {
       const m = await session(req, 'cc_manager'); const k = await session(req, 'cc_kiosk');
@@ -168,9 +172,9 @@ export default async function handler(req) {
     if (action === 'me') {
       const { s, state } = await activeStaffSession(req); const d = todayState(state);
       const secs = state.sections?.enabled ? (state.sections.list || []) : []; const owners = d.sectionOwners || {};
-      const mySections = secs.filter(x => owners[x.id] === s.staff).map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, shelves: x.shelves }));
+      const mySections = secs.filter(x => owners[x.id] === s.staff).map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, brands: x.brands || [], shelves: x.shelves }));
       const week = [6,5,4,3,2,1,0].map(n => { const day = londonDay(Date.now() - n * 86400000); const ts = (state.days[day]?.tasks || []).filter(t => t.assignee === s.staff && !t.archived); return { day, given: ts.length, done: ts.filter(t => t.status === 'done').length }; });
-      return json({ week, mySections, allSectionRules: secs.map(x => ({ id: x.id, name: x.name, kind: x.kind, rules: x.rules })), branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
+      return json({ week, mySections, allSectionRules: secs.map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, brands: x.brands || [] })), branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
     }
     if (action === 'phone-save') {
       const { s } = await activeStaffSession(req); const phone = ukMobile(body.phone); if (!phone) fail('Enter your mobile number.');

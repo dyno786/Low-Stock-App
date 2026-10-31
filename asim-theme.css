@@ -272,3 +272,7 @@ body.k-page .workspace{max-width:none;padding:0;margin:0}
 .k-person small{font-size:11px;font-weight:600}
 .k-person.in{background:var(--t-ok-bg);color:var(--t-ok-ink)}.k-person.out{background:var(--t-track2);color:var(--t-ink)}
 @media (max-width:900px){.k-screen{grid-template-columns:1fr}.k-wrap{padding:24px}}
+/* section chips inside the stock work areas */
+#out .sec-bar{padding:4px 0 12px}
+.sec-stock .m-chip{gap:6px}
+@media (min-width:761px){#out .sec-bar .m-chip{border:1px solid var(--line,#e2e8f0)}}

@@ -430,9 +430,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);max-width:480
   .chk-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 }
 </style>
-<link rel="stylesheet" href="app-ui.css?v=11">
+<link rel="stylesheet" href="app-ui.css?v=12">
 <link rel="stylesheet" href="workspace-nav.css?v=4">
-<script defer src="workspace-nav.js?v=9"></script>
+<script defer src="workspace-nav.js?v=10"></script>
 </head>
 <body class="branch-app" data-branch="0">
 <div class="hdr">
@@ -1845,7 +1845,7 @@ function renderOrdersInbox(){
 
   var byKey=ordIndex()||{};
   var active=[],doneL=[];
-  ordData.forEach(function(o){var fb=ordForBranch(o,byKey);if(!fb.mine.length)return;(ordBranchDone(o,fb)?doneL:active).push({o:o,fb:fb});});
+  ordData.forEach(function(o){var fb=ordForBranch(o,byKey);if(window.secOkBc){fb.mine=fb.mine.filter(function(m){return window.secOkBc(m.it.barcode);});}if(!fb.mine.length)return;(ordBranchDone(o,fb)?doneL:active).push({o:o,fb:fb});});
   var body='';
   if(active.length)body+='<div style="font-weight:800;margin:6px 0 6px;color:'+_obm[DEST_ID].color+'">📦 To pick ('+active.length+')</div><div class="card-list">'+active.map(function(x){return ordCard(x.o,x.fb);}).join('')+'</div>';
   if(doneL.length)body+='<div style="font-weight:800;margin:14px 0 6px;color:var(--sub)">✓ Picked ('+doneL.length+')</div><div class="card-list">'+doneL.map(function(x){return ordCard(x.o,x.fb);}).join('')+'</div>';
@@ -4692,6 +4692,6 @@ catBoot();
 
 </script>
 </template>
-<script src="staffday.js?v=5"></script>
+<script src="staffday.js?v=6"></script>
 </body>
 </html>
