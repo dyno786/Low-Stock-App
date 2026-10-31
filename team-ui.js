@@ -122,6 +122,7 @@ async function myDay(quiet=false){
   const me=currentMe;branch=me.branch;const b=boot.branches[branch];setAccent(b);
   if(me.needsTrainingReview){renderTraining(me);return;}
   if(!me.profile?.phone){renderPhone(me);return;}
+  if(!quiet){const k='asim.intro.'+me.date+'.'+me.staff;let seen=0;try{seen=+localStorage.getItem(k)||0;}catch{}if(seen<2){renderIntro(me,b,seen,k);return;}}
   navCount=me.tasks.length?me.tasks.filter(t=>t.status==='done').length+'/'+me.tasks.length:'';
   root.innerHTML='<div class="m-app">'+todayScreen(me,b)+tasksScreen(me,b)+meScreen(me,b)+'</div>'+staffNav(b,mPane);
   root.querySelectorAll('[data-pane]').forEach(x=>x.onclick=e=>{e.preventDefault();mPane=x.dataset.pane;showPane();window.scrollTo(0,0);});
@@ -137,7 +138,7 @@ async function myDay(quiet=false){
   clearInterval(poll);poll=setInterval(()=>{if(!document.querySelector('dialog')&&!document.hidden)myDay(true);},30000);
 }
 let taskFilter='all';
-const jobMeta=t=>t.sectionName||boot.skills.find(k=>k.id===t.category)?.name||'Job';
+const jobMeta=t=>{if(t.sectionName)return t.sectionName;const k=boot.skills.find(k=>k.id===t.category)?.name;return k&&k!==t.title?k:(t.auto?'Daily job':'Job from the manager');};
 const needsPhoto=t=>t.photoRequired&&!(t.photos||[]).length&&t.status!=='done';
 function weekChart(week){const w=week||[];const max=Math.max(4,...w.map(d=>d.given));const tot=w.reduce((n,d)=>n+d.given,0),dn=w.reduce((n,d)=>n+d.done,0);const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const lbl=d=>D[new Date(d.day+'T12:00:00Z').getUTCDay()];
   return `<section class="m-card"><div class="m-row" style="align-items:flex-end"><div><span class="m-label">Jobs done this week</span><div class="m-big">${dn} <small>of ${tot}</small></div></div>${tot?`<span class="m-pill ok">${Math.round(dn/tot*100)}% done</span>`:''}</div>
@@ -175,6 +176,27 @@ function meScreen(me,b){const theme=document.body.dataset.theme||'red';const tra
     <section class="m-card"><span class="m-label">App colour</span><div class="m-seg">${[['red','CC red'],['purple','Purple']].map(([k,n])=>`<button type="button" data-theme-pick="${k}" aria-pressed="${theme===k}">${n}</button>`).join('')}</div></section>
     <a class="m-btn big" href="${esc(b.file)}">Open branch stock tools</a>
     <button type="button" class="m-btn big ghost" id="device-logout">Sign out of this phone</button></div>`;}
+// ---------- first open of the day: Welcome → You’ve been assigned … ----------
+function renderIntro(me,b,step,key){
+  clearInterval(poll);const a=me.arrival;const first=me.name.split(' ')[0];
+  const next=()=>{try{localStorage.setItem(key,String(step+1));}catch{}myDay();};
+  if(step===0){
+    root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(b.name)} · ${esc(dateLabel(me.date))}</span><h1>Clock in</h1></div></header>
+      <section class="m-card m-center"><span class="m-badge-icon ok">${tick(34)}</span><h2>Welcome, ${esc(first)}!</h2><p>Clocked in at <strong>${time(a.at)}</strong> · ${a.lateMinutes?'<strong>'+a.lateMinutes+' min late</strong>':'On time'}. ${a.returns?.length?'Welcome back.':'Have a good shift.'}</p></section>
+      <button type="button" class="m-btn accent big" id="intro-next">Continue</button></div>`;
+  } else {
+    const secs=(me.mySections||[]).filter(s=>s.kind!=='duty');const duties=(me.mySections||[]).filter(s=>s.kind==='duty');
+    const jobs=me.tasks.filter(t=>t.status!=='done');const preview=jobs.slice(0,4);
+    const head=secs.length?`You’ve been assigned ${esc(secs.map(s=>s.area?s.area.split('·')[0].trim():s.name).join(' + '))}`:me.till?'You are on the till today':'Your jobs today';
+    root.innerHTML=`<div class="m-app"><header class="m-head"><div><span class="m-label">${esc(b.name)} · ${esc(dateLabel(me.date))}</span><h1>Your day</h1></div></header>
+      <section class="m-clock"><span class="m-label">TODAY</span><div class="time" style="font-size:24px">${head}</div><span class="sub">${secs.length?esc(secs.map(s=>s.name).join(' · '))+' · ':''}${me.tasks.length} jobs${duties.length?' · '+duties.map(d=>esc(d.name)).join(', '):''}</span></section>
+      ${me.needsSupportCount?'':''}
+      <div class="m-row"><h2>First up</h2><span class="m-label">${me.tasks.filter(t=>t.status==='done').length}/${me.tasks.length} completed</span></div>
+      <div class="m-list">${preview.map(t=>`<div class="m-job"><span class="box"></span><span class="text"><b>${esc(t.title)}</b><small class="${needsPhoto(t)?'need':''}">${needsPhoto(t)?'Photo needed':jobMeta(t)}</small></span>${needsPhoto(t)?`<span class="cam">${svg('cam',20)}</span>`:''}</div>`).join('')||'<section class="m-card m-center"><p>Your manager allocates jobs once everyone has signed in. Check back in a few minutes.</p></section>'}${jobs.length>4?`<p class="m-hint">and ${jobs.length-4} more on your Tasks screen</p>`:''}</div>
+      <button type="button" class="m-btn accent big" id="intro-next">Start my day</button></div>`;
+  }
+  document.getElementById('intro-next').onclick=next;
+}
 // ---------- one-time: WhatsApp number ----------
 function renderPhone(me){
   clearInterval(poll);const b=boot.branches[me.branch];
