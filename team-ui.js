@@ -157,7 +157,7 @@ function todayScreen(me,b){
   const greet=hour<12?'Morning':hour<17?'Afternoon':'Evening';const open=me.tasks.filter(t=>t.status!=='done');const next=[...me.tasks.filter(t=>t.status==='done').slice(-1),...open].slice(0,3);
   return `<div class="m-pane" data-p="today"><header class="m-head"><div><span class="m-label">${esc(b.name)} · ${esc(dateLabel(me.date))}</span><h1>${greet}, ${esc(first)}</h1></div><a href="#jobs" class="m-icon-btn" aria-label="Today’s jobs">${svg('bell')}</a></header>
     <section class="m-clock"><div class="m-row"><div><span class="m-label">CLOCKED IN</span><div class="time">${time(a.at)}</div><span class="sub">${a.lateMinutes?a.lateMinutes+' min late':'On time'} · ${duration(attendanceMs(a,me.now))} worked</span></div><span class="ring">${svg('clock',30)}</span></div>
-      <span class="sub" style="opacity:.9">Lunch or finishing? Scan the QR on the till computer and choose Clock out.</span></section>
+      <span class="sub" style="opacity:.9">To clock out, scan the QR on the till computer and choose Clock out.</span></section>
     ${me.till?`<div class="m-notice"><b>You are on the till today.</b> Customers come first; do other jobs in quiet periods.</div>`:''}
     ${(me.mySections||[]).length?`<div class="m-chips">${me.mySections.map((s,i)=>{const ts=me.tasks.filter(t=>t.section===s.id);const dn=ts.filter(t=>t.status==='done').length;return `<span class="m-chip ${i?'':'on'}">${esc(s.area?s.area.split('·')[0].trim():s.name)}${ts.length?' · '+dn+'/'+ts.length:''}</span>`;}).join('')}</div>`:''}
     ${weekChart(me.week)}
@@ -179,7 +179,6 @@ function meScreen(me,b){const theme=document.body.dataset.theme||'red';const tra
     <section class="m-card m-me"><span class="m-avatar">${esc(me.name.slice(0,1))}</span><div><b style="font-size:15px">${esc(me.name)}</b><br><span class="m-label">${esc(me.profile.seniority||'')} · arrived ${time(me.arrival.at)}</span></div></section>
     <section class="m-card"><div class="m-row"><div><span class="m-label">WhatsApp number</span><b>${esc(me.profile.phone||'Not added')}</b></div><button type="button" class="m-btn" id="change-phone">Change</button></div></section>
     <section class="m-card"><div class="m-row"><div><span class="m-label">Training</span><b>${trained} of ${boot.skills.length} jobs trained</b></div><button type="button" class="m-btn" id="update-training">Review</button></div></section>
-    <section class="m-card"><span class="m-label">App colour</span><div class="m-seg">${[['red','CC red'],['purple','Purple']].map(([k,n])=>`<button type="button" data-theme-pick="${k}" aria-pressed="${theme===k}">${n}</button>`).join('')}</div></section>
     <a class="m-btn big" href="${esc(b.file)}">Open branch stock tools</a>
     <button type="button" class="m-btn big ghost" id="device-logout">Sign out of this phone</button></div>`;}
 // ---------- first open of the day: Welcome → You’ve been assigned … ----------

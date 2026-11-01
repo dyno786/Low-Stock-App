@@ -34,7 +34,7 @@ window.AsimNavigation={setBranch(value){const id=parse(value);if(id===null||id==
 try{localStorage.setItem('asim.branch',String(branch));}catch{}
 render();document.body.prepend(header);document.body.classList.add('asim-has-navigation');document.querySelector('body>.app-header')?.remove();
 // Phone bottom menu on the stock pages: the same five items as "My day" (styles: asim-theme.css).
-if(!manager&&!signin&&file!=='myday.html'){
+if(!manager&&!signin&&file!=='myday.html'&&branch===1){
  const I={home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',tasks:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 18h3v3"/>',stock:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',me:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>'};
  const ic=k=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
  const bb=branches[branch]||branches[0];const day=`myday.html?branch=${bb.id}`;
