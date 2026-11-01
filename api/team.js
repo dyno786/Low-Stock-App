@@ -2,7 +2,7 @@ import { BRANCHES, fail, redis, random, sha, equal, londonDay, londonMinutes, cl
 import { SKILLS, LEVELS, branchConfig, training, allocate } from '../lib/allocation.js';
 import { endWork, closeArrival, pauseStaffTasks } from '../lib/work-time.js';
 import { locationConfig, checkLocation, geocode } from '../lib/location.js';
-import { validateSections, cityCentreTemplate, genericTemplate } from '../lib/sections.js';
+import { validateSections, cityCentreTemplate, genericTemplate, GROUPS, TOOLS } from '../lib/sections.js';
 export const config = { runtime: 'edge' };
 const LEGACY_MANAGER_HASH = '77f1cec5dabf986e5d5aea8b199033ecaa62b0f991e27512ddf3ee3fb6c86cd7';
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', ...headers } });
@@ -174,7 +174,7 @@ export default async function handler(req) {
       const secs = state.sections?.enabled ? (state.sections.list || []) : []; const owners = d.sectionOwners || {};
       const mySections = secs.filter(x => owners[x.id] === s.staff).map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, brands: x.brands || [], shelves: x.shelves }));
       const week = [6,5,4,3,2,1,0].map(n => { const day = londonDay(Date.now() - n * 86400000); const ts = (state.days[day]?.tasks || []).filter(t => t.assignee === s.staff && !t.archived); return { day, given: ts.length, done: ts.filter(t => t.status === 'done').length }; });
-      return json({ week, mySections, allSectionRules: secs.map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, brands: x.brands || [] })), branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
+      return json({ week, groups: GROUPS, tools: TOOLS, mySections, allSectionRules: secs.map(x => ({ id: x.id, name: x.name, area: x.area, kind: x.kind, rules: x.rules, brands: x.brands || [] })), branch: s.branch, name: state.staff[s.staff].name, staff: s.staff, date: s.date, arrival: d.arrivals[s.staff], profile: publicStaff(state).find(p => p.id === s.staff), tasks: d.tasks.filter(t => t.assignee === s.staff && !t.archived), till: d.till === s.staff, needsTrainingReview: d.arrivals[s.staff].trainingDate !== s.date, skills: SKILLS, now: Date.now() });
     }
     if (action === 'phone-save') {
       const { s } = await activeStaffSession(req); const phone = ukMobile(body.phone); if (!phone) fail('Enter your mobile number.');
